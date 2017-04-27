@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>CreateService</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">CreateService</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Installs a windows service.</p>
+
+<div class="block"><pre>CreateService(<a href="#p1">cServiceName</a>, <a href="#p2">cDisplayName</a>, <a href="#p3">cExecutable</a> [, <a href="#p4">nServiceType</a> [, <a href="#p5">nStartType</a> [, <a href="#p6">nErrorControl</a> [, <a href="#p7">cLoadOrderGroup</a> [, <a href="#p8">cDependencies</a> [, <a href="#p9">cServiceAccount</a> [, <a href="#p10">cAccountPassword</a> [, <a href="#p11">cMachine</a> [, <a href="#p12">cDatabase</a>]]]]]]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cServiceName</a></dt>
+<dd><p>The short name of the service.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cDisplayName</a></dt>
+<dd><p>The descriptive name of the service.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cExecutable</a></dt>
+<dd><p>Full path to the service executable.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nServiceType (optional)</a></dt>
+<dd><p>default = SERVICE_WIN32_OWN_PROCESS<br />
+<br />
+The service type.</p>
+<table class="constlist">
+<caption>This parameter can be one of the following values.</caption>
+<tr><th style="width: 20%;">Service type</th><th>Description</th></tr>
+<tr><td>SERVICE_FILE_SYSTEM_DRIVER</td><td>File system driver service.</td></tr>
+<tr><td>SERVICE_KERNEL_DRIVER</td><td>Driver service.</td></tr>
+<tr><td>SERVICE_WIN32_OWN_PROCESS</td><td>Service that runs in its own process.</td></tr>
+<tr><td>SERVICE_WIN32_SHARE_PROCESS</td><td>Service that shares a process with one or more other services.</td></tr>
+<tr><td>SERVICE_INTERACTIVE_PROCESS</td><td>If you specify either SERVICE_WIN32_OWN_PROCESS or SERVICE_WIN32_SHARE_PROCESS, and the service is running in the context of the LocalSystem account, you can also specify this value.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p5">nStartType (optional)</a></dt>
+<dd><p>default = SERVICE_AUTO_START<br />
+<br />
+The service start options.</p>
+<table class="constlist">
+<caption>This parameter can be one of the following values.</caption>
+<tr><th style="width: 20%;">Start type</th><th>Description</th></tr>
+<tr><td>SERVICE_AUTO_START</td><td>A service started automatically by the service control manager during system startup.</td></tr>
+<tr><td>SERVICE_BOOT_START</td><td>A device driver started by the system loader. This value is valid only for driver services.</td></tr>
+<tr><td>SERVICE_DEMAND_START</td><td>A service started by the service control manager when a process calls the <a href="/pages/startservice.html">StartService</a> function.</td></tr>
+<tr><td>SERVICE_DISABLED</td><td>A service that cannot be started. Attempts to start the service result in the error code ERROR_SERVICE_DISABLED.</td></tr>
+<tr><td>SERVICE_SYSTEM_START</td><td>A device driver started by the IoInitSystem function. This value is valid only for driver services.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p6">nErrorControl</a></dt>
+<dd><p>default = SERVICE_ERROR_NORMAL<br />
+<br />
+The severity of the error, and action taken, if this service fails to start.</p>
+<table class="constlist">
+<caption>This parameter can be one of the following values.</caption>
+<tr><th style="width: 20%;">Error control</th><th>Description</th></tr>
+<tr><td>SERVICE_ERROR_CRITICAL</td><td>The startup program logs the error in the event log, if possible. If the last-known-good configuration is being started, the startup operation fails. Otherwise, the system is restarted with the last-known good configuration.</td></tr>
+<tr><td>SERVICE_ERROR_IGNORE</td><td>The startup program ignores the error and continues the startup operation.</td></tr>
+<tr><td>SERVICE_ERROR_NORMAL</td><td>The startup program logs the error in the event log but continues the startup operation.</td></tr>
+<tr><td>SERVICE_ERROR_SEVERE</td><td>The startup program logs the error in the event log. If the last-known-good configuration is being started, the startup operation continues. Otherwise, the system is restarted with the last-known-good configuration.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p7">cLoadOrderGroup (optional)</a></dt>
+<dd><p>default = NULL</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p8">cDependencies (optional)</a></dt>
+<dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p9">cServiceAccount (optional)</a></dt>
+<dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p10">cAccountPassword (optional)</a></dt>
+<dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p11">cMachine (optional)</a></dt>
+<dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p12">cDatabase (optional)</a></dt>
+<dd><p></p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>Always .T.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adependentservices.html">ADependentServices</a><br />
+<a href="/pages/aserviceconfig.html">AServiceConfig</a><br />
+<a href="/pages/aservices.html">AServices</a><br />
+<a href="/pages/aservicestatus.html">AServiceStatus</a><br />
+<a href="/pages/closeservicehandle.html">CloseServiceHandle</a><br />
+<a href="/pages/continueservice.html">ContinueService</a><br />
+<a href="/pages/controlservice.html">ControlService</a><br />
+<a href="/pages/openservice.html">OpenService</a><br />
+<a href="/pages/pauseservice.html">PauseService</a><br />
+<a href="/pages/startservice.html">StartService</a><br />
+<a href="/pages/stopservice.html">StopService</a><br />
+<a href="/pages/waitforservicestatus.html">WaitForServiceStatus</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682450(v=vs.85).aspx">CreateService</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682028(VS.85).aspx">CloseServiceHandle</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

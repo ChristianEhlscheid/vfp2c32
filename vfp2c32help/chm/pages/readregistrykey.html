@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ReadRegistryKey</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ReadRegistryKey</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Retrieves the data for the specified registry value.</p>
+
+<div class="block"><pre>ReadRegistryKey(<a href="#p1">nRegKey</a> [, <a href="#p2">cValueName</a> [, <a href="#p3">cKeyName</a> [, <a href="#p4">cValueType</a>]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nRegKey</a></dt>
+<dd><p>Either a registry handle returned from <a href="/pages/openregistrykey.html">OpenRegistryKey</a> or one of the following key constants.</p>
+<table>
+<tr><th>Constant</th><th>Description</th></tr>
+<tr><td>HKEY_CLASSES_ROOT</td><td>Registry entries subordinate to this key define types (or classes) of documents and the properties associated with those types. Shell and COM applications use the information stored under this key.<br />
+<br />
+This key also provides backward compatibility with the Windows 3.1 registration database by storing information for DDE and OLE support. File viewers and user interface extensions store their OLE class identifiers in HKEY_CLASSES_ROOT, and in-process servers are registered in this key.<br />
+<br />
+This handle should not be used in a service or an application that impersonates different users.</td></tr>
+<tr><td>HKEY_CURRENT_CONFIG</td><td>Contains information about the current hardware profile of the local computer system. The information under HKEY_CURRENT_CONFIG describes only the differences between the current hardware configuration and the standard configuration. Information about the standard hardware configuration is stored under the Software and System keys of HKEY_LOCAL_MACHINE.<br />
+<br />
+HKEY_CURRENT_CONFIG is an alias for HKEY_LOCAL_MACHINE\System\CurrentControlSet\Hardware Profiles\Current.</td></tr>
+<tr><td>HKEY_CURRENT_USER</td><td>Registry entries subordinate to this key define the preferences of the current user. These preferences include the settings of environment variables, data about program groups, colors, printers, network connections, and application preferences. This key makes it easier to establish the current user's settings; the key maps to the current user's branch in HKEY_USERS. In HKEY_CURRENT_USER, software vendors store the current user-specific preferences to be used within their applications. Microsoft, for example, creates the HKEY_CURRENT_USER\Software\Microsoft key for its applications to use, with each application creating its own subkey under the Microsoft key.<br />
+<br />
+The mapping between HKEY_CURRENT_USER and HKEY_USERS is per process and is established the first time the process references HKEY_CURRENT_USER. The mapping is based on the security context of the first thread to reference HKEY_CURRENT_USER. If this security context does not have a registry hive loaded in HKEY_USERS, the mapping is established with HKEY_USERS\.Default. After this mapping is established it persists, even if the security context of the thread changes.<br />
+<br />
+All registry entries in HKEY_CURRENT_USER except those under HKEY_CURRENT_USER\Software\Classes are included in the per-user registry portion of a roaming user profile. To exclude other entries from a roaming user profile, store them in HKEY_CURRENT_USER_LOCAL_SETTINGS.<br />
+<br />
+This handle should not be used in a service or an application that impersonates different users. Instead, call the RegOpenCurrentUser function.</td></tr>
+<tr><td>HKEY_CURRENT_USER_LOCAL_SETTINGS</td><td>Registry entries subordinate to this key define preferences of the current user that are local to the machine. These entries are not included in the per-user registry portion of a roaming user profile.<br />
+<br />
+Windows Server 2008, Windows Vista, Windows Server 2003, and Windows XP/2000:  This key is supported starting with Windows 7 and Windows Server 2008 R2.</td></tr>
+<tr><td>HKEY_LOCAL_MACHINE</td><td>Registry entries subordinate to this key define the physical state of the computer, including data about the bus type, system memory, and installed hardware and software. It contains subkeys that hold current configuration data, including Plug and Play information (the Enum branch, which includes a complete list of all hardware that has ever been on the system), network logon preferences, network security information, software-related information (such as server names and the location of the server), and other system information.</td></tr>
+<tr><td>HKEY_PERFORMANCE_DATA</td><td>Registry entries subordinate to this key allow you to access performance data. The data is not actually stored in the registry; the registry functions cause the system to collect the data from its source.</td></tr>
+<tr><td>HKEY_PERFORMANCE_NLSTEXT</td><td>Registry entries subordinate to this key reference the text strings that describe counters in the local language of the area in which the computer system is running. These entries are not available to Regedit.exe and Regedt32.exe.<br />
+<br />
+Windows 2000:  This key is not supported.</td></tr>
+<tr><td>HKEY_PERFORMANCE_TEXT</td><td><br />
+Registry entries subordinate to this key reference the text strings that describe counters in US English. These entries are not available to Regedit.exe and Regedt32.exe.<br />
+<br />
+Windows 2000:  This key is not supported.</td></tr>
+<tr><td>HKEY_USERS</td><td>Registry entries subordinate to this key define the default user configuration for new users on the local computer and the user configuration for the current user.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cValueName</a></dt>
+<dd><p>The name of the value for which to return the data.<br />
+If you pass an empty string the default value of the specified key is returned.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cKeyName</a></dt>
+<dd><p>Path to the subkey of the key passed in <em>nRegKey</em>.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cValueType (optional)</a></dt>
+<dd><p>The VFP datatype into which the registry value should be converted.<br />
+<br />
+If you omit <em>cValueType</em> it is retrieved from the registry.<br />
+<br />
+The following table lists the default conversion of registry to VFP types.</p>
+<table>
+<tr><th style="width: 60%;">Registry type</th><th>VFP type</th></tr>
+<tr><td>REG_SZ, REG_MULTI_SZ, REG_EXPAND_SZ, REG_LINK and REG_NONE</td><td>C</td></tr>
+<tr><td>REG_BINARY</td><td>Q **</td></tr>
+<tr><td>REG_DWORD, REG_DWORD_BIG_ENDIAN, REG_DOUBLE</td><td>N</td></tr>
+<tr><td>REG_INTEGER</td><td>I</td></tr>
+<tr><td>REG_LOGICAL</td><td>L</td></tr>
+<tr><td>REG_DATE</td><td>D</td></tr>
+<tr><td>REG_DATETIME</td><td>T</td></tr>
+<tr><td>REG_QWORD, REG_MONEY</td><td>Y</td></tr>
+</table><p><br />
+If you pass <em>cValueType</em> the following table lists the allowed conversions.</p>
+<table>
+<tr><th style="width: 40%;">Registry type</th><th>cValueType</th></tr>
+<tr><td>REG_SZ</td><td>C, Q</td></tr>
+<tr><td>REG_EXPAND_SZ</td><td>C, Q</td></tr>
+<tr><td>REG_MULTI_SZ</td><td>C, Q</td></tr>
+<tr><td>REG_BINARY</td><td>C, Q</td></tr>
+<tr><td>REG_DWORD</td><td>N, I, L, Q</td></tr>
+<tr><td>REG_DWORD_BIG_ENDIAN</td><td>N, I, L, Q</td></tr>
+<tr><td>REG_QWORD</td><td>Y, Q, C, N</td></tr>
+<tr><td>REG_INTEGER</td><td>I, N, L, Q</td></tr>
+<tr><td>REG_LOGICAL</td><td>I, N, L, Q</td></tr>
+<tr><td>REG_DOUBLE</td><td>N, D, T, Q</td></tr>
+<tr><td>REG_DATE</td><td>D, T, Q</td></tr>
+<tr><td>REG_DATETIME</td><td>D, T, Q</td></tr>
+<tr><td>REG_MONEY</td><td>Y, Q</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>** Since it is not possible to return varbinary (Q) values from a FLL the value is returned as a normal string.<br />
+You can convert it into a varbinary value with <a href="its:dv_foxhelp.chm::/html/cad2893d-9c63-4899-83d8-e5d58f79a414.htm">CREATEBINARY</a>( ).
+</p></div>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The data for the registry value.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aregistrykeys.html">ARegistryKeys</a><br />
+<a href="/pages/aregistryvalues.html">ARegistryValues</a><br />
+<a href="/pages/cancelregistrychange.html">CancelRegistryChange</a><br />
+<a href="/pages/closeregistrykey.html">CloseRegistryKey</a><br />
+<a href="/pages/createregistrykey.html">CreateRegistryKey</a><br />
+<a href="/pages/deleteregistrykey.html">DeleteRegistryKey</a><br />
+<a href="/pages/findregistrychange.html">FindRegistryChange</a><br />
+<a href="/pages/openregistrykey.html">OpenRegistryKey</a><br />
+<a href="/pages/registryhivetoobject.html">RegistryHiveToObject</a><br />
+<a href="/pages/registryvaluestoobject.html">RegistryValuesToObject</a><br />
+<a href="/pages/writeregistrykey.html">WriteRegistryKey</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms724897(VS.85).aspx">RegOpenKeyEx</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724911(VS.85).aspx">RegQueryValueEx</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724837(VS.85).aspx">RegCloseKey</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

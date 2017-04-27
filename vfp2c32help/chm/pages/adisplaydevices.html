@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ADisplayDevices</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ADisplayDevices</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about the display devices in the current session into an array.</p>
+
+<div class="block"><pre>ADisplayDevices(<a href="#p1">cArrayName</a> [, <a href="#p2">cDeviceName</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><p>The name of the array as a string into which the function should store the information.</p>
+<table>
+<caption>On return the array contains the following values from the <a href="http://msdn.microsoft.com/en-us/library/dd183569(VS.85).aspx">DISPLAY_DEVICE</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>DeviceString</td><td>C</td></tr>
+<tr><td>2</td><td>DeviceName</td><td>C</td></tr>
+<tr><td>3</td><td>DeviceID</td><td>C</td></tr>
+<tr><td>4</td><td>DeviceKey</td><td>C</td></tr>
+<tr><td>5</td><td>StateFlags</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cDeviceName (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+A device name. If NULL, function returns information for the display adapter(s) on the machine,.<br />
+<br />
+For more information, see Remarks.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of display devices.</p>
+
+<h2>Remarks</h2>
+<p>Have a look at the remarks section for the <a href="http://msdn.microsoft.com/en-us/library/dd162609(VS.85).aspx">EnumDisplayDevices</a> API on how to retrieve <br />
+information for monitors etc ...</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adesktoparea.html">ADesktopArea</a><br />
+<a href="/pages/adesktops.html">ADesktops</a><br />
+<a href="/pages/aresolutions.html">AResolutions</a><br />
+<a href="/pages/awindowstations.html">AWindowStations</a><br />
+<a href="/pages/expandenvironmentstrings.html">ExpandEnvironmentStrings</a><br />
+<a href="/pages/getlocaleinfoex.html">GetLocaleInfoEx</a><br />
+<a href="/pages/getsystemdirectory.html">GetSystemDirectory</a><br />
+<a href="/pages/getwindowsdirectory.html">GetWindowsDirectory</a><br />
+<a href="/pages/osex.html">OsEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/dd162609(VS.85).aspx">EnumDisplayDevices</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

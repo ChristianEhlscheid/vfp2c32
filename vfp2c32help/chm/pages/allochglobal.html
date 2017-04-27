@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>AllocHGlobal</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">AllocHGlobal</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Allocates the specified number of bytes from the global heap.</p>
+
+<div class="block"><pre>AllocHGlobal(<a href="#p1">nNumberOfBytes</a> [, <a href="#p2">nFlags</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nNumberOfBytes</a></dt>
+<dd><p>The number of bytes to allocate.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nFlags (optional, additive)</a></dt>
+<dd><p>default =  GMEM_MOVEABLE | GMEM_ZEROINIT<br />
+</p>
+<table>
+<caption>One or a combination of the following values.</caption>
+<tr><th style="width: 70px;">Flag</th><th>Description</th></tr>
+<tr><td>GMEM_FIXED</td><td>Allocates fixed memory. The return value is a pointer.</td></tr>
+<tr><td>GMEM_MOVEABLE</td><td>Allocates movable memory. Memory blocks are never moved in physical memory, but they can be moved within the default heap.<br />
+The return value is a handle to the memory object. To translate the handle into a pointer, use the <a href="/pages/lockhglobal.html">LockHGlobal</a> function.<br />
+This value cannot be combined with GMEM_FIXED.</td></tr>
+<tr><td>GMEM_ZEROINIT</td><td>Initializes memory contents to zero.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>Either a pointer or handle to the allocated memory depending on the nFlags parameter.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/allocmem.html">AllocMem</a><br />
+<a href="/pages/allocmemto.html">AllocMemTo</a><br />
+<a href="/pages/amemblocks.html">AMemBlocks</a><br />
+<a href="/pages/compactmem.html">CompactMem</a><br />
+<a href="/pages/freehglobal.html">FreeHGlobal</a><br />
+<a href="/pages/freemem.html">FreeMem</a><br />
+<a href="/pages/freepmem.html">FreePMem</a><br />
+<a href="/pages/freerefarray.html">FreeRefArray</a><br />
+<a href="/pages/lockhglobal.html">LockHGlobal</a><br />
+<a href="/pages/reallochglobal.html">ReAllocHGlobal</a><br />
+<a href="/pages/reallocmem.html">ReAllocMem</a><br />
+<a href="/pages/sizeofmem.html">SizeOfMem</a><br />
+<a href="/pages/unlockhglobal.html">UnlockHGlobal</a><br />
+<a href="/pages/validatemem.html">ValidateMem</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa366574(VS.85).aspx">GlobalAlloc</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

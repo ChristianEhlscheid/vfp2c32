@@ -1,0 +1,73 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Int642Str</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">Int642Str</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Converts a __int64 (64bit numeric value) value into the requested format.</p>
+
+<div class="block"><pre>Int642Str(<a href="#p1">yqcnValue</a> [, <a href="#p2">nFormat</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cnValue</a></dt>
+<dd><p>A numeric value in the range –9,223,372,036,854,775,808 to 9,223,372,036,854,775,807.<br />
+<br />
+The parameter can be passed in 4 different formats.<br />
+1. As a currency value.<br />
+2. As a 8 byte varbinary string.<br />
+3. As a string literal e.g. "-1234567890123"<br />
+4. As a normal VFP numeric value.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nFormat (optional)</a></dt>
+<dd><p>default = 1<br />
+<br />
+Specifies the format of the return value.</p>
+<table>
+<caption>One of the following values.</caption>
+<tr><th style="width: 40px">Format</th><th>Description</th></tr>
+<tr><td>1</td><td>8 byte binary string.</td></tr>
+<tr><td>2</td><td>String literal.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>The __int64 value in the requested format.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/colors2rgb.html">Colors2RGB</a><br />
+<a href="/pages/double2str.html">Double2Str</a><br />
+<a href="/pages/float2str.html">Float2Str</a><br />
+<a href="/pages/long2str.html">Long2Str</a><br />
+<a href="/pages/num2binary.html">Num2Binary</a><br />
+<a href="/pages/pg_bytea2str.html">PG_ByteA2Str</a><br />
+<a href="/pages/pg_str2bytea.html">PG_Str2ByteA</a><br />
+<a href="/pages/rgb2colors.html">RGB2Colors</a><br />
+<a href="/pages/short2str.html">Short2Str</a><br />
+<a href="/pages/str2double.html">Str2Double</a><br />
+<a href="/pages/str2float.html">Str2Float</a><br />
+<a href="/pages/str2int64.html">Str2Int64</a><br />
+<a href="/pages/str2long.html">Str2Long</a><br />
+<a href="/pages/str2short.html">Str2Short</a><br />
+<a href="/pages/str2uint64.html">Str2UInt64</a><br />
+<a href="/pages/str2ulong.html">Str2ULong</a><br />
+<a href="/pages/str2ushort.html">Str2UShort</a><br />
+<a href="/pages/uint642str.html">UInt642Str</a><br />
+<a href="/pages/ulong2str.html">ULong2Str</a><br />
+<a href="/pages/ushort2str.html">UShort2Str</a><br />
+<a href="/pages/value2variant.html">Value2Variant</a><br />
+<a href="/pages/variant2value.html">Variant2Value</a><br />
+</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

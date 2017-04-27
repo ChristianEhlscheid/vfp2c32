@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>GetSaveFileName</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">GetSaveFileName</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Creates a Save dialog box that lets the user specify the drive, directory, and name of a file to save.</p>
+
+<div class="block"><pre>GetSaveFileName([<a href="#p1">nFlags</a> [, <a href="#p2">cFileFilters</a> [, <a href="#p3">cFileName</a> [, <a href="#p4">cInitialDirectory</a> [, <a href="#p5">cDialogTitle</a> [, <a href="#p6">nFlagsEx</a> [, <a href="#p7">cCallbackFunc</a>]]]]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nFlags (optional, additive)</a></dt>
+<dd><p>If you omit nFlags parameter or pass 0 these flags are used:<br />
+OFN_EXPLORER | OFN_NOCHANGEDIR<br />
+<br />
+Valid flags:</p>
+<table>
+<tr><th>Flag</th><th>Meaning</th></tr>
+<tr><td>OFN_CREATEPROMPT </td><td>If the user specifies a file that does not exist, this flag causes the dialog box to prompt the user for permission to create the file.</td></tr>
+<tr><td>OFN_DONTADDTORECENT</td><td>Windows 2000/XP: Prevents the system from adding a link to the selected file in the file system directory that contains the user's most recently used documents.</td></tr>
+<tr><td>OFN_EXPLORER</td><td>If you want the old-style user interface, omit the OFN_EXPLORER flag.</td></tr>
+<tr><td>OFN_FILEMUSTEXIST</td><td>Specifies that the user can type only names of existing files in the File Name entry field. If this flag is specified and the user enters an invalid name, the dialog box procedure displays a warning in a message box. If this flag is specified, the OFN_PATHMUSTEXIST flag is also used. This flag can be used in an Open dialog box. It cannot be used with a Save As dialog box.</td></tr>
+<tr><td>OFN_FORCESHOWHIDDEN</td><td>Windows 2000/XP: Forces the showing of system and hidden files, thus overriding the user setting to show or not show hidden files. However, a file that is marked both system and hidden is not shown.</td></tr>
+<tr><td>OFN_LONGNAMES</td><td>For old-style dialog boxes, this flag causes the dialog box to use long file names. If this flag is not specified, or if the OFN_ALLOWMULTISELECT flag is also set, old-style dialog boxes use short file names (8.3 format) for file names with spaces. Explorer-style dialog boxes ignore this flag and always display long file names.</td></tr>
+<tr><td>OFN_NOCHANGEDIR</td><td> Restores the current directory to its original value if the user changed the directory while searching for files.</td></tr>
+<tr><td>OFN_NODEREFERENCELINKS</td><td>Directs the dialog box to return the path and file name of the selected shortcut (.LNK) file. If this value is not specified, the dialog box returns the path and file name of the file referenced by the shortcut.</td></tr>
+<tr><td>OFN_NOLONGNAMES</td><td>For old-style dialog boxes, this flag causes the dialog box to use short file names (8.3 format). Explorer-style dialog boxes ignore this flag and always display long file names.</td></tr>
+<tr><td>OFN_NONETWORKBUTTON</td><td>Hides and disables the Network button.</td></tr>
+<tr><td>OFN_NOREADONLYRETURN</td><td>Specifies that the returned file does not have the Read Only check box selected and is not in a write-protected directory.</td></tr>
+<tr><td>OFN_NOTESTFILECREATE </td><td>Specifies that the file is not created before the dialog box is closed. This flag should be specified if the application saves the file on a create-nonmodify network share. When an application specifies this flag, the library does not check for write protection, a full disk, an open drive door, or network protection. Applications using this flag must perform file operations carefully, because a file cannot be reopened once it is closed.</td></tr>
+<tr><td>OFN_OVERWRITEPROMPT </td><td>Causes the Save As dialog box to generate a message box if the selected file already exists. The user must confirm whether to overwrite the file.</td></tr>
+<tr><td>OFN_PATHMUSTEXIST</td><td>Specifies that the user can type only valid paths and file names. If this flag is used and the user types an invalid path and file name in the File Name entry field, the dialog box function displays a warning in a message box.</td></tr>
+<tr><td>OFN_READONLY</td><td>Causes the Read Only check box to be selected initially when the dialog box is created. This flag indicates the state of the Read Only check box when the dialog box is closed.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cFileFilters (optional)</a></dt>
+<dd><p>default = 'All' + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + '*.*'<br />
+<br />
+<a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) seperated string of filters e.g.: "Tables" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "*.dbf" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "Databases" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "*.dbc"<br />
+you can also pass "" (empty string) to omit the filter values.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cFileName (optional)</a></dt>
+<dd><p>default = empty<br />
+<br />
+The filename that is initially displayed in the dialog box.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cInitialDirectory (optional)</a></dt>
+<dd><p>default = empty<br />
+<br />
+The initial directory. The algorithm for selecting the initial directory varies on different platforms.<br />
+<br />
+Windows 7:<br />
+If <em>cInitialDirectory</em> has the same value as was passed the first time the application used an Open or Save As dialog box, the path most recently selected by the user is used as the initial directory.<br />
+Otherwise, if <em>cFileName</em> contains a path, that path is the initial directory.<br />
+Otherwise, if <em>cInitialDirectory</em> is not empty, it specifies the initial directory.<br />
+If <em>cInitialDirectory</em> is empty and the current directory contains any files of the specified filter types, the initial directory is the current directory.<br />
+Otherwise, the initial directory is the personal files directory of the current user.<br />
+Otherwise, the initial directory is the Desktop folder.<br />
+<br />
+Windows 2000/XP/Vista:<br />
+If <em>cFileName</em> contains a path, that path is the initial directory.<br />
+Otherwise, <em>cInitialDirectory</em> specifies the initial directory.<br />
+Otherwise, if the application has used an Open or Save As dialog box in the past, the path most recently used is selected as the initial directory. However, if an application is not run for a long time, its saved selected path is discarded.<br />
+If <em>cInitialDirectory</em> is empty and the current directory contains any files of the specified filter types, the initial directory is the current directory.<br />
+Otherwise, the initial directory is the personal files directory of the current user.<br />
+Otherwise, the initial directory is the Desktop folder.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cDialogTitle (optional)</a></dt>
+<dd><p>default = empty<br />
+<br />
+A string to be placed in the title bar of the dialog box. If this parameter is empty, the system uses the default title (that is, Save As or Open).</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p6">nFlagsEx (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+if you pass OFN_EX_NOPLACESBAR (1) as nFlagsEx paramter the dialog doesn't show the places bar (the button's on the left for common used directories).</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p7">cCallbackfunction (optional)</a></dt>
+<dd><p>If you pass a VFP function name the function will be called when events in the dialog occur. <br />
+<br />
+The function must have to following prototype.</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION OpenFileCallback(lnHwnd, lnControlID, lnCode)
+ENDFUNC
+</pre></div>
+<p>See dialogs.prg in the example project for more info.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>-1 if an error occured.<br />
+0 if the dialog was aborted.<br />
+The entered filename.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/getopenfilename.html">GetOpenFileName</a><br />
+<a href="/pages/messageboxex.html">MessageBoxEx</a><br />
+<a href="/pages/shbrowsefolder.html">SHBrowseFolder</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms646928(VS.85).aspx">GetSaveFileName</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms646916(VS.85).aspx">CommDlgExtendedError</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

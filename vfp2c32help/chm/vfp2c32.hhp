@@ -1,0 +1,23 @@
+[OPTIONS]
+Binary TOC=Yes
+Compatibility=1.1 or later
+Compiled file=vfp2c32.chm
+Contents file=vfp2c32toc.hhc
+Default Font=Verdana,9,0
+Default topic=/pages/static/Mainpage.html
+Display compile notes=No
+Display compile progress=No
+Full-text search=Yes
+Index file=vfp2c32index.hhk
+Language=0x409 Englisch (USA)
+Title=VFP2C32
+
+
+[ALIAS]
+#include vfp2c32alias.h
+
+[MAP]
+#include vfp2c32map.h
+
+[INFOTYPES]
+

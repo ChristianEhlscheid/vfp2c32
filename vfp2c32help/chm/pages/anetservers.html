@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ANetServers</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ANetServers</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores all servers of the specified type that are visible in a domain into an array.</p>
+
+<div class="block"><pre>ANetServers(<a href="#p1">cArrayName</a> [, <a href="#p2">nServerType</a> [, <a href="#p3">nLevel</a> [, <a href="#p4">cDomain</a>]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><p>if <em>nLevel</em> = 1</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/aa370903(v=vs.85).aspx">SERVER_INFO_101</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>Platform ID</td><td>N</td></tr>
+<tr><td>2</td><td>The name of a server.</td><td>C</td></tr>
+<tr><td>3</td><td>The major version number and the server type.</td><td>N</td></tr>
+<tr><td>4</td><td>The minor release version number of the operating system.</td><td>N</td></tr>
+<tr><td>5</td><td>The type of software the computer is running.</td><td>N</td></tr>
+<tr><td>6</td><td>A comment describing the server.</td><td>C</td></tr>
+</table><p><br />
+if <em>nLevel</em> = 2</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/bb706782.aspx">SERVER_INFO_100</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>Platform ID</td><td>C</td></tr>
+<tr><td>2</td><td>The name of a server.</td><td>C</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">nServerType (optional)</a></dt>
+<dd><p>default = SV_TYPE_SERVER<br />
+<br />
+A value that filters the server entries.<br />
+For a list of possible values have a look at the <a href="http://msdn.microsoft.com/en-us/library/aa370623(VS.85).aspx">NetServerEnum</a> documentation.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nLevel (optional)</a></dt>
+<dd><p>default = 1<br />
+<br />
+1 or 2.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cDomain (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+The name of the domain for which a list of servers is to be returned.<br />
+The domain name must be a NetBIOS domain name (for example, microsoft).<br />
+The ANetServers function does not support DNS-style names (for example, microsoft.com).</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of servers.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aborturldownloadtofileex.html">AbortUrlDownloadToFileEx</a><br />
+<a href="/pages/aipaddresses.html">AIpAddresses</a><br />
+<a href="/pages/anetfiles.html">ANetFiles</a><br />
+<a href="/pages/getservertime.html">GetServerTime</a><br />
+<a href="/pages/icmpping.html">IcmpPing</a><br />
+<a href="/pages/ip2macaddress.html">Ip2MacAddress</a><br />
+<a href="/pages/resolvehosttoip.html">ResolveHostToIp</a><br />
+<a href="/pages/synctosntpserver.html">SyncToSNTPServer</a><br />
+<a href="/pages/urldownloadtofileex.html">UrlDownloadToFileEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa370623(VS.85).aspx">NetServerEnum</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

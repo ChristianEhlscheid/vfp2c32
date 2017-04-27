@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ReAllocHGlobal</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ReAllocHGlobal</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Changes the size of a specified global memory object.</p>
+
+<div class="block"><pre>ReAllocHGlobal(<a href="#p1">nHandle</a>, <a href="#p2">nNumberOfBytes</a> [, <a href="#p3">nFlags</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nHandle</a></dt>
+<dd><p>A handle to a memory block returned from <a href="/pages/allochglobal.html">AllocHGlobal</a>.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nNumberOfBytes</a></dt>
+<dd><p>The new size of the memory block.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nFlags (optional)</a></dt>
+<dd><p>default = GMEM_ZEROINIT<br />
+<br />
+The reallocation options.<br />
+<br />
+If GMEM_MODIFY is specified, the function modifies the attributes of the memory object only (the <em>nNumberOfBytes</em> parameter is ignored.) Otherwise, the function reallocates the memory object. <br />
+<br />
+You can optionally combine GMEM_MODIFY with the following value.</p>
+<table>
+<tr><th style="width: 70px;">Flag</th><th>Description</th></tr>
+<tr><td>GMEM_MOVEABLE </td><td>Allocates movable memory.<br />
+<br />
+If the memory is a locked GMEM_MOVEABLE memory block or a GMEM_FIXED memory block and this flag is not specified, the memory can only be reallocated in place.</td></tr>
+</table><p><br />
+If this parameter does not specify GMEM_MODIFY, you can use the following value.</p>
+<table>
+<tr><th style="width: 70px;">Flag</th><th>Description</th></tr>
+<tr><td>GMEM_ZEROINIT</td><td>Causes the additional memory contents to be initialized to zero if the memory object is growing in size.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>A handle or a pointer to the allocated memory area.</p>
+
+<h2>Remarks</h2>
+<p>If ReAllocHGlobal reallocates a movable object, the return value is a handle to the memory object. To convert the handle to a pointer, use the <a href="/pages/lockhglobal.html">LockHGlobal</a> function.<br />
+<br />
+If ReAllocHGlobal reallocates a fixed object, the value of the handle returned is the address of the first byte of the memory block.<br />
+<br />
+If ReAllocHGlobal fails, the original memory is not freed, and the original handle and pointer are still valid.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/allochglobal.html">AllocHGlobal</a><br />
+<a href="/pages/allocmem.html">AllocMem</a><br />
+<a href="/pages/allocmemto.html">AllocMemTo</a><br />
+<a href="/pages/amemblocks.html">AMemBlocks</a><br />
+<a href="/pages/compactmem.html">CompactMem</a><br />
+<a href="/pages/freehglobal.html">FreeHGlobal</a><br />
+<a href="/pages/freemem.html">FreeMem</a><br />
+<a href="/pages/freepmem.html">FreePMem</a><br />
+<a href="/pages/freerefarray.html">FreeRefArray</a><br />
+<a href="/pages/lockhglobal.html">LockHGlobal</a><br />
+<a href="/pages/reallocmem.html">ReAllocMem</a><br />
+<a href="/pages/sizeofmem.html">SizeOfMem</a><br />
+<a href="/pages/unlockhglobal.html">UnlockHGlobal</a><br />
+<a href="/pages/validatemem.html">ValidateMem</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa366590(VS.85).aspx">GlobalReAlloc</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

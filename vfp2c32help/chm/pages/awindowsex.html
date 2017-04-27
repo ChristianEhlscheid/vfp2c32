@@ -1,0 +1,93 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>AWindowsEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">AWindowsEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about windows into an array.</p>
+
+<div class="block"><pre>AWindowsEx(<a href="#p1">cArrayName</a>, <a href="#p2">cFlags</a>, <a href="#p3">nType</a> [, <a href="#p4">nParam</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1"></a></dt>
+<dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cFlags (additive)</a></dt>
+<dd><p>The position of the character determines the column position in the resulting array<br />
+</p>
+<table>
+<tr><th style="width: 60px;">Char</th><th>Information</th></tr>
+<tr><td>W</td><td>HWND</td></tr>
+<tr><td>C</td><td>Class</td></tr>
+<tr><td>T</td><td>Text</td></tr>
+<tr><td>S</td><td>Style</td></tr>
+<tr><td>E</td><td>ExStyle</td></tr>
+<tr><td>H</td><td>HInstance</td></tr>
+<tr><td>P</td><td>HWND of parent window</td></tr>
+<tr><td>D</td><td>Userdata</td></tr>
+<tr><td>I</td><td>ID</td></tr>
+<tr><td>R</td><td>ThreadID</td></tr>
+<tr><td>O</td><td>ProcessID</td></tr>
+<tr><td>V</td><td>Visible</td></tr>
+<tr><td>N</td><td>Iconic</td></tr>
+<tr><td>M</td><td>Maximized</td></tr>
+<tr><td>U</td><td>Unicode</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p3">nType</a></dt>
+<dd><p>One of the following values.</p>
+<table class="constlist">
+<tr><th style="width: 20%;">Type</th><th>Description</th></tr>
+<tr><td>AWINDOWS_TOPLEVEL</td><td>Returns top level windows.</td></tr>
+<tr><td>AWINDOWS_CHILD</td><td>Returns child windows of  the window passed in nParam.</td></tr>
+<tr><td>AWINDOWS_THREAD</td><td>Returns windows owned by the thread passed in nParam.</td></tr>
+<tr><td>AWINDOWS_DESKTOP</td><td>Returns windows contained in the desktop passed in nParam.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p4">nParam (optional)</a></dt>
+<dd><p>Depending on the nType parameter this parameter should be on of the following values.</p>
+<table>
+<tr><th style="width: 20%;">Type</th><th>Meaning of this parameter</th></tr>
+<tr><td>AWINDOWS_TOPLEVEL</td><td>Don't pass this parameter.</td></tr>
+<tr><td>AWINDOWS_CHILD</td><td>A window handle for which to retrieve the child windows.</td></tr>
+<tr><td>AWINDOWS_THREAD</td><td>A thread handle for which to retrieve the owned windows.</td></tr>
+<tr><td>AWINDOWS_DESKTOP</td><td>A desktop handle for which to retrieve the contained windows.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>The number of windows.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/awindowprops.html">AWindowProps</a><br />
+<a href="/pages/awindows.html">AWindows</a><br />
+<a href="/pages/centerwindowex.html">CenterWindowEx</a><br />
+<a href="/pages/getwindowrectex.html">GetWindowRectEx</a><br />
+<a href="/pages/getwindowtextex.html">GetWindowTextEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms633497(VS.85).aspx">EnumWindows</a> if nType = AWINDOWS_TOPLEVEL<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633494(VS.85).aspx">EnumChildWindows</a> if nType = AWINDOWS_CHILD<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633495(VS.85).aspx">EnumThreadWindows</a> if nType = AWINDOWS_THREAD<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682615(VS.85).aspx">EnumDesktopWindows</a> if nType = AWINDOWS_DESKTOP<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633582(VS.85).aspx">GetClassName</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633520(VS.85).aspx">GetWindowText</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633584(VS.85).aspx">GetWindowLong</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633510(VS.85).aspx">GetParent</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633522(VS.85).aspx">GetWindowThreadProcessId</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633530(VS.85).aspx">IsWindowVisible</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633527(VS.85).aspx">IsIconic</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633531(VS.85).aspx">IsZoomed</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633529(VS.85).aspx">IsWindowUnicode</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

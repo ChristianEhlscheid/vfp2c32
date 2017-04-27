@@ -1,0 +1,73 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>MarshalCursor2CArray</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">MarshalCursor2CArray</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Converts a VFP cursor  into a C array.</p>
+
+<div class="block"><pre>MarshalCursor2CArray(<a href="#p1">nAddress</a>, <a href="#p2">cCursorAndFieldNames</a>, <a href="#p3">nType</a> [, <a href="#p4">nLength | <a href="#p5">nCodePage</a></a> [, nCodePage]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nAddress</a></dt>
+<dd><p>The base address of the C array.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cCursorAndFieldNames</a></dt>
+<dd><p>The cursor and fieldnames e.g. "cursorname.fieldname, fieldname2".</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nType</a></dt>
+<dd><p>The C datatype of the array.<br />
+</p>
+<table class="constlist">
+<caption>One of the following values.</caption>
+<tr><th style="width: 40px">Type</th><th>C Array declaration</th></tr>
+<tr><td>CTYPE_SHORT</td><td>short array[]</td></tr>
+<tr><td>CTYPE_USHORT</td><td>unsigned short array[]</td></tr>
+<tr><td>CTYPE_INT</td><td>int array[]</td></tr>
+<tr><td>CTYPE_UINT</td><td>unsigned int array[]</td></tr>
+<tr><td>CTYPE_FLOAT</td><td>float array[]</td></tr>
+<tr><td>CTYPE_DOUBLE</td><td>double array[]</td></tr>
+<tr><td>CTYPE_BOOL</td><td>BOOL array[]</td></tr>
+<tr><td>CTYPE_CSTRING</td><td>char* array[]</td></tr>
+<tr><td>CTYPE_WSTRING</td><td>wchar_t* array[]</td></tr>
+<tr><td>CTYPE_CHARARRAY</td><td>char array[][]</td></tr>
+<tr><td>CTYPE_WCHARARRAY</td><td>wchar_t array[][]</td></tr>
+<tr><td>CTYPE_INT64</td><td>__int64 array[]</td></tr>
+<tr><td>CTYPE_UINT64</td><td>unsigned __int64 array[]</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p4">nLength | nCodePage (optional)</a></dt>
+<dd><p>Either the length of a character array or the codepage to use for ansi to unicode conversion.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nCodePage (optional)</a></dt>
+<dd><p>The codepage to use for ansi to unicode conversion.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>Always .T.</p>
+
+<h2>Remarks</h2>
+<p>The fields of the cursor must be of proper type or NULL otherwise "invalid arguments" error is risen.<br />
+<br />
+NULL values are ignored and the value at the current array index is not changed.<br />
+For character type pointer arrays, CTYPE_CSTRING and CTYPE_WSTRING a NULL value results in a 0 pointer.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/marshalcarray2cursor.html">MarshalCArray2Cursor</a><br />
+<a href="/pages/marshalcarray2foxarray.html">MarshalCArray2FoxArray</a><br />
+<a href="/pages/marshalfoxarray2carray.html">MarshalFoxArray2CArray</a><br />
+</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

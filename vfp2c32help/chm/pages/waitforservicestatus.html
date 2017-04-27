@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>WaitForServiceStatus</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">WaitForServiceStatus</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Monitors a windows service to reach a specified status.</p>
+
+<div class="block"><pre>WaitForServiceStatus(<a href="#p1">cServiceName | nServiceHandle</a>, <a href="#p2">nStatus</a> [, <a href="#p3">nTimeout</a> [, <a href="#p4">cServer</a> [, <a href="#p5">cDatabase</a>]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cServiceName | nServiceHandle</a></dt>
+<dd><p>Either the name of the service or a numeric handle returned from the <a href="/pages/openservice.html">OpenService</a> function.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nStatus</a></dt>
+<dd><p>The service status to wait for.<br />
+</p>
+<table class="constlist">
+<caption>One of the following values.</caption>
+<tr><th style="width: 20%;">Status</th><th>Description</th></tr>
+<tr><td>SERVICE_STOPPED</td><td>The service is not running.</td></tr>
+<tr><td>SERVICE_START_PENDING</td><td>The service is starting.</td></tr>
+<tr><td>SERVICE_STOP_PENDING</td><td>The service is stopping.</td></tr>
+<tr><td>SERVICE_RUNNING</td><td>The service is running.</td></tr>
+<tr><td>SERVICE_CONTINUE_PENDING</td><td>The service continue is pending.</td></tr>
+<tr><td>SERVICE_PAUSE_PENDING</td><td>The service pause is pending.</td></tr>
+<tr><td>SERVICE_PAUSED</td><td>The service is paused.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p3">nTimeout (optional)</a></dt>
+<dd><p>Maximum time in seconds to wait while the service is in not in the requested state.<br />
+<br />
+If you pass 0 as the timout value the function checks the status once and then returns immediately.<br />
+<br />
+If you omit this parameter or pass NULL the timeout is set to the default timeout reported by the service.<br />
+See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms685992(VS.85).aspx">SERVICE_STATUS_PROCESS</a> structure's "dwWaitHint" member.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cServer (optional)</a></dt>
+<dd><p>The server name on which the service is running.<br />
+See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cDatabase (optional)</a></dt>
+<dd><p>The database under which the service is registered.<br />
+See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>1 if the service is in the requested state within the timeout period, 0 if not.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adependentservices.html">ADependentServices</a><br />
+<a href="/pages/aserviceconfig.html">AServiceConfig</a><br />
+<a href="/pages/aservices.html">AServices</a><br />
+<a href="/pages/aservicestatus.html">AServiceStatus</a><br />
+<a href="/pages/closeservicehandle.html">CloseServiceHandle</a><br />
+<a href="/pages/continueservice.html">ContinueService</a><br />
+<a href="/pages/controlservice.html">ControlService</a><br />
+<a href="/pages/createservice.html">CreateService</a><br />
+<a href="/pages/openservice.html">OpenService</a><br />
+<a href="/pages/pauseservice.html">PauseService</a><br />
+<a href="/pages/startservice.html">StartService</a><br />
+<a href="/pages/stopservice.html">StopService</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms684939(VS.85).aspx">QueryServiceStatus</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684330(VS.85).aspx">OpenService</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

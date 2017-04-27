@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ExpandEnvironmentStrings</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ExpandEnvironmentStrings</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Expands environment variables in the passed in string.</p>
+
+<div class="block"><pre>ExpandEnvironmentStrings(<a href="#p1">cEnvironmentString</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cEnvironmentString</a></dt>
+<dd><p>A string that contains one or more environment-variable strings in the form: %variableName%.<br />
+For each such reference, the %variableName% portion is replaced with the current value of that environment variable. <br />
+<br />
+Case is ignored when looking up the environment-variable name. If the name is not found, the %variableName% portion is left unexpanded.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The expanded environment string.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adesktoparea.html">ADesktopArea</a><br />
+<a href="/pages/adesktops.html">ADesktops</a><br />
+<a href="/pages/adisplaydevices.html">ADisplayDevices</a><br />
+<a href="/pages/aresolutions.html">AResolutions</a><br />
+<a href="/pages/awindowstations.html">AWindowStations</a><br />
+<a href="/pages/getlocaleinfoex.html">GetLocaleInfoEx</a><br />
+<a href="/pages/getsystemdirectory.html">GetSystemDirectory</a><br />
+<a href="/pages/getwindowsdirectory.html">GetWindowsDirectory</a><br />
+<a href="/pages/osex.html">OsEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms724265(VS.85).aspx">ExpandEnvironmentStrings</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

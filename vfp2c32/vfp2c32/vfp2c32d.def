@@ -1,0 +1,3 @@
+LIBRARY	vfp2c32d.fll
+EXPORTS
+GetIDispatch

@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>SHSpecialFolder</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">SHSpecialFolder</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Retrieves the path of a special folder.</p>
+
+<div class="block"><pre>SHSpecialFolder(<a href="#p1">nFolderID</a>, <a href="#p2">@cFolder</a> [, <a href="#p3">bCreateFolder</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nFolderId (additive)</a></dt>
+<dd><p>A CSIDL that identifies the folder of interest.<br />
+</p>
+<table class="constlist">
+<caption>One of the following values.</caption>
+<tr><th>Constant</th><th>Description</th></tr>
+<tr><td>CSIDL_ADMINTOOLS</td><td>The file system directory that is used to store administrative tools for an individual user. The MMC will save customized consoles to this directory, and it will roam with the user.</td></tr>
+<tr><td>CSIDL_ALTSTARTUP </td><td>The file system directory that corresponds to the user's nonlocalized Startup program group. This value is recognized in Windows Vista for backward compatibility, but the folder itself no longer exists.</td></tr> 
+<tr><td>CSIDL_APPDATA</td><td>The file system directory that serves as a common repository for application-specific data. A typical path is C:\Documents and Settings\username\Application Data. This CSIDL is supported by the redistributable Shfolder.dll for systems that do not have the Microsoft Internet Explorer 4.0 integrated Shell installed.</td></tr> 
+<tr><td>CSIDL_BITBUCKET</td><td>The virtual folder that contains the objects in the user's Recycle Bin.</td></tr> 
+<tr><td>CSIDL_CDBURN_AREA</td><td>The file system directory that acts as a staging area for files waiting to be written to a CD. A typical path is C:\Documents and Settings\username\Local Settings\Application Data\Microsoft\CD Burning.</td></tr> 
+<tr><td>CSIDL_COMMON_ADMINTOOLS</td><td>The file system directory that contains administrative tools for all users of the computer.</td></tr> 
+<tr><td>CSIDL_COMMON_ALTSTARTUP</td><td>The file system directory that corresponds to the nonlocalized Startup program group for all users. This value is recognized in Windows Vista for backward compatibility, but the folder itself no longer exists.</td></tr> 
+<tr><td>CSIDL_COMMON_APPDATA</td><td>The file system directory that contains application data for all users. A typical path is C:\Documents and Settings\All Users\Application Data. This folder is used for application data that is not user specific. For example, an application can store a spell-check dictionary, a database of clip art, or a log file in the CSIDL_COMMON_APPDATA folder. This information will not roam and is available to anyone using the computer.</td></tr> 
+<tr><td>CSIDL_COMMON_DESKTOPDIRECTORY</td><td>The file system directory that contains files and folders that appear on the desktop for all users. A typical path is C:\Documents and Settings\All Users\Desktop.</td></tr> 
+<tr><td>CSIDL_COMMON_DOCUMENTS</td><td>The file system directory that contains documents that are common to all users. A typical path is C:\Documents and Settings\All Users\Documents.</td></tr> 
+<tr><td>CSIDL_COMMON_FAVORITES</td><td>The file system directory that serves as a common repository for favorite items common to all users.</td></tr> 
+<tr><td>CSIDL_COMMON_MUSIC</td><td>The file system directory that serves as a repository for music files common to all users. A typical path is C:\Documents and Settings\All Users\Documents\My Music.</td></tr> 
+<tr><td>CSIDL_COMMON_OEM_LINKS</td><td>This value is recognized in Windows Vista for backward compatibility, but the folder itself is no longer used.</td></tr> 
+<tr><td>CSIDL_COMMON_PICTURES</td><td>The file system directory that serves as a repository for image files common to all users. A typical path is C:\Documents and Settings\All Users\Documents\My Pictures.</td></tr> 
+<tr><td>CSIDL_COMMON_PROGRAMS</td><td>The file system directory that contains the directories for the common program groups that appear on the Start menu for all users. A typical path is C:\Documents and Settings\All Users\Start Menu\Programs.</td></tr>
+<tr><td>CSIDL_COMMON_STARTMENU</td><td>The file system directory that contains the programs and folders that appear on the Start menu for all users. A typical path is C:\Documents and Settings\All Users\Start Menu.</td></tr>
+<tr><td>CSIDL_COMMON_STARTUP</td><td>The file system directory that contains the programs that appear in the Startup folder for all users. A typical path is C:\Documents and Settings\All Users\Start Menu\Programs\Startup.</td></tr>
+<tr><td>CSIDL_COMMON_TEMPLATES</td><td>The file system directory that contains the templates that are available to all users. A typical path is C:\Documents and Settings\All Users\Templates.</td></tr>
+<tr><td>CSIDL_COMMON_VIDEO</td><td>The file system directory that serves as a repository for video files common to all users. A typical path is C:\Documents and Settings\All Users\Documents\My Videos.</td></tr>
+<tr><td>CSIDL_COMPUTERSNEARME</td><td>The folder that represents other computers in your workgroup.</td></tr>
+<tr><td>CSIDL_CONNECTIONS</td><td>The virtual folder that represents Network Connections, that contains network and dial-up connections.</td></tr>
+<tr><td>CSIDL_CONTROLS</td><td>The virtual folder that contains icons for the Control Panel applications.</td></tr>
+<tr><td>CSIDL_COOKIES</td><td>The file system directory that serves as a common repository for Internet cookies. A typical path is C:\Documents and Settings\username\Cookies.</td></tr>
+<tr><td>CSIDL_DESKTOP</td><td>The virtual folder that represents the Windows desktop, the root of the namespace.</td></tr>
+<tr><td>CSIDL_DESKTOPDIRECTORY</td><td>The file system directory used to physically store file objects on the desktop (not to be confused with the desktop folder itself). A typical path is C:\Documents and Settings\username\Desktop.</td></tr>
+<tr><td>CSIDL_DRIVES</td><td>The virtual folder that represents My Computer, containing everything on the local computer: storage devices, printers, and Control Panel. The folder can also contain mapped network drives.</td></tr>
+<tr><td>CSIDL_FAVORITES</td><td>The file system directory that serves as a common repository for the user's favorite items. A typical path is C:\Documents and Settings\username\Favorites.</td></tr>
+<tr><td>CSIDL_FONTS</td><td>A virtual folder that contains fonts. A typical path is C:\Windows\Fonts.</td></tr>
+<tr><td>CSIDL_HISTORY</td><td>The file system directory that serves as a common repository for Internet history items.</td></tr>
+<tr><td>CSIDL_INTERNET</td><td>A virtual folder for Internet Explorer.</td></tr>
+<tr><td>CSIDL_INTERNET_CACHE</td><td>The file system directory that serves as a common repository for temporary Internet files. A typical path is C:\Documents and Settings\username\Local Settings\Temporary Internet Files.</td></tr>
+<tr><td>CSIDL_LOCAL_APPDATA</td><td>The file system directory that serves as a data repository for local (nonroaming) applications. A typical path is C:\Documents and Settings\username\Local Settings\Application Data.</td></tr>
+<tr><td>CSIDL_MYDOCUMENTS</td><td>The virtual folder that represents the My Documents desktop item. This value is equivalent to CSIDL_PERSONAL.</td></tr>
+<tr><td>CSIDL_MYMUSIC</td><td>The file system directory that serves as a common repository for music files. A typical path is C:\Documents and Settings\User\My Documents\My Music.</td></tr>
+<tr><td>CSIDL_MYPICTURES</td><td>The file system directory that serves as a common repository for image files. A typical path is C:\Documents and Settings\username\My Documents\My Pictures.</td></tr>
+<tr><td>CSIDL_MYVIDEO</td><td>The file system directory that serves as a common repository for video files. A typical path is C:\Documents and Settings\username\My Documents\My Videos.</td></tr>
+<tr><td>CSIDL_NETHOOD</td><td>A file system directory that contains the link objects that may exist in the My Network Places virtual folder. It is not the same as CSIDL_NETWORK, which represents the network namespace root. A typical path is C:\Documents and Settings\username\NetHood.</td></tr>
+<tr><td>CSIDL_NETWORK</td><td>A virtual folder that represents Network Neighborhood, the root of the network namespace hierarchy.</td></tr>
+<tr><td>CSIDL_PERSONAL</td><td>The virtual folder that represents the My Documents desktop item. This is equivalent to CSIDL_MYDOCUMENTS.<br />
+Previous to Version 6.0. The file system directory used to physically store a user's common repository of documents. A typical path is C:\Documents and Settings\username\My Documents. This should be distinguished from the virtual My Documents folder in the namespace. To access that virtual folder, use SHGetFolderLocation, which returns the ITEMIDLIST for the virtual location, or refer to the technique described in Managing the File System.</td></tr>
+<tr><td>CSIDL_PRINTERS</td><td>The virtual folder that contains installed printers.</td></tr>
+<tr><td>CSIDL_PRINTHOOD</td><td>The file system directory that contains the link objects that can exist in the Printers virtual folder. A typical path is C:\Documents and Settings\username\PrintHood.</td></tr>
+<tr><td>CSIDL_PROFILE</td><td>The user's profile folder. A typical path is C:\Users\username. Applications should not create files or folders at this level; they should put their data under the locations referred to by CSIDL_APPDATA or CSIDL_LOCAL_APPDATA. However, if you are creating a new Known Folder the profile root referred to by CSIDL_PROFILE is appropriate.</td></tr>
+<tr><td>CSIDL_PROGRAM_FILES</td><td>The Program Files folder. A typical path is C:\Program Files.</td></tr>
+<tr><td>CSIDL_PROGRAM_FILES_COMMON</td><td>A folder for components that are shared across applications. A typical path is C:\Program Files\Common. Valid only for Windows XP.</td></tr>
+<tr><td>CSIDL_PROGRAMS</td><td>The file system directory that contains the user's program groups (which are themselves file system directories). A typical path is C:\Documents and Settings\username\Start Menu\Programs.</td></tr>
+<tr><td>CSIDL_RECENT</td><td>The file system directory that contains shortcuts to the user's most recently used documents. A typical path is C:\Documents and Settings\username\My Recent Documents. To create a shortcut in this folder, use SHAddToRecentDocs. In addition to creating the shortcut, this function updates the Shell's list of recent documents and adds the shortcut to the My Recent Documents submenu of the Start menu.</td></tr>
+<tr><td>CSIDL_RESOURCES</td><td>Windows Vista. The file system directory that contains resource data. A typical path is C:\Windows\Resources.</td></tr>
+<tr><td>CSIDL_SENDTO</td><td>The file system directory that contains Send To menu items. A typical path is C:\Documents and Settings\username\SendTo.</td></tr>
+<tr><td>CSIDL_STARTMENU</td><td>The file system directory that contains Start menu items. A typical path is C:\Documents and Settings\username\Start Menu.</td></tr>
+<tr><td>CSIDL_STARTUP</td><td>The file system directory that corresponds to the user's Startup program group. The system starts these programs whenever any user logs on. A typical path is C:\Documents and Settings\username\Start Menu\Programs\Startup.</td></tr>
+<tr><td>CSIDL_SYSTEM</td><td>The Windows System folder. A typical path is C:\Windows\System32.</td></tr>
+<tr><td>CSIDL_TEMPLATES</td><td>The file system directory that serves as a common repository for document templates. A typical path is C:\Documents and Settings\username\Templates.</td></tr>
+<tr><td>CSIDL_WINDOWS</td><td>The Windows directory or SYSROOT. This corresponds to the %windir% or %SYSTEMROOT% environment variables. A typical path is C:\Windows.</td></tr>
+<tr><td></td><td></td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">@cFolder</a></dt>
+<dd><p>A variable by reference in which the requested folder path is stored.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">bCreateFolder (optional)</a></dt>
+<dd><p>default = .F.<br />
+<br />
+Indicates whether the folder should be created if it does not already exist.<br />
+If this value is .T., the folder is created.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>.T. if the operation was successful, .F. otherwise.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/shcopyfiles.html">SHCopyFiles</a><br />
+<a href="/pages/shdeletefiles.html">SHDeleteFiles</a><br />
+<a href="/pages/shmovefiles.html">SHMoveFiles</a><br />
+<a href="/pages/shrenamefiles.html">SHRenameFiles</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/bb762204(VS.85).aspx">SHGetSpecialFolderPath</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

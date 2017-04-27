@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>VFP2C32Front</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>VFP2C32Front</h1>
+</div>
+<div id="content">
+
+<h2>Introduction</h2>
+
+<p>The VFP2C32Front application analyses C code snippets and creates VFP classes that emulate the 
+supplied type definitions.<br />
+The resulting classes can be used like normal VFP classes, this allows you to program in a clean object oriented style and easily port C to VFP code.<br /></p>
+
+<h2>General usage</h2>
+
+<p>To convert C types to VFP copy the sourcecode of these types into the editbox in the <strong>Input</strong> page.<br />
+Figure 1 shows an example with the <a href="http://msdn.microsoft.com/en-us/library/ms686331(v=vs.85).aspx">STARTUPINFO</a> structure.<br /><br />
+<img title="Figure 1" src="/images/vfp2cfront1.jpg" /></p>
+
+<p>In the next step click the <strong>Parse Input</strong> button, if all went well you should see the parsed type in the <strong>Parsed types</strong> list box,<br />
+like show in Figure 2.<br /><br />
+<img title="Figure 2" src="/images/vfp2cfront2.jpg" /></p>
+
+<p>Now you have to configure how the type should be translated.<br />
+The options that control how the type is translated are located at the top as shown in Figure3.<br />
+Have a look at the topic <a href="/pages/static/VFP2C32Front_Options.html">Translation options</a> for an explanation on how these options affect the generated code.<br /><br />
+<img  title="Figure 3" src="/images/vfp2cfront3.jpg" /></p>
+
+<p>Finally hit the <strong>Generate wrapper</strong> button and the generated VFP code is displayed in the <strong>Output</strong> page, as shown in Figure 4.<br /><br />
+<img title="Figure 4"  src="/images/vfp2cfront4.jpg" /></p>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

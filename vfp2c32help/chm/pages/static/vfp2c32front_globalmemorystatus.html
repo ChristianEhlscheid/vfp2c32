@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>VFP2C32Front - GlobalMemoryStatusEx</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>VFP2C32Front - GlobalMemoryStatusEx</h1>
+</div>
+<div id="content">
+
+<h2>GlobalMemoryStatusEx</h2>
+<p>The <a href="http://msdn.microsoft.com/en-us/library/aa366589(v=vs.85).aspx">GlobalMemoryStatusEx</a> function expects a pointer to a 
+<a href="http://msdn.microsoft.com/en-us/library/aa366770(v=vs.85).aspx">MEMORYSTATUSEX</a> structure.<br />
+The application is responsible to allocate and free the required memory for the structure, the default <a href="/pages/static/VFP2C32Front_Options.html">Translation options</a> are used.<br />
+The are a few modifications done to the created code, see comments in the example below.</p>
+
+<div class="codeheader"><a onclick="CopyCode('code_34V1B12VF')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_34V1B12VF">
+LOCAL loMemStatus
+m.loMemStatus = CREATEOBJECT('MEMORYSTATUSEX')
+? GlobalMemoryStatusEx(m.loMemStatus.Address)
+? 'Memory Load', m.loMemStatus.dwMemoryLoad
+? 'Physical memory', m.loMemStatus.ullTotalPhys
+
+FUNCTION GlobalMemoryStatusEx(lpBuffer)
+	&& BOOL WINAPI GlobalMemoryStatusEx( __inout  LPMEMORYSTATUSEX lpBuffer)
+	DECLARE INTEGER GlobalMemoryStatusEx IN WIN32API INTEGER 
+	RETURN GlobalMemoryStatusEx(m.lpBuffer)
+ENDFUNC
+
+DEFINE CLASS MEMORYSTATUSEX AS Exception
+
+	Address = 0
+	SizeOf = 64
+	Name = "MEMORYSTATUSEX"
+	&& structure fields
+	dwLength = .F.
+	dwMemoryLoad = .F.
+	ullTotalPhys = .F.
+	ullAvailPhys = .F.
+	ullTotalPageFile = .F.
+	ullAvailPageFile = .F.
+	ullTotalVirtual = .F.
+	ullAvailVirtual = .F.
+	ullAvailExtendedVirtual = .F.
+
+	PROCEDURE Init()
+		THIS.Address = AllocMem(THIS.SizeOf)
+		THIS.dwLength = THIS.SizeOf && manually added, this member needs to be set to the size of the structure
+	ENDPROC
+
+	PROCEDURE Destroy()
+		FreeMem(THIS.Address)
+	ENDPROC
+
+	PROCEDURE dwLength_Access()
+		RETURN ReadUInt(THIS.Address)
+	ENDPROC
+
+	PROCEDURE dwLength_Assign(lnNewVal)
+		WriteUInt(THIS.Address,lnNewVal)
+	ENDPROC
+
+	PROCEDURE dwMemoryLoad_Access()
+		RETURN ReadUInt(THIS.Address+4)
+	ENDPROC
+
+	PROCEDURE ullTotalPhys_Access()
+		RETURN ReadUInt64(THIS.Address+8, 4) && changed to return value as numeric value
+	ENDPROC
+
+	PROCEDURE ullAvailPhys_Access()
+		RETURN ReadUInt64(THIS.Address+16, 4)
+	ENDPROC
+
+	PROCEDURE ullTotalPageFile_Access()
+		RETURN ReadUInt64(THIS.Address+24, 4)
+	ENDPROC
+
+	PROCEDURE ullAvailPageFile_Access()
+		RETURN ReadUInt64(THIS.Address+32, 4)
+	ENDPROC
+
+	PROCEDURE ullTotalVirtual_Access()
+		RETURN ReadUInt64(THIS.Address+40, 4)
+	ENDPROC
+
+	PROCEDURE ullAvailVirtual_Access()
+		RETURN ReadUInt64(THIS.Address+48, 4)
+	ENDPROC
+
+	PROCEDURE ullAvailExtendedVirtual_Access()
+		RETURN ReadUInt64(THIS.Address+56, 4)
+	ENDPROC
+
+ENDDEFINE
+</pre></div>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

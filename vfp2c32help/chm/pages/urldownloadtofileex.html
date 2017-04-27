@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>UrlDownloadToFileEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">UrlDownloadToFileEx</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Downloads a resource from the Internet and saves them to a file.</p>
+
+<div class="block"><pre>UrlDownloadToFileEx(<a href="#p1">cUrl</a>, <a href="#p2">cLocalFile</a> [, <a href="#p3">cCallback</a> [, <a href="#p4">bAsyncronous</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cUrl</a></dt>
+<dd><p>The url to download, the protocal prefix (e.g. http://, ftp:// ) has to be included!</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cLocalFile</a></dt>
+<dd><p>The download location - a valid local filename.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cCallback (optional)</a></dt>
+<dd><p>The callback function to call to report progress during the download.<br />
+<br />
+The callback function must have the following prototype:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION UrlProgress
+LPARAMETERS ulProgress, ulProgressMax, ulStatusCode
+ENDFUNC
+</pre></div>
+<p>parameter meanings:<br />
+ulProgress = bytes downloaded<br />
+ulProgressMax = size of resource downloaded<br />
+ulStatusCode = reason of callback<br />
+<br />
+ulStatusCode can be one of the following:</p>
+<table>
+<tr><th>Value</th><th>Meaning</th></tr>
+<tr><td>BINDSTATUS_DOWNLOADINGDATA</td><td>A new chunk of data has arrived.</td></tr>
+<tr><td>BINDSTATUS_FINDINGRESOURCE</td><td>The url gets resolved.</td></tr>
+<tr><td>BINDSTATUS_CONNECTING</td><td>Connecting.</td></tr>
+<tr><td>BINDSTATUS_REDIRECTING</td><td>Redirecting.</td></tr>
+<tr><td>BINDSTATUS_BEGINDOWNLOADDATA</td><td>The download begins.</td></tr>
+<tr><td>BINDSTATUS_ENDDOWNLOADDATA</td><td>The download has finished, file is now in the local IE cache.</td></tr>
+<tr><td>BINDSTATUS_DOWNLOAD_FINISHED</td><td>The download is now ready to be read from the supplied file destination.</td></tr>
+<tr><td>BINDSTATUS_DOWNLOAD_ABORTED</td><td>The download was aborted (through <a href="/pages/aborturldownloadtofileex.html">AbortUrlDownloadToFileEx</a> or release of the FLL).</td></tr>
+<tr><td>BINDSTATUS_USINGCACHEDCOPY </td><td>The file is found in the IE cache and is not redownloaded.</td></tr>
+<tr><td>BINDSTATUS_SENDINGREQUEST</td><td>The file is requested.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p4">bAsyncronous (optional)</a></dt>
+<dd><p>default = .F.<br />
+<br />
+If .T. is passed the download is executed asyncronous in a seperate thread, the function returns immediately.<br />
+Otherwise the download is executed syncronously and the function returns when the download has finished.<br />
+<br />
+Progress callback works for both types.<br />
+<br />
+To abort an asyncronous download you have to call <a href="/pages/aborturldownloadtofileex.html">AbortUrlDownloadToFileEx</a> with the numeric handle value returned from UrlDownloadToFileEx.<br />
+To abort a syncronous download you have to return .F. from the callback function.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>If the download is syncronous the function returns the result from the UrlDownloadToFile API (HRESULT | &lt; 0  failure | &gt; 0 success).<br />
+If the download is asyncronous the function returns an internal handle representing the thread which executes the download.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aborturldownloadtofileex.html">AbortUrlDownloadToFileEx</a><br />
+<a href="/pages/aipaddresses.html">AIpAddresses</a><br />
+<a href="/pages/anetfiles.html">ANetFiles</a><br />
+<a href="/pages/anetservers.html">ANetServers</a><br />
+<a href="/pages/getservertime.html">GetServerTime</a><br />
+<a href="/pages/icmpping.html">IcmpPing</a><br />
+<a href="/pages/ip2macaddress.html">Ip2MacAddress</a><br />
+<a href="/pages/resolvehosttoip.html">ResolveHostToIp</a><br />
+<a href="/pages/synctosntpserver.html">SyncToSNTPServer</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms775123(VS.85).aspx">URLDownloadToFile</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

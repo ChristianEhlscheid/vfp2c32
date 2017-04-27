@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="cparser"
+	ProjectGUID="{F48F8780-666A-4038-AF40-862B0DE912DE}"
+	RootNamespace="cparser"
+	Keyword="Win32Proj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="2"
+			CharacterSet="2"
+			ReferencesPath="C:\Programme\GnuWin32\bin">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;CPARSER_EXPORTS"
+				StringPooling="TRUE"
+				MinimalRebuild="TRUE"
+				ExceptionHandling="FALSE"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="5"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="4"
+				CallingConvention="0"
+				CompileAs="1"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				OutputFile="$(OutDir)/cparser.dll"
+				LinkIncremental="0"
+				ModuleDefinitionFile="cparser.def"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/cparser.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/cparser.lib"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				CommandLine="copy &quot;$(TargetPath)&quot; &quot;D:\Stuff\vfp2c32front\$(TargetFileName)&quot;
+copy &quot;$(TargetPath)&quot; &quot;C:\VFP2C\$(TargetFileName)&quot;
+"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="2"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;CPARSER_EXPORTS"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="3"
+				CompileAs="1"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				OutputFile="$(OutDir)/cparser.dll"
+				LinkIncremental="1"
+				ModuleDefinitionFile="cparser.def"
+				GenerateDebugInformation="FALSE"
+				SubSystem="2"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				ImportLibrary="$(OutDir)/cparser.lib"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				CommandLine="copy &quot;$(TargetPath)&quot; &quot;D:\Stuff\vfp2c32front\$(TargetFileName)&quot;
+copy &quot;$(TargetPath)&quot; &quot;C:\VFP2C\$(TargetFileName)&quot;
+"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseDebug|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1">
+			<Tool
+				Name="VCCLCompilerTool"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="DebugTS|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="2"
+			CharacterSet="2"
+			ReferencesPath="C:\Programme\GnuWin32\bin">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;CPARSER_EXPORTS"
+				StringPooling="TRUE"
+				MinimalRebuild="TRUE"
+				ExceptionHandling="FALSE"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="5"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="4"
+				CallingConvention="0"
+				CompileAs="1"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				OutputFile="$(OutDir)/cparser.dll"
+				LinkIncremental="0"
+				ModuleDefinitionFile="cparser.def"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/cparser.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/cparser.lib"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				CommandLine="copy &quot;$(TargetPath)&quot; &quot;D:\Stuff\vfp2c32front\$(TargetFileName)&quot;
+copy &quot;$(TargetPath)&quot; &quot;C:\VFP2C\$(TargetFileName)&quot;
+"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseTS|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="2"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;CPARSER_EXPORTS"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="3"
+				CompileAs="1"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				OutputFile="$(OutDir)/cparser.dll"
+				LinkIncremental="1"
+				ModuleDefinitionFile="cparser.def"
+				GenerateDebugInformation="FALSE"
+				SubSystem="2"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				ImportLibrary="$(OutDir)/cparser.lib"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				CommandLine="copy &quot;$(TargetPath)&quot; &quot;D:\Stuff\vfp2c32front\$(TargetFileName)&quot;
+copy &quot;$(TargetPath)&quot; &quot;C:\VFP2C\$(TargetFileName)&quot;
+"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseDebugTS|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1">
+			<Tool
+				Name="VCCLCompilerTool"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
+			<File
+				RelativePath=".\ccomment.l">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing ccomment.l to lex.cc.c"
+						CommandLine="flex.exe ccomment.l
+"
+						Outputs="lex.cc.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing ccomment.l to lex.cc.c"
+						CommandLine="flex.exe ccomment.l
+"
+						Outputs="lex.cc.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing ccomment.l to lex.cc.c"
+						CommandLine="flex.exe ccomment.l
+"
+						Outputs="lex.cc.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing ccomment.l to lex.cc.c"
+						CommandLine="flex.exe ccomment.l
+"
+						Outputs="lex.cc.c"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\clex.l">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing clex.l to lex.yy.c"
+						CommandLine="flex.exe clex.l
+"
+						Outputs="lex.yy.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing clex.l to lex.yy.c"
+						CommandLine="flex.exe clex.l
+"
+						Outputs="lex.yy.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing clex.l to lex.yy.c"
+						CommandLine="flex.exe clex.l
+"
+						Outputs="lex.yy.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing clex.l to lex.yy.c"
+						CommandLine="flex.exe clex.l
+"
+						Outputs="lex.yy.c"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\cparse.tab.c">
+			</File>
+			<File
+				RelativePath=".\cparse.y">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Generate Bison parser - cparse.y to cparse.tab.c/h"
+						CommandLine="bison cparse.y
+"
+						Outputs="cparse.tab.c, cparse.tab.h"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Generate Bison parser - cparse.y to cparse.tab.c/h"
+						CommandLine="bison cparse.y
+"
+						Outputs="cparse.tab.c, cparse.tab.h"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Generate Bison parser - cparse.y to cparse.tab.c/h"
+						CommandLine="bison cparse.y
+"
+						Outputs="cparse.tab.c, cparse.tab.h"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Generate Bison parser - cparse.y to cparse.tab.c/h"
+						CommandLine="bison cparse.y
+"
+						Outputs="cparse.tab.c, cparse.tab.h"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\cparser.def">
+			</File>
+			<File
+				RelativePath=".\decltree.c">
+			</File>
+			<File
+				RelativePath=".\deflex.l">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing deflex to lex.de.c"
+						CommandLine="flex.exe deflex.l
+"
+						Outputs="lex.de.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing deflex to lex.de.c"
+						CommandLine="flex.exe deflex.l
+"
+						Outputs="lex.de.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing deflex to lex.de.c"
+						CommandLine="flex.exe deflex.l
+"
+						Outputs="lex.de.c"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseTS|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Flexing deflex to lex.de.c"
+						CommandLine="flex.exe deflex.l
+"
+						Outputs="lex.de.c"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\lex.cc.c">
+			</File>
+			<File
+				RelativePath=".\lex.de.c">
+			</File>
+			<File
+				RelativePath=".\lex.yy.c">
+			</File>
+			<File
+				RelativePath=".\main.c">
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
+			<File
+				RelativePath=".\clex.h">
+			</File>
+			<File
+				RelativePath=".\cparse.tab.h">
+			</File>
+			<File
+				RelativePath=".\decltree.h">
+			</File>
+			<File
+				RelativePath=".\standard.h">
+			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
+		</Filter>
+		<File
+			RelativePath=".\todo.txt">
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

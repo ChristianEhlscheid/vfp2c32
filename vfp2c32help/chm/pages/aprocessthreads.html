@@ -1,0 +1,51 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>AProcessThreads</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">AProcessThreads</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about threads of a process into an array.</p>
+
+<div class="block"><pre>AProcessThreads(<a href="#p1">cArrayName</a>, <a href="#p2">nProcessID</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><table>
+<caption>On return the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/ms686735(VS.85).aspx">THREADENTRY32</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>Thread ID</td><td>N</td></tr>
+<tr><td>2</td><td>Owner Process ID</td><td>N</td></tr>
+<tr><td>3</td><td>Base Priority</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">nProcessID</a></dt>
+<dd><p>The process ID of the process for which to enumerate the threads.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of threads.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aheapblocks.html">AHeapBlocks</a><br />
+<a href="/pages/aprocesses.html">AProcesses</a><br />
+<a href="/pages/aprocessheaps.html">AProcessHeaps</a><br />
+<a href="/pages/aprocessmodules.html">AProcessModules</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms682489(VS.85).aspx">CreateToolhelp32SnapShot</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms686728(VS.85).aspx">Thread32First</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms686731(VS.85).aspx">Thread32Next</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

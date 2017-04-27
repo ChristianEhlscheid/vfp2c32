@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ANetFiles</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ANetFiles</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about opened files on a server into an array.</p>
+
+<div class="block"><pre>ANetFiles(<a href="#p1">cArrayName</a>[, <a href="#p2">cServer</a> [, <a href="#p3">cBasepath</a> [, <a href="#p4">cUser</a>]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><table>
+<caption>On return the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/cc247195(PROT.10).aspx">FILE_INFO_3</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>The path of the opened resource.</td><td>C</td></tr>
+<tr><td>2</td><td>A string that specifies which user (on servers that have user-level security) or which computer (on servers that have share-level security) opened the resource.</td><td>C</td></tr>
+<tr><td>3</td><td>A identification number assigned to the resource when it is opened.</td><td>N</td></tr>
+<tr><td>4</td><td>The access permissions associated with the opening application.</td><td>N</td></tr>
+<tr><td>5</td><td>The number of file locks on the file, device, or pipe.</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cServer (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+The DNS or NetBIOS name of the remote server on which the function is to execute. If this parameter is NULL, the local computer is used.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cBasePath (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+A qualifier for the returned information. If this parameter is NULL, all open resources are enumerated. If this parameter is not NULL, the function enumerates only resources that have the value of the basepath parameter as a prefix.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cUser (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+The name of the user. If this parameter is not NULL, its value serves as a qualifier for the enumeration. The files returned are limited to those that have user names matching the qualifier. If this parameter is NULL, no user-name qualifier is used.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of files.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aborturldownloadtofileex.html">AbortUrlDownloadToFileEx</a><br />
+<a href="/pages/aipaddresses.html">AIpAddresses</a><br />
+<a href="/pages/anetservers.html">ANetServers</a><br />
+<a href="/pages/getservertime.html">GetServerTime</a><br />
+<a href="/pages/icmpping.html">IcmpPing</a><br />
+<a href="/pages/ip2macaddress.html">Ip2MacAddress</a><br />
+<a href="/pages/resolvehosttoip.html">ResolveHostToIp</a><br />
+<a href="/pages/synctosntpserver.html">SyncToSNTPServer</a><br />
+<a href="/pages/urldownloadtofileex.html">UrlDownloadToFileEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/bb525378(VS.85).aspx">NetFileEnum</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

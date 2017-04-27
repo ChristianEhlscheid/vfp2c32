@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>RasDialDlgEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">RasDialDlgEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Establishes a RAS connection using a specified phone-book entry and the credentials of the logged-on user.</p>
+
+<div class="block"><pre>RasDialDlgEx([<a href="#p1">cPhonebook</a> [, <a href="#p2">cPhonebookEntry</a> [, <a href="#p3">cPhoneNumber</a> [, <a href="#p4">nSubEntry</a> [, <a href="#p5">nHwndOwner</a>]]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cPhonebook (optional)</a></dt>
+<dd><p>default = empty<br />
+<br />
+If <em>cPhonebook</em> is empty the system default phonebook is used otherwise the it should specify a valid phonebook filename.<br />
+The default phone-book file is the one selected by the user in the User Preferences property sheet of the Dial-Up Networking dialog box.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cPhonebookEntry (optional)</a></dt>
+<dd><p>The name of the phonebookentry to dial.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cPhoneNumber (optional)</a></dt>
+<dd><p>defaul = empty<br />
+<br />
+A string that specifies a phone number that overrides the numbers stored in the phone-book entry. If this parameter is empty, RasDialDlgEx uses the numbers in the phone-book entry.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nSubEntry (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+Specifies the subentry or subentries to dial. If <em>nSubEntry</em> is 0, RasDialDlgEx dials all subentries associated with the specified phone-book entry.<br />
+Otherwise, to indicate the index of the individual subentry to dial, <em>nSubEntry</em> must be a number from one to the number of subentries.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nHwndOwner (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+Specifies the window that owns the modal RasDialDlgEx dialog boxes.<br />
+This parameter can be any valid window handle, or it can be 0 if the dialog box has no owner.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>.T. if a RAS connection was established, .F. if the dialog was aborted.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/abortrasconnectionnotification.html">AbortRasConnectionNotification</a><br />
+<a href="/pages/arasconnections.html">ARasConnections</a><br />
+<a href="/pages/arasdevices.html">ARasDevices</a><br />
+<a href="/pages/arasphonebookentries.html">ARasPhonebookEntries</a><br />
+<a href="/pages/rasclearconnectionstatistics.html">RasClearConnectionStatistics</a><br />
+<a href="/pages/rasconnectionnotificationex.html">RasConnectionNotificationEx</a><br />
+<a href="/pages/rasdialex.html">RasDialEx</a><br />
+<a href="/pages/rasgetconnectstatusex.html">RasGetConnectStatusEx</a><br />
+<a href="/pages/rashangupex.html">RasHangUpEx</a><br />
+<a href="/pages/rasphonebookdlgex.html">RasPhonebookDlgEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa377020(VS.85).aspx">RasDialDlg</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

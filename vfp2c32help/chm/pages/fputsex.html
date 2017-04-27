@@ -1,0 +1,60 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>FPutsEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">FPutsEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Writes a character string, carriage return, and line feed to a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</p>
+
+<div class="block"><pre>FPutsEx(<a href="#p1">nFileHandle</a>, <a href="#p2">cData</a> [, <a href="#p3">nMaxBytesToWrite</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nFileHandle</a></dt>
+<dd><p>A file handle retrieved from <a href="/pages/fcreateex.html">FCreateEx</a>, <a href="/pages/fopenex.html">FOpenEx</a> or a windows api function.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cData</a></dt>
+<dd><p>The content to write to the file.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nMaxBytesToWrite (optional)</a></dt>
+<dd><p>default = <a href="its:dv_foxhelp.chm::/html/6993649e-01d9-4818-a48c-c77e5e3f3061.htm">LEN</a>(<em>cData</em>)<br />
+<br />
+The maximum number of bytes to write.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of bytes written or 0 if an error occured.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/afhandlesex.html">AFHandlesEx</a><br />
+<a href="/pages/fchsizeex.html">FChSizeEx</a><br />
+<a href="/pages/fcloseex.html">FCloseEx</a><br />
+<a href="/pages/fcreateex.html">FCreateEx</a><br />
+<a href="/pages/feofex.html">FEoFEx</a><br />
+<a href="/pages/fflushex.html">FFlushEx</a><br />
+<a href="/pages/fgetsex.html">FGetsEx</a><br />
+<a href="/pages/flockfile.html">FLockFile</a><br />
+<a href="/pages/flockfileex.html">FLockFileEx</a><br />
+<a href="/pages/fopenex.html">FOpenEx</a><br />
+<a href="/pages/freadex.html">FReadEx</a><br />
+<a href="/pages/fseekex.html">FSeekEx</a><br />
+<a href="/pages/funlockfile.html">FUnlockFile</a><br />
+<a href="/pages/funlockfileex.html">FUnlockFileEx</a><br />
+<a href="/pages/fwriteex.html">FWriteEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa365747(VS.85).aspx">WriteFile</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

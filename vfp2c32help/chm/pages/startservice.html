@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>StartService</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">StartService</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Starts a windows service.</p>
+
+<div class="block"><pre>StartService(<a href="#p1">cServiceName | nServiceHandle</a> [, <a href="#p2">@aArguments</a> [, <a href="#p3">nTimeout</a> [, <a href="#p4">cServer</a> [, <a href="#p5">cDatabase</a>]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cServiceName | nServiceHandle</a></dt>
+<dd><p>Either the name of the service or a numeric handle returned from the <a href="/pages/openservice.html">OpenService</a> function.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">@aArguments (optional)</a></dt>
+<dd><p>Array of strings that are passed as arguments to the service.<br />
+If you want to omit this parameter but want pass parameters that come after this you can pass NULL instead of a valid array.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nTimeout (optional)</a></dt>
+<dd><p>Maximum time in seconds to wait while the service is in SERVICE_START_PENDING state.<br />
+<br />
+If you pass 0 the function doesn't wait until the service is initiazed, instead it returns immediately after the start request has been sent.<br />
+<br />
+If you omit this parameter or pass NULL the timeout is set to the default timeout reported by the service.<br />
+See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms685992(VS.85).aspx">SERVICE_STATUS_PROCESS</a> structure's "dwWaitHint" member.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cServer (optional)</a></dt>
+<dd><p>The server name on which the service is running.<br />
+See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cDatabase (optional)</a></dt>
+<dd><p>The database under which the service is registered.<br />
+See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>1 if the service was started successful or was already running, 0 if the timeout interval elapsed before the service switched into the running state.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adependentservices.html">ADependentServices</a><br />
+<a href="/pages/aserviceconfig.html">AServiceConfig</a><br />
+<a href="/pages/aservices.html">AServices</a><br />
+<a href="/pages/aservicestatus.html">AServiceStatus</a><br />
+<a href="/pages/closeservicehandle.html">CloseServiceHandle</a><br />
+<a href="/pages/continueservice.html">ContinueService</a><br />
+<a href="/pages/controlservice.html">ControlService</a><br />
+<a href="/pages/createservice.html">CreateService</a><br />
+<a href="/pages/openservice.html">OpenService</a><br />
+<a href="/pages/pauseservice.html">PauseService</a><br />
+<a href="/pages/stopservice.html">StopService</a><br />
+<a href="/pages/waitforservicestatus.html">WaitForServiceStatus</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms686321(VS.85).aspx">StartService</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684939(VS.85).aspx">QueryServiceStatus</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684330(VS.85).aspx">OpenService</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

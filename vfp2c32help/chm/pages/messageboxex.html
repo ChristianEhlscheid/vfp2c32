@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>MessageBoxEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">MessageBoxEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Creates, displays, and operates a message box. The message box contains application-defined message text and title, any icon, and any combination of predefined push buttons.</p>
+
+<div class="block"><pre>MessageBoxEx(<a href="#p1">cText</a> [, <a href="#p2">nFlags</a> [, <a href="#p3">cCaption</a> [, <a href="#p4">nHwnd</a> [, <a href="#p5">cnIconResource</a> [, <a href="#p6">nHInstance</a> [, <a href="#p7">nHelpContextId</a> [, <a href="#p8">nLanguageId</a>]]]]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cText</a></dt>
+<dd><p>Specifies the text that appears in the dialog box.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>The VFP <a href="its:dv_foxhelp.chm::/html/09f87252-c201-4402-93f0-b204468955ef.htm">MESSAGEBOX</a>( ) function allows to pass an expression of any type in this parameter - this function does <strong>NOT</strong>!<br />
+The value passed has to be a string, just use <a href="its:dv_foxhelp.chm::/html/a13cde28-affa-4bec-96ab-a4370da9b3b6.htm">TRANSFORM</a>( ) or other formatting functions to create a string out of an expression.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nFlags (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+The <em>nFlags</em> parameter controls the  appearance and behaviour of the message box.<br />
+</p>
+<table>
+<caption>Buttons.</caption>
+<tr><th style="width: 20%;">Value</th><th>Description</th></tr>
+<tr><td>MB_OK</td><td>OK button only</td></tr>
+<tr><td>MB_OKCANCEL</td><td>OK and Cancel buttons</td></tr>
+<tr><td>MB_ABORTRETRYIGNORE</td><td>Abort, Retry, and Ignore buttons</td></tr>
+<tr><td>MB_YESNOCANCEL</td><td>Yes, No, and Cancel buttons</td></tr>
+<tr><td>MB_YESNO</td><td>Yes and No buttons</td></tr>
+<tr><td>MB_RETRYCANCEL</td><td>Retry and Cancel buttons</td></tr>
+</table><p></p>
+<table>
+<caption>Icon</caption>
+<tr><th style="width: 20%;">Value</th><th>Description</th></tr>
+<tr><td>MB_ICONSTOP</td><td>OK button only</td></tr>
+<tr><td>MB_ICONQUESTION</td><td>OK and Cancel buttons</td></tr>
+<tr><td>MB_ICONEXCLAMATION</td><td>Abort, Retry, and Ignore buttons</td></tr>
+<tr><td>MB_ICONINFORMATION</td><td>Yes, No, and Cancel buttons</td></tr>
+</table><p></p>
+<table>
+<caption>Default button.</caption>
+<tr><th style="width: 20%;">Value</th><th>Description</th></tr>
+<tr><td>MB_DEFBUTTON1</td><td>The first button is the default button.<br />
+<br />
+MB_DEFBUTTON1 is the default unless MB_DEFBUTTON2, MB_DEFBUTTON3, or MB_DEFBUTTON4 is specified.</td></tr>
+<tr><td>MB_DEFBUTTON2</td><td> Second button is default.</td></tr>
+<tr><td>MB_DEFBUTTON3</td><td>Third button is default.</td></tr>
+<tr><td>MB_DEFBUTTON4</td><td>The fourth button is the default button.</td></tr>
+</table><p></p>
+<table>
+<caption>Modality of the dialog box.</caption>
+<tr><th style="width: 20%;">Value</th><th>Description</th></tr>
+<tr><td>MB_APPLMODAL</td><td>The user must respond to the message box before continuing work in the window identified by the <i>nWnd</i> parameter. However, the user can move to the windows of other threads and work in those windows.<br />
+<br />
+Depending on the hierarchy of windows in the application, the user may be able to move to other windows within the thread. All child windows of the parent of the message box are automatically disabled, but pop-up windows are not.<br />
+<br />
+MB_APPLMODAL is the default if neither MB_SYSTEMMODAL nor MB_TASKMODAL is specified.</td></tr>
+<tr><td>MB_SYSTEMMODAL</td><td>Same as MB_APPLMODAL except that the message box has the WS_EX_TOPMOST style. Use system-modal message boxes to notify the user of serious, potentially damaging errors that require immediate attention (for example, running out of memory). This flag has no effect on the user's ability to interact with windows other than those associated with <i>nHwnd</i>.</td></tr>
+<tr><td>MB_TASKMODAL</td><td>Same as MB_APPLMODAL except that all the top-level windows belonging to the current thread are disabled if the <i>nWnd</i> parameter is 0. Use this flag when the calling application or library does not have a window handle available but still needs to prevent input to other windows in the calling thread without suspending other threads.</td></tr>
+</table><p></p>
+<table>
+<caption>Various other options.</caption>
+<tr><th style="width: 20%;">Value</th><th>Description</th></tr>
+<tr><td>MB_DEFAULT_DESKTOP_ONLY</td><td>Same as desktop of the interactive window station. For more information, see Window Stations.<br />
+<br />
+If the current input desktop is not the default desktop, MessageBox does not return until the user switches to the default desktop.</td></tr>
+
+<tr><td>MB_RIGHT</td><td>The text is right-justified.</td></tr>
+<tr><td>MB_RTLREADIND</td><td>Displays message and caption text using right-to-left reading order on Hebrew and Arabic systems.</td></tr>
+<tr><td>MB_SETFOREGROUND</td><td>The message box becomes the foreground window. Internally, the system calls the SetForegroundWindow function for the message box.</td></tr>
+<tr><td>MB_TOPMOST</td><td>The message box is created with the WS_EX_TOPMOST window style.</td></tr>
+<tr><td>MB_SERVICE_NOTIFICATION</td><td>The caller is a service notifying the user of an event. The function displays a message box on the current active desktop, even if there is no user logged on to the computer.
+
+Terminal Services: If the calling thread has an impersonation token, the function directs the message box to the session specified in the impersonation token.
+
+If this flag is set, the <i>nWnd</i> parameter must be 0. This is so that the message box can appear on a desktop other than the desktop corresponding to the <i>nWnd</i>.<br />
+<br />
+For information on security considerations in regard to using this flag, see Interactive Services. In particular, be aware that this flag can produce interactive content on a locked desktop and should therefore be used for only a very limited set of scenarios, such as resource exhaustion.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p3">cCaption (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+The message box title. If this member is NULL, the default title "Error" is used.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nHwnd (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+A handle to the owner window.<br />
+<br />
+If <em>nHwnd</em> is NULL or omitted the current active window is set as the owner window.<br />
+You can also specify 0 if the dialog box should not have an owner window.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cnIconResource (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+Identifies a custom icon resource.<br />
+<br />
+This parameter can be either a string or an integer resource identifier.<br />
+To load one of the standard system-defined icons pass NULL in the <em>nHInstance</em> parameter and specify one of the values listed with the <a href="http://msdn.microsoft.com/en-us/library/ms648072(v=vs.85).aspx">LoadIcon</a> function.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p6">nHInstance (optional)</a></dt>
+<dd><p>default = NULL | HINSTANCE of the current executable<br />
+<br />
+A handle to the module that contains the icon resource identified by the <em>cnIconResource</em> parameter.<br />
+<br />
+If you omit this parameter parameter or pass NULL but specify a custom icon in the <em>cnIconResource</em> parameter <br />
+<em>nHInstance</em> defaults to the HINSTANCE of the current executable.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>The HINSTACE/HMODULE of a module (dll) can be retrieved with the <a href="http://msdn.microsoft.com/en-us/library/ms683199(VS.85).aspx">GetModuleHandle</a> or <a href="http://msdn.microsoft.com/en-us/library/ms684175(v=vs.85).aspx">LoadLibray</a> function.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p7">nHelpContextId (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+Identifies a help context.<br />
+<br />
+If a help event occurs, this value is passed to the owner window.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p8">nLanguageId (optional)</a></dt>
+<dd><p>default = <a href="http://msdn.microsoft.com/en-us/library/dd318137(v=vs.85).aspx">GetUserDefaultUILanguage</a>()<br />
+<br />
+The language in which to display the text contained in the predefined push buttons.<br />
+<br />
+For a list of supported language identifiers, see Language Identifiers. Note that each localized release of Windows typically contains resources only for a limited set of languages. Thus, for example, the U.S. version offers LANG_ENGLISH, the French version offers LANG_FRENCH, the German version offers LANG_GERMAN, and the Japanese version offers LANG_JAPANESE. Each version offers LANG_NEUTRAL. This limits the set of values that can be used with the <em>nLanguageId</em> parameter. Before specifying a language identifier, you should enumerate the locales that are installed on a system.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>If the function succeeds, the return value is one of the following menu-item values.<br />
+<br />
+If a message box has a Cancel button, the function returns the IDCANCEL value if either the ESC key is pressed or the Cancel button is selected. If the message box has no Cancel button, pressing ESC has no effect.<br />
+<br />
+If there is not enough memory to create the message box, error 43 is raised.<br />
+ </p>
+<table>
+<tr><th style="width: 20%;">Value</th><th>Description</th></tr>
+<tr><td>IDOK</td><td>The <b>OK</b> button was selected.</td></tr>
+<tr><td>IDCANCEL</td><td>The  <b>Cancel</b> button was selected.</td></tr>
+<tr><td>IDABORT</td><td>The <b>Abort </b>button was selected.</td></tr>
+<tr><td>IDRETRY</td><td>The <b>Retry</b> button was selected.</td></tr>
+<tr><td>IDIGNORE</td><td>The <b>Ignore</b> button was selected.</td></tr>
+<tr><td>IDYES</td><td>The <b>Yes</b> button was selected.</td></tr>
+<tr><td>IDNO</td><td>The <b>No</b> button was selected.</td></tr>
+<tr><td>IDTRYAGAIN</td><td>The <b>Try Again</b> button was selected.</td></tr>
+<tr><td>IDCONTINUE</td><td>The <b>Continue</b> button was selected.</td></tr>
+</table>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/getopenfilename.html">GetOpenFileName</a><br />
+<a href="/pages/getsavefilename.html">GetSaveFileName</a><br />
+<a href="/pages/shbrowsefolder.html">SHBrowseFolder</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms645511(v=vs.85).aspx">MessageBoxIndirect</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/dd318137(v=vs.85).aspx">GetUserDefaultUILanguage</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms683199(VS.85).aspx">GetModuleHandle</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

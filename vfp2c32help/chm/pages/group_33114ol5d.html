@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Low level file handling</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>Low level file handling</h1>
+
+</div>
+<div id="content">
+<p>
+Extended low level file handling functions.</p>
+<table>
+<caption>Main features/enhancements.</caption>
+<tr><td>Also handles files larger than 2GB.</td></tr>
+<tr><td>Files can be created/opened for shared access (VFP native functions only allow exclusive access).</td></tr>
+<tr><td>Additional functions for locking parts of a file - FLockFile, FLockFileEx, FUnlockFile and FUnlockFileEx.</td></tr>
+<tr><td>FCreateEx and FOpenEx return the real windows file handle, you can use this handle for other API functions.<br />
+You can also pass API handles not created with FCreateEx or FOpenEx to the functions FWriteEx, FPutsEx, FReadEx ect. ...</td></tr>
+</table>
+
+<table class="list">
+<tr class="uneven"><td><a href="afhandlesex.html">AFHandlesEx</a></td><td>Stores all open file handles created with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a> into an array.</td></tr>
+<tr class="even"><td><a href="fchsizeex.html">FChSizeEx</a></td><td>Changes the size of a file opened with the <a href="/pages/fopenex.html">FOpenEx</a> or <a href="/pages/fcreateex.html">FCreateEx</a> function.</td></tr>
+<tr class="uneven"><td><a href="fcloseex.html">FCloseEx</a></td><td>Flushes and closes a file or communication port opened with the <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a> function.</td></tr>
+<tr class="even"><td><a href="fcreateex.html">FCreateEx</a></td><td>Creates and opens a file.</td></tr>
+<tr class="uneven"><td><a href="feofex.html">FEoFEx</a></td><td>Determines whether the file pointer is positioned at the end of a file.</td></tr>
+<tr class="even"><td><a href="fflushex.html">FFlushEx</a></td><td>Flushes to disk a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="uneven"><td><a href="fgetsex.html">FGetsEx</a></td><td>Returns a series of bytes from a the specified file or a communication port opened with <a href="/pages/fopenex.html">FOpenEx</a> or <a href="/pages/fcreateex.html">FCreateEx</a> until it encounters a carriage return.</td></tr>
+<tr class="even"><td><a href="flockfile.html">FLockFile</a></td><td>Locks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="uneven"><td><a href="flockfileex.html">FLockFileEx</a></td><td>Locks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="even"><td><a href="fopenex.html">FOpenEx</a></td><td>Opens a file.</td></tr>
+<tr class="uneven"><td><a href="fputsex.html">FPutsEx</a></td><td>Writes a character string, carriage return, and line feed to a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="even"><td><a href="freadex.html">FReadEx</a></td><td>Returns a specified number of bytes from a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="uneven"><td><a href="fseekex.html">FSeekEx</a></td><td>Moves the file pointer in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="even"><td><a href="funlockfile.html">FUnlockFile</a></td><td>Unlocks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="uneven"><td><a href="funlockfileex.html">FUnlockFileEx</a></td><td>Unlocks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+<tr class="even"><td><a href="fwriteex.html">FWriteEx</a></td><td>Writes a character string to a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
+</table>
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

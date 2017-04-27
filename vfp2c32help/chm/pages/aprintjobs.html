@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>APrintJobs</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">APrintJobs</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about a specified set of print jobs for a specified printer into an array.</p>
+
+<div class="block"><pre>APrintJobs(<a href="#p1">cArrayName</a>, <a href="#p2">cPrinter</a> [, <a href="#p3">nLevel</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><p>if <em>nLevel</em> = 1</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/dd145019(VS.85).aspx">JOB_INFO_1</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>Name of the print job.</td><td>C</td></tr>
+<tr><td>2</td><td>Name of the printer for which the job is spooled.</td><td>C</td></tr>
+<tr><td>3</td><td>Name of the user that owns the print job.</td><td>C</td></tr>
+<tr><td>4</td><td>Name of the machine that created the print job.</td><td>C</td></tr>
+<tr><td>5</td><td>The type of data used to record the print job.</td><td>C</td></tr>
+<tr><td>6</td><td>The status of the print job.</td><td>C</td></tr>
+<tr><td>7</td><td>A job identifier.</td><td>N</td></tr>
+<tr><td>8</td><td>The job status. For a list of possible values have a look here <a href="http://msdn.microsoft.com/en-us/library/dd145019(VS.85).aspx">JOB_INFO_1</a>.</td><td>N</td></tr>
+<tr><td>9</td><td>The job priority. For a list of possible values have a look here <a href="http://msdn.microsoft.com/en-us/library/dd145019(VS.85).aspx">JOB_INFO_1</a>.</td><td>N</td></tr>
+<tr><td>10</td><td>The job's position in the print queue.</td><td>N</td></tr>
+<tr><td>11</td><td>The total number of pages that the document contains. <br />
+This value may be zero if the print job does not contain page delimiting information.</td><td>N</td></tr>
+<tr><td>12</td><td>The number of pages that have printed.<br />
+This value may be zero if the print job does not contain page delimiting information.</td><td>N</td></tr>
+<tr><td>13</td><td>The time that this document was spooled.<br />
+This time value is in Universal Time Coordinate (UTC) format. You should convert it to a local time value before displaying it.<br />
+You can use the <a href="/pages/utc2dt.html">UTC2DT</a> function to perform the conversion.</td><td>T</td></tr>
+</table><p><br />
+if <em>nLevel</em> = 2 </p>
+<table>
+<caption>the array contains the following additional information from the <a href="http://msdn.microsoft.com/en-us/library/dd145020(VS.85).aspx">JOB_INFO_2</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>14</td><td>The name of the user who should be notified when the job has been printed or when an error occurs while printing the job.</td><td>C</td></tr>
+<tr><td>15</td><td>The name of the print processor that should be used to print the job.</td><td>C</td></tr>
+<tr><td>16</td><td>Print-processor parameters.</td><td>C</td></tr>
+<tr><td>17</td><td>The name of the printer driver that should be used to process the print job.</td><td>C</td></tr>
+<tr><td>18</td><td>The total time, in milliseconds, that has elapsed since the job began printing.</td><td>N</td></tr>
+<tr><td>19</td><td>The earliest time that the job can be printed.</td><td>N</td></tr>
+<tr><td>20</td><td>The latest time that the job can be printed.</td><td>N</td></tr>
+<tr><td>21</td><td>The size, in bytes, of the job.</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cPrinter</a></dt>
+<dd><p>Name of the printer for which to enumerate the printjobs.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nLevel (optional)</a></dt>
+<dd><p>default = 1<br />
+<br />
+The level of information to return, either 1 or 2.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of print jobs.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/apapersizes.html">APaperSizes</a><br />
+<a href="/pages/aprinterforms.html">APrinterForms</a><br />
+<a href="/pages/aprintersex.html">APrintersEx</a><br />
+<a href="/pages/aprintertrays.html">APrinterTrays</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/dd162625(VS.85).aspx">EnumJobs</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/dd162751(VS.85).aspx">OpenPrinter</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/dd183446(VS.85).aspx">ClosePrinter</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

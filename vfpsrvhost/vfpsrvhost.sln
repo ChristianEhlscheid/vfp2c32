@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual C++ Express 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vfpsrvhost", "vfpsrvhost.vcproj", "{49422D47-E160-46C6-8F9E-7D7348D91777}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49422D47-E160-46C6-8F9E-7D7348D91777}.Debug|Win32.ActiveCfg = Debug|Win32
+		{49422D47-E160-46C6-8F9E-7D7348D91777}.Debug|Win32.Build.0 = Debug|Win32
+		{49422D47-E160-46C6-8F9E-7D7348D91777}.Release|Win32.ActiveCfg = Release|Win32
+		{49422D47-E160-46C6-8F9E-7D7348D91777}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

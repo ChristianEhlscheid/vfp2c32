@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>SHRenameFiles</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">SHRenameFiles</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Renames a file.</p>
+
+<div class="block"><pre>SHRenameFiles(<a href="#p1">cSource</a>, <a href="#p2">cTarget</a>, <a href="#p3">nFlags</a> [, <a href="#p4">cTitle</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cSource</a></dt>
+<dd><p>A file name. The name should be a fully-qualified path to prevent unexpected results.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cTarget</a></dt>
+<dd><p>The destination file name.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3"></a></dt>
+<dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cTitle (optional)</a></dt>
+<dd><p>Title of the progress dialog.<br />
+If you pass this parameter, the FOF_SIMPLEPROGRESS flag is automatically set since one cannot specify a title without setting this flag.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>1 if the file was renamed successfull, 0 if the operation was aborted, otherwise the errorcode from the <a href="http://msdn.microsoft.com/en-us/library/bb762164(VS.85).aspx">SHFileOperation</a> API.</p>
+
+<h2>Remarks</h2>
+<p>You cannot use this function to rename multiple files with a single function call.<br />
+Use <a href="/pages/shmovefiles.html">SHMoveFiles</a> instead.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/shcopyfiles.html">SHCopyFiles</a><br />
+<a href="/pages/shdeletefiles.html">SHDeleteFiles</a><br />
+<a href="/pages/shmovefiles.html">SHMoveFiles</a><br />
+<a href="/pages/shspecialfolder.html">SHSpecialFolder</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/bb762164(VS.85).aspx">SHFileOperation</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

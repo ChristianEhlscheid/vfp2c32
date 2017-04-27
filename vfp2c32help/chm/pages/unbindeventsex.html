@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>UnbindEventsEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">UnbindEventsEx</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Unbinds events for a windows which was previously bound with <a href="/pages/bindeventsex.html">BindEventsEx</a>.</p>
+
+<div class="block"><pre>UnbindEventsEx(<a href="#p1">nHwnd</a> [, <a href="#p2">nMsg</a> [, <a href="#p3">bClass</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nHwnd</a></dt>
+<dd><p>Specifies the handle of the window for which events are unbound.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nMsg (optional)</a></dt>
+<dd><p>The message which should be unbound.<br />
+If you omit the <em>nMsg</em> parameter or pass 0 all messages are unbound and the window is unsubclassed.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">bClass (optional)</a></dt>
+<dd><p>default = .F.<br />
+<br />
+If you subclassed a windowclass with the BINDEVENTSEX_CLASSPROC flag you have to pass .T. in this parameter.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>Always .T.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/asyncwaitforobject.html">AsyncWaitForObject</a><br />
+<a href="/pages/bindeventsex.html">BindEventsEx</a><br />
+<a href="/pages/cancelwaitforobject.html">CancelWaitForObject</a><br />
+<a href="/pages/createcallbackfunc.html">CreateCallbackFunc</a><br />
+<a href="/pages/createpublicshadowobjreference.html">CreatePublicShadowObjReference</a><br />
+<a href="/pages/destroycallbackfunc.html">DestroyCallbackFunc</a><br />
+<a href="/pages/releasepublicshadowobjreference.html">ReleasePublicShadowObjReference</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms633591(VS.85).aspx">SetWindowLong</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633588(VS.85).aspx">SetClassLong</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

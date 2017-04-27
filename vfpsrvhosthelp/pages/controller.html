@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Main</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfpsrvhostversion"></p>
+<h1>Controller</h1>
+</div>
+<div id="content">
+
+<p>The methods which you implement in the controller class define which events your service will handle - e.g if the service should not be pauseable just don't implement the OnPause method, all but the OnStart and OnStop methods are optional.</p>
+
+<div class="block"><pre>FUNCTION OnStart(laArgs[] As String,  loService AS Object) As Void</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt>cArrayname</dt>
+<dd><p>An array of arguments passed to the service</p></dd>
+</dl>
+<dl class="parm"><dt>loService</dt>
+<dd><p>A reference to a service object implemented in vfpsrvhost.exe.</p></dd>
+</dl>
+<p>Called once when the service is started.</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block">
+<pre id="code_1">
+TRY
+	SET LIBRARY TO vfp2c32t.fll ADDITIVE &amp;&amp; 
+	THIS.oService = m.loService
+	THIS.oWorkerThread = CreateThreadObject('YourProject.ServiceWorkerClass', THIS)
+	THIS.oWorkerThread.WorkerMethod()
+CATCH TO loExc
+	THIS.ThrowError(m.loExc)
+ENDTRY
+</pre></div>
+
+
+<div class="block"><pre>FUNCTION OnStop() As Void</pre></div>
+<p>Called once when the service is stopped.</p>
+<div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block">
+<pre id="code_2">
+TRY
+	THIS.oWorkerThread.AbortCall()
+	THIS.oWorkerThread = .NULL.
+CATCH TO loExc
+	THIS.oWorkerThread = .NULL.
+	THIS.ThrowError(m.loExc)
+ENDTRY
+</pre></div>
+
+<div class="block"><pre>FUNCTION OnPause() AS Void</pre></div>
+<p>Called once when the service is paused.</p>
+<div class="codeheader"><a onclick="CopyCode('code_3')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block">
+<pre id="code_3">
+TRY
+	THIS.oWorkerThread.AbortCall()
+CATCH TO loExc
+	THIS.ThrowError(m.loExc)
+ENDTRY
+ENDFUNC
+</pre></div>
+
+<div class="block"><pre>FUNCTION OnContinue() AS Void</pre></div>
+<p>Called once when the service resumes from the "paused" state.</p>
+<div class="codeheader"><a onclick="CopyCode('code_4')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block">
+<pre id="code_4">
+TRY
+	THIS.oWorkerThread.ThreadFunc()
+CATCH TO loExc
+	THIS.ThrowError(m.loExc)
+ENDTRY
+</pre></div>
+
+
+
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFPSrvHost</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

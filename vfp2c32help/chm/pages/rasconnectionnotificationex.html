@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>RasConnectionNotificationEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">RasConnectionNotificationEx</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Starts a new thread which monitors the system for RAS connections, whenever a connection is created or terminated the specified callback procedure is called.</p>
+
+<div class="block"><pre>RasConnectionNotificationEx(<a href="#p1">nRasConn</a>, <a href="#p2">nFlags</a>, <a href="#p3">cCallback</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nRasConn</a></dt>
+<dd><p>A handle to the RAS connection for which to receive the notification.<br />
+This can be a handle returned by the <a href="/pages/rasdialex.html">RasDialEx</a> or <a href="/pages/arasconnections.html">ARasConnections</a>.<br />
+If this parameter is INVALID_HANDLE_VALUE (-1), notifications are received for all RAS connections on the local client.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nFlags</a></dt>
+<dd><table>
+<caption>One or a combition of the following values (defined in rasapi32.h).</caption>
+<tr><th>Constant</th><th>Description</th></tr>
+<tr><td>RASCN_Connection</td><td>If <i>nRasConn</i> is INVALID_HANDLE_VALUE, a callback is made when any RAS connection is created.</td></tr>
+<tr><td>RASCN_Disconnection</td><td>A callback is made when the <i>nRasConn</i> connection is terminated. If <i>nRasConn</i> is a multilink connection, the callback is made when all subentries are disconnected. If <i>nRasConn</i> is INVALID_HANDLE_VALUE, the callback is made when any RAS connection is terminated.</td></tr>
+<tr><td>RASCN_BandwidthAdded</td><td>Windows NT:  If <i>nRasConn</i> is a handle to a combined multilink connection, the callback is made when a subentry is connected.</td></tr>
+<tr><td>RASCN_BandwidthRemoved</td><td>Windows NT:  If <i>nRasConn</i> is a handle to a combined multilink connection, the callback is made when a subentry is disconnected.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p3">cCallback</a></dt>
+<dd><p>The name of a function to call when a RAS connection is created/terminated.<br />
+The function should have the following prototype.</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION OnConnectionChange(lnConn, lnError)
+    IF lnError = 0
+        &amp;&amp; call <a href="/pages/arasconnections.html">ARasConnections</a> to see if a new connection was established or one was disconnected
+        LOCAL lnConnCount, laRasConns[1,5]
+        lnConnCount = <a href="/pages/arasconnections.html">ARasConnections</a>('laRasConns')
+        IF ASCAN(laRasConns,lnConn,1,0,5,8) &gt; 0
+            ? "RAS connection", lnConn, "connected."
+        ELSE
+            ? "RAS connection", lnConn, "disconnected."
+        ENDIF
+    ELSE
+        ? "WaitForMultipleObjects failed with errorcode", lnError
+    ENDIF
+ENDFUNC
+</pre></div>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>When monitoring a single active RAS connection, the notifications end automatically after it's disconnected.
+</p></div>
+</dd></dl>
+<h2>Return Value</h2>
+<p>An handle to the thread monitoring the RAS connection.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/abortrasconnectionnotification.html">AbortRasConnectionNotification</a><br />
+<a href="/pages/arasconnections.html">ARasConnections</a><br />
+<a href="/pages/arasdevices.html">ARasDevices</a><br />
+<a href="/pages/arasphonebookentries.html">ARasPhonebookEntries</a><br />
+<a href="/pages/rasclearconnectionstatistics.html">RasClearConnectionStatistics</a><br />
+<a href="/pages/rasdialdlgex.html">RasDialDlgEx</a><br />
+<a href="/pages/rasdialex.html">RasDialEx</a><br />
+<a href="/pages/rasgetconnectstatusex.html">RasGetConnectStatusEx</a><br />
+<a href="/pages/rashangupex.html">RasHangUpEx</a><br />
+<a href="/pages/rasphonebookdlgex.html">RasPhonebookDlgEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa376726(VS.85).aspx">RasConnectionNotification</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms687025(VS.85).aspx">WaitForMultipleObjects</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms644944(VS.85).aspx">PostMessage</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

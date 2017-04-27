@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Error handling</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>Error handling</h1>
+</div>
+<div id="content">
+
+<p>The following errors are raised by the library.</p>
+<table>
+<tr><th>Error number</th><th>Message</th><th>Cause</th></tr>
+<tr><td>9</td><td>Data type mismatch.</td><td>One of the parameters has not the expected datatype.</td></tr>
+<tr><td>11</td><td>Function argument value, type, or count is invalid.</td><td>One of the parameters was not valid or the count of parameters was incorrect.</td></tr>
+<tr><td>43</td><td>There is not enough memory to complete this operation.</td><td>A memory allocation failed.</td></tr>
+<tr><td>1754</td><td> Cannot find entry point.</td><td>The part of the library was not initialized with <a href="/pages/InitVFP2C32.html">InitVFP2C32</a> or<br />
+the function is not available on the current operating system.</td></tr>
+<tr><td>1098</td><td>Contains the system or custom error message.</td><td>Depends - call <a href="/pages/AErrorEx.html">AErrorEx</a> to get extended error information.</td></tr>
+<table>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

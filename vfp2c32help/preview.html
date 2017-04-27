@@ -1,0 +1,480 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>CopyFileEx</title><style type="text/css">
+<!--
+*
+{
+	margin: 0;
+	padding: 0;
+}
+
+html, body
+{
+	border-style: none;
+}
+
+body
+{
+	color: #000;
+	background-color: #FFF;
+	font-size: 1em;
+	font-family: Verdana;
+}
+
+#header
+{
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 53px;
+	background-color: #D4DFFF;
+	padding-top: 5px;
+	border-bottom: 1px solid #C8CDDE;
+	z-index: 99;
+}
+
+#header p
+{
+	margin-left: 10px;
+	margin-bottom: 2px;
+	font-size: 0.6em;
+	color: #3355FF;
+}
+
+#header p.links
+{
+	font-size: 0.8em;
+	font-weight: bold;
+}
+
+#header p.links a
+{
+	padding-right: 8px;
+}
+
+#header h1
+{
+	margin-left: 10px;
+	font-size: 1em;
+	font-weight: bold;
+	color: #003399;
+	padding-left: 20px;
+	background: transparent url(./chm/images/note.gif) no-repeat left center;
+}
+
+#header h1.function
+{
+	background: transparent url(./chm/images/function.gif) no-repeat left center;
+}
+
+#header div.flags
+{
+	margin-left: 10px;
+}
+
+#header div.flags a
+{
+	display: inline-block;
+	height: 17px;
+	color: #000;
+	font-size: 0.6em;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+#header div.flags a.initflag
+{
+	padding: 0 0 0 13px;
+	line-height: 16px;
+	background: transparent url(./chm/images/note.gif) no-repeat left center;	
+}
+
+#header div.flags a.initflag:hover
+{
+	text-decoration: underline;
+}
+
+#header div.flags a.threadsafe
+{
+	margin-right: 6px;
+	padding-left: 16px;
+	background: transparent url(./chm/images/threadsafe.gif) no-repeat left top;	
+}
+
+#header div.flags a.notthreadsafe
+{
+	margin-right: 6px;
+	padding-left: 16px;
+	background: transparent url(./chm/images/notthreadsafe.gif) no-repeat left top;	
+}
+
+#content
+{
+	position: relative;
+	top: 58px;
+	padding: 10px 15px 30px 25px;
+}
+
+#footer
+{
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 20px;
+	border-top: 1px solid #C8CDDE;
+	background-color: #D4DFFF;
+	z-index: 99;
+}
+
+#footer p
+{
+	margin: 3px 0 0 10px;
+	font-size: 0.65em;
+	color: #003399;
+}
+
+/* margins for elements that are direct descendents of #content */
+#content > p, #content > table, #content > ul
+{
+	margin-left: 15px;
+}
+
+#content > p.description
+{
+	margin-left: 0;
+}
+
+h2
+{
+	font-size: 1em;
+	color: #003399;
+	font-weight: bold;
+	margin: 15px 0 10px;
+}
+
+div.block
+{
+	margin: 10px 0 5px 10px;
+	background-color: #F7F7FF;
+	border: 1px solid #CCC;
+	border-width: 0 0 1px 0;
+	width: 90%;
+}
+
+div.block pre
+{
+	padding: 10px 5px;
+	font-family: Monospace, Courier New, Courier;
+	color:	#000066;
+	font-size: 1em;
+	word-wrap: break-word;
+}
+
+div.block pre a
+{
+	color: #000066;
+	text-decoration: none;
+}
+
+div.block pre a:hover
+{
+	color: #3366FF;
+	text-decoration: underline;
+}
+
+div.block p
+{
+	padding: 5px 5px;
+}
+
+div.blockheader
+{
+	margin: 10px 0 -10px 10px;
+	height: 14px;
+	background-color: #EFEFF7;
+	border-bottom: 1px solid #C8CDDE;
+	width: 90%;
+}
+
+div.blockheader p.note
+{
+	margin-left: 3px;
+	color: #003399;
+	padding-left: 13px;
+	font-size: 0.6em;
+	font-weight: bold;
+	line-height: 14px;
+	background: transparent url(./chm/images/note.gif) no-repeat left center;
+}
+
+div.codeheader
+{
+	position: relative;
+	z-index: 1;
+	margin: 10px 0 -10px 10px;
+	height: 18px;
+	background-color: #EFEFF7;
+	border-bottom: 1px solid #C8CDDE;
+	width: 90%;
+}
+
+div.codeheader a
+{
+	position: absolute;
+	right: 4px;
+	display: block;
+	height: 17px;
+	line-height: 17px;
+	padding-left: 17px;
+	font-size: 0.6em;
+	text-decoration: none;
+	background: transparent url(./chm/images/copycode.gif) no-repeat left center;
+}
+
+div.codeheader a.onhover
+{
+	cursor: pointer;
+	background: transparent url(./chm/images/copycode2.gif) no-repeat left center;
+}
+
+h3
+{
+	font-size: 0.9em;
+	font-weight: bold;
+	margin-top: 15px;
+}
+
+h4
+{
+	font-size: 0.8em;
+	font-weight: bold;
+	margin: 10px 0 5px 15px;
+}
+
+a
+{
+	color: #0000FF;
+}
+
+a:hover
+{
+	color: #3366FF;
+}
+
+p
+{
+	font-size: 0.8em;
+}
+
+p + p
+{
+	margin-top: 15px;
+}
+
+dl.parm dt
+{
+	margin: 10px 0 5px 0;
+	font-size: 0.8em;
+	font-weight: bold;
+	font-style: italic;
+}
+
+dl.parm dt a
+{
+	color: #000;
+	text-decoration: none;
+}
+
+dl.parm dd
+{
+	margin-left: 15px;
+}
+
+table
+{
+	margin-top: 7px;
+	font-size: 0.8em;
+	width: 90%;
+}
+
+table caption
+{
+	text-align: left;
+	padding-bottom: 3px;
+}
+
+table tr
+{
+	margin-bottom: 1px;
+}
+
+table th
+{
+	color: #003399;
+	background-color: #EFEFF7;
+	border-bottom: 1px solid #C8CDDE;
+	text-align: left;
+	padding: 5px;
+	font-weight: bold;
+}
+
+table td
+{
+	background-color: #F7F7FF;
+	border-bottom: 1px solid #C8CDDE;
+	padding: 4px;
+}
+
+ul
+{
+	margin: 5px 0 10px;
+	list-style-position: inside;
+	list-style-image: url(./chm/images/list_bullet.gif);
+}
+
+ul li
+{
+	font-size: 0.8em;
+}
+
+ul li ul
+{
+	margin-left: 15px;
+	list-style-type: disc;
+}
+
+ul li ul li
+{
+	font-size: 1em;
+}
+
+table.list
+{
+	border-collapse: collapse;
+}
+
+table.list tr.even td
+{
+	background-color: #EFEFF7;
+}
+
+table.list tr.uneven td
+{
+	background-color: #F7F7FF;
+}
+
+table.list td
+{
+	border-bottom: 1px solid #C8CDDE;
+	padding: 3px 4px;
+}
+
+table.list td:first-child
+{
+	width: 20%;
+}
+-->
+</style>
+<script type="text/javascript">
+if ( window.addEventListener ) {
+     window.addEventListener( "load", setvfp2c32version, false );
+} else if ( window.attachEvent ) {
+        window.attachEvent( "onload", setvfp2c32version );
+} else if ( window.onLoad ) {
+		window.onload = setvfp2c32version;
+}
+
+function setvfp2c32version()
+{
+	var version = document.getElementById('vfp2c32version');
+	version.innerText = 'VFP2C32 2.0.0.14';
+}			
+			
+function CopyCode(cElement)
+{
+	var oElement = document.getElementById(cElement);
+	window.clipboardData.setData("Text", oElement.innerText);
+}
+
+function ChangeClass(oElement, cClass)
+{
+	oElement.className = cClass;
+}
+
+
+</script>
+</head>		<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">CopyFileEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Copies a file, an optional callback function can be passed which receives status while the copy operation is in progress.</p>
+
+<div class="block"><pre>CopyFileEx(<a href="#p1">cSourceFile</a>, <a href="#p2">cDestinationFile</a> [, <a href="#p3">cCallback</a> [, <a href="#p4">nShareMode</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cSourceFile</a></dt>
+<dd><p>Fully qualified path of the file to copy.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cDestinationFile</a></dt>
+<dd><p>Fully qualified path of the destination for the copy operation.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cCallback (optional)</a></dt>
+<dd><p>The function to callback with progress information during the copy operation.<br />
+The function should have the following prototype:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION CopyCallback(nBytesCopied, nFileSize, nPercentCopied)
+ENDFUNC
+</pre></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nShareMode (optional)</a></dt>
+<dd><p>The share mode with which the copied files are opened in the <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> API call.<br />
+<br />
+Defaults to 0 (no sharing).<br />
+<br />
+Other possible values are FILE_SHARE_READ, FILE_SHARE_WRITE and FILE_SHARE_DELETE or any combination of these values.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>.T. if the file was copied, .F. if the copy operation was aborted by the callback routine.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/ADirectoryInfo.html">ADirectoryInfo</a><br />
+<a href="/pages/ADirEx.html">ADirEx</a><br />
+<a href="/pages/ADriveInfo.html">ADriveInfo</a><br />
+<a href="/pages/AFileAttributes.html">AFileAttributes</a><br />
+<a href="/pages/AFileAttributesEx.html">AFileAttributesEx</a><br />
+<a href="/pages/CancelFileChange.html">CancelFileChange</a><br />
+<a href="/pages/CompareFileTimes.html">CompareFileTimes</a><br />
+<a href="/pages/DeleteDirectory.html">DeleteDirectory</a><br />
+<a href="/pages/DeleteFileEx.html">DeleteFileEx</a><br />
+<a href="/pages/FindFileChange.html">FindFileChange</a><br />
+<a href="/pages/GetFileAttributes.html">GetFileAttributes</a><br />
+<a href="/pages/GetFileOwner.html">GetFileOwner</a><br />
+<a href="/pages/GetFileSize.html">GetFileSize</a><br />
+<a href="/pages/GetFileTimes.html">GetFileTimes</a><br />
+<a href="/pages/GetLongPathName.html">GetLongPathName</a><br />
+<a href="/pages/GetShortPathName.html">GetShortPathName</a><br />
+<a href="/pages/MoveFileEx.html">MoveFileEx</a><br />
+<a href="/pages/SetFileAttributes.html">SetFileAttributes</a><br />
+<a href="/pages/SetFileTimes.html">SetFileTimes</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa364952(VS.85).aspx">GetFileInformationByHandle</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa365467(VS.85).aspx">ReadFile</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa365747(VS.85).aspx">WriteFile</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

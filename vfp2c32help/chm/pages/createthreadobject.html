@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>CreateThreadObject</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">CreateThreadObject</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Creates a COM object on a seperate thread.</p>
+
+<div class="block"><pre>CreateThreadObject(<a href="#p1">cClassName</a> [, <a href="#p2">oCallback</a> [, <a href="#p3">bSyncronousAccess</a> [, <a href="#p4">nContext</a> [, <a href="#p5">nStackSize</a>]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cClassName</a></dt>
+<dd><p>Specifies the COM class from which the new object is created.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">oCallback</a></dt>
+<dd><p>default = .NULL.<br />
+<br />
+An object reference which will receive callbacks when the called methods on the created object complete or an error occurs.<br />
+If you pass NULL you won't receive any callbacks on method completion or errors.<br />
+If you pass an object it has to implement at least one of these methods:<br />
+</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION OnCallComplete(callid, result, callcontext)
+&amp;&amp; callid = a unique call id (integer) that is assigned to each call
+&amp;&amp; result = the return value of the method
+&amp;&amp; callcontext = the callcontext value that was associated with the call 
+</pre></div>
+<p></p>
+<div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_2">FUNCTION OnError(callid, callcontext, errornumber, errorsource, errordescription)
+&amp;&amp; callid = a unique call id (integer) that is assigned to each call
+&amp;&amp; callcontext = the callcontext value that was associated with the call 
+&amp;&amp; errornumber = the errornumber
+&amp;&amp; errorsource = the source of the error that occured
+&amp;&amp; errordescription = the description of the error that occured
+</pre></div>
+<p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>You should implement proper COM error handling by using the <a href="its:dv_foxhelp.chm::/html/92f175d6-95d9-4333-8dd4-4d00969d56a6.htm">COMRETURNERROR</a> function inside your COM classes to<br />
+make the <em>OnError</em> callback return correct information.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">bSyncronousAccess</a></dt>
+<dd><p>default = .F.<br />
+<br />
+If .T. the created proxy object will support the "Object" property to access the created object syncronously.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nContext</a></dt>
+<dd><p>default = CLSCTX_INPROC_SERVER<br />
+<br />
+The execution context of the created COM object.<br />
+</p>
+<table class="constlist">
+<caption>This parameter can be one of the following values.</caption>
+<tr><th style="width: 20%;">Execution context</th><th>Description</th></tr>
+<tr><td>CLSCTX_INPROC_SERVER</td><td>The code that creates and manages objects of this class is a DLL that runs in the same process as the caller of the function specifying the class context.</td></tr>
+<tr><td>CLSCTX_LOCAL_SERVER</td><td>The EXE code that creates and manages objects of this class runs on same machine but is loaded in a separate process space.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p5">nStackSize</a></dt>
+<dd><p>default = 64 KB<br />
+<br />
+Specifies the stacksize of the created thread in bytes.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A proxy object for the created object which allows you to call functions asyncronously.</p>
+
+<h2>Remarks</h2>
+<p>This functions allows you to create real multithreaded FoxPro programs.<br />
+Creating multithreaded code in FoxPro was actually possible since you can compile FoxPro code into COM classes. The problem was that you could only run this code in a multithreaded fashion inside other multithreading aware environments / languages like IIS, C++ or C#.<br />
+<br />
+The <em>CreateThreadObject</em> function provides the missing piece in the puzzle - creating multithreading capable COM objects on their own thread from within Visual FoxPro.<br />
+<br />
+Each method call or property access/assignment you make is executed on the thread the created object "lives" in, the call returns immediatly while the method is executed in the background. The return value is always a unique indentifier value (callid) assigned to the call.<br />
+<br />
+All calls are put into a FIFO (first in first out) queue and are processed in the order they are made. The size of the queue is only limited by available memory, so you can queue up as many calls on the object as you like.<br />
+<br />
+The lifetime of the thread is bound to the returned proxy object. If the proxy object is destroyed the thread is destroyed as well.<br />
+When the thread is still executing a method when the object is destroyed the destruction will block until the method has finished execution. All other calls that are still in the queue are discarded.<br />
+<br />
+The returned proxy object also implements a few functions for managing method abortion and other tasks.<br />
+</p>
+<table>
+<tr><th>Type</th><th>Name</th><th>Description</th></tr>
+<tr><td>Method</td><td>AbortCall(callid)</td><td>Aborts the call with the given callid or all calls if 0 is passed.</td></tr>
+<tr><td>Method</td><td>GetCallQueueSize</td><td>Returns the number of pending call's in the queue. The currently processed call is also counted.</td></tr>
+<tr><td>Method</td><td>GetCallRunTime(callid)</td><td>Returns the time in milliseconds the call is running. 0 is returned if the call has finished or is still in the queue. If you pass 0 the runtime of the currently processed call is returned.</td></tr>
+<tr><td>Property</td><td>Object</td><td>When accessing the <i>Object</i> property all calls are made syncronously. This property is only available when you passed .T. in the <i>bSyncronousAccess</i> parameter when creating the object.</td></tr>
+<tr><td>Property</td><td>ThreadId</td><td>Read only property which returns the thread id on which the object is running.</td></tr>
+<tr><td>Property/Method</td><td>CallContext</td><td>The <i>CallContext</i> property/method allows you to associate a value (e.g. primary key of a table row) with the next following asyncronous method call. This value is passed on to the completion callback when the method has finished.</td></tr>
+</table><p><br />
+If you implement a property named <em>CallInfo</em> in the COM class you created with <em>CreateThreadObject</em>, you can access this property during the execution of methods<br />
+to check for method abortion and other information. The property will return an object which implements the following interface.<br />
+</p>
+<table>
+<tr><th>Type</th><th>Name</th><th>Description</th></tr>
+<tr><td>Property</td><td>AbortEvent</td><td>Returns the winapi event object (<a href="http://msdn.microsoft.com/en-us/library/ms682396(VS.85).aspx">CreateEvent</a>) which is used internally to abort the call.</td><tr>
+<tr><td>Method</td><td>Aborted()</td><td>Returns .T. if the call was aborted, .F. otherwise.</td><tr>
+<tr><td>Property</td><td>CallContext</td><td>Returns the value associated with the method call</td><tr>
+<tr><td>Property</td><td>CallId</td><td>Returns the uniqued id assigned to this call.</td><tr>
+</table>
+<h2>Example</h2>
+<p>TestFunc blocks for the passed in timeout <br />
+TestFunc2 loops, simulates some work with the Sleep api call and checks for method abortion<br />
+</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">&amp;&amp; Compile this class into a "Multi-threaded COM server (dll)"
+DEFINE CLASS ExampleObject AS Session OLEPUBLIC
+    DataSession = 2 &amp;&amp; you should always run each object in their own datasession
+    CallInfo = .NULL. &amp;&amp; "magic" property
+    
+    FUNCTION TestFunc(lnTimeOut AS Long) AS Long
+        DECLARE Sleep IN WIN32API INTEGER
+        Sleep(m.lnTimeOut * 1000)
+        RETURN m.lnTimeOut
+    ENDFUNC
+
+    FUNCTION TestFunc2() AS Long
+        LOCAL lnRetVal, xj
+        DECLARE Sleep IN WIN32API INTEGER
+        m.lnRetVal = 1
+        FOR m.xj = 1 TO 30
+            Sleep(500)
+            IF THIS.CallInfo.Aborted()
+                m.lnRetVal = -1
+                EXIT				
+            ENDIF
+        ENDFOR
+        RETURN m.lnRetVal
+    ENDFUNC
+
+ENDDEFINE
+</pre></div>
+<p></p>
+<div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_2">&amp;&amp; using the above class
+PUBLIC loObj, loCallback, xj, lnCallId
+m.loCallback = <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>('ExampleCallback')
+m.loObj = CreateThreadObject('YourProject.ExampleObject', m.loCallback, .T.)
+
+FOR m.xj = 1 to 5
+? m.loObj.TestFunc(m.xj)
+ENDFOR
+
+&amp;&amp; aborting a call
+m.lnCallId = m.loObj.TestFunc2()
+? m.loObj.AbortCall(m.lnCallId)
+
+&amp;&amp; associating a value with the next call
+m.loObj.CallContext = 'someValue'
+? m.loObj.TestFunc(5)
+&amp;&amp; you can also use CallContext as a method with chaining (it returns "THIS")
+? m.loObj.CallContext('someValue2').TestFunc(5)
+
+&amp;&amp; making a syncronous call over the "Object" property
+&amp;&amp; this will block until the method has finished just like any ordinary method call
+? m.loObj.Object.TestFunc(5)
+
+DEFINE CLASS ExampleCallback AS Custom
+
+	FUNCTION OnCallComplete(callid AS Long, result AS Variant, callcontext AS Variant) AS VOID
+		 ? callid, result, callcontext
+	ENDFUNC
+	
+	FUNCTION OnError(callid AS Long, callcontext AS Variant, errornumber AS Long, errorsource AS String, errordescription AS String) AS VOID
+		 ? callid, callcontext, errornumber, errorsource, errordescription
+	ENDFUNC
+
+ENDDEFINE
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/clsidfromprogid.html">CLSIDFromProgID</a><br />
+<a href="/pages/clsidfromstring.html">CLSIDFromString</a><br />
+<a href="/pages/createguid.html">CreateGuid</a><br />
+<a href="/pages/getiunknown.html">GetIUnknown</a><br />
+<a href="/pages/isequalguid.html">IsEqualGuid</a><br />
+<a href="/pages/progidfromclsid.html">ProgIDFromCLSID</a><br />
+<a href="/pages/registeractiveobject.html">RegisterActiveObject</a><br />
+<a href="/pages/registerobjectasfilemoniker.html">RegisterObjectAsFileMoniker</a><br />
+<a href="/pages/revokeactiveobject.html">RevokeActiveObject</a><br />
+<a href="/pages/stringfromclsid.html">StringFromCLSID</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/kdzttdcb(v=vs.80).aspx">_beginthreadex</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724211(VS.85).aspx">CloseHandle</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms688386(VS.85).aspx">CLSIDFromProgID</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms686615(v=vs.85).aspx">CoCreateInstance</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms691421(v=vs.85).aspx">CoGetInterfaceAndReleaseStream</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms693316(v=vs.85).aspx">CoMarshalInterThreadInterfaceInStream</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms695279(v=vs.85).aspx">CoInitializeEx</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms688715(v=vs.85).aspx">CoUninitialize</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682396(VS.85).aspx">CreateEvent</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms644934(v=vs.85).aspx">DispatchMessage</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682608(v=vs.85).aspx">EnterCriticalSection</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms679360(v=vs.85).aspx">GetLastError</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms683476(v=vs.85).aspx">InitializeCriticalSectionAndSpinCount</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684169(v=vs.85).aspx">LeaveCriticalSection</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684242(v=vs.85).aspx">MsgWaitForMultipleObjects</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms644943(v=vs.85).aspx">PeekMessage</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms685081(v=vs.85).aspx">ResetEvent</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms686211(VS.85).aspx">SetEvent</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms221258.aspx">VariantChangeType</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms221165.aspx">VariantClear</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms221402.aspx">VariantInit</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms221697.aspx">VariantCopy</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms687032(v=vs.85).aspx">WaitForSingleObject</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

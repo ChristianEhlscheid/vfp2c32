@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>GetServerTime</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">GetServerTime</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">The retrieves the current time from a windows server.</p>
+
+<div class="block"><pre>GetServerTime(<a href="#p1">cServer</a> [, <a href="#p2">nTimeZone</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cServer</a></dt>
+<dd><p>The DNS or NetBIOS name of the remote server from which to retrieve the time.</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>Windows NT:  This string must begin with \\.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nTimeZone (optional)</a></dt>
+<dd><p>default = 1<br />
+<br />
+The timezone into which the returned time should be converted.<br />
+<br />
+One of the following values:</p>
+<table>
+<tr><th>Timezone</th><th>Meaning</th></tr>
+<tr><td>1</td><td>UTC</td></tr>
+<tr><td>2</td><td>The timezone of the local computer.</td></tr>
+<tr><td>3</td><td>The timezone of the server.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>A datetime value.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aborturldownloadtofileex.html">AbortUrlDownloadToFileEx</a><br />
+<a href="/pages/aipaddresses.html">AIpAddresses</a><br />
+<a href="/pages/anetfiles.html">ANetFiles</a><br />
+<a href="/pages/anetservers.html">ANetServers</a><br />
+<a href="/pages/icmpping.html">IcmpPing</a><br />
+<a href="/pages/ip2macaddress.html">Ip2MacAddress</a><br />
+<a href="/pages/resolvehosttoip.html">ResolveHostToIp</a><br />
+<a href="/pages/synctosntpserver.html">SyncToSNTPServer</a><br />
+<a href="/pages/urldownloadtofileex.html">UrlDownloadToFileEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/bb706687.aspx">NetRemoteTOD</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

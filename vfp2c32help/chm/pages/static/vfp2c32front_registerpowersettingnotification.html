@@ -1,0 +1,269 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>VFP2C32Front - RegisterPowerSettingNotification</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>VFP2C32Front - RegisterPowerSettingNotification</h1>
+</div>
+<div id="content">
+
+<h2>RegisterPowerSettingNotification</h2>
+<p>The following example monitors the system for power state changes.<br />
+With the <a href="http://msdn.microsoft.com/en-us/library/aa373196(v=VS.85).aspx">RegisterPowerSettingNotification</a> function we register a window handle which will receive notifications when the power state of the system changes.<br />
+Then we hook the window procedure of the window with the <a href="pages/BindEventsEx.html">BindEventsEx</a> function.<br />
+The <a href="http://msdn.microsoft.com/en-us/library/aa372723(v=VS.85).aspx">POWERBROADCAST_SETTING</a> structure has a varying length, a pointer to this structure is passed to the registered callback function <strong>PowerBroadCastEvent</strong>.<br />
+The Translation options for this structure are <strong>Memory management - not responsible</strong> since the structure is passed to us from the OS and we don't need to allocate or free any memory.<br />
+The <strong>DataDword</strong> and <strong>DataGuid</strong> members are added manually to access the varying data in the structure.</p>
+
+<div class="codeheader"><a onclick="CopyCode('code_34V1B12VG')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_34V1B12VG">
+#DEFINE WM_POWERBROADCAST				0x0218
+#DEFINE PBT_POWERSETTINGCHANGE		0x8013
+
+#DEFINE GUID_POWERSCHEME_PERSONALITY		0h41855D2443392244B02513A784F679B7	&& {245D8541-3943-4422-B025-13A784F679B7}
+#DEFINE GUID_MIN_POWER_SAVINGS			0hDA7F5E8CBFE8964A9A85A6E23A8C635C	&& {8C5E7FDA-E8BF-4A96-9A85-A6E23A8C635C}
+#DEFINE GUID_MAX_POWER_SAVINGS			0h081384A14135AB4FBC81F71556F20B4A	&& {A1841308-3541-4FAB-BC81-F71556F20B4A}
+#DEFINE GUID_TYPICAL_POWER_SAVINGS		0h22421B3894F6F0419685FF5BB260DF2E	&& {381B4222-F694-41F0-9685-FF5BB260DF2E}
+#DEFINE GUID_ACDC_POWER_SOURCE			0h599A3E5DD5E9004BA6BDFF34FF516548	&& {5D3E9A59-E9D5-4B00-A6BD-FF34FF516548}
+#DEFINE GUID_BATTERY_PERCENTAGE_REMAINING	0h4180ADA75AB4AE4C87A3EECBB468A9E1	&& {A7AD8041-B45A-4CAE-87A3-EECBB468A9E1}
+#DEFINE GUID_IDLE_BACKGROUND_TASK		0hD8315C5134F73D16A0FD11A08C91E8F1	&& {515C31D8-F734-163D-A0FD-11A08C91E8F1}
+#DEFINE GUID_SYSTEM_AWAYMODE			0h80F5A798F701AA489C0F44352C29E5C0	&& {98A7F580-01F7-48AA-9C0F-44352C29E5C0}
+#DEFINE GUID_MONITOR_POWER_ON			0h151073021045264599E6E5A17EBD1AEA	&& {02731015-4510-4526-99E6-E5A17EBD1AEA}
+
+PUBLIC goPowerEvents
+m.goPowerEvents = CREATEOBJECT('cPowerEvents')
+m.goPowerEvents.RegisterEvent(GUID_POWERSCHEME_PERSONALITY)
+m.goPowerEvents.RegisterEvent(GUID_ACDC_POWER_SOURCE)
+m.goPowerEvents.RegisterEvent(GUID_BATTERY_PERCENTAGE_REMAINING)
+m.goPowerEvents.RegisterEvent(GUID_MONITOR_POWER_ON)
+
+DEFINE CLASS cPowerEvents AS Custom
+
+	PROTECTED oRegisteredEvents
+	oRegisteredEvents = .NULL.
+	
+	FUNCTION Init
+		THIS.oRegisteredEvents = CREATEOBJECT('Collection')
+		BINDEVENTSEX(_VFP.hWnd, WM_POWERBROADCAST, THIS, 'PowerBroadCastEvent', 'wParam, lParam')
+	ENDFUNC
+
+	FUNCTION Destroy
+		THIS.UnregisterEvent()
+		UNBINDEVENTSEX(_VFP.hWnd, WM_POWERBROADCAST)
+	ENDFUNC
+
+	FUNCTION RegisterEvent(lcEvent)
+		LOCAL lnIndex, lnHandle
+		m.lnIndex = THIS.oRegisteredEvents.GetKey(m.lcEvent)
+		IF m.lnIndex = 0
+			m.lnHandle = RegisterPowerSettingNotification(_VFP.hWnd, m.lcEvent, 0)
+			THIS.oRegisteredEvents.Add(m.lnHandle, m.lcEvent)
+		ENDIF
+	ENDFUNC
+	
+	FUNCTION UnregisterEvent(lcEvent)
+		LOCAL lnIndex, lnHandle
+		IF VARTYPE(m.lcEvent) = 'C'
+			m.lnIndex = THIS.oRegisteredEvents.GetKey(m.lcEvent)
+			IF m.lnIndex != 0
+				m.lnHandle = THIS.oRegisteredEvents.Item(m.lnIndex)
+				UnregisterPowerSettingNotification(m.lnHandle)
+				THIS.oRegisteredEvents.Remove(m.lnIndex)
+			ENDIF
+		ELSE && remove all events
+			FOR EACH m.lnHandle IN THIS.oRegisteredEvents
+				UnregisterPowerSettingNotification(m.lnHandle)
+			ENDFOR
+			THIS.oRegisteredEvents.Remove(-1)
+		ENDIF
+	ENDFUNC
+
+	FUNCTION PowerBroadCastEvent
+		LPARAMETERS dwEvent, lnData
+
+		DO CASE
+
+			CASE m.dwEvent = PBT_POWERSETTINGCHANGE
+			
+				LOCAL loPBS, lcPowerSetting
+				m.loPBS = CREATEOBJECT('POWERBROADCAST_SETTING', m.lnData) && pass pointer to structure!
+				m.lcPowerSetting = m.loPBS.PowerSetting.Guid
+				DO CASE
+					CASE m.lcPowerSetting == GUID_POWERSCHEME_PERSONALITY
+						LOCAL lcPSGuid, lcPSName
+						m.lcPSGuid = m.loPBS.DataGuid.Guid
+						m.lcPSName = ICASE(m.lcPSGuid == GUID_MIN_POWER_SAVINGS, 'High Performance', ;
+							m.lcPSGuid == GUID_MAX_POWER_SAVINGS, 'Power Saver', 'Automatic')
+						? 'Active power scheme changed to: ' + m.lcPSName
+					
+					CASE m.lcPowerSetting == GUID_ACDC_POWER_SOURCE
+						LOCAL lnPowerSource
+						m.lnPowerSource = m.loPBS.DataDword
+						DO CASE
+							CASE m.lnPowerSource = 0
+								? 'The computer is powered by an AC power source.'
+							CASE m.lnPowerSource = 1
+								? 'The computer is powered by an onboard battery power source.'
+							CASE m.lnPowerSource = 2
+								? 'The computer is powered by a short-term power source such as a UPS device.'
+						ENDCASE
+
+					CASE m.lcPowerSetting == GUID_BATTERY_PERCENTAGE_REMAINING
+						? 'Current battery capacity: ' + ALLTRIM(STR(m.loPBS.DataDword)) + '%'
+						
+					CASE m.lcPowerSetting == GUID_MONITOR_POWER_ON
+						? 'Monitor state changed to: ' + IIF(m.loPBS.DataDword = 0, 'Off', 'On')
+
+				ENDCASE
+			
+		ENDCASE
+		
+	ENDFUNC
+
+ENDDEFINE
+
+FUNCTION RegisterPowerSettingNotification(hRecipient, PowerSettingGuid,  Flags)
+	DECLARE INTEGER RegisterPowerSettingNotification IN WIN32API INTEGER hRecipient, STRING PowerSettingGuid, INTEGER Flags
+	RETURN RegisterPowerSettingNotification(m.hRecipient, m.PowerSettingGuid, m.Flags)
+ENDFUNC
+
+FUNCTION UnregisterPowerSettingNotification(Handle)
+	DECLARE INTEGER UnregisterPowerSettingNotification IN WIN32API INTEGER Handle
+	RETURN UnregisterPowerSettingNotification(m.Handle)
+ENDFUNC
+
+DEFINE CLASS POWERBROADCAST_SETTING AS Exception
+
+	Address = 0
+	Name = "POWERBROADCAST_SETTING"
+	&& structure fields
+	PowerSetting = .NULL.
+	DataLength = .F.
+	DataGuid = .F. && added manually to access GUID at offset of Data member
+	DataDword = .F. && added manually to access DWORD at offset of Data member
+	
+	PROCEDURE Init(lnAddress)
+		ASSERT TYPE('lnAddress') = 'N' AND lnAddress != 0 MESSAGE 'Invalid structure address!'
+		THIS.Address = lnAddress
+		THIS.PowerSetting = CREATEOBJECT('GUID', THIS.Address)
+		THIS.DataGuid = CREATEOBJECT('GUID', THIS.Address+20) && added manually
+	ENDPROC
+
+	PROCEDURE Address_Assign(lnAddress)
+		DO CASE
+			CASE THIS.Address = 0
+				THIS.Address = lnAddress
+			CASE THIS.Address = lnAddress
+			OTHERWISE
+				THIS.Address = lnAddress
+				THIS.PowerSetting.Address = lnAddress
+				THIS.DataGuid.Address = lnAddress + 20 && added manually
+		ENDCASE
+	ENDPROC
+
+	PROCEDURE DataLength_Access()
+		RETURN ReadUInt(THIS.Address+16)
+	ENDPROC
+
+	PROCEDURE DataDword_Access()
+		RETURN ReadUInt(THIS.Address+20)
+	ENDPROC
+
+ENDDEFINE
+
+DEFINE CLASS GUID AS Exception
+
+	Address = 0
+	SizeOf = 16
+	PROTECTED Embedded
+	Embedded = .F.
+	Name = "GUID"
+	&& structure fields
+	Data1 = .F.
+	Data2 = .F.
+	Data3 = .F.
+	Data4 = .F.
+	Guid = .F. && custom member to assign and access GUID as a binary string
+	GuidString = .F. && custom member to assign and access GUID as a readable string
+	
+	PROCEDURE Init(lnAddress)
+		IF PCOUNT() = 0
+			THIS.Address = AllocMem(THIS.SizeOf)
+		ELSE
+			THIS.Address = lnAddress
+			THIS.Embedded = .T.
+		ENDIF
+	ENDPROC
+
+	PROCEDURE Destroy()
+		IF !THIS.Embedded
+			FreeMem(THIS.Address)
+		ENDIF
+	ENDPROC
+
+	PROCEDURE Data1_Access()
+		RETURN ReadUInt(THIS.Address)
+	ENDPROC
+
+	PROCEDURE Data1_Assign(lnNewVal)
+		WriteUInt(THIS.Address,lnNewVal)
+	ENDPROC
+
+	PROCEDURE Data2_Access()
+		RETURN ReadUShort(THIS.Address+4)
+	ENDPROC
+
+	PROCEDURE Data2_Assign(lnNewVal)
+		WriteUShort(THIS.Address+4,lnNewVal)
+	ENDPROC
+
+	PROCEDURE Data3_Access()
+		RETURN ReadUShort(THIS.Address+6)
+	ENDPROC
+
+	PROCEDURE Data3_Assign(lnNewVal)
+		WriteUShort(THIS.Address+6,lnNewVal)
+	ENDPROC
+
+	PROCEDURE Data4_Access()
+		RETURN ReadCharArray(THIS.Address+8,8)
+	ENDPROC
+
+	PROCEDURE Data4_Assign(lnNewVal)
+		WriteCharArray(THIS.Address+8,lnNewVal,8)
+	ENDPROC
+
+	PROCEDURE Guid_Access()
+		RETURN ReadBytes(THIS.Address, 16)
+	ENDPROC
+
+	PROCEDURE Guid_Assign(lnNewVal)
+		WriteBytes(THIS.Address, m.lnNewVal, 16)
+	ENDPROC
+
+	PROCEDURE GuidString_Access()
+		RETURN STRINGFROMCLSID(THIS.Address)
+	ENDPROC
+
+	PROCEDURE GuidString_Assign(lnNewVal)
+		LOCAL lcGuid
+		m.lcGuid = CLSIDFROMSTRING(m.lnNewVal)
+		WriteBytes(THIS.Address, m.lcGuid)
+	ENDPROC
+
+ENDDEFINE
+</pre></div>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

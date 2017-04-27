@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Memory management</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>Memory management</h1>
+
+</div>
+<div id="content">
+<p>
+Memory allocation.</p>
+<p></p>
+
+
+<table class="list">
+<tr class="uneven"><td><a href="allochglobal.html">AllocHGlobal</a></td><td>Allocates the specified number of bytes from the global heap.</td></tr>
+<tr class="even"><td><a href="allocmem.html">AllocMem</a></td><td>Allocates the specified number of bytes from the custom library heap.</td></tr>
+<tr class="uneven"><td><a href="allocmemto.html">AllocMemTo</a></td><td>Allocates the specified number of bytes from the custom library heap and stores a pointer to the allocated memory at the passed address.</td></tr>
+<tr class="even"><td><a href="amemblocks.html">AMemBlocks</a></td><td>Stores information about all blocks allocated from the library internal heap into an array.</td></tr>
+<tr class="uneven"><td><a href="compactmem.html">CompactMem</a></td><td>Returns the size of the largest committed free block in the library specific heap.</td></tr>
+<tr class="even"><td><a href="freehglobal.html">FreeHGlobal</a></td><td>Frees memory allocated with <a href="/pages/allochglobal.html">AllocHGlobal</a>.</td></tr>
+<tr class="uneven"><td><a href="freemem.html">FreeMem</a></td><td>Frees a memory block allocated from the library internal heap by the <a href="/pages/allocmem.html">AllocMem</a> or <a href="/pages/reallocmem.html">ReAllocMem</a> function.</td></tr>
+<tr class="even"><td><a href="freepmem.html">FreePMem</a></td><td>Frees the memory block the passed in pointer points to from the library internal heap.</td></tr>
+<tr class="uneven"><td><a href="freerefarray.html">FreeRefArray</a></td><td>Frees all memory allocated for the passed in C style array.</td></tr>
+<tr class="even"><td><a href="lockhglobal.html">LockHGlobal</a></td><td>Locks a global memory object and returns a pointer to the first byte of the object's memory block.</td></tr>
+<tr class="uneven"><td><a href="reallochglobal.html">ReAllocHGlobal</a></td><td>Changes the size of a specified global memory object.</td></tr>
+<tr class="even"><td><a href="reallocmem.html">ReAllocMem</a></td><td>Changes the size of a memory block previously allocated by <a href="/pages/allocmem.html">AllocMem</a>.</td></tr>
+<tr class="uneven"><td><a href="sizeofmem.html">SizeOfMem</a></td><td>Retrieves the size of a memory block allocated by <a href="/pages/allocmem.html">AllocMem</a>.</td></tr>
+<tr class="even"><td><a href="unlockhglobal.html">UnlockHGlobal</a></td><td>Decrements the lock count associated with a memory object allocated with <a href="/pages/allochglobal.html">AllocHGlobal</a>.</td></tr>
+<tr class="uneven"><td><a href="validatemem.html">ValidateMem</a></td><td>Validates the library internal heap. The function scans all the memory blocks in the heap and verifies that the heap control structures maintained by the heap manager are in a consistent state. You can also use the ValidateMem function to validate a single memory block without checking the validity of the entire heap.</td></tr>
+</table>
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

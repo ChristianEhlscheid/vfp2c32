@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Distribution</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfpsrvhostversion"></p>
+<h1>Distribution</h1>
+</div>
+<div id="content">
+
+<h2>Configuration</h2>
+<p>The VFPSrvHost executable is configured by small XML named after the executable with the extension ".xml", this way you can rename 
+the vfpsrvhost.exe if you want to e.g. "yourservice.exe" and then name the config file "yourservice.xml". The XML structure of the file is explained below.</p>
+
+<div class="block"><pre>
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;Services&gt;
+	&lt;ServiceConfig&gt;
+		&lt;DisplayName&gt;&lt;/DisplayName&gt;
+		&lt;ServiceName&gt;&lt;/ServiceName&gt;
+		&lt;StartType&gt;&lt;/StartType&gt;
+		&lt;ServiceAccount&gt;&lt;/ServiceAccount&gt;
+		&lt;ComClass&gt;&lt;/ComClass&gt;
+		&lt;ComLocale&gt;&lt;/ComLocale&gt;
+		&lt;InitialWaitHint&gt;&lt;/InitialWaitHint&gt;
+		&lt;StopWaitHint&gt;&lt;/StopWaitHint&gt;
+		&lt;PauseWaitHint&gt;&lt;/PauseWaitHint&gt;
+		&lt;ContinueWaitHint&gt;&lt;/ContinueWaitHint&gt;
+		&lt;PowerNotifications&gt;&lt;/PowerNotifications&gt;
+		&lt;Dependencies&gt;&lt;/Dependencies&gt;
+	&lt;/ServiceConfig&gt;
+&lt;/Services&gt;
+</pre></div>
+
+<h3>ServiceConfig</h3>
+<p>Each ServiceConfig tag includes the information for one service.  VFPSrvHost is able to host multiple services 
+in one process instance.</p>
+
+<h3>DisplayName</h3>
+<p>The descriptive displayname of you windows service.</p>
+
+<h3>ServiceName</h3>
+<p>The actual name of the windows service with a limit of 256 characters.</p>
+
+<h3>StartType</h3>
+<p>The service start type.<br />
+On of these values:</p>
+<table>
+<tr><th>Value</th><th>Meaning</th></tr>
+<tr><td>AutoStart</td><td>A service started automatically by the service control manager during system startup.</td></tr>
+<tr><td>DemandStart</td><td>A service started by the service control manager when a process calls the StartService function.</td></tr>
+</table>
+
+<h3>ServiceAccount (optional)</h3>
+<p>The user account under which the service will run, if this tag is ommited the service will run under the  LocalSystem account.</p>
+
+<h3>ComClass</h3>
+<p>The COM "controller" class the host application should instantiate to handle service requests.</p>
+
+<h3>ComLocale (optional)</h3>
+<p>The COM locale identifier (numeric) which should be used. If this tag is ommited 1033 (English-US) is used.</p>
+
+<h3>InitialWaitHint (optinal)</h3>
+<p>The time in milliseconds the service needs to initialize. Defaults to 10000 (10 seconds) if ommited.</p>
+
+<h3>StopWaitHint (optinal)</h3>
+<p>The time in milliseconds the service needs to stop. Defaults to 20000 (20 seconds) if ommited.</p>
+
+<h3>PauseWaitHint (optinal)</h3>
+<p>The time in milliseconds the service needs to pause.Defaults to 20000 (20 seconds) if ommited.</p>
+
+<h3>ContinueWaitHint (optinal)</h3>
+<p>The time in milliseconds the service needs to continue.Defaults to 20000 (20 seconds) if ommited.</p>
+
+<h3>PowerNotifications (optinal)</h3>
+<p>A semicolon seperated list of power notifications the service should be notified of. If you specify this tag your service controller class has to implement the "OnPowerEvent" method.<br />
+One or several of these values:</p>
+
+<table>
+<tr><th>Value</th><th>Meaning</th></tr>
+<tr><td>GUID_ACDC_POWER_SOURCE</td><td>The system power source has changed.</td></tr>
+<tr><td>GUID_BATTERY_PERCENTAGE_REMAINING</td><td>The remaining battery capacity has changed.</td></tr>
+<tr><td>GUID_IDLE_BACKGROUND_TASK</td><td>The system is busy. This indicates that the system will not be moving into an idle state in the near future and that the current time is a good time for components to perform background or idle tasks that would otherwise prevent the computer from entering an idle state.</td></tr>
+<tr><td>GUID_MONITOR_POWER_ON</td><td>The primary system monitor has been powered on or off.</td></tr>
+<tr><td>GUID_POWERSCHEME_PERSONALITY</td><td>The active power scheme personality has changed.</td></tr>
+<tr><td>GUID_SYSTEM_AWAYMODE</td><td>The system is entering or exiting away mode.</td></tr>
+</table>
+
+<h3>Dependencies (optinal)</h3>
+<p>A semicolon seperated list of service names this service depends on. If your service doesn't depend on other services just omit this tag.</p>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFPSrvHost</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

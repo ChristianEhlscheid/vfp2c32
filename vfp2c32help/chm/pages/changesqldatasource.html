@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>ChangeSQLDataSource</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">ChangeSQLDataSource</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Modifies a ODBC data source.</p>
+
+<div class="block"><pre>ChangeSQLDataSource(<a href="#p1">cDataSource</a>, <a href="#p2">cDriver</a>, <a href="#p3">nDataSourceType</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cDataSource</a></dt>
+<dd><p>A list of attributes in the form of keyword-value pairs seperated by <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).<br />
+E.g. "DSN=Personnel Data" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "UID=Smith"  + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "PWD=Sesame" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "DATABASE=Personnel"</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cDriver</a></dt>
+<dd><p>Driver name, a list of drivers can be retrieved with the <a href="/pages/asqldrivers.html">ASQLDrivers</a> function.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nDataSourceType</a></dt>
+<dd><table class="constlist">
+<caption>One of the following values.</caption>
+<tr><th style="width: 20%;">DatasourceType</th><th>Description</th></tr>
+<tr><td>ODBC_USER_DSN</td><td>Changes a user data sources.</td></tr>
+<tr><td>ODBC_SYSTEM_DSN</td><td>Changes a system data sources.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>.T. if the API call to <a href="http://msdn.microsoft.com/en-us/library/ms716476(VS.85).aspx">SQLConfigDataSource</a> succeeded, .F. otherwise.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/asqldatasources.html">ASQLDataSources</a><br />
+<a href="/pages/asqldrivers.html">ASQLDrivers</a><br />
+<a href="/pages/createsqldatasource.html">CreateSQLDataSource</a><br />
+<a href="/pages/deletesqldatasource.html">DeleteSQLDataSource</a><br />
+<a href="/pages/sqlcancelex.html">SQLCancelEx</a><br />
+<a href="/pages/sqlexecex.html">SQLExecEx</a><br />
+<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
+<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms716476(VS.85).aspx">SQLConfigDataSource</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

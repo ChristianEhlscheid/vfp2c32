@@ -1,0 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>AVolumePaths</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">AVolumePaths</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores the drive letters and volume GUID paths for the specified volume into an array.</p>
+
+<div class="block"><pre>AVolumePaths(<a href="#p1">cArrayName</a>, <a href="#p2">cVolume</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><table>
+<caption>On return the array contains the following information.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>A drive letter or volume GUID paths.</td><td>C</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cVolume</a></dt>
+<dd><p>A volume GUID path for the volume.<br />
+A list of volume GUID paths can be retrieved with <a href="/pages/avolumes.html">AVolumes</a>.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of volume paths.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/avolumeinformation.html">AVolumeInformation</a><br />
+<a href="/pages/avolumemountpoints.html">AVolumeMountPoints</a><br />
+<a href="/pages/avolumes.html">AVolumes</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa364998(VS.85).aspx">GetVolumePathNamesForVolumeName</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

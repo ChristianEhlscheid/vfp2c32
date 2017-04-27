@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>AHeapBlocks</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">AHeapBlocks</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about the blocks of a heap that has been allocated by a process into an array.</p>
+
+<div class="block"><pre>AHeapBlocks(<a href="#p1">cArrayName</a>, <a href="#p2">nProcessID</a>, <a href="#p3">nHeapID</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><table>
+<caption>On return the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/ms683443(VS.85).aspx">HEAPENTRY32</a> structure.</caption>
+<tr><th style="width: 70px">Column</th><th>Content</th><th style="width: 70px">Datatype</th></tr>
+<tr><td>1</td><td>A handle to the heap block.</td><td>N</td></tr>
+<tr><td>2</td><td>The linear address of the start of the block.</td><td>N</td></tr>
+<tr><td>3</td><td>The size of the heap block, in bytes.</td><td>N</td></tr>
+<tr><td>4</td><td>Flags</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">nProcessID</a></dt>
+<dd><p>The identifier of the process context that owns the heap.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nHeapID</a></dt>
+<dd><p>The identifier of the heap to be enumerated.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of heap blocks.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aprocesses.html">AProcesses</a><br />
+<a href="/pages/aprocessheaps.html">AProcessHeaps</a><br />
+<a href="/pages/aprocessmodules.html">AProcessModules</a><br />
+<a href="/pages/aprocessthreads.html">AProcessThreads</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms683245(VS.85).aspx">Heap32First</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms683440(VS.85).aspx">Heap32Next</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

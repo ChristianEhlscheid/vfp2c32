@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Distribution</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfpsrvhostversion"></p>
+<h1>Distribution</h1>
+</div>
+<div id="content">
+
+<h2>VFPSrvHost Package</h2>
+<p>The distribution contains the following directories:</p>
+<table>
+<tr><td>vfpsrvhost</td><td>Contains the vfpsrvhost.exe and all supporting files.</td></tr>
+<tr><td>vfpexampleservice</td><td>Contains an example service project.</td></tr>
+</table>
+
+<h2>Deployment</h2>
+<p>The vfpsrvhost.exe executable has only one dependency which is <a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ee388577(v=vs.85).aspx">XMLLite</a> - this system library is part of any Windows OS since XP SP3 / Windows Server 2003.
+You can use simple xcopy deployment for the executable itself, the VFP COM classes which implement the service have to be registered on the system or you have to create a manifest file (vfpsrvhost.exe.manifest) for regfree deployment.</p>
+
+</div>
+
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFPSrvHost</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

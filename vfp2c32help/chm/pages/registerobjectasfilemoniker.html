@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>RegisterObjectAsFileMoniker</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">RegisterObjectAsFileMoniker</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Creates a file moniker for the passed object.</p>
+
+<div class="block"><pre>RegisterObjectAsFileMoniker(<a href="#p1">oObjectReference</a>, <a href="#p2">cProgID</a>, <a href="#p3">cFileName</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cObjectReference</a></dt>
+<dd><p>A reference to the COM object you want to register as a file moniker.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cProgID</a></dt>
+<dd><p>The ProgID of your COM object - the same string you used in <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cFileName</a></dt>
+<dd><p>The name of a file.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A numeric handle representing the registered object.</p>
+
+<h2>Remarks</h2>
+<p>File monikers can be used to identify any object that is stored in its own file. A file moniker acts as a wrapper for the path name the native file system assigns to the file.  The source of the object named by the moniker must provide an implementation of the IPersistFile interface to support binding a file moniker. File monikers can represent either a complete or a relative path.</p>
+
+<h2>Example</h2>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">LOCAL yourObject, nObjectHandle
+yourObject = <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>('some.ComObject')
+nObjectHandle= RegisterObjectAsFileMoniker(m.yourObject, 'some.ComObject', 'D:\objec.ref')
+? nObjectHandle
+
+&amp;&amp; the object can now be obtained from any program with 
+LOCAL loComObjectRef
+m.loComObjectRef = GETOBJECT('D:\object.ref')
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/clsidfromprogid.html">CLSIDFromProgID</a><br />
+<a href="/pages/clsidfromstring.html">CLSIDFromString</a><br />
+<a href="/pages/createguid.html">CreateGuid</a><br />
+<a href="/pages/createthreadobject.html">CreateThreadObject</a><br />
+<a href="/pages/getiunknown.html">GetIUnknown</a><br />
+<a href="/pages/isequalguid.html">IsEqualGuid</a><br />
+<a href="/pages/progidfromclsid.html">ProgIDFromCLSID</a><br />
+<a href="/pages/registeractiveobject.html">RegisterActiveObject</a><br />
+<a href="/pages/revokeactiveobject.html">RevokeActiveObject</a><br />
+<a href="/pages/stringfromclsid.html">StringFromCLSID</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms688386(VS.85).aspx">CLSIDFromProgID</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms684004(VS.85).aspx">GetRunningObjectTable</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa380341(VS.85).aspx">StgOpenStorage</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa380323(VS.85).aspx">StgCreateDocfile</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa380384(VS.85).aspx">WriteClassStg</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa380302(v=vs.85).aspx">ReadClassStg</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms693465(VS.85).aspx">CreateFileMoniker</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms695276(VS.85).aspx">IRunningObjectTable</a> Register</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

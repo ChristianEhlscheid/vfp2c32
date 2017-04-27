@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>FLockFileEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">FLockFileEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Locks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</p>
+
+<div class="block"><pre>FLockFileEx(<a href="#p1">nFileHandle</a>, <a href="#p2">nLockOffset</a>, <a href="#p3">nBytesToLock</a> [, <a href="#p4">nLockMode</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nFileHandle</a></dt>
+<dd><p>A file handle retrieved from <a href="/pages/fcreateex.html">FCreateEx</a>, <a href="/pages/fopenex.html">FOpenEx</a> or a windows api function.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nLockOffset</a></dt>
+<dd><p>Startoffset of the section of bytes to lock in the file.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nBytesToLock</a></dt>
+<dd><p>Number of bytes to lock in the file.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nLockMode (optional, additive)</a></dt>
+<dd><p>default = 0<br />
+</p>
+<table>
+<tr><th style="width: 20%;">Lockmode</th><th>Description</th></tr>
+<tr><td>LOCKFILE_FAIL_IMMEDIATELY</td><td>The function returns immediately if it is unable to acquire the requested lock. If this flag is not specified, the function waits.</td></tr>
+<tr><td>LOCKFILE_EXCLUSIVE_LOCK</td><td>The function requests an exclusive lock. If this flag is not specified, the function requests a shared lock.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>.T. if lock was successful, .F. otherwise.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/afhandlesex.html">AFHandlesEx</a><br />
+<a href="/pages/fchsizeex.html">FChSizeEx</a><br />
+<a href="/pages/fcloseex.html">FCloseEx</a><br />
+<a href="/pages/fcreateex.html">FCreateEx</a><br />
+<a href="/pages/feofex.html">FEoFEx</a><br />
+<a href="/pages/fflushex.html">FFlushEx</a><br />
+<a href="/pages/fgetsex.html">FGetsEx</a><br />
+<a href="/pages/flockfile.html">FLockFile</a><br />
+<a href="/pages/fopenex.html">FOpenEx</a><br />
+<a href="/pages/fputsex.html">FPutsEx</a><br />
+<a href="/pages/freadex.html">FReadEx</a><br />
+<a href="/pages/fseekex.html">FSeekEx</a><br />
+<a href="/pages/funlockfile.html">FUnlockFile</a><br />
+<a href="/pages/funlockfileex.html">FUnlockFileEx</a><br />
+<a href="/pages/fwriteex.html">FWriteEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa365203(VS.85).aspx">LockFileEx</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

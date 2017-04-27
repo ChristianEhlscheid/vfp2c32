@@ -1,0 +1,1 @@
+DO (HOME() + 'vfp2c32_help.prg') WITH 'install'

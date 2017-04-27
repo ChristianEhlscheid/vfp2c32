@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>APrintersEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">APrintersEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores information about available printers, print servers, domains, or print providers into an array.</p>
+
+<div class="block"><pre>APrintersEx(<a href="#p1">cArrayName</a> [, <a href="#p2">cName</a> [, <a href="#p3">nFlags</a> [, <a href="#p4">nLevel</a> [, <a href="#p5">nOutputType</a>]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><p>if <em>nLevel</em> = 1</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/dd162844(VS.85).aspx">PRINTER_INFO_1</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>Flags. Have a look here <a href="http://msdn.microsoft.com/en-us/library/dd162844(VS.85).aspx">PRINTER_INFO_1</a> for a list of possible values.</td><td>N</td></tr>
+<tr><td>2</td><td>Describes the contents of the structure.</td><td>C</td></tr>
+<tr><td>3</td><td>Names the contents of the structure.</td><td>C</td></tr>
+<tr><td>4</td><td>Additional data describing the structure.</td><td>C</td></tr>
+</table><p><br />
+if <em>nLevel</em> = 2</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/dd162845(VS.85).aspx">PRINTER_INFO_2</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>The server that controls the printer. If this string is empty, the printer is controlled locally.</td><td>C</td></tr>
+<tr><td>2</td><td>The name of the printer.</td><td>C</td></tr>
+<tr><td>3</td><td>The share point for the printer.</td><td>C</td></tr>
+<tr><td>4</td><td>The port(s) used to transmit data to the printer.</td><td>C</td></tr>
+<tr><td>5</td><td>The name of the printer driver.</td><td>C</td></tr>
+<tr><td>6</td><td>A brief description of the printer.</td><td>C</td></tr>
+<tr><td>7</td><td>Specifies the physical location of the printer</td><td>C</td></tr>
+<tr><td>8</td><td>The name of the file used to create the separator page. This page is used to separate print jobs sent to the printer.</td><td>C</td></tr>
+<tr><td>9</td><td>The name of the print processor used by the printer. </td><td>C</td></tr>
+<tr><td>10</td><td>The data type used to record the print job.</td><td>C</td></tr>
+<tr><td>11</td><td>The default print-processor parameters.</td><td>C</td></tr>
+<tr><td>12</td><td>The printer attributes. For a list of possible values have a look here <a href="http://msdn.microsoft.com/en-us/library/dd162845(VS.85).aspx">PRINTER_INFO_2</a>.</td><td>N</td></tr>
+<tr><td>13</td><td>A priority value that the spooler uses to route print jobs.</td><td>N</td></tr>
+<tr><td>14</td><td>The default priority value assigned to each print job.</td><td>N</td></tr>
+<tr><td>15</td><td>The earliest time at which the printer will print a job.<br />
+This value is expressed as minutes elapsed since 12:00 AM GMT (Greenwich Mean Time).</td><td>N</td></tr>
+<tr><td>16</td><td>The latest time at which the printer will print a job.<br />
+This value is expressed as minutes elapsed since 12:00 AM GMT (Greenwich Mean Time).</td><td>N</td></tr>
+<tr><td>17</td><td>The printer status. For a list of possible values have a look here <a href="http://msdn.microsoft.com/en-us/library/dd162845(VS.85).aspx">PRINTER_INFO_2</a>.</td><td>C</td></tr>
+<tr><td>18</td><td>The number of print jobs that have been queued for the printer.</td><td>N</td></tr>
+<tr><td>19</td><td>The average number of pages per minute that have been printed on the printer.</td><td>N</td></tr>
+</table><p><br />
+if <em>nLevel</em> = 4</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/dd162847(VS.85).aspx">PRINTER_INFO_4</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>The name of the printer (local or remote).</td><td>C</td></tr>
+<tr><td>2</td><td>The name of the server.</td><td>C</td></tr>
+<tr><td>3</td><td>Attributes. For a list of possible values have a look here <a href="http://msdn.microsoft.com/en-us/library/dd162847(VS.85).aspx">PRINTER_INFO_4</a>.</td><td>N</td></tr>
+</table><p><br />
+if <em>nLevel</em> = 5</p>
+<table>
+<caption>the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/dd162848(VS.85).aspx">PRINTER_INFO_5</a> structure.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>The name of the printer.</td><td>C</td></tr>
+<tr><td>2</td><td>The port(s) used to transmit data to the printer.</td><td>C</td></tr>
+<tr><td>3</td><td>The printer attributes. For a list of possible values have a look here <a href="http://msdn.microsoft.com/en-us/library/dd162848(VS.85).aspx">PRINTER_INFO_5</a>.</td><td>N</td></tr>
+<tr><td>4</td><td>DeviceNotSelectedTimeout</td><td>N</td></tr>
+<tr><td>5</td><td>TransmissionRetryTimeout</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">cName (optional)</a></dt>
+<dd><p>default = empty<br />
+<br />
+Name of the print processor, domain or server for which to enumerater printers.<br />
+<br />
+if <em>nLevel</em> is 1, <em>nFlags</em> contains PRINTER_ENUM_NAME and <em>cName</em> is not empty, then <em>cName</em> specifies the name of the object to enumerate.<br />
+This string can be the name of a server, a domain, or a print provider.<br />
+<br />
+if <em>nLevel</em> is 1, <em>nFlags</em> contains PRINTER_ENUM_NAME, and <em>cName</em> is empty, then the function enumerates the available print providers.<br />
+<br />
+if <em>nLevel</em> is 1, <em>nFlags</em> contains PRINTER_ENUM_REMOTE, and <em>cName</em> is empty, then the function enumerates the printers in the user's domain.<br />
+<br />
+If <em>nLevel</em> is 2 or 5, <em>cName</em> specifies the name of a server whose printers are to be enumerated. If <em>cName</em> is empty, then the function enumerates the printers installed on the local machine.<br />
+<br />
+If <em>nLevel</em> is 4, <em>cName</em> should be empty. The function always queries on the local machine.<br />
+<br />
+When <em>cName</em> is empty, setting <em>nFlags</em> to PRINTER_ENUM_LOCAL + PRINTER_ENUM_CONNECTIONS enumerates printers that are installed on the local machine. These printers include those that are physically attached to the local machine as well as remote printers to which it has a network connection.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nFlags (optional, additive)</a></dt>
+<dd><p>default = PRINTER_ENUM_LOCAL<br />
+</p>
+<table>
+<caption>One or a combination of the following values.</caption>
+<tr><th style="width: 20%;">Flag</th><th>Description</th></tr>
+<tr><td>PRINTER_ENUM_LOCAL</td><td>The function ignores the cName parameter, and enumerates the locally installed printers.<br />
+Windows 95/98/Me: The function will also enumerate network printers because they are handled by the local print provider.</td></tr>
+<tr><td>PRINTER_ENUM_NAME</td><td>The function enumerates the printer identified by <i>cName</i>. This can be a server, a domain, or a print provider.
+If <i>cName</i> is empty, the function enumerates available print providers.</td></tr>
+<tr><td>PRINTER_ENUM_SHARED</td><td>The function enumerates printers that have the shared attribute.<br />
+Cannot be used in isolation; use an + operation to combine with another PRINTER_ENUM type.</td></tr>
+<tr><td>PRINTER_ENUM_DEFAULT</td><td>Windows 95/98/Me: The function returns information about the default printer.</td></tr>
+<tr><td>PRINTER_ENUM_CONNECTIONS</td><td>Windows NT/2000/XP: The function enumerates the list of printers to which the user has made previous connections.</td></tr>
+<tr><td>PRINTER_ENUM_NETWORK</td><td>Windows NT/2000/XP: The function enumerates network printers in the computer's domain. This value is valid only if <i>nLevel</i> is 1.</td></tr>
+<tr><td>PRINTER_ENUM_REMOTE</td><td>Windows NT/2000/XP: The function enumerates network printers and print servers in the computer's domain. This value is valid only if <i>nLevel</i> is 1.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p4">nLevel (optional)</a></dt>
+<dd><p>default = 2<br />
+<br />
+Specifies the level of intormation returned by the function,<br />
+<br />
+Valid values are 1, 2, 4, and 5, which correspond to the <a href="http://msdn.microsoft.com/en-us/library/dd162844(VS.85).aspx">PRINTER_INFO_1</a>, <a href="http://msdn.microsoft.com/en-us/library/dd162845(VS.85).aspx">PRINTER_INFO_2</a>, <a href="http://msdn.microsoft.com/en-us/library/dd162847(VS.85).aspx">PRINTER_INFO_4</a>, and <a href="http://msdn.microsoft.com/en-us/library/dd162848(VS.85).aspx">PRINTER_INFO_5</a> data structures.<br />
+<br />
+Windows 95/98/Me: The value can be 1, 2, or 5.<br />
+Windows NT/2000/XP: This value can be 1, 2, 4, or 5.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nOutputType (optional)</a></dt>
+<dd><p>default = APRINT_OUTPUT_ARRAY<br />
+<br />
+Valid values.<br />
+APRINT_OUTPUT_ARRAY - the information is returned in a multidimenional array<br />
+APRINT_OUTPUT_OBJECTARRAY - the information is returned in a single dimension array, where each row holds an object with custom set properties</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The number of printers.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/apapersizes.html">APaperSizes</a><br />
+<a href="/pages/aprinterforms.html">APrinterForms</a><br />
+<a href="/pages/aprintertrays.html">APrinterTrays</a><br />
+<a href="/pages/aprintjobs.html">APrintJobs</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/dd162692(VS.85).aspx">EnumPrinters</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

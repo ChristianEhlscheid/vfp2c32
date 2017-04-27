@@ -1,0 +1,14 @@
+LIBRARY	cparser
+EXPORTS
+start_parse
+remove_comments
+extract_defines
+add_knowntype
+remove_knowntype
+clear_knowntypes
+get_parsedtypehead
+clear_parsedtypes
+debug_entry
+get_parseerrorhead
+clear_errors
+get_errorcount

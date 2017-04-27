@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>StringFromCLSID</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">StringFromCLSID</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Converts a globally unique identifier (GUID) into a string of printable characters.</p>
+
+<div class="block"><pre>StringFromCLSID(<a href="#p1">cClsId | nClsIdPointer</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1"></a></dt>
+<dd><p></p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A CLSID (class GUID) in readable form. e.g. {2C256447-3F0D-4CBB-9D12-575BB20CDA0A}</p>
+
+<h2>Remarks</h2>
+<p>A CLSID is a globally unique identifier that identifies a COM class object. If your server or container allows linking to its embedded objects, you need to register a CLSID for each supported class of objects.</p>
+
+<h2>Example</h2>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">lcCLSID = <a href="/pages/clsidfromprogid.html">CLSIDFromProgID</a>('VisualFoxPro.Application')
+&amp;&amp; lcCLSID now contains the CLSID in binary format
+? StringFromCLSID(lcCLSID) &amp;&amp; convert into human readable format
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/clsidfromprogid.html">CLSIDFromProgID</a><br />
+<a href="/pages/clsidfromstring.html">CLSIDFromString</a><br />
+<a href="/pages/createguid.html">CreateGuid</a><br />
+<a href="/pages/createthreadobject.html">CreateThreadObject</a><br />
+<a href="/pages/getiunknown.html">GetIUnknown</a><br />
+<a href="/pages/isequalguid.html">IsEqualGuid</a><br />
+<a href="/pages/progidfromclsid.html">ProgIDFromCLSID</a><br />
+<a href="/pages/registeractiveobject.html">RegisterActiveObject</a><br />
+<a href="/pages/registerobjectasfilemoniker.html">RegisterObjectAsFileMoniker</a><br />
+<a href="/pages/revokeactiveobject.html">RevokeActiveObject</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms683893(VS.85).aspx">StringFromGUID2</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

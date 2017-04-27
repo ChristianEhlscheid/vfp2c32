@@ -1,0 +1,45 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Main</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfpsrvhostversion"></p>
+<h1>VFPSrvHost</h1>
+</div>
+<div id="content">
+
+<img src="/images/vfpx.gif" /> 
+
+<p class="ident">VFPSrvHost is a small executable that is able to run Visual FoxPro COM servers as a windows service.</p>
+
+<p>The application is configured by a small XML file which contains all the information describing the windows services hosted by the executable.
+The format of the configuration file is documented in the <a href=Configuration.html">Configuration</a> page.</p>
+
+<p>To implement a windows service in VFP at least two classes have to be implemented, a service "controller" class which will receive 
+events when the service is requested to start, stop, pause or other service specific events. The other one is the "worker" class in which the actual work your service performs is implemented.
+The OS expects each service to handle control requests in a timely manner, that's why the "controller" and "worker" classes have to be decoupled.
+The controller will handle the events originating from the OS while the worker runs independently on it's own thread.
+How to implement a controller class is documented <a href="Controller.html">here</a></p>
+
+<p>Installation, Configuration and Deinstallation of the windows service can be done by invoking the vfpsrvhost.exe on a DOS commandline which 
+is described in the section <a href="Installation">Installation</a>.
+
+<!-- image list for images which are only referenced in the stylesheed -->
+<img style="display:none" src="/images/caution.gif" /> 
+<img style="display:none" src="/images/copycode.gif" /> 
+<img style="display:none" src="/images/copycode2.gif" /> 
+<img style="display:none" src="/images/function.gif" /> 
+<img style="display:none" src="/images/note.gif" /> 
+<img style="display:none" src="/images/list_bullet.gif" /> 
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFPSrvHost</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

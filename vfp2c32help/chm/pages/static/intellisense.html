@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Intellisense &amp; Context Help</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>Intellisense &amp; Context Help</h1>
+</div>
+<div id="content">
+
+<h2>Installing Intellisense</h2>
+<p>To install Intellisense support for the functions in VFP2C32 execute the program "vfp2cinstallintelli.prg" from the subdirectory "vfp2c32\help".</p>
+
+<h2>Special scripts</h2>
+<p>To popup a list of all functions inside the library type "vfp2c" followed by a space.</p>
+
+<h2>Particularities</h2>
+<p>These functions exceed the intellisense limit of 26 characters:</p>
+<ul>
+<li>AbortRasConnectionNotification</li>
+<li>CreatePublicShadowObjReference</li>
+<li>RasClearConnectionStatistics</li>
+<li>RasConnectionNotificationEx</li>
+<li>RegisterObjectAsFileMoniker</li>
+<li>ReleasePublicShadowObjReference</li>
+</ul>
+<p>When intellisense pops up for these function only the first 26 characters are displayed,<br />
+just don't mind and specify the parameters and when finished instead of typing the final ")" to close the function call type another ","<br />
+the script will then correct the functionname for you.</p>
+
+<h2>Context sensitive help</h2>
+<p>There's also a context sensitive help script for the functions in VFP2C32 which integrates seemlessly with the VFP help system.</p>
+<p>Whenever a function contained in the library is highlighted in an editor window you're directly taken to the help topic inside this CHM file when pressing F1.<p> 
+
+<h2>Installing context sensitive help</h2>
+<p>The context sensitive help script is dependent on the Intellisense script so install this first,<br />
+then copy the files "vfp2c32_help.prg" and "vfp2c32.chm" from the subdirectory "vfp2c32\help" into your VFP installation directory.<br />
+The script needs to be executed at every start of VFP, to achive this add this line to you _STARTUP script:<br \>
+DO (HOME() + 'vfp2c32_help.prg') WITH 'install'<br />
+If you don't have a _STARTUP script yet, you can just copy the file "_startup.prg" into your VFP installation directory and<br \>
+select it at "Tools" -> "Options" -> "File Locations" -> "Startup program".</p>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>

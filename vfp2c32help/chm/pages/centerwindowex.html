@@ -1,0 +1,51 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>CenterWindowEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">CenterWindowEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Centers a window either in a specific window, it's parent window or on the desktop.</p>
+
+<div class="block"><pre>CenterWindowEx(<a href="#p1">nHwnd</a>, <a href="#p2">nCenterInHwnd</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nHwnd</a></dt>
+<dd><p>A handle to the window which should be centered.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nCenterInHwnd (optional)</a></dt>
+<dd><p>A handle to the window in which to center the window.<br />
+If you omit nCenterinHwnd the window is centered in it's parent window, if does not have a parent window it's centered on the desktop.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>Always .T.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/awindowprops.html">AWindowProps</a><br />
+<a href="/pages/awindows.html">AWindows</a><br />
+<a href="/pages/awindowsex.html">AWindowsEx</a><br />
+<a href="/pages/getwindowrectex.html">GetWindowRectEx</a><br />
+<a href="/pages/getwindowtextex.html">GetWindowTextEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms633545(VS.85).aspx">SetWindowPos</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633519(VS.85).aspx">GetWindowRect</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633510(VS.85).aspx">GetParent</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724385(VS.85).aspx">GetSystemMetrics</a> with parameter SM_CMONITORS<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724947(VS.85).aspx">SystemParametersInfo</a> with parameter SPI_GETWORKAREA<br />
+<a href="http://msdn.microsoft.com/en-us/library/dd145064(VS.85).aspx">MonitorFromWindow</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>FormatMessageEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">FormatMessageEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Retrieves the error message for the specified error number.</p>
+
+<div class="block"><pre>FormatMessageEx(<a href="#p1">nLastError</a> [, <a href="#p2">nLanguageId</a> [, <a href="#p3">nModuleHandle</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nLastError</a></dt>
+<dd><p>The error number.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nLanguageId (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+The language identifier for the requested message.<br />
+<br />
+If you pass a specific LANGID in this parameter, FormatMessageEx will return a message for that LANGID only. If the function cannot find a message for that LANGID, it sets Last-Error to ERROR_RESOURCE_LANG_NOT_FOUND. If you pass in zero, FormatMessageEx looks for a message for LANGIDs in the following order:<br />
+<br />
+Language neutral<br />
+Thread LANGID, based on the thread's locale value<br />
+User default LANGID, based on the user's default locale value<br />
+System default LANGID, based on the system default locale value<br />
+US English</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nModuleHandle (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+A handle to the module that contains the message table to search.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>The error message.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/aerrorex.html">AErrorEx</a><br />
+<a href="/pages/initvfp2c32.html">InitVFP2C32</a><br />
+<a href="/pages/vfp2csys.html">VFP2CSys</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms679351(VS.85).aspx">FormatMessage</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

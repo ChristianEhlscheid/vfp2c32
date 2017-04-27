@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>AWindows</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">AWindows</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Stores window handles (HWND's) into an array.</p>
+
+<div class="block"><pre>AWindows(<a href="#p1">cArrayName</a>, <a href="#p2">nType</a> [, <a href="#p3">nParam</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cArrayName</a></dt>
+<dd><table>
+<caption>On return the array contains the following information.</caption>
+<tr><th style="width: 70px;">Column</th><th>Content</th><th style="width: 70px;">Datatype</th></tr>
+<tr><td>1</td><td>A window handle (HWND).</td><td>N</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">nType (additive)</a></dt>
+<dd><p>One of the following values.</p>
+<table>
+<tr><th style="width: 20%;">Type</th><th>Description</th></tr>
+<tr><td>AWINDOWS_TOPLEVEL</td><td>Returns top level windows.</td></tr>
+<tr><td>AWINDOWS_CHILD</td><td>Returns child windows of  the window passed in nParam.</td></tr>
+<tr><td>AWINDOWS_THREAD</td><td>Returns windows owned by the thread passed in nParam.</td></tr>
+<tr><td>AWINDOWS_DESKTOP</td><td>Returns windows contained in the desktop passed in nParam.</td></tr>
+<tr><td>AWINDOWS_CALLBACK</td><td>Interpret first paramter as callback function (additive to the above).</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p3">nParam</a></dt>
+<dd><p>Depending on the nType parameter this parameter should be on of the following values.</p>
+<table class="constlist">
+<tr><th style="width: 20%;">Type</th><th>Meaning of this parameter</th></tr>
+<tr><td>AWINDOWS_TOPLEVEL</td><td>Don't pass this parameter.</td></tr>
+<tr><td>AWINDOWS_CHILD</td><td>A window handle for which to retrieve the child windows.</td></tr>
+<tr><td>AWINDOWS_THREAD</td><td>A thread handle for which to retrieve the owned windows.</td></tr>
+<tr><td>AWINDOWS_DESKTOP</td><td>A desktop handle for which to retrieve the contained windows.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>If nType contains AWINDOWS_CALLBACK 1 is returned, otherwise the number of windows.</p>
+
+<h2>Example</h2>
+<p>Enumerate toplevel windows into an array:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">AWindows('laArray',1)
+</pre></div>
+<p>Enumerate toplevel windows by calling SomeFunction with hHwnd parameter for each window found:</p>
+<div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_2">AWindows('SomeFunction',1+16)
+</pre></div>
+<p>Enumerate child windows of _SCREEN:</p>
+<div class="codeheader"><a onclick="CopyCode('code_3')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_3">AWindows('laArray',2,_SCREEN.hWnd)
+</pre></div>
+<p>Enumerate windows of a thread:</p>
+<div class="codeheader"><a onclick="CopyCode('code_4')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_4">AWindows('laArray',4,_VFP.ThreadId)
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/awindowprops.html">AWindowProps</a><br />
+<a href="/pages/awindowsex.html">AWindowsEx</a><br />
+<a href="/pages/centerwindowex.html">CenterWindowEx</a><br />
+<a href="/pages/getwindowrectex.html">GetWindowRectEx</a><br />
+<a href="/pages/getwindowtextex.html">GetWindowTextEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms633497(VS.85).aspx">EnumWindows</a> if nType = AWINDOWS_TOPLEVEL<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633494(VS.85).aspx">EnumChildWindows</a> if nType = AWINDOWS_CHILD<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633495(VS.85).aspx">EnumThreadWindows</a> if nType = AWINDOWS_THREAD<br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682615(VS.85).aspx">EnumDesktopWindows</a> if nType = AWINDOWS_DESKTOP</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>GetFileOwner</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">GetFileOwner</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Retrieves the owner of a file.</p>
+
+<div class="block"><pre>GetFileOwner(<a href="#p1">cFileName</a>, <a href="#p2">@rOwner</a>[, <a href="#p3">@rDomain</a>[, <a href="#p4">@rSidType</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cFileName</a></dt>
+<dd><p>The name of the file for which to retrieve the owner.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>This can be a relative path or only a filename, the VFP function <a href="its:dv_foxhelp.chm::/html/a3944489-2eaa-4f99-8dd7-98d7a355426a.htm">FULLPATH</a> is used to retrieve the fully qualified filename. <br />
+The usual VFP search path (<a href="its:dv_foxhelp.chm::/html/047f2e74-3552-43b7-a18d-ee2c7dd2db6e.htm">SET PATH</a>) is used.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">rOwner</a></dt>
+<dd><p>A reference to a variable that receives the owner of the file.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">rDomain</a></dt>
+<dd><p>A reference to a variable that receives the domain of the owner of the file.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">rSidType</a></dt>
+<dd><p>A reference to a variable that receives the type of the account.<br />
+The type is one of the values in <a href="http://msdn.microsoft.com/en-us/library/aa379601(v=vs.85).aspx">SID_NAME_USE</a> enumeration.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>Always .T.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adirectoryinfo.html">ADirectoryInfo</a><br />
+<a href="/pages/adirex.html">ADirEx</a><br />
+<a href="/pages/adriveinfo.html">ADriveInfo</a><br />
+<a href="/pages/afileattributes.html">AFileAttributes</a><br />
+<a href="/pages/afileattributesex.html">AFileAttributesEx</a><br />
+<a href="/pages/cancelfilechange.html">CancelFileChange</a><br />
+<a href="/pages/comparefiletimes.html">CompareFileTimes</a><br />
+<a href="/pages/copyfileex.html">CopyFileEx</a><br />
+<a href="/pages/deletedirectory.html">DeleteDirectory</a><br />
+<a href="/pages/deletefileex.html">DeleteFileEx</a><br />
+<a href="/pages/findfilechange.html">FindFileChange</a><br />
+<a href="/pages/getfileattributes.html">GetFileAttributes</a><br />
+<a href="/pages/getfilesize.html">GetFileSize</a><br />
+<a href="/pages/getfiletimes.html">GetFileTimes</a><br />
+<a href="/pages/getlongpathname.html">GetLongPathName</a><br />
+<a href="/pages/getshortpathname.html">GetShortPathName</a><br />
+<a href="/pages/movefileex.html">MoveFileEx</a><br />
+<a href="/pages/setfileattributes.html">SetFileAttributes</a><br />
+<a href="/pages/setfiletimes.html">SetFileTimes</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa446641(VS.85).aspx">GetKernelObjectSecurity</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa446651(VS.85).aspx">GetSecurityDescriptorOwner</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa379166(VS.85).aspx">LookupAccountSid</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724211(VS.85).aspx">CloseHandle</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

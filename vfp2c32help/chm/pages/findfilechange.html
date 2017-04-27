@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>FindFileChange</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">FindFileChange</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Monitors a directory for file changes in a seperate thread.</p>
+
+<div class="block"><pre>FindFileChange(<a href="#p1">cDirectory</a>, <a href="#p2">bWatchSubtree</a>, <a href="#p3">nFilter</a>, <a href="#p4">cCallback</a>)</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cDirectory</a></dt>
+<dd><p>The full path of the directory to be watched. This cannot be a relative path or an empty string.<br />
+The name is limited to MAX_PATH (260) characters.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">bWatchSubtree</a></dt>
+<dd><p>If this parameter is .T., the function monitors the directory tree rooted at the specified directory; if it is .F., it monitors only the specified directory.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nFilter</a></dt>
+<dd><p>The filter conditions that satisfy a change notification. This parameter can be one or more of the following values.</p>
+<table>
+<tr><th>Value</th><th>Meaning</th></tr>
+<tr><td>FILE_NOTIFY_CHANGE_FILE_NAME</td><td>Any file name change in the watched directory or subtree causes a change notification wait operation to return. Changes include renaming, creating, or deleting a file name.</td></tr>
+<tr><td>FILE_NOTIFY_CHANGE_DIR_NAME</td><td>Any directory-name change in the watched directory or subtree causes a change notification wait operation to return. Changes include creating or deleting a directory.</td></tr>
+<tr><td>FILE_NOTIFY_CHANGE_ATTRIBUTES</td><td>Any attribute change in the watched directory or subtree causes a change notification wait operation to return.</td></tr>
+<tr><td>FILE_NOTIFY_CHANGE_SIZE</td><td>Any file-size change in the watched directory or subtree causes a change notification wait operation to return. The operating system detects a change in file size only when the file is written to the disk. For operating systems that use extensive caching, detection occurs only when the cache is sufficiently flushed.</td></tr>
+<tr><td>FILE_NOTIFY_CHANGE_LAST_WRITE</td><td>Any change to the last write-time of files in the watched directory or subtree causes a change notification wait operation to return. The operating system detects a change to the last write-time only when the file is written to the disk. For operating systems that use extensive caching, detection occurs only when the cache is sufficiently flushed.</td></tr>
+<tr><td>FILE_NOTIFY_CHANGE_SECURITY</td><td>Any security-descriptor change in the watched directory or subtree causes a change notification wait oper</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p4">cCallback</a></dt>
+<dd><p>The function to call when one of the filter conditions occur in the monitored directory or subtree.<br />
+The function should have to following signature:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION FolderChanged
+    LPARAMETERS hHandle, cPath, nError
+    IF nError = 0
+        ? cPath + ' changed'
+    ELSE
+        ? 'Function: ' + cPath + " failed. ErrorNo. ", nError
+    ENDIF		
+ENDFUNC
+</pre></div>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A numeric handle representing the thread which monitors the directory.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adirectoryinfo.html">ADirectoryInfo</a><br />
+<a href="/pages/adirex.html">ADirEx</a><br />
+<a href="/pages/adriveinfo.html">ADriveInfo</a><br />
+<a href="/pages/afileattributes.html">AFileAttributes</a><br />
+<a href="/pages/afileattributesex.html">AFileAttributesEx</a><br />
+<a href="/pages/cancelfilechange.html">CancelFileChange</a><br />
+<a href="/pages/comparefiletimes.html">CompareFileTimes</a><br />
+<a href="/pages/copyfileex.html">CopyFileEx</a><br />
+<a href="/pages/deletedirectory.html">DeleteDirectory</a><br />
+<a href="/pages/deletefileex.html">DeleteFileEx</a><br />
+<a href="/pages/getfileattributes.html">GetFileAttributes</a><br />
+<a href="/pages/getfileowner.html">GetFileOwner</a><br />
+<a href="/pages/getfilesize.html">GetFileSize</a><br />
+<a href="/pages/getfiletimes.html">GetFileTimes</a><br />
+<a href="/pages/getlongpathname.html">GetLongPathName</a><br />
+<a href="/pages/getshortpathname.html">GetShortPathName</a><br />
+<a href="/pages/movefileex.html">MoveFileEx</a><br />
+<a href="/pages/setfileattributes.html">SetFileAttributes</a><br />
+<a href="/pages/setfiletimes.html">SetFileTimes</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa364417(VS.85).aspx">FindFirstChangeNotification</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa364427(VS.85).aspx">FindNextChangeNotification</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms682453(VS.85).aspx">CreateThread</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms687025(VS.85).aspx">WaitForMultipleObjects</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms644944(VS.85).aspx">PostMessage</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

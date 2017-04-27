@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>RasDialEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">RasDialEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">The <a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a> function establishes a RAS connection between a RAS client and a RAS server.</p>
+
+<div class="block"><pre>RasDialEx(<a href="#p1"><a href="#p2">cPhonebook</a>Entry | nRasDialParamsPtr</a> [, cPhonebook [, <a href="#p3">cCallback</a> [, <a href="#p4">nFlags</a> [, <a href="#p5">nRasConn</a>]]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cPhonebookEntry | nRasDialParamsPtr</a></dt>
+<dd><p>Either the name of the phonebookentry or a pointer to a <a href="http://msdn.microsoft.com/en-us/library/aa377238(VS.85).aspx">RASDIALPARAMS</a> structure.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cPhonebook (optional)</a></dt>
+<dd><p>default = empty<br />
+<br />
+If <em>cPhonebook</em> is empty the system default phonebook is used otherwise the it should specify a valid phonebook filename.<br />
+The default phone-book file is the one selected by the user in the User Preferences property sheet of the Dial-Up Networking dialog box.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cCallback (optional)</a></dt>
+<dd><p>default = no callbacks are made during the dial operation.<br />
+<br />
+A FoxPro function to call back.<br />
+<br />
+If you pass a callback function the <a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a> function is executed asyncronously.<br />
+It will return immediately and during the dial process your callback function will be called and <br />
+provide you with the current status of the operation.<br />
+<br />
+See class RasConnection:DialCallback in the ras.prg example.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nFlags (optional)</a></dt>
+<dd><p>default = 0<br />
+</p>
+<table>
+<caption>One or a combination of the following flags.</caption>
+<tr><th>Constant</th><th>Description</th></tr>
+<tr><td>RDEOPT_UsePrefixSuffix</td><td>If this flag is set, RasDialEx uses the prefix and suffix that is in the RAS phone book.<br />
+If this flag is not set, RasDialEx ignores the prefix and suffix that is in the RAS phone book.<br />
+If no phone book entry name is specified in the call to RasDialEx, the actual value of this flag is ignored, and it is assumed to be zero.</td></tr>
+<tr><td>RDEOPT_PausedStates</td><td>If this flag is set, RasDialEx accepts paused states. Examples of paused states are terminal mode, retry logon, change password, set callback number, and EAP authentication.<br />
+If this flag is not set, RasDialEx reports a fatal error if it enters a paused state.</td></tr>
+<tr><td>RDEOPT_IgnoreModemSpeaker</td><td>If this flag is set, RasDialEx ignores the modem speaker setting that is in the RAS phone book, and uses the setting specified by the RDEOPT_SetModemSpeaker bit flag.<br />
+If this flag is not set, RasDialEx uses the modem speaker setting that is in the RAS phone book, and ignores the setting specified by the RDEOPT_SetModemSpeaker bit flag.<br />
+If no phone book entry name is specified in the call to RasDialEx, the choice is between using a default setting or the setting specified by the RDEOPT_SetModemSpeaker bit flag. The default setting is used if RDEOPT_IgnoreModemSpeaker is zero. The setting specified by RDEOPT_SetModemSpeaker is used if RDEOPT_IgnoreModemSpeaker is one.</td></tr>
+<tr><td>RDEOPT_SetModemSpeaker</td><td>If this flag is set, and RDEOPT_IgnoreModemSpeaker is one, RasDialEx sets the modem speaker on.<br />
+If this flag is not set, and RDEOPT_IgnoreModemSpeaker is one, RasDialEx sets the modem speaker off.<br />
+If RDEOPT_IgnoreModemSpeaker is not set, RasDialEx ignores the value of RDEOPT_SetModemSpeaker, and sets the modem speaker based on the RAS phone-book setting or the default setting.</td></tr>
+<tr><td>RDEOPT_IgnoreSoftwareCompression</td><td>If this flag is set, RasDialEx ignores the software compression setting that is in the RAS phone book, and uses the setting specified by the RDEOPT_SetSoftwareCompression bit flag.<br />
+If this flag is not set, RasDialEx uses the software compression setting that is in the RAS phone book, and ignores the setting specified by the RDEOPT_SetSoftwareCompression flag.<br />
+<br />
+If no phone-book entry name is specified in the call to RasDialEx, the choice is between using a default setting or the setting specified by the RDEOPT_SetSoftwareCompression bit flag. The default setting is used if RDEOPT_IgnoreSoftwareCompression is zero. The setting specified by RDEOPT_SetSoftwareCompression is used if RDEOPT_IgnoreSoftwareCompression is one.</td></tr>
+<tr><td>RDEOPT_SetSoftwareCompression</td><td>If this flag is set, and RDEOPT_IgnoreSoftwareCompression is one, RasDialEx uses software compression.<br />
+If this flag is not set, and RDEOPT_IgnoreSoftwareCompression is one, RasDialEx does not use software compression.<br />
+<br />
+If RDEOPT_IgnoreSoftwareCompression is zero, RasDialEx ignores the value of RDEOPT_SetSoftwareCompression, and sets the software compression state based on the RAS phone-book setting or the default setting.</td></tr>
+<tr><td>RDEOPT_UseCustomScripting</td><td>If this flag is set, RasDialEx invokes a custom-scripting DLL after establishing the connection to the server.<br />
+RasDialEx only invokes the DLL if all of the following conditions are met:<br />
+<br />
+This flag is set<br />
+A custom-scripting DLL is correctly registered with the system.<br />
+The RASEO_CustomScript option is specified in the phone-book entry.</td></tr>
+<tr><td>RDEOPT_CustomDial</td><td>If this flag is set, RasDialEx dials normally instead of calling the RasCustomDial entrypoint of the custom dialer. This flag is used when RasCustomDialDlg calls RasDialEx so that RasDialEx does not have to call the custom dialer back.</td></tr>
+<tr><td>RDEOPT_NoUser</td><td>Windows Vista or later: If this flag is set, the connection was dialed from a Windows Logon context. In this case, RasDialEx uses default user preferences for the connection. This flag must be set if RCD_Logon is set in the dwfOptions parameter of RasCustomDialDlg.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p5">nRasConn (optional)</a></dt>
+<dd><p>default = not used<br />
+<br />
+Pass an existing HRASCONN handle when you resume an asyncronously RasDialEx call from a paused state.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A handle (HRASCONN) representing the RAS connection.</p>
+
+<h2>Example</h2>
+<p>Dialing a custom number.</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">LOCAL lnConn, loRasParams
+loRasParams = <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>('RASDIALPARAMS')
+loRasParams.szPhoneNumber = '111 2453'
+loRasParams.szCallbackNumber = '*'
+loRasParams.szUserName = 'username'
+loRasParams.szPassword = '******'
+loRasParams.szDomain = ''
+lnConn = RasDialEx(loRasParams.Address)
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/abortrasconnectionnotification.html">AbortRasConnectionNotification</a><br />
+<a href="/pages/arasconnections.html">ARasConnections</a><br />
+<a href="/pages/arasdevices.html">ARasDevices</a><br />
+<a href="/pages/arasphonebookentries.html">ARasPhonebookEntries</a><br />
+<a href="/pages/rasclearconnectionstatistics.html">RasClearConnectionStatistics</a><br />
+<a href="/pages/rasconnectionnotificationex.html">RasConnectionNotificationEx</a><br />
+<a href="/pages/rasdialdlgex.html">RasDialDlgEx</a><br />
+<a href="/pages/rasgetconnectstatusex.html">RasGetConnectStatusEx</a><br />
+<a href="/pages/rashangupex.html">RasHangUpEx</a><br />
+<a href="/pages/rasphonebookdlgex.html">RasPhonebookDlgEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa377529(VS.85).aspx">RasGetEntryDialParams</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa377480(VS.85).aspx">RasGetEapUserIdentity</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa377503(VS.85).aspx">RasGetConnectStatus</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa377567(VS.85).aspx">RasHangUp</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa377480(VS.85).aspx">RasFreeEapUserIdentity</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

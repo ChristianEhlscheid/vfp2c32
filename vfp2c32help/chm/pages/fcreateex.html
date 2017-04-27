@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>FCreateEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">FCreateEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Creates and opens a file.</p>
+
+<div class="block"><pre>FCreateEx(<a href="#p1">cFileName</a> [, <a href="#p2">nAttributesAndFlags</a> [, <a href="#p3">nAccessMode</a> [, <a href="#p4">nShareMode</a>]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cFileName</a></dt>
+<dd><p>Specifies the name of the file to create. You can include a drive designator and path with the file name. If a drive designator or path isn't included, the file is created in the default directory.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nAttributesAndFlags (optional, additive)</a></dt>
+<dd><p>default = FILE_ATTRIBUTE_NORMAL<br />
+<br />
+The file or device attributes and flags, FILE_ATTRIBUTE_NORMAL being the most common default value for files.<br />
+This parameter can include any combination of the available file attributes (FILE_ATTRIBUTE_*). All other file attributes override FILE_ATTRIBUTE_NORMAL.<br />
+This parameter can also contain combinations of flags (FILE_FLAG_*) for control of file or device caching behavior, access modes, and other special-purpose flags. These combine with any FILE_ATTRIBUTE_* values.<br />
+<br />
+File attributes:</p>
+<table>
+<tr><th>Value</th><th>Description</th></tr>
+<tr><td>FILE_ATTRIBUTE_READONLY</td><td>The file is read only. Applications can read the file, but cannot write to or delete it.</td></tr>
+<tr><td>FILE_ATTRIBUTE_HIDDEN</td><td>The file is hidden. Do not include it in an ordinary directory listing.</td></tr>
+<tr><td>FILE_ATTRIBUTE_SYSTEM</td><td>The file is part of or used exclusively by an operating system.</td></tr>
+<tr><td>FILE_ATTRIBUTE_ARCHIVE</td><td>The file should be archived. Applications use this attribute to mark files for backup or removal.</td></tr>
+<tr><td>FILE_ATTRIBUTE_NORMAL</td><td>The file does not have other attributes set. This attribute is valid only if used alone.</td></tr>
+<tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>The file is being used for temporary storage.</td></tr>
+<tr><td>FILE_ATTRIBUTE_OFFLINE</td><td>The data of a file is not immediately available. This attribute indicates that file data is physically moved to offline storage. This attribute is used by Remote Storage, the hierarchical storage management software. Applications should not arbitrarily change this attribute.</td></tr>
+<tr><td>FILE_ATTRIBUTE_ENCRYPTED</td><td>The file or directory is encrypted. For a file, this means that all data in the file is encrypted. For a directory, this means that encryption is the default for newly created files and subdirectories. For more information, see File Encryption.<br />
+This flag has no effect if FILE_ATTRIBUTE_SYSTEM is also specified.</td></tr>
+</table><p>Flags:</p>
+<table>
+<tr><th>Value</th><th>Description</th></tr>
+<tr><td>FILE_FLAG_BACKUP_SEMANTICS</td><td>The file is being opened or created for a backup or restore operation. The system ensures that the calling process overrides file security checks when the process has SE_BACKUP_NAME and SE_RESTORE_NAME privileges.<br />
+You must set this flag to obtain a handle to a directory. A directory handle can be passed to some functions instead of a file handle. For more information, see the Remarks section.</td></tr>
+<tr><td>FILE_FLAG_DELETE_ON_CLOSE</td><td>The file is to be deleted immediately after all of its handles are closed, which includes the specified handle and any other open or duplicated handles.<br />
+If there are existing open handles to a file, the call fails unless they were all opened with the FILE_SHARE_DELETE share mode.<br />
+Subsequent open requests for the file fail, unless the FILE_SHARE_DELETE share mode is specified.</td></tr>
+<tr><td>FILE_FLAG_NO_BUFFERING</td><td>The file or device is being opened with no system caching for data reads and writes.<br />
+This flag does not affect hard disk caching or memory mapped files.<br />
+There are strict requirements for successfully working with files opened with <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> using the FILE_FLAG_NO_BUFFERING flag.</td></tr>
+<tr><td>FILE_FLAG_OPEN_NO_RECALL</td><td>The file data is requested, but it should continue to be located in remote storage. It should not be transported back to local storage. This flag is for use by remote storage systems.</td></tr>
+<tr><td>FILE_FLAG_POSIX_SEMANTICS</td><td>Access will occur according to POSIX rules. This includes allowing multiple files with names, differing only in case, for file systems that support that naming. Use care when using this option, because files created with this flag may not be accessible by applications that are written for MS-DOS or 16-bit Windows.</td></tr>
+<tr><td>FILE_FLAG_RANDOM_ACCESS</td><td>Access is intended to be random. The system can use this as a hint to optimize file caching.<br />
+This flag has no effect if the file system does not support cached I/O and FILE_FLAG_NO_BUFFERING.</td></tr>
+<tr><td>FILE_FLAG_SEQUENTIAL_SCAN</td><td>Access is intended to be sequential from beginning to end. The system can use this as a hint to optimize file caching.<br />
+This flag should not be used if read-behind (that is, backwards scans) will be used.<br />
+This flag has no effect if the file system does not support cached I/O and FILE_FLAG_NO_BUFFERING.</td></tr>
+<tr><td>FILE_FLAG_WRITE_THROUGH</td><td>Write operations will not go through any intermediate cache, they will go directly to disk.</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>For more information on the attributes and flags have a look at the <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> documentation.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nAccessMode (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+valid values:<br />
+0 - read only<br />
+1 - write only<br />
+2 - read/write</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nSharemode (optional)</a></dt>
+<dd><p>default = 0 (no sharing)<br />
+</p>
+<table>
+<caption>One or a combination of the following values.</caption>
+<tr><th style="width: 20%,">Sharemode</th><th>Description</th></tr>
+<tr><td>0</td><td>Prevents other processes from opening a file or device if they request delete, read, or write access.</td></tr>
+<tr><td>FILE_SHARE_READ</td><td> Enables subsequent open operations on a file or device to request read access.<br />
+Otherwise, other processes cannot open the file or device if they request read access.<br />
+If this flag is not specified, but the file or device has been opened for read access, the function fails.</td></tr>
+<tr><td>FILE_SHARE_WRITE</td><td>Enables subsequent open operations on a file or device to request write access.<br />
+Otherwise, other processes cannot open the file or device if they request write access.<br />
+If this flag is not specified, but the file or device has been opened for write access or has a file mapping with write access, the function fails.</td></tr>
+<tr><td>FILE_SHARE_DELETE</td><td>Enables subsequent open operations on a file or device to request delete access.<br />
+Otherwise, other processes cannot open the file or device if they request delete access.<br />
+If this flag is not specified, but the file or device has been opened for delete access, the function fails.<br />
+Note: Delete access allows both delete and rename operations.</td></tr>
+</table></dd></dl>
+<h2>Return Value</h2>
+<p>A HANDLE (numeric) value to the created file or -1 if an error occured.</p>
+
+<h2>Remarks</h2>
+<p>The <em>nAccessMode</em> and <em>nShareMode</em> parameters extended the functionality of FoxPro's native <a href="its:dv_foxhelp.chm::/html/4ace2f80-3f5a-4aa9-a949-3f03a414a0d5.htm">FCREATE</a>().<br />
+<br />
+If a file with the name you specify already exists, it is overwritten without warning.<br />
+<br />
+FCreateEx( ) assigns a file handle number to the file, which you can use to identify the file in other Visual FoxPro low-level file functions. FCreateEx( ) returns the file handle number when a file is created, or returns –1 if the file cannot be created.</p>
+
+<h2>Example</h2>
+<p>Create a read-only INI file in the current directory, if it doesn't already exist:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">LOCAL cIniFile, nFileHandle
+cIniFile = [./MyFile.ini]
+IF NOT FILE(cIniFile)  &amp;&amp; Does file exist? 
+	nFileHandle= FCreateEx(cIniFile)  &amp;&amp; If not create it in a read-only mode
+	IF nFileHandle&lt; 0     &amp;&amp; Check for error opening file
+	   WAIT "Cannot open or create INI file" WINDOW NOWAIT
+	ELSE  &amp;&amp; If no error, write to file
+	   <a href="/pages/fwriteex.html">FWriteEx</a>(nFileHandle, "[Program Information]"+CHR(13)+"DataDir="+ADDBS(GETENV("APPDATA"))+"MyApp\")
+	ENDIF
+	FCloseEx(nFileHandle)     &amp;&amp; Close file
+ENDIF
+MODIFY FILE (cIniFile) NOWAIT  &amp;&amp; Open file in edit window
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/afhandlesex.html">AFHandlesEx</a><br />
+<a href="/pages/fchsizeex.html">FChSizeEx</a><br />
+<a href="/pages/fcloseex.html">FCloseEx</a><br />
+<a href="/pages/feofex.html">FEoFEx</a><br />
+<a href="/pages/fflushex.html">FFlushEx</a><br />
+<a href="/pages/fgetsex.html">FGetsEx</a><br />
+<a href="/pages/flockfile.html">FLockFile</a><br />
+<a href="/pages/flockfileex.html">FLockFileEx</a><br />
+<a href="/pages/fopenex.html">FOpenEx</a><br />
+<a href="/pages/fputsex.html">FPutsEx</a><br />
+<a href="/pages/freadex.html">FReadEx</a><br />
+<a href="/pages/fseekex.html">FSeekEx</a><br />
+<a href="/pages/funlockfile.html">FUnlockFile</a><br />
+<a href="/pages/funlockfileex.html">FUnlockFileEx</a><br />
+<a href="/pages/fwriteex.html">FWriteEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

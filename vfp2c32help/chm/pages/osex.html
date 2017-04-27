@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>OsEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">OsEx</h1>
+<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+</div>
+<div id="content">
+<p class="description">Retrieves the current operating system.</p>
+
+<div class="block"><pre>OsEx()</pre></div>
+<h2>Return Value</h2>
+<p>An integer representing the operating system in use.<br />
+</p>
+<table>
+<tr><th>Value</th><th>OS</th></tr>
+<tr><td>1</td><td>Windows 95</td></tr>
+<tr><td>2</td><td>Windows 95 OSR2</td></tr>
+<tr><td>3</td><td>Windows 98</td></tr>
+<tr><td>4</td><td>Windows 98 Second Edition</td></tr>
+<tr><td>5</td><td>Windows Millennium</td></tr>
+<tr><td>6</td><td>Windows NT 3.5</td></tr>
+<tr><td>7</td><td>Windows NT 4.0</td></tr>
+<tr><td>8</td><td>Windows NT 4.0 Server</td></tr>
+<tr><td>9</td><td>Windows 2000</td></tr>
+<tr><td>10</td><td>Windows XP</td></tr>
+<tr><td>11</td><td>Windows XP Professional x64</td></tr>
+<tr><td>12</td><td>Windows Home Server</td></tr>
+<tr><td>13</td><td>Windows Vista</td></tr>
+<tr><td>14</td><td>Windows Server 2003</td></tr>
+<tr><td>15</td><td>Windows Server 2003 R2</td></tr>
+<tr><td>16</td><td>Windows 7</td></tr>
+<tr><td>17</td><td>Windows Server 2008</td></tr>
+<tr><td>18</td><td>Windows Server 2008 R2</td></tr>
+<tr><td>19</td><td>Unknown Windows with a higher version number</td></tr>
+</table>
+<h2>Remarks</h2>
+<p>If compatibility mode is in effect, the OsEx function reports the operating system as it identifies itself, which may not be the operating system that is installed. For example, if compatibility mode is in effect, OsEx reports the operating system that is selected for application compatibility.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/adesktoparea.html">ADesktopArea</a><br />
+<a href="/pages/adesktops.html">ADesktops</a><br />
+<a href="/pages/adisplaydevices.html">ADisplayDevices</a><br />
+<a href="/pages/aresolutions.html">AResolutions</a><br />
+<a href="/pages/awindowstations.html">AWindowStations</a><br />
+<a href="/pages/expandenvironmentstrings.html">ExpandEnvironmentStrings</a><br />
+<a href="/pages/getlocaleinfoex.html">GetLocaleInfoEx</a><br />
+<a href="/pages/getsystemdirectory.html">GetSystemDirectory</a><br />
+<a href="/pages/getwindowsdirectory.html">GetWindowsDirectory</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms724451(VS.85).aspx">GetVersionEx</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724340(VS.85).aspx">GetNativeSystemInfo</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724381(VS.85).aspx">GetSystemInfo</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

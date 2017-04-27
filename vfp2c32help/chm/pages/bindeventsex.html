@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>BindEventsEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">BindEventsEx</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Provides the ability to execute a function or object method when an API window receives a specified window message.</p>
+
+<div class="block"><pre>BindEventsEx(<a href="#p1">nHwnd</a>, <a href="#p2">nMsg</a>, <a href="#p3">oObject</a>, <a href="#p4">cFunction</a> [, <a href="#p5">cParmDefinition</a> [, <a href="#p6">nFlags</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nHwnd</a></dt>
+<dd><p>The handle to the window which messages should be intercepted.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nMsg</a></dt>
+<dd><p>The window message which should trigger the callback function e.g. WM_MOUSEMOVE, WM_ACTIVATE</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">oObject</a></dt>
+<dd><p>The object on which the function passed in <em>cFunction</em> should be called or NULL if <em>cFunction</em> is a public FUNCTION / PROCEDURE.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cFunction</a></dt>
+<dd><p>Name of the function or method which should be called when the message is received by the window.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cParmDefinition (optional)</a></dt>
+<dd><p>A comma seperated list of parameters to pass to the function.<br />
+<br />
+If you omit cParmDefinition or pass NULL the default is like in BINDEVENTSEX, that is 4 parameters are passed to your callback function:<br />
+</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">FUNCTION YourFunc(Hwnd, uMsg, wParam, lParam)
+</pre></div>
+<p>and wParam &amp; lParam are marshaled as signed integers.<br />
+<br />
+You can also specify you own function definition e.g.</p>
+<div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_2">&amp;&amp; you only want wParam &amp; lParam as parameters
+BINDEVENTSEX(yourHwnd,WM_SOMEMESSAGE,NULL,'SomeFunc','wParam,lParam')
+&amp;&amp; if you don't need parameters at all pass an empty string
+BINDEVENTSEX(yourHwnd,WM_SOMEMESSAGE,NULL,'SomeFunc','')
+</pre></div>
+<p></p>
+<table>
+<caption>Possible values for the list are.</caption>
+<tr><th>Value</th><th>Description</th></tr>
+<tr><td>hwnd, uMsg, wParam or lParam</td><td>parameter as signed integer</td></tr>
+<tr><td>UNSIGNED(wParam or lParam)</td><td>wParam or lParam as unsigned integer</td></tr>
+<tr><td>HIWORD(wParam or lParam)</td><td>high word (upper 16 bit) as a signed short</td></tr>
+<tr><td>LOWORD(wParam or lParam)</td><td>low word (lower 16 bit) as a signed short</td></tr>
+<tr><td>UNSIGNED(HIWORD(wParam or lParam))</td><td>high word (upper 16 bit) as a unsigned short</td></tr>
+<tr><td>UNSIGNED(LOWORD(wParam or lParam))</td><td>low word (lower 16 bit) as a unsigned short</td></tr>
+<tr><td>BOOL(wParam or lParam)</td><td>parameter converted to boolean, 0 = .F. everything else = .T.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p6">nFlags (optional, additive)</a></dt>
+<dd><p>If you omit the nFlags parameter or pass 0 the default is BINDEVENTSEX_CALL_BEFORE.<br />
+</p>
+<table>
+<tr><th>Flag</th><th>Description</th></tr>
+<tr><td>BINDEVENTSEX_CALL_BEFORE</td><td>Your function is called before <a href="http://msdn.microsoft.com/en-us/library/ms633571(VS.85).aspx">CallWindowProc</a> is called.</td></tr>
+<tr><td>BINDEVENTSEX_CALL_AFTER</td><td>Your function is called after <a href="http://msdn.microsoft.com/en-us/library/ms633571(VS.85).aspx">CallWindowProc</a> is called.<br />
+You have to return a numeric value from your callback function which is used as the return value of the underlying window procedure.</td></tr>
+<tr><td>BINDEVENTSEX_RETURN_VALUE</td><td><a href="http://msdn.microsoft.com/en-us/library/ms633571(VS.85).aspx">CallWindowProc</a> is not called automatically, you can either call it yourself in the callback function or omit it.<br />
+You have to return a numeric value from you callback function which is used as the return value of the underlying window procedure.</td></tr>
+<tr><td>BINDEVENTSEX_NO_RECURSION</td><td>Is the same as in BINDEVENTS<br />
+_VFP.AutoYield is set to .F. before your function is called and reset to it's original value afterwards to prevent recursion.<br />
+</td></tr>
+<tr><td>BINDEVENTSEX_CLASSPROC</td><td>Instead of the actual window the window class of the passed <i>nHwnd</i> is subclassed.<br />
+All subsequent windows created from the windowclass are automatically subclassed.<br />
+!! You have to call <a href="/pages/unbindeventsex.html">UnbindEventsEx</a> with the third parameter set to .T. if you unbind a message from a windowclass !!<br />
+</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>The flags BINDEVENTSEX_CALL_BEFORE, BINDEVENTSEX_CALL_AFTER &amp; BINDEVENTSEX_RETURN_VALUE are<br />
+mutually exclusive, that means you can only specify one of the values, otherwise error "invalid parameters" is risen.
+</p></div>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A pointer (numeric) to the original window procedure, returned from <a href="http://msdn.microsoft.com/en-us/library/ms633584(VS.85).aspx">GetWindowLong</a>(<em>nHwnd</em>, GWL_WNDPROC).</p>
+
+<h2>Remarks</h2>
+<p>BindEventsEx almost behaves exactly as BINDEVENT does, the differences are:<br />
+<br />
+1. It returns the pointer to the original window procedure instead of no meaningful value, so you don't have to call <a href="http://msdn.microsoft.com/en-us/library/ms633584(VS.85).aspx">GetWindowLong</a>(<em>nHwnd</em>, GWL_WNDPROC).<br />
+2. You don't have to bind the message to an object method, it can also be a public function / procedure<br />
+3. You don't have to call <a href="http://msdn.microsoft.com/en-us/library/ms633571(VS.85).aspx">CallWindowProc</a> by default, <a href="http://msdn.microsoft.com/en-us/library/ms633571(VS.85).aspx">CallWindowProc</a> is automatically called with the original parameters before/after your function is called back this behaviour is controllable through the nFlags parameter<br />
+4. You can specify exactly what parameters should be send to your callback function / method and how they should be marshaled.<br />
+5. You cannot pass 0 as the <em>nHwnd</em> parameter like in BINDEVENT to bind to all windows<br />
+<br />
+To emulate callbacks on an object the library has to make a copy of the object into a public variable.<br />
+The name of the variable is auto generated by the following scheme:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">lcVarName = "__VFP2C_WCBO" + <a href="its:dv_foxhelp.chm::/html/88519813-050c-4bee-acce-8fa823850a2e.htm">IIF</a>(<a href="its:dv_foxhelp.chm::/html/e03290b3-e96a-421c-8efa-f9b1691b09cb.htm">BITAND</a>(nFlags, BINDEVENTSEX_CLASSPROC) &gt; 0, "1", "0") + "_" + <a href="its:dv_foxhelp.chm::/html/767f9fa5-5271-4fe2-baf8-332cf8d15fb5.htm">ALLTRIM</a>(<a href="its:dv_foxhelp.chm::/html/970442f9-ac4f-401f-a027-03aa9f978054.htm">STR</a>(nHwnd)) + "_" + <a href="its:dv_foxhelp.chm::/html/767f9fa5-5271-4fe2-baf8-332cf8d15fb5.htm">ALLTRIM</a>(<a href="its:dv_foxhelp.chm::/html/970442f9-ac4f-401f-a027-03aa9f978054.htm">STR</a>(nMsg))
+</pre></div>
+<p>This workaround is necessary cause the FoxPro LCK doesn't provide an API function to call methods of an object.<br />
+The public variable is automatically released when you unbind the message.<br />
+Although a copy of the object is made the internal object reference count is not incremented, the public copy doesn't affect your object's lifetime (scope).<br />
+The only thing you have to consider is that your own variables doesn't conflict with the above naming scheme which is very unlikely.</p>
+
+<h2>Example</h2>
+<p>Bind the mousemove event of a window with proper parameters.</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">BINDEVENTSEX(yourHwnd, WM_MOUSEMOVE, NULL, 'MouseMoveCallback', 'wParam, LOWORD(lParam), HIWORD(lParam)')
+FUNCTION MouseMoveCallback(nKeyState, nXCoord, nYCoord)
+&amp;&amp; handle mousemove ..
+ENDFUNC
+</pre></div>
+<p><br />
+Bind the activation/deactivation of your application window.</p>
+<div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_2">BINDEVENTSEX(_SCREEN.hWnd, WM_ACTIVATE, 'AppFocusStateChanged', 'BOOL(wParam)')
+FUNCTION AppFocusStateChanged(bState)
+? "Application " + <a href="its:dv_foxhelp.chm::/html/88519813-050c-4bee-acce-8fa823850a2e.htm">IIF</a>(m.bState, 'got focus', 'lost focus')
+ENDFUNC
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/asyncwaitforobject.html">AsyncWaitForObject</a><br />
+<a href="/pages/cancelwaitforobject.html">CancelWaitForObject</a><br />
+<a href="/pages/createcallbackfunc.html">CreateCallbackFunc</a><br />
+<a href="/pages/createpublicshadowobjreference.html">CreatePublicShadowObjReference</a><br />
+<a href="/pages/destroycallbackfunc.html">DestroyCallbackFunc</a><br />
+<a href="/pages/releasepublicshadowobjreference.html">ReleasePublicShadowObjReference</a><br />
+<a href="/pages/unbindeventsex.html">UnbindEventsEx</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms633591(VS.85).aspx">SetWindowLong</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633584(VS.85).aspx">GetWindowLong</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633588(VS.85).aspx">SetClassLong</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633580(VS.85).aspx">GetClassLong</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms633571(VS.85).aspx">CallWindowProc</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa366597(VS.85).aspx">HeapAlloc</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa366898(VS.85).aspx">VirtualProtect</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

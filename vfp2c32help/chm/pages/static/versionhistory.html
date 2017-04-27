@@ -1,0 +1,367 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Version history</title>
+<link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1>Version history</h1>
+</div>
+<div id="content">
+
+<h2>Version 2.0.0.15 -- 2017-03-18</h2>
+<ul>
+<li>enhanced CopyFileEx and MoveFileEx - new optional parameter nShareMode which specifies the sharing mode with which the copied/moved files are opened.</li>
+</ul>
+
+<h2>Version 2.0.0.14 -- 2016-01-04</h2>
+<ul>
+<li>enhanced DT2Timet</li>
+<li>new subproject vfpsrvhost - a small C++ host executable to create real windows services out of VFP COM objects<br />
+the documentation is not 100% complete but I'll release it anyway before it just rots on my HDD</li>
+</ul>
+
+<h2>Version 2.0.0.13 -- 2013-08-05</h2>
+<ul>
+<li>enhanced SQLExecEx<br />
+- SQL_VARCHAR and SQL_WVARCHAR columns are now mapped to the C(x) datatype like in SQLExec,<br />
+use CURSORSETPROP('MapVarchar', .T., 0) to alter the mapping to the V(x) datatype<br />
+- varchar(max)/varbinary(max) fields from SQL Server are retrieved correctly as Memo/Blob fields when using the SQL Native Client ODBC driver</li>
+<li>added SQLPrepareEx and SQLCancelEx</li>
+<li>added constants for CreateGUID in vfp2c.h</li>
+<li>fixed MemberData generation in VFP2CFront</li>
+</ul>
+
+
+<h2>Version 2.0.0.11 -- 2012-02-04</h2>
+<ul>
+<li>enhanced CreateThreadObject - the returned proxy object implments 2 new methods: GetCallQueueSize and GetCallRunTime</li>
+<li>enhanced GetSaveFileName - if a file extension filter is passed, the function appends the selected extension on the entered filename</li>
+</ul>
+
+<h2>Version 2.0.0.10 -- 2011-08-11</h2>
+<ul>
+<li>fixed a bug in CreateThreadObject which could lead to a dangling object reference on the passed callback object</li>
+</ul>
+
+<h2>Version 2.0.0.9 -- 2011-05-24</h2>
+<ul>
+<li>removed dependency on msvcp71.dll</li>
+<li>fixed a bug in FGetsEx - file pointer was set incorrectly when retrieving lines in the file and the current file pointer position was greater than 4GB. FGetsEx now also behaves identical to FGets in respect to linefeed carriage return handling.</li>
+<li>fixed a bug in ANetFiles, ANetServers - reported file/server names were truncated.</li>
+<li>changed many functions to direct linking instead of dynamic runtime linking, this has two implications:<br />1. The mininum operating system supported by VFP2C32 now is Windows 2000<br />2. Most functions don't need to be initialized with a call to InitVFP2C32 anymore.</li>
+<li>created a thread safe version of the library (vfp2c32t.fll) which you can use inside Visual FoxPro COM servers or for multithreaded development.</li>
+<li>added function: CreateThreadObject - allows you to create COM objects on their own thread and fire off functions calls on these objects asyncronously - or in simple terms: create multithreaded FoxPro programs.</li>
+</ul>
+
+<h2>Version 2.0.0.8 -- 2011-01-27</h2>
+<ul >
+<li>fixed a bug in BindEventsEx - if you passed an empty string in the "cParmDefinition" parameter the callback function would be called with the default parameters instead of no parameters.</li>
+<li>fixed a potential bug in AProcessModules - the function could fail occassionally.</li>
+<li>fixed a bug in AAverage - if the SUM of all values exceeded the maximum currency or double limit the result was wrong.</li>
+<li>ASum now raises error 1988 "Currency value is out of range." if the result overflows.</li>     
+<li>fixed a potential bug in SHCopyFiles, SHMoveFiles, SHRenameFiles and SHDeleteFiles, the function could return 1 for success even if the operation was aborted.</li>
+<li>fixed a potential bug in ARasConnections if there were more than 32 active RAS connections</li>
+<li>extended AllocHGlobal and ReAllocHGlobal, a seconds parameter allows to change the allocation options.</li>
+<li>extended CreateCallbackFunc: added more marshaling modifiers for the STRING, INT64 and UINT64 datatypes.</li>
+<li>extended Colors2RGB and RGB2Colors: the alpha channel of the color can now optionally be set or retrieved.</li>
+<li>extended FCreateEx, FOpenEx, DeleteFileEx: even files with names exceeding MAX_PATH are now supported.</li>
+<li>extended Int64_Add, Int64_Sub, Int64_Mul, Int64_Div and Int64_Mul: the functions now throw errors on numeric overflow or divide by zero and an extra parameter allows to specify the format of the return value.</li>
+<li>extended RasDialDlgEx: two new optional parameters allow to specify a subentry to dial and the owner window.</li>
+<li>extended ReadInt64, ReadPInt64, ReadUInt64 and ReadPUInt64: an extra parameter allows to return the 64 bit integer in different formats.</li>
+<li>extended WriteInt64, WritePInt64, WriteUInt64 and WritePUInt64: the functions now except the 64 bit value in more formats.</li>
+<li>rewritten all marshaling functions that had to be DECLARE'd  to use the FLL export mechanism, additionally all marshaling functions now raise error "invalid parameters" if a 0 pointer is passed, and all ReadPxxx  functions now return .NULL. if the address passed contains a 0 pointer. </li>
+<li>added functions:
+	<ul>
+	<li>OsEx</li>
+	<li>AVolumes</li>
+	<li>AVolumeMountPoints</li>
+	<li>AVolumePaths</li>
+	<li>CreateService</li>
+	<li>DeleteService</li>
+	<li>MessageBoxEx</li>
+	<li>Int642Str</li>
+	<li>Str2Int64</li>
+	<li>UInt642Str</li>
+	<li>Str2UInt64</li>
+	</ul>
+</li>
+<li>internal code cleanup</li>
+</ul>
+
+<h3>Breaking changes!</h3>
+<ul >
+<li>changed function AHeapBlocks: removed first column from resulting array since it was of no value.</li>
+<li>changed function ReadRegistryValue: the type and meaning of parameter 4 has changed - have a look at the new documention.</li>
+<li>changed function GetServerTime: the type and meaning of parameter 2 has changed.</li>
+<li>removed functions ReadInt64AsDouble, ReadPInt64AsDouble, ReadUInt64AsDouble and ReadPUInt64AsDouble: use ReadInt64, ReadPInt64 ... instead.</li>
+<li>removed function SetSystemTimeEx: use SetSystemTime instead.</li>
+<li>removed function SyncToServerTime: use SyncToSNTPServer instead.</li>
+<li>removed functions MarshalArrayXXX, UnMarshalArrayXXX, MarshalCursorXXX and UnMarshalCursorXXX: use MarshalCArray2Cursor, MarshalCArray2FoxArray, 
+MarshalCursor2CArray or MarshalFoxArray2CArray instead.</li>
+</ul>
+
+<h2>Version 2.0.0.7 -- 2010-11-16</h2>
+<ul>
+<li>fixed a bug in AAverage - NULL values in the array corrupted the result</li>
+<li>removed limitation in ASum, AMin, AMax, AAverage - the functions were limited to 65000 elements, now they're limited to 65000 rows</li>
+<li>ASplitStr now returns a 1 element array with an empty string when an empty string is passed (behaves more like ALINES)</li>
+<li>internal code cleanup and optimization:
+	<ul>
+	<li>optimized FoxArray class - results in a speedup of 10-20% in many functions which return the result in an array - like AProcesses, AWindows, AdirEx etc.</li>
+	<li>optimized C++ API over LCK</li>
+	<li>replaced C-style casts with C++ casts</li>
+	<li>removed almost all preprocessor macros</li>
+	</ul>
+</li>
+</ul>
+
+<h2>Version 2.0.0.6 -- 2010-11-08</h2>
+<ul>
+<li>changed FCreateEx, FOpenEx, and all other F...Ex functions to use the windows api file handle directly instead of an internal pseudo handle.<br />
+ If you already have code written using these functions they work still like the old version, the only two differences are that the 
+ function "FHandleEx" which returned the api file handle previously is removed now since it isn't needed anymore, and "AFHandlesEx"
+ now returns a 1 column array of api handles instead of a 2 column array with the mapping of internal handles to api handles.
+ This change has the advantage that now any file/pipe/whatever api handle (not necessarily created with FCreateEx or FOpenEx) can be used with the FPutsEx, FWriteEx, FReadEx ...
+ functions.</li>
+<li>changed copyright notice in FLL resource (AGETFILEVERSION())</li>
+<li>CLSIDFromProgID now returns a binary string (like created with CREATEBINARY) instead of a normal string - should not affect any code using it already - just cosmetics since the CLSID returned is actually binary data</li>
+<li>CreateGUID now also returns a binary string (only when 2 is passed as a parameter)</li>
+<li>fixed a bug in CLSIDFromString - the function always returned an empty string</li>
+<li>fixed a bug in ARegistryKeys - the function raised error "access denied" cause the registry key was not opened with sufficient rights</li>
+<li>internal code cleanup:
+	<ul>
+	<li>revised the C++ API over the LCK</li>
+	<li>replaced many C-style casts with C++ casts</li>
+	<li>removed more macros</li>
+	</ul>
+</li>
+</ul>
+
+<h2>Version 2.0.0.5 -- 2010-11-05</h2>
+<ul>
+<li>added functions:
+	<ul>
+	<li>APaperSizes</li>
+	<li>AServiceConfig</li>
+	<li>ADependentServices</li>
+	<li>WaitForServiceStatus</li>
+	<li>AFontInfo</li>
+	<li>ARasDevices</li>
+	<li>ARasPhonebookEntries</li>
+	<li>RasPhonebookDlgEx</li>
+	<li>RasDialEx</li>
+	<li>RasHangUpEx</li>
+	<li>RasGetConnectStatusEx</li>
+	<li>RasDialDlgEx</li>
+	<li>RasConnectionNotificationEx</li>
+	<li>AbortRasConnectionNotificationEx</li>
+	<li>RasClearConnectionStatisticsEx</li>
+	<li>CreatePublicShadowObjReference</li>
+	<li>ReleasePublicShadowObjReference</li>
+	<li>GetLocaleInfoEx</li>
+	<li>AsyncWaitForObject</li>
+	<li>CancelWaitForObject</li>
+	</ul>
+</li>
+<li>renamed functions:
+	<ul>
+	<li>"Invoke" to "IDispatch_Invoke"</li>
+	<li>"AsyncInvoke" to "IDispatch_AsyncInvoke"</li>
+	<li>"ADialUpConnections" to "ARasConnections"</li>
+	</ul>
+</li>
+<li>fixed some memory leaks in various functions which occured in an error condition</li>
+<li>interal code cleanup - replaced many of the preprocessor marcros with C++ inline functions</li>
+<li>removed hardcoded threadlimit in FindFileChange & FindRegistryChange</li>
+</ul>
+
+<h2>Version 2.0.0.3</h2>
+<ul>
+<li>fixed a bug in the AbortUrlDownloadToFileEx function,<br />
+abortable asynchronous downloading of internet resources with progress monitoring works now flawlessly,
+see updated example
+</li>updated Intellisense table for UrlDownloadToFileEx/AbortUrlDownloadToFileEx</li>
+</ul>
+
+<h2>Version 2.0.0.2</h2>
+<ul>
+<li>fixed parameter verification in SQLExecEx - callback functionality was not useable</li>
+</ul>
+
+<h2>Version 2.0.0.1</h2>
+<ul>
+<li>fixed ClsIdFromProgID - function returned an empty string instead of the CLSID</li>
+<li>fixed CreateCallbackFunc - the last parameter expects a numerical flag, but only a logical value was accepted</li>
+<li>enhanced ADirEx, AFileAttributes(Ex) & Get(Set)FileTimes, file times can now be retrieved/set as UTC times</li>
+</ul>
+
+<h2>Version 2.0.0.0</h2>
+<ul>
+<li>fixed the BINDSTATUS #DEFINE's in vfp2c.h</li>
+<li>extended UrlDownloadToFile, the function can now be executed asyncronous on a different thread</li>
+<li>added function AbortUrlDownloadToFileEx to abort an asyncronous download started with UrlDownLoadToFileEx</li>
+<li>added function Decimals, which returns the number of decimals of a numeric value</li>
+<li>added functions MoveFileEx & CopyFileEx (move/copy files with progress callback)</li>
+<li>added marshaling functions: ReadPInt64AsDouble, ReadPUInt64AsDouble, WriteInt64, WritePInt64, WriteUInt64, WritePUInt64</li>
+<li>added function CreateGuid</li>
+<li>added function CenterWindowEx</li>
+<li>enhanced function CreateCallbackFunc - C callback functions that are called from a different thread are now supported</li>
+<li>added function ControlService</li>
+<li>added function APrintersEx</li>
+<li>added function IcmpPing </li>
+<li>rewritten large parts of the FLL with a new set of C++ classes that wrap the Fox Library construction kit (vfp2ccppapi.cpp/h)</li>
+</ul>
+
+<h2>Version 1.0.3.5</h2>
+<ul>
+<li>added function Value2Variant & Variant2Value</li>
+<li>added VFP like extended file functions:<br />
+FCreateEx, FOpenEx, FCloseEx, FReadEx, FWriteEx, FGetsEx, FPutsEx, FSeekEx, FEoFEx, 
+FChSizeEx, FFlushEx, FLockFile, FUnlockFile, FLockFileEx, FUnlockFileEx, FHandleEx, AFHandlesEx</li>
+</ul>
+
+<h2>Version 1.0.3.4</h2>
+<ul>
+<li>added function ADialUpConnections</li>
+<li>added function Ip2MacAddress</li>
+<li>updated/added alot of functions in the Intellisense script</li>
+<li>added function PauseService & ContinueService</li>
+<li>enhanced StopService, depenant services are now stopped in an recursive algorithm </li>
+<li>fixed bugs in FindFileChange & FindRegistryChange:<br />
+the functions worked as expected before but if the limit of notifications slots was reached the error handling was incorrect</li>
+</ul>
+
+<h2>Version 1.0.3.3</h2>
+<ul>
+<li>enhanced ANetFiles, also works on Win95/98/Me now</li>
+<li>enhanced AProcesses, also works on WinNT now (if psapi.dll is present)</li>
+<li>enhanced all functions that take a filename as a parameter:<br />
+GetFileSize, AFileAttributes(Ex), Get(Set)FileAttributes, Get(Set)FileTimes,
+CompareFileTimes, GetLongPathName, GetShortPathName, GetFileOwner, DeleteFileEx - 
+one don't has to specify the fullpathname of the file anymore, internally the VFP
+function FULLPATH is now used to retrieve the fullpath of the file.</li>
+<li>enhanced GetOpenFileName & GetSaveFileName:<br />
+both functions now optionally can call a VFP callback procedure while the dialog is running (for dialog events, customizing dialog appearance).
+and GetOpenFileName takes as an extra parameter an arrayname into which a multiple file selection is stored (see dialogs.prg example)</li>
+<li>added function Int64_Add, Int64_Sub, Int64_Mul, Int64_Div, Int64_Mod to do simple arithmetic on Int64 literals</li>
+<li>added function AIPAddresses - store IP addresses of the local machine into an array</li>
+<li>added function ResolveHostToIp - get IP address of a server in your domain or from a toplevel domain e.g. www.google.com</li>
+<li>added function GetWindowRectEx - stores screen coordinates of a window into an array</li>
+</ul>
+
+<h2>Version 1.0.3.2</h2>
+<ul>
+<li>SQLExecEx enhancements/fixes:
+	<ul>
+	<li>SQL_BIGINT is now converted to a character (C(20)) column by default</li>
+	<li>SQL_GUID is now converted to a character (C(36)) column by default</li>
+	<li>removed General field support, the content was successfully stored into a general field before as is, but the general field was invalid in VFP.</li>
+	<li>unknown SQL types are now converted to a character/memo field by default depending on size (xml datatype in MS SQL Server for example)</li>
+	<li>fixed bug when decimals had bigger precision or scale than is supported in VFP.</li>
+	<li>added flag SQLEXECEX_STORE_INFO, output of PRINT statements or other commands can be stored in an array</li>
+	<li>added new optional parameter nCallbackInterval - specifies interval in records when the callback progress function should be called (before 100 was the default)</li>
+	<li>fixed callback functionality - "Invalid parameters" error was risen when more than 7 parameters were passed to SQLEXECEX</li>
+	<li>fixed some non working datatype conversions</li>
+	<li>.NULL. values are now retrieved into memo/blob fields properly</li>
+	<li>SQL_DEST_VARIABLE now supports all datatypes, large types (SQL_LONGVARCHAR, SQL_LONGBINARY, SQL_WLONGVARCHAR ..) weren't stored.</li>
+	<li>SQL_FLOAT, SQL_REAL & SQL_DOUBLE are now by default converted to B(16) datatype instead of N(20,16).</li>
+	<li>memo/blob fields that were specified as parameters inside the SQL statement are now send properly</li>
+	<li>fixed bug when a SQL_CHAR or SQL_BINARY column was bigger than 254 bytes, it's converted to a memo/blob field now, before error "invalid field length" was risen</li>
+	<li>fixed bug in storing money datatype with SQLGetData - error "datatype mismatch" was risen</li>
+	<li>fixed bug in parsing the cursorschema, decimal precision of N(X,X) was lost, resulting into N(X,0)</li>
+	<li>if data should be converted to currency, it's retrieved now as SQL_CHAR since most ODBC drivers doesn't support the SQL_C_NUMERIC type that was used before</li>
+	</ul>
+</li>
+<li>added functions ASum, AAverage, AMax & AMin</li>
+</ul>
+
+<h2>Version 1.0.3.1</h2>
+<ul>
+<li>fixed a bug in ADIREX that was introduced in one of the last development releases.</li>
+<li>added function OpenService, CloseServiceHandle & AServiceStatus</li>
+<li>function AServices now always creates an array with 10 dimension regardless of OS in use, and on WinNT the last two columns are set to 0</li>
+</ul>
+
+<h2>Version 1.0.3.0</h2>
+<ul>
+<li>added functions GetWindowsDirectory, GetSystemDirectory & ExpandEnvironmentStrings</li>
+<li>added functions GetLongPathName, GetShortPathName</li>
+<li>added function RegisterObjectAsFileMoniker</li>
+</ul>
+
+<h2>Version 1.0.2.9</h2>
+<ul>
+<li>added function GetWindowTextEx</li>
+<li>changed flags for BindEventsEx - see Intellisense help.</li>
+<li>fixed a bug in UnBindEventsEx, when more than one window was subclassed</li>
+<li>fixed yet another bug in BindEventsEx that occured when you rebind a message that was previously hooked to another object, the first object was released from memory.</li>
+</ul>
+
+<h2>Version 1.0.2.8</h2>
+<ul>
+<li>fixed a critical bug in BINDEVENTSEX for callbacks on an object method</li>
+</ul>
+
+<h2>Version 1.0.2.7</h2>
+<ul>
+<li>added functions BindEventsEx & UnbindEventsEx</li>
+<li>added function GetCursorPosEx</li>
+<li>added functions StartService & StopService</li>
+<li>rewritten InitVFPC32(), doesn't stop initialzing independent parts of the libary if an error occurs</li>
+<li>corrected initialization #DEFINES in vfp2c.h</li>
+</ul>
+
+<h2>Version 1.0.2.6</h2>
+<ul>
+<li>corrected bug in SQLExecEx if you tried to pass NULL or empty date(time)s as parameters.</li>
+<li>added flag SQLEXECEX_REUSE_CURSOR to SQLExecEx function</li>
+<li>added functions RGB2Colors & Colors2RGB</li>
+</ul>
+
+<h2>Version 1.0.2.5</h2>
+<ul>
+<li>finished SQLExecEx<br />
+extended SQLExec with storage of updated/deleted/inserted rows, progress callback & custom cursorschema support ..<br />
+we needed that years ago don't we? :-)<br />
+since this function is rather complex (about 1300 lines of code in itself and the 30 helper functions) i put it into this development release first ..</li>
+<li>fixed bug in ODBC errorhandler - AErrorEx returned wrong number of errors</li>
+<li>added function ATimeZones - enumerate all available times zones on the system</li>
+<li>added functions DT2UTC & UTC2DT to convert datetimes from UTC/GMT to local time and vice versa</li>
+<li>added function SyncToSNTPServer - sync to an SNTP (Time) Server on the internet or local network (for all OS's)</li>
+<li>changed GetSystemTime & GetServerTime - both now return the time instead of storing it into a variable passed by reference<br />
+if you're using these functions you'll have to adjust your code - backward compatibilty isn't my highest priority.<br />
+If I make a fault in a function interface (like in this case) i'll correct it as soon as possible.</li>
+</ul>
+
+<h2>Version 1.0.2.0</h2>
+<ul>
+<li>fixed SetFileTimes - was completly messed up .. </li>
+<li>added functions to convert numeric types into binary strings and vice versa:<br />
+Str2Short, Short2Str, Str2Long, Long2Str, Str2ULong, ULong2Str, Str2Double, Double2Str, Str2Float, Float2Str .. </li>
+<li>added functions RegisterActiveObject, RevokeActiveObject - to register COM objects into the running object table</li>
+<li>fixed bug in internal helper function DateTimeToFileTimeEx (for those that use the source code or are interested in)</li>
+<li>added function RegistryHiveToObject - builds an object hierarchie with values and subkeys of a registry key in one call</li>
+<li>fixed a minor bug in SHFileOperation wrappers (SHCopyFiles, SHDeleteFiles, SHMoveFiles, SHRenameFiles)<br />
+if you passed a title to for the dialog to one of these function's but didn't specify the FOF_SIMPELPROGRESS flag the title was ignored,<br />
+now the FOF_SIMPLEPROGRESS flag is added if you pass a title</li>
+<li>added function ASplitStr - split a string into an array of N fixed length strings</li>
+</ul>
+
+<h2>Version 1.0.1.0</h2>
+<ul>
+<li>added functions SyncToServerTime & RegistryValuesToObject</li>
+<li>enhanced ADIREX and fixed a small bug in it</li>
+</ul>
+
+</div>
+<div id="footer">
+<p>© <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+</div>
+</body>
+</html>
