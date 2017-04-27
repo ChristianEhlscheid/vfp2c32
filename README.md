@@ -2,7 +2,7 @@
 
 Parts of this project
 * a FLL for Microsoft's Visual FoxPro with wrappers for many WinAPI functions (vfp2c32/vfp2c32.fll)
-* an executable to convert C Struct/Enum's to equivalent FoxPro classes (vfp2cfront/vfp2cfront.exe)
+* an executable to convert C Struct/Enum's to equivalent FoxPro classes (vfp2c32front/vfp2cfront.exe)
 * an executable to run Visual FoxPro COM server's as a windows service (vfp2srvhost/vfpsrvhost.exe)
 
 ## First steps
