@@ -6,7 +6,7 @@ Parts of this project
 * an executable to run Visual FoxPro COM server's as a windows service (vfp2srvhost/vfpsrvhost.exe)
 
 ## First steps
-Have a look at the [CHM helpfile](/vfp2c32help/chm/vfp2c32.chm)
+Have a look at the [CHM helpfile](/vfp2c32help/chm/vfp2c32.chm?raw=true)
 Especially the topics VFP2C32 -> Installing Intellisense and VFP2C32 -> Distribution
 
 ## Project manager
