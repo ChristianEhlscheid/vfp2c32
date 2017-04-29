@@ -1,4 +1,4 @@
-# ![VFPx](/vfpsrvhosthelp/images/vfpx.gif?raw=true "VFPx") VFP2C32
+# ![<img src="/vfpsrvhosthelp/images/vfpx.gif">](https://vfpx.github.io) VFP2C32
 
 Parts of this project
 * a FLL for Microsoft's Visual FoxPro with wrappers for many WinAPI functions (vfp2c32/vfp2c32.fll)
