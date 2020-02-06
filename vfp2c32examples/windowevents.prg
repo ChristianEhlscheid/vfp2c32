@@ -1,13 +1,11 @@
 #INCLUDE vfp2c.h
 
 && BindEventsEx/UnBindEventsEx
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_CALLBACK flag set
 CD (FULLPATH(JUSTPATH(SYS(16))))
 
 SET PROCEDURE TO windowevents ADDITIVE
 SET LIBRARY TO vfp2c32.fll ADDITIVE
 
-INITVFP2C32(VFP2C_INIT_CALLBACK)
 
 && BINDEVENTSEX - extended BINDEVENTS to bind some VFP function to a window message
 && BindEventsEx almost behaves exactly as BINDEVENTS does, the differences are:

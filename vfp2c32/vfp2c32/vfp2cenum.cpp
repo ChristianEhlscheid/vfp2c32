@@ -325,6 +325,56 @@ BOOL _stdcall WindowPropEnumCallback(HWND nHwnd, LPCSTR pPropName, HANDLE hData,
 	return TRUE;		
 }
 
+void _fastcall AMonitors(ParamBlk *parm)
+{
+	try
+	{
+		MonitorEnumParam pEnum;
+		pEnum.pArray.Dimension(p1, 1, 10);
+		BOOL ret = EnumDisplayMonitors(0, 0, MonitorEnumCallback, (LPARAM)&pEnum);
+		if (ret == FALSE)
+		{
+			SaveWin32Error("EnumDisplayMonitors", GetLastError());
+			throw E_APIERROR;
+		}
+		else if (pEnum.bError)
+		{
+			throw E_APIERROR;
+		}
+		Return(pEnum.nCount);
+	}
+	catch (int nErrorNo)
+	{
+		RaiseError(nErrorNo);
+	}
+}
+
+BOOL _stdcall MonitorEnumCallback(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData)
+{
+	MonitorEnumParam *pEnum = reinterpret_cast<MonitorEnumParam*>(dwData);
+	MONITORINFO lpmi;
+	lpmi.cbSize = sizeof(MONITORINFO);
+	if (GetMonitorInfo(hMonitor, &lpmi) == FALSE)
+	{
+		SaveWin32Error("GetMonitorInfo", GetLastError());
+		pEnum->bError = true;
+		return FALSE;
+	}
+	pEnum->nCount++;
+	unsigned int nRow = pEnum->pArray.Grow();
+	pEnum->pArray(nRow, 1) = hMonitor;
+	pEnum->pArray(nRow, 2) = lprcMonitor->left;
+	pEnum->pArray(nRow, 3) = lprcMonitor->top;
+	pEnum->pArray(nRow, 4) = lprcMonitor->right;
+	pEnum->pArray(nRow, 5) = lprcMonitor->bottom;
+	pEnum->pArray(nRow, 6) = lpmi.rcWork.left;
+	pEnum->pArray(nRow, 7) = lpmi.rcWork.bottom;
+	pEnum->pArray(nRow, 8) = lpmi.rcWork.right;
+	pEnum->pArray(nRow, 9) = lpmi.rcWork.bottom;
+	pEnum->pArray(nRow, 10) = (lpmi.dwFlags & MONITORINFOF_PRIMARY) > 0;
+	return TRUE;
+}
+
 void _fastcall AProcesses(ParamBlk *parm)
 {
 try

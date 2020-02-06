@@ -7,7 +7,6 @@
 #INCLUDE vfp2c.h
 CD (FULLPATH(JUSTPATH(SYS(16))))
 SET LIBRARY TO vfp2c32d.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_ALL)
 
 && 1st step
 TRACKMEM(.T.) && enable memory allocation tracking in the library

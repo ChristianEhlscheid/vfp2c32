@@ -4,7 +4,6 @@ CD (FULLPATH(JUSTPATH(SYS(16))))
 
 && initialize the library
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_MARSHAL)
 
 && this prg contains the array classes
 SET PROCEDURE TO vfp2carray.prg ADDITIVE

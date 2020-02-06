@@ -1,13 +1,10 @@
 && RAS functions 
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_RAS flag set and
-&& VFP2C_INIT_MARSHAL flag for the RASDIALPARAMS structure
 
 #INCLUDE "vfp2c.h"
 #INCLUDE "rasapi32.h"
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_RAS + VFP2C_INIT_ASYNC + VFP2C_INIT_MARSHAL)
 
 && enumerate active RAS connections
 LOCAL lnCount, xj

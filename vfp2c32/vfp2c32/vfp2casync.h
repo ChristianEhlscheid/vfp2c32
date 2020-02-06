@@ -7,6 +7,7 @@
 
 const UINT WM_CALLBACK			= (WM_USER+1);
 const UINT WM_CALLBACKRESULT	= (WM_USER+2);
+const UINT WM_CALLBACK_FFEX		= (WM_USER+3);
 
 class FindFileChangeThread : public CThread
 {
@@ -25,6 +26,59 @@ private:
 	CStr m_Path;
 	CEvent m_AbortEvent;
 	HANDLE m_FileEvent;
+};
+
+class FindFileChangeExEntry
+{
+public:
+	FindFileChangeExEntry();
+	~FindFileChangeExEntry();
+
+	void Setup(char *pPath, bool bWatchSubtree, DWORD nFilter, char *pCallback, DWORD nBufferSize, HANDLE nIoPort);
+	void Callback(PFILE_NOTIFY_INFORMATION pInfo);
+	void PostCallback();
+	void ReadChanges();
+	DWORD BufferSize() { return m_BufferSize; }
+
+private:
+	ApiHandle m_Handle;
+	OVERLAPPED m_Ol;
+	WCHAR m_OldFilename[MAX_PATH];
+	DWORD m_OldFilenameLength;
+	BOOL m_Subtree;
+	DWORD m_Filter;
+	DWORD m_BufferSize;
+	CStr m_Path;
+	CStr m_LongPath;
+	CStr m_LongPath2;
+	CStr m_Callback;
+	CStr m_CallbackError;
+	CStr m_PostCallbackBuffer;
+	CStr m_CallbackBuffer;
+	CBuffer m_ReadDirBuffer;
+	CBuffer m_PostBuffer;
+};
+
+class FindFileChangeExThread : public CThread
+{
+public:
+	FindFileChangeExThread(CThreadManager &pManager);
+
+	virtual void SignalThreadAbort();
+	virtual DWORD Run();
+
+	void AddDirectory(FindFileChangeExEntry *pFFC);
+	bool RemoveDirectory(FindFileChangeExEntry *pFFC);
+	bool ValidDirectory(FindFileChangeExEntry *pFFC);
+	void RemoveAllDirectories();
+	bool IsWatching();
+	HANDLE GetIoPort() { return m_IoPort; }
+
+private:
+	ApiHandle m_IoPort;
+	CCriticalSection m_Sect;
+	CCriticalSection m_SectDelete;
+	CAtlMap<FindFileChangeExEntry*,FindFileChangeExEntry*> m_FileChangeEntries;
 };
 
 class FindRegistryChangeThread : public CThread
@@ -76,6 +130,9 @@ void _stdcall VFP2C_Destroy_Async(VFP2CTls& tls);
 
 void _fastcall FindFileChange(ParamBlk *parm);
 void _fastcall CancelFileChange(ParamBlk *parm);
+
+void _fastcall FindFileChangeEx(ParamBlk *parm);
+void _fastcall CancelFileChangeEx(ParamBlk *parm);
 
 void _fastcall FindRegistryChange(ParamBlk *parm);
 void _fastcall CancelRegistryChange(ParamBlk *parm);

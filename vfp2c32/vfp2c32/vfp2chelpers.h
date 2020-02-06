@@ -5,6 +5,7 @@
 #include <shlwapi.h>
 #include <assert.h>
 #include <atlcoll.h>
+#include "vfp2ccppapi.h"
 
 #define VER_SUITE_WH_SERVER 0x8000
 
@@ -32,7 +33,7 @@ typedef enum WindowsVersion
 	WindowsServer2008,
 	WindowsServer2008R2,
 	WindowsX
-};
+} WindowsVersion;
 
 class COs
 {
@@ -103,6 +104,38 @@ private:
 	unsigned int m_Length;
 };
 
+class CStringBuilder
+{
+public:
+	CStringBuilder(char* buffer, unsigned int buffersize) : m_String(buffer), m_Size(buffersize), m_Length(0) {}
+	unsigned int Len() const { return m_Length; }
+	CStringBuilder& Len(unsigned int nLen) { assert(nLen <= m_Size); m_Length = nLen; return *this; }
+
+	CStringBuilder& Format(const char* format, ...);
+	CStringBuilder& AppendFromat(const char* format, ...);
+
+	CStringBuilder& operator=(const CStringBuilder &pString);
+	CStringBuilder& operator=(const FoxString &pString);
+	CStringBuilder& operator=(const char *pString);
+
+	CStringBuilder& operator+=(const CStringBuilder &pString);
+	CStringBuilder& operator+=(const FoxString &pString);
+	CStringBuilder& operator+=(const char *pString);
+
+	bool operator==(const CStringBuilder &pString) const;
+	bool operator==(const FoxString &pString) const;
+	bool operator==(const char *pString) const;
+
+	operator char*() const { return m_String; }
+	operator unsigned char*() const { return reinterpret_cast<unsigned char*>(m_String); }
+	operator void*() const { return reinterpret_cast<void*>(m_String); }
+
+private:
+	char *m_String;
+	unsigned int m_Size;
+	unsigned int m_Length;
+};
+
 class CBuffer
 {
 public:
@@ -113,6 +146,8 @@ public:
 	void Size(unsigned int nSize);
 	unsigned int Size() const {	return m_Size; }
 	void* Address() { return static_cast<void*>(m_Pointer); }
+	void Detach(CBuffer &buf);
+	void Detach() { m_Pointer = 0; m_Size = 0; }
 
 	operator void*() const { return static_cast<void*>(m_Pointer); }
 	operator char*() const { return m_Pointer; }
@@ -145,7 +180,7 @@ public:
   	ApiHandle() {}
 	ApiHandle(HANDLE hHandle) { m_Handle = hHandle; }
 	~ApiHandle() { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); }
-	void operator=(HANDLE hHandle) { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); m_Handle = hHandle; }
+	void operator=(HANDLE hHandle) { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); if (hHandle != NULL) m_Handle = hHandle; else m_Handle = INVALID_HANDLE_VALUE; }
 	void Close() { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); m_Handle = INVALID_HANDLE_VALUE; }
 };
 
@@ -155,7 +190,7 @@ public:
 	PrinterHandle() {};
 	PrinterHandle(HANDLE hHandle) { m_Handle = hHandle; }
 	~PrinterHandle() { if (m_Handle != INVALID_HANDLE_VALUE) ClosePrinter(m_Handle); }
-	void operator=(HANDLE hHandle) { if (m_Handle != INVALID_HANDLE_VALUE) ClosePrinter(m_Handle); m_Handle = hHandle; }
+	void operator=(HANDLE hHandle) { if (m_Handle != INVALID_HANDLE_VALUE) ClosePrinter(m_Handle); if (hHandle != NULL) m_Handle = hHandle; else m_Handle = INVALID_HANDLE_VALUE; }
 };
 
 class RegistryKey

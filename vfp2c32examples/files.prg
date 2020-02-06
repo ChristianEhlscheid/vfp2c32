@@ -5,7 +5,6 @@ m.lcPath = FULLPATH(JUSTPATH(SYS(16)))
 CD (m.lcPath)
 
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_FILE)
 
 LOCAL lnCount, lnCount2, laFiles[1], xj, xi
 

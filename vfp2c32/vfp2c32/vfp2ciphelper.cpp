@@ -136,7 +136,7 @@ try
 	if (!fpSendARP)
 		throw E_NOENTRYPOINT;
 
-	nIpAddr = inet_addr(vIp);
+	nIpAddr = fpInetPton(AF_INET,vIp,&nIpAddr);
 	if (nIpAddr == INADDR_NONE)
 	{
 		SaveCustomError("inet_addr","Invalid IP address passed.");

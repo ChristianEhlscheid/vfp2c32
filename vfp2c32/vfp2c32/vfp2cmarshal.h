@@ -36,7 +36,7 @@ typedef enum MarshalType
 	CTYPE_WCHARARRAY,
 	CTYPE_INT64,
 	CTYPE_UINT64
-};
+} MarshalType;
 
 // typedefs for dynamic linking to heap functions
 typedef BOOL (_stdcall *PHEAPSETINFO)(HANDLE, HEAP_INFORMATION_CLASS, PVOID, SIZE_T); // HeapSetInformation

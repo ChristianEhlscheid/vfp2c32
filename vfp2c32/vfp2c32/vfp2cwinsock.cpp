@@ -7,6 +7,8 @@
 #include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 
+PINET_PTON fpInetPton = (PINET_PTON)-1;
+
 void _stdcall SaveWinsockError(char *pFunction)
 {
 	int nError;
@@ -46,7 +48,7 @@ int _stdcall VFP2C_Init_Winsock()
 
 	if (tls.WinsockInited == FALSE)
 	{
-		wWinsockVer = MAKEWORD(1,1);
+		wWinsockVer = MAKEWORD(2,2);
  		nError = WSAStartup(wWinsockVer,&wsaData);
 		if (nError != ERROR_SUCCESS)
 		{
@@ -54,6 +56,16 @@ int _stdcall VFP2C_Init_Winsock()
 			return E_APIERROR;
 		}
 		tls.WinsockInited = TRUE;
+	}
+	if (fpInetPton == (PINET_PTON)-1)
+	{
+		HMODULE hWSock = GetModuleHandle("ws2_32.dll");
+		if (hWSock == NULL)
+		{
+			SaveWin32Error("GetModuleHandle", GetLastError());
+			return E_APIERROR;
+		}
+		fpInetPton = (PINET_PTON)GetProcAddress(hWSock, "InetPton");
 	}
 	return 0;
 }

@@ -1,11 +1,9 @@
 #INCLUDE vfp2c.h
 
 && Printer related functions
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_PRINT flag set
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_PRINT)
 
 LOCAL lnCount, xj
 

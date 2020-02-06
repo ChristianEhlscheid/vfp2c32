@@ -4,7 +4,6 @@
 #INCLUDE "vfp2c.h"
 
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_MARSHAL)
 
 && declare needed functions
 DECLARE INTEGER GetNetworkParams IN iphlpapi.dll INTEGER pFixedInfo, INTEGER @ dwOutBufLen

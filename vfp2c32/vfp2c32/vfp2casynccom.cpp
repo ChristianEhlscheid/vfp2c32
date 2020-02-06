@@ -76,22 +76,22 @@ STDMETHODIMP CComCallInfo::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT 
 {
 	HRESULT hr = DISP_E_UNKNOWNNAME;
 	*rgdispid = DISPID_UNKNOWN;
-	if (wcsicmp(L"AbortEvent", *rgszNames) == 0)
+	if (_wcsicmp(L"AbortEvent", *rgszNames) == 0)
 	{
 		*rgdispid = DISPID_AbortEvent;
 		hr = S_OK;
 	}
-	else if (wcsicmp(L"Aborted", *rgszNames) == 0)
+	else if (_wcsicmp(L"Aborted", *rgszNames) == 0)
 	{
 		*rgdispid = DISPID_Aborted;
 		hr = S_OK;
 	}
-	else if (wcsicmp(L"CallContext", *rgszNames) == 0)
+	else if (_wcsicmp(L"CallContext", *rgszNames) == 0)
 	{
 		*rgdispid = DISPID_CallContext;
 		hr = S_OK;
 	}
-	else if (wcsicmp(L"CallId", *rgszNames) == 0)
+	else if (_wcsicmp(L"CallId", *rgszNames) == 0)
 	{
 		*rgdispid = DISPID_CallId;
 		hr = S_OK;

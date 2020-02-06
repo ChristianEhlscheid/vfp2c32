@@ -22,22 +22,6 @@
 
 #endif
 
-const unsigned int VFP2C_INIT_MARSHAL	= 0x00000001;
-const unsigned int VFP2C_INIT_ENUM		= 0x00000002;
-const unsigned int VFP2C_INIT_ASYNC		= 0x00000004;
-const unsigned int VFP2C_INIT_FILE		= 0x00000008;
-const unsigned int VFP2C_INIT_WINSOCK	= 0x00000010;
-const unsigned int VFP2C_INIT_ODBC		= 0x00000020;
-const unsigned int VFP2C_INIT_PRINT		= 0x00000040;
-const unsigned int VFP2C_INIT_NETAPI	= 0x00000080;
-const unsigned int VFP2C_INIT_CALLBACK	= 0x00000100;
-const unsigned int VFP2C_INIT_SERVICES	= 0x00000200;
-const unsigned int VFP2C_INIT_WINDOWS	= 0x00000400;
-const unsigned int VFP2C_INIT_RAS		= 0x00000800;
-const unsigned int VFP2C_INIT_IPHELPER	= 0x00001000;
-const unsigned int VFP2C_INIT_URLMON	= 0x00002000;
-const unsigned int VFP2C_INIT_WININET	= 0x00004000;
-const unsigned int VFP2C_INIT_COM		= 0x00008000;
 
 const unsigned int VFP2C_MAX_CALLBACKFUNCTION	= 1024;
 const unsigned int VFP2C_MAX_CALLBACKBUFFER		= 2048;

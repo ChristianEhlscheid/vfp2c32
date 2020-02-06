@@ -1673,6 +1673,100 @@ unsigned int _stdcall printfex(char *lpBuffer, const char *lpFormat, va_list lpA
   return lpString - lpBuffer;
 }
 
+unsigned int _stdcall printfnex(char *lpBuffer, const char *lpFormat, unsigned int len, va_list lpArgs)
+{
+	char *lpString;
+	char *lpStringParm;
+	double nDouble;
+	int nPrecision, nUseLength;
+
+	for (lpString = lpBuffer; *lpFormat; lpFormat++)
+	{
+		if (--len <= 0)
+			throw E_INSUFMEMORY;
+
+		if (*lpFormat != '%')
+		{
+			*lpString++ = *lpFormat;
+			continue;
+		}
+
+		lpFormat++;
+
+		if (nUseLength = IsDigit(*lpFormat))
+			nPrecision = skip_atoi(&lpFormat);
+		else
+			nPrecision = 6;
+
+		switch (*lpFormat)
+		{
+
+		case 'I':
+			lpString = IntToStr(lpString, va_arg(lpArgs, int));
+			continue;
+
+		case 'U':
+			lpString = UIntToStr(lpString, va_arg(lpArgs, unsigned int));
+			continue;
+
+		case 'i':
+			lpString = IntToStr(lpString, va_arg(lpArgs, short));
+			continue;
+
+		case 'u':
+			lpString = UIntToStr(lpString, va_arg(lpArgs, unsigned short));
+			continue;
+
+		case 'F':
+			lpString = DoubleToStr(lpString, va_arg(lpArgs, double), nPrecision);
+			continue;
+
+		case 'f':
+			nDouble = (double)va_arg(lpArgs, float);
+			lpString = DoubleToStr(lpString, nDouble, nPrecision);
+			continue;
+
+		case 'b':
+			lpString = Int64ToStr(lpString, va_arg(lpArgs, __int64));
+			continue;
+
+		case 'B':
+			lpString = UInt64ToStr(lpString, va_arg(lpArgs, unsigned __int64));
+
+		case 'L':
+			lpString = BoolToStr(lpString, va_arg(lpArgs, int));
+			continue;
+
+		case 'S':
+			lpStringParm = va_arg(lpArgs, char*);
+			if (lpStringParm)
+			{
+				if (!nUseLength)
+					while ((*lpStringParm)) *lpString++ = *lpStringParm++;
+				else
+					while ((*lpStringParm) && nPrecision--) *lpString++ = *lpStringParm++;
+			}
+			continue;
+
+		case 's':
+			*lpString++ = va_arg(lpArgs, char);
+			continue;
+
+		default:
+			if (*lpFormat != '%') *lpString++ = '%';
+			if (*lpFormat)
+				*lpString++ = *lpFormat;
+			else
+				--lpFormat;
+			continue;
+		}
+
+	}
+
+	*lpString = '\0';
+	return lpString - lpBuffer;
+}
+
 // skips over whitespace (space & tab)
 void _stdcall skip_ws(char **pString)
 {

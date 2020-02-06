@@ -249,12 +249,6 @@ try
 	}
 	else
 	{
-		if (!goUrlThreads.Initialized())
-		{
-			SaveCustomError("UrlDownloadToFileEx","Library not initialized!");
-			throw E_APIERROR;
-		}
-
 		pDownload = new UrlDownloadThread(goUrlThreads);
 		if (!pDownload)
 			throw E_INSUFMEMORY;

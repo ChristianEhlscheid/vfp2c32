@@ -72,9 +72,7 @@
 				CommandLine="copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFileName)&quot;
 "/>
 			<Tool
-				Name="VCPreBuildEventTool"
-				Description="Freeing leacked PDB handles"
-				CommandLine="&quot;$(VCInstallDir)\bin\freepdb.cmd&quot; &quot;$(ProjectName)&quot;"/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
@@ -214,9 +212,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCPreBuildEventTool"
-				Description="Freeing leacked PDB handles"
-				CommandLine="&quot;$(VCInstallDir)\bin\freepdb.cmd&quot; &quot;$(ProjectName)&quot;"/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
@@ -290,9 +286,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCPreBuildEventTool"
-				Description="Freeing leacked PDB handles"
-				CommandLine="&quot;$(VCInstallDir)\bin\freepdb.cmd&quot; &quot;$(ProjectName)&quot;"/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
@@ -430,9 +424,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCPreBuildEventTool"
-				Description="Freeing leacked PDB handles"
-				CommandLine="&quot;$(VCInstallDir)\bin\freepdb.cmd&quot; &quot;$(ProjectName)&quot;"/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
@@ -540,7 +532,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 					Name="Debug|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="C:\masm32\bin\ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
+						CommandLine="ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
 "
 						Outputs="$(OutDir)\$(InputName).obj"/>
 				</FileConfiguration>
@@ -548,7 +540,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 					Name="Release|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="C:\masm32\bin\ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
+						CommandLine="ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
 "
 						Outputs="$(OutDir)\$(InputName).obj"/>
 				</FileConfiguration>
@@ -556,7 +548,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 					Name="ReleaseDebug|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="C:\masm32\bin\ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
+						CommandLine="ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
 "
 						Outputs="$(OutDir)\$(InputName).obj"/>
 				</FileConfiguration>
@@ -564,7 +556,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 					Name="DebugTS|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="C:\masm32\bin\ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
+						CommandLine="ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
 "
 						Outputs="$(OutDir)\$(InputName).obj"/>
 				</FileConfiguration>
@@ -572,7 +564,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 					Name="ReleaseTS|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="C:\masm32\bin\ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
+						CommandLine="ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
 "
 						Outputs="$(OutDir)\$(InputName).obj"/>
 				</FileConfiguration>
@@ -580,7 +572,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 					Name="ReleaseDebugTS|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="C:\masm32\bin\ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
+						CommandLine="ml /Fo $(TargetDir)$(InputName).obj /c /Cx /coff $(inputpath)
 "
 						Outputs="$(OutDir)\$(InputName).obj"/>
 				</FileConfiguration>

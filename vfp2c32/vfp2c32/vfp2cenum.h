@@ -44,6 +44,15 @@ public:
 	unsigned short aFlags[WINDOW_ENUM_FLAGS];
 };
 
+class MonitorEnumParam
+{
+public:
+	MonitorEnumParam() { nCount = 0; bError = false; }
+	FoxArray pArray;
+	unsigned int nCount;
+	bool bError;
+};
+
 // custom types and defines for resource enumeration functions
 const int RESOURCE_ENUM_TYPELEN	= 512;
 const int RESOURCE_ENUM_NAMELEN	= 2048;
@@ -81,6 +90,8 @@ void _fastcall AWindowsEx(ParamBlk *parm);
 BOOL _stdcall WindowEnumCallbackEx(HWND nHwnd, LPARAM nParam);
 void _fastcall AWindowProps(ParamBlk *parm);
 BOOL _stdcall WindowPropEnumCallback(HWND nHwnd, LPCSTR pPropName, HANDLE hData, DWORD nParam);
+void _fastcall AMonitors(ParamBlk *parm);
+BOOL _stdcall MonitorEnumCallback(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData);
 void _fastcall AProcesses(ParamBlk *parm);
 void _fastcall AProcessesPSAPI(ParamBlk *parm);
 void _fastcall AProcessThreads(ParamBlk *parm);

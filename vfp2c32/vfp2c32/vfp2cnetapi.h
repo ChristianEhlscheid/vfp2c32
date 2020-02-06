@@ -35,7 +35,7 @@ typedef enum TimeZone
 	UTC = 1,
 	LocalTimeZone,
 	ServerTimeZone
-};
+} TimeZone;
 
 #ifdef __cplusplus
 extern "C" {

@@ -15,6 +15,7 @@
 HWND ghAsyncHwnd = 0;
 static ATOM gnAsyncAtom = 0;
 CThreadManager goThreadManager;
+FindFileChangeExThread *goFindFileChangeExThread = 0;
 
 int _stdcall VFP2C_Init_Async()
 {
@@ -89,12 +90,6 @@ try
 	DWORD nFilter = p3.ev_long;
 	FoxString pCallback(p4);
 
-	if (!goThreadManager.Initialized())
-	{
-		SaveCustomError("FindFileChange","Library not initialized!");
-		throw E_APIERROR;
-	}
-
     if (pPath.Len() > MAX_PATH-1)
 		throw E_INVALIDPARAMS;
 
@@ -139,6 +134,89 @@ catch(int nErrorNo)
 }
 }
 
+void _fastcall FindFileChangeEx(ParamBlk *parm)
+{
+	FindFileChangeExEntry *pFFC = 0;
+try
+{
+	int nErrorNo = VFP2C_Init_Async();
+	if (nErrorNo)
+		throw nErrorNo;
+
+	FoxString pPath(p1);
+	bool bWatchSubtree = p2.ev_length > 0;
+	DWORD nFilter = p3.ev_long;
+	FoxString pCallback(p4);
+	DWORD nBufferSize = PCount() > 4 ? p5.ev_long : 32768;
+
+    if (pPath.Len() > MAX_PATH-1)
+		throw E_INVALIDPARAMS;
+
+	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
+		throw E_INVALIDPARAMS;
+
+	if (goFindFileChangeExThread == 0) {
+		goFindFileChangeExThread = new FindFileChangeExThread(goThreadManager);
+		if (goFindFileChangeExThread == 0)
+			throw E_INSUFMEMORY;
+	}
+
+	// find free slot
+	pFFC = new FindFileChangeExEntry();
+	if (pFFC == 0)
+		throw E_INSUFMEMORY;
+
+	pFFC->Setup(pPath, bWatchSubtree, nFilter, pCallback, nBufferSize, goFindFileChangeExThread->GetIoPort());
+
+	goFindFileChangeExThread->AddDirectory(pFFC);
+	goFindFileChangeExThread->StartThread();
+	Return(pFFC);
+}
+catch(int nErrorNo)
+{
+	if (pFFC)
+		delete pFFC;
+	RaiseError(nErrorNo);
+}
+}
+
+void _fastcall CancelFileChangeEx(ParamBlk *parm)
+{
+try
+{
+	int nErrorNo = VFP2C_Init_Async();
+	if (nErrorNo)
+		throw nErrorNo;
+
+
+	FindFileChangeExEntry *pFFC = reinterpret_cast<FindFileChangeExEntry *>(p1.ev_long);
+	if (goFindFileChangeExThread)
+	{
+		if (pFFC) 
+		{
+			if (!goFindFileChangeExThread->RemoveDirectory(pFFC))
+				throw E_INVALIDPARAMS;
+		}
+		else 
+		{
+			goFindFileChangeExThread->RemoveAllDirectories();
+		}
+
+		if (!goFindFileChangeExThread->IsWatching())
+		{
+			goThreadManager.AbortThread(goFindFileChangeExThread);
+			goFindFileChangeExThread = 0;
+		}
+		Return(true);
+	}
+	Return(false);
+}
+catch(int nErrorNo)
+{
+	RaiseError(nErrorNo);
+}
+}
+
 void _fastcall FindRegistryChange(ParamBlk *parm)
 {
 	FindRegistryChangeThread *pThread = 0;
@@ -153,12 +231,6 @@ try
 	bool bWatchSubtree = p3.ev_length > 0;
 	DWORD dwFilter = p4.ev_long;
 	FoxString pCallback(p5);
-
-	if (!goThreadManager.Initialized())
-	{
-		SaveCustomError("FindRegistryChange","Library not initialized!");
-		throw E_APIERROR;
-	}
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
 		throw E_INVALIDPARAMS;
@@ -255,50 +327,76 @@ catch(int nErrorNo)
 LRESULT _stdcall FindChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int nErrorNo;
-	if (uMsg == WM_CALLBACK)
+	LRESULT retval;
+
+	switch(uMsg)
 	{
-		__try
-		{
-			char *pCommand = reinterpret_cast<char*>(wParam);
-			if (pCommand)
+		case WM_CALLBACK:
+			__try
 			{
-				_Execute(pCommand);
-				delete[] pCommand;
-			}
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER) {}
-		return 0;
-	}
-	else if (uMsg == WM_CALLBACKRESULT)
-	{
-		Value vRetVal;
-		vRetVal.ev_type = '0';
-		LRESULT retval = 0;
-		__try
-		{
-			char *pCommand = reinterpret_cast<char*>(wParam);
-			if (pCommand)
-			{
-				nErrorNo = _Evaluate(&vRetVal, pCommand);
-				delete[] pCommand;
-				if (nErrorNo == 0)
+				char *pCommand = reinterpret_cast<char*>(wParam);
+				if (pCommand)
 				{
-					if (Vartype(vRetVal) == 'I')
-						retval = vRetVal.ev_long;
-					else if (Vartype(vRetVal) == 'N')
-						retval = static_cast<LRESULT>(vRetVal.ev_real);
-					else if (Vartype(vRetVal) == 'L')
-						retval = vRetVal.ev_width;
-					else 
-						ReleaseValue(vRetVal);
+					_Execute(pCommand);
+					delete[] pCommand;
 				}
 			}
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER) {}
-		return retval;
+			__except (EXCEPTION_EXECUTE_HANDLER) {}
+			return 0;
+
+		case WM_CALLBACKRESULT:
+			Value vRetVal;
+			vRetVal.ev_type = '0';
+			retval = 0;
+			__try
+			{
+				char *pCommand = reinterpret_cast<char*>(wParam);
+				if (pCommand)
+				{
+					nErrorNo = _Evaluate(&vRetVal, pCommand);
+					delete[] pCommand;
+					if (nErrorNo == 0)
+					{
+						if (Vartype(vRetVal) == 'I')
+							retval = vRetVal.ev_long;
+						else if (Vartype(vRetVal) == 'N')
+							retval = static_cast<LRESULT>(vRetVal.ev_real);
+						else if (Vartype(vRetVal) == 'L')
+							retval = vRetVal.ev_width;
+						else 
+							ReleaseValue(vRetVal);
+					}
+				}
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER) {}
+			return retval;
+
+		case WM_CALLBACK_FFEX:
+			__try
+			{
+				FindFileChangeExEntry *pFFC = reinterpret_cast<FindFileChangeExEntry*>(wParam);
+				LPBYTE pBuffer = reinterpret_cast<LPBYTE>(lParam);
+				if (goFindFileChangeExThread && goFindFileChangeExThread->ValidDirectory(pFFC)) 
+				{
+					PFILE_NOTIFY_INFORMATION pInfo = reinterpret_cast<PFILE_NOTIFY_INFORMATION>(lParam);
+					while(true)
+					{
+						pFFC->Callback(pInfo);
+						if (pInfo->NextEntryOffset == 0)
+							break;
+				
+						pInfo = (PFILE_NOTIFY_INFORMATION)((LPBYTE)pInfo + pInfo->NextEntryOffset);
+						if ((LPBYTE)pInfo > pBuffer + pFFC->BufferSize())
+							break;
+					}
+				}
+				delete[] pBuffer;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER) {}
+			return 0;
 	}
-	else
-		return DefWindowProc(nHwnd,uMsg,wParam,lParam);
+
+	return DefWindowProc(nHwnd,uMsg,wParam,lParam);
 }
 
 FindFileChangeThread::FindFileChangeThread(CThreadManager &pManager) : CThread(pManager)
@@ -382,6 +480,225 @@ DWORD FindFileChangeThread::Run()
 	return 0;
 }
 
+FindFileChangeExEntry::FindFileChangeExEntry()
+{
+	memset(&m_Ol, 0, sizeof(m_Ol));
+	m_OldFilename[0] = 0;
+	m_OldFilenameLength = 0;
+}
+
+FindFileChangeExEntry::~FindFileChangeExEntry()
+{
+	if (m_Handle)
+	{
+		CancelIo(m_Handle);
+		m_Handle.Close();
+	}
+}
+
+void FindFileChangeExEntry::Setup(char *pPath, bool bWatchSubtree, DWORD nFilter, char *pCallback, DWORD nBufferSize, HANDLE nIoPort)
+{
+	m_Handle = CreateFile(pPath, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
+	if (!m_Handle)
+	{
+		SaveWin32Error("CreateFile", GetLastError());
+		throw E_APIERROR;
+	}
+	m_Path = pPath;
+	m_Path.AddBs();
+	m_LongPath.Size(MAX_PATH + 1);
+	m_LongPath2.Size(MAX_PATH + 1);
+	m_Callback = pCallback;
+	m_Callback += "(%U,%U,'%S','%S')";
+	m_CallbackError = pCallback;
+	m_CallbackError += "(%U,%U,'%S',%U)";
+	m_CallbackBuffer.Size(VFP2C_MAX_CALLBACKBUFFER);
+	m_PostCallbackBuffer.Size(VFP2C_MAX_CALLBACKBUFFER);
+	m_BufferSize = nBufferSize;
+	m_ReadDirBuffer.Size(m_BufferSize);
+	m_Subtree = bWatchSubtree;
+	m_Filter = nFilter;
+
+	if (!CreateIoCompletionPort(m_Handle, nIoPort, (ULONG_PTR)this, 1))
+	{
+		SaveWin32Error("CreateIoCompletionPort", GetLastError());
+		throw E_APIERROR;
+	}
+
+	if (!ReadDirectoryChangesW(m_Handle, m_ReadDirBuffer, m_ReadDirBuffer.Size(), bWatchSubtree, nFilter, 0, &m_Ol, 0))
+	{
+		SaveWin32Error("ReadDirectoryChangesW", GetLastError());
+		throw E_APIERROR;
+	}
+}
+
+void FindFileChangeExEntry::ReadChanges()
+{
+	m_ReadDirBuffer.Detach(m_PostBuffer);
+	m_ReadDirBuffer.Size(m_BufferSize);
+	if (!ReadDirectoryChangesW(m_Handle, m_ReadDirBuffer, m_ReadDirBuffer.Size(), m_Subtree, m_Filter, 0, &m_Ol, 0))
+	{
+		m_PostCallbackBuffer.Format(m_CallbackError, this, 0, "ReadDirectoryChangesW", GetLastError());
+		char *pCallback = m_PostCallbackBuffer.Strdup();
+		if (pCallback)
+			PostMessage(ghAsyncHwnd, WM_CALLBACK, (WPARAM)pCallback, 0);
+	}
+}
+
+void FindFileChangeExEntry::Callback(PFILE_NOTIFY_INFORMATION pInfo)
+{
+	DWORD nLen;
+	switch(pInfo->Action)
+	{
+		case FILE_ACTION_ADDED:
+		case FILE_ACTION_REMOVED:
+		case FILE_ACTION_MODIFIED:
+			m_LongPath.Format("%S%W", (char*)m_Path, &pInfo->FileName, pInfo->FileNameLength / 2);
+			m_LongPath2 = "";
+			if (pInfo->Action != FILE_ACTION_REMOVED)
+			{
+				nLen = GetLongPathName(m_LongPath, m_LongPath, m_LongPath.Size());
+				if (nLen >= m_LongPath.Size())
+				{
+					m_LongPath.Size(nLen + 1);
+					GetLongPathName(m_LongPath, m_LongPath, m_LongPath.Size());
+				}
+			}
+			m_CallbackBuffer.Format(m_Callback, this, pInfo->Action, (char*)m_LongPath, (char*)m_LongPath2);
+			_Execute(m_CallbackBuffer);
+			break;
+
+		case FILE_ACTION_RENAMED_OLD_NAME:
+			memcpy(&m_OldFilename, &pInfo->FileName, pInfo->FileNameLength);
+			m_OldFilenameLength = pInfo->FileNameLength;
+			break;
+
+		case FILE_ACTION_RENAMED_NEW_NAME:
+			m_LongPath.Format("%S%W", (char*)m_Path, &m_OldFilename, m_OldFilenameLength / 2);
+			m_LongPath2.Format("%S%W", (char*)m_Path, &pInfo->FileName, pInfo->FileNameLength / 2);
+			nLen = GetLongPathName(m_LongPath2, m_LongPath2, m_LongPath2.Size());
+			if (nLen >= m_LongPath2.Size())
+			{
+				m_LongPath2.Size(nLen + 1);
+				GetLongPathName(m_LongPath2, m_LongPath2, m_LongPath2.Size());
+			}
+			m_CallbackBuffer.Format(m_Callback, this, FILE_ACTION_RENAMED_OLD_NAME, (char*)m_LongPath, (char*)m_LongPath2);
+			m_OldFilenameLength = 0;
+			_Execute(m_CallbackBuffer);
+			break;
+	}
+}
+
+void FindFileChangeExEntry::PostCallback()
+{
+	PostMessage(ghAsyncHwnd, WM_CALLBACK_FFEX, (WPARAM)this, (LPARAM)m_PostBuffer.Address());
+	m_PostBuffer.Detach();
+}
+
+FindFileChangeExThread::FindFileChangeExThread(CThreadManager &pManager) : CThread(pManager)
+{
+	if (!m_Sect.Initialize(4000))
+		throw E_APIERROR;
+
+	if (!m_SectDelete.Initialize(4000))
+		throw E_APIERROR;
+
+	m_IoPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
+	if (!m_IoPort)
+	{
+		SaveWin32Error("CreateIoCompletionPort", GetLastError());
+		throw E_APIERROR;
+	}
+}
+
+void FindFileChangeExThread::AddDirectory(FindFileChangeExEntry *pFFC)
+{
+	m_Sect.Enter();
+	m_FileChangeEntries.SetAt(pFFC, pFFC);
+	m_Sect.Leave();
+}
+
+bool FindFileChangeExThread::RemoveDirectory(FindFileChangeExEntry *pFFC)
+{
+	bool ret;
+	m_SectDelete.Enter();
+	m_Sect.Enter();
+	if (ret = m_FileChangeEntries.RemoveKey(pFFC))
+	{
+		delete pFFC;
+	}
+	m_Sect.Leave();
+	m_SectDelete.Leave();
+	return ret;
+}
+
+void FindFileChangeExThread::RemoveAllDirectories()
+{
+	FindFileChangeExEntry *pFFC;
+	m_SectDelete.Enter();
+	m_Sect.Enter();
+	while(!m_FileChangeEntries.IsEmpty())
+	{
+		POSITION nPos = m_FileChangeEntries.GetStartPosition();
+		pFFC = m_FileChangeEntries.GetValueAt(nPos);
+		m_FileChangeEntries.RemoveAtPos(nPos);
+		delete pFFC;
+	}
+	m_Sect.Leave();
+	m_SectDelete.Leave();
+}
+
+bool FindFileChangeExThread::ValidDirectory(FindFileChangeExEntry *pFFC)
+{
+	FindFileChangeExEntry *pDummy;
+	bool ret;
+	m_Sect.Enter();
+	ret = m_FileChangeEntries.Lookup(pFFC, pDummy);
+	m_Sect.Leave();
+	return ret;
+}
+
+bool FindFileChangeExThread::IsWatching()
+{
+	bool ret;
+	m_Sect.Enter();
+	ret = !m_FileChangeEntries.IsEmpty();
+	m_Sect.Leave();
+	return ret;
+}
+
+void FindFileChangeExThread::SignalThreadAbort()
+{
+	PostQueuedCompletionStatus(m_IoPort, 0, 0, 0);
+}
+
+DWORD FindFileChangeExThread::Run()
+{
+	DWORD dwBytes;
+	FindFileChangeExEntry *pFFC;
+	OVERLAPPED *pOl;
+	while(true)
+	{
+		if (GetQueuedCompletionStatus(m_IoPort, &dwBytes, (PULONG_PTR)&pFFC, &pOl, INFINITE))
+		{
+			if (pFFC)
+			{
+				m_SectDelete.Enter();
+				if (ValidDirectory(pFFC))
+				{
+					pFFC->ReadChanges();
+					pFFC->PostCallback();
+				}
+				m_SectDelete.Leave();
+			} else
+				break;
+		}
+	}
+	return 0;
+}
+
+
 FindRegistryChangeThread::FindRegistryChangeThread(CThreadManager &pManager) : CThread(pManager)
 {
 	m_RegKey = NULL;
@@ -392,6 +709,8 @@ FindRegistryChangeThread::~FindRegistryChangeThread()
 	if (m_RegKey)
 		RegCloseKey(m_RegKey);
 }
+
+
 
 bool FindRegistryChangeThread::Setup(HKEY hRoot, char *pKey, bool bWatchSubtree, DWORD dwFilter, char *pCallback)
 {

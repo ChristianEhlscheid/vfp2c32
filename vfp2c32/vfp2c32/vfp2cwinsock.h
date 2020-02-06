@@ -8,6 +8,9 @@ const int VFP2C_MAX_IP_LEN			= 16;
 extern "C" {
 #endif
 
+typedef int (_stdcall *PINET_PTON)(INT  Family, PCTSTR pszAddrString, PVOID pAddrBuf);
+extern PINET_PTON fpInetPton;
+
 void _stdcall SaveWinsockError(char *pFunction);
 int _stdcall VFP2C_Init_Winsock();
 void _stdcall VFP2C_Destroy_Winsock(VFP2CTls& tls);

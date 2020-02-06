@@ -13,8 +13,8 @@
 #include "vfp2ccppapi.h"
 #include "vfpmacros.h"
 
-const char* BINDEVENTSEX_OBJECT_SCHEME	= "__VFP2C_WCBO%U_%U_%U";
-const char* CALLBACKFUNC_OBJECT_SCHEME	= "__VFP2C_CBO_%U";
+#define BINDEVENTSEX_OBJECT_SCHEME "__VFP2C_WCBO%U_%U_%U"
+#define CALLBACKFUNC_OBJECT_SCHEME "__VFP2C_CBO_%U"
 
 static HANDLE ghThunkHeap = 0;
 static LPWINDOWSUBCLASS gpWMSubclasses = 0;
@@ -613,7 +613,7 @@ void _stdcall CreateSubclassMsgThunkProc(LPWINDOWSUBCLASS lpSubclass, LPMSGCALLB
 
 	if (!pParmDef)
 	{
-		strcat(lpMsg->pCallbackFunction,"(%U,%U,%I,%I)");
+		strcat(lpMsg->pCallbackFunction, "(%U,%U,%I,%I)");
 		rasm.Push("lParam");
 		rasm.Push("wParam");
 		rasm.Push("uMsg");
@@ -918,7 +918,7 @@ try
 	DWORD nSyncFlag = PCount() == 5 ? p5.ev_long : CALLBACK_SYNCRONOUS;
 	bool bCDeclCallConv = (nSyncFlag & CALLBACK_CDECL) > 0; // is CALLBACK_CDECL set?
 	nSyncFlag &= ~CALLBACK_CDECL; // remove CALLBACK_CDECL from nSyncFlag
-	nSyncFlag = nSyncFlag ? nSyncFlag : CALLBACK_SYNCRONOUS; // set nSyncFlag to default CALLBACK_SYNCRONOUS if is 0
+	nSyncFlag = nSyncFlag ? nSyncFlag : CALLBACK_SYNCRONOUS; // set nSyncFlag to default CALLBACK_SYNCRONOUS if it is 0
 
 	RuntimeAssembler rasm;
 
@@ -941,7 +941,7 @@ try
 	{
 		sprintfex(aObjectName,CALLBACKFUNC_OBJECT_SCHEME,pFunc);
 		StoreObjectRef(aObjectName,pFunc->nObject,p4);
-		strcpy(pFunc->aCallbackBuffer,aObjectName);
+		strcpy(pFunc->aCallbackBuffer, aObjectName);
 		strcat(pFunc->aCallbackBuffer,".");
 	}
  
@@ -1060,7 +1060,7 @@ try
 				else
 					throw E_INVALIDPARAMS;
 				
-				// copy function name to into buffer
+				// copy function name into buffer
 				int nStringLen = strlen(pFunc);
 				rasm.Push(nStringLen);
 				rasm.Push((AVALUE)pFunc);

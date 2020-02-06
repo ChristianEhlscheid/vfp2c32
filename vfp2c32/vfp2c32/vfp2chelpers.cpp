@@ -226,7 +226,7 @@ CStr& CStr::AddLastPath(const char *pPath)
 {
 	assert(m_String);
 	int nStrLen = strlen(pPath) + 1;
-	char *pLastBS = strrchr(pPath,'\\');
+	const char *pLastBS = strrchr(pPath,'\\');
 
 	AddBs();
 
@@ -307,8 +307,10 @@ unsigned int CStr::Format(const char *lpFormat,...)
 	assert(m_Size);
 	char *lpString;
 	char *lpStringParm;
+	wchar_t *lpWStringParm;
 	double nDouble;
 	int nPrecision, nUseLength;
+	int nChars;
 	unsigned int nSize = m_Size;
 
 	va_list lpArgs;
@@ -385,7 +387,17 @@ unsigned int CStr::Format(const char *lpFormat,...)
 		case 's':
 			*lpString++ = va_arg(lpArgs,char);
 			continue;
-			
+		
+		case 'W':
+			lpWStringParm = va_arg(lpArgs,wchar_t*);
+			nPrecision = va_arg(lpArgs,int);
+			if (nPrecision > 0)
+			{
+				nChars = WideCharToMultiByte(VFP2CTls::Tls().ConvCP, 0, lpWStringParm, nPrecision, lpString, (m_Size - (lpString - m_String)), 0, 0);
+				lpString += nChars;
+			}
+			continue;
+
 		default:
 			if (*lpFormat != '%') *lpString++ = '%';
 			if (*lpFormat)
@@ -401,7 +413,7 @@ unsigned int CStr::Format(const char *lpFormat,...)
   va_end(lpArgs);
 
   m_Length = lpString - m_String;
-  return lpString - m_String;
+  return m_Length;
 }
 
 CStr& CStr::operator=(const CStr &pString)
@@ -446,6 +458,101 @@ bool CStr::operator==(const char *pString) const
 	return nRet == 0;
 }
 
+CStringBuilder& CStringBuilder::Format(const char* format, ...)
+{
+	va_list lpArgs;
+	va_start(lpArgs, format);
+	m_Length = printfex(m_String, format, lpArgs);
+	va_end(lpArgs);
+	return *this;
+};
+
+CStringBuilder& CStringBuilder::AppendFromat(const char* format, ...)
+{
+	unsigned int len;
+	va_list lpArgs;
+	va_start(lpArgs, format);
+	len = printfex(m_String + m_Length, format, lpArgs);
+	va_end(lpArgs);
+	m_Length += len;
+	return *this;
+}
+
+CStringBuilder& CStringBuilder::operator=(const CStringBuilder &pString)
+{
+	if (pString.Len() >= m_Size)
+		throw E_INSUFMEMORY;
+	m_Length = pString.Len();
+	memcpy(m_String, pString, m_Length + 1);
+	return *this;
+}
+
+CStringBuilder& CStringBuilder::operator=(const FoxString &pString)
+{
+	if (pString.Len() >= m_Size)
+		throw E_INSUFMEMORY;
+	m_Length = pString.Len();
+	memcpy(m_String, pString, m_Length + 1);
+	return *this;
+}
+
+CStringBuilder& CStringBuilder::operator=(const char *pString)
+{
+	size_t len = strlen(pString);
+	if (len >= m_Size)
+		throw E_INSUFMEMORY;
+	m_Length = len;
+	memcpy(m_String, pString, len + 1);
+	return *this;
+}
+
+CStringBuilder& CStringBuilder::operator+=(const CStringBuilder &pString)
+{
+	if (m_Length + pString.Len() >= m_Size)
+		throw E_INSUFMEMORY;
+	memcpy(m_String + m_Length, pString, pString.Len() + 1);
+	m_Length += pString.Len();
+	return *this;
+}
+
+CStringBuilder& CStringBuilder::operator+=(const FoxString &pString)
+{
+	if (m_Length + pString.Len() >= m_Size)
+		throw E_INSUFMEMORY;
+	memcpy(m_String + m_Length, pString, pString.Len() + 1);
+	m_Length += pString.Len();
+	return *this;
+}
+
+CStringBuilder& CStringBuilder::operator+=(const char *pString)
+{
+	size_t len = strlen(pString);
+	if (len + m_Length >= m_Size)
+		throw E_INSUFMEMORY;
+	memcpy(m_String + m_Length, pString, len + 1);
+	m_Length += len;
+	return *this;
+}
+
+bool CStringBuilder::operator==(const CStringBuilder &pString) const
+{
+	if (m_Length != pString.Len())
+		return false;
+	return strcmp(m_String, pString) == 0;
+}
+
+bool CStringBuilder::operator==(const FoxString &pString) const
+{
+	if (m_Length != pString.Len())
+		return false;
+	return strcmp(m_String, pString) == 0;
+}
+
+bool CStringBuilder::operator==(const char *pString) const
+{
+	return strcmp(m_String, pString) == 0;
+}
+
 CBuffer::CBuffer(unsigned int nSize)
 {
 	m_Pointer = new char[nSize];
@@ -469,6 +576,14 @@ void CBuffer::Size(unsigned int nSize)
 	if (m_Pointer == 0)
 		throw E_INSUFMEMORY;
     m_Size = nSize;
+}
+
+void CBuffer::Detach(CBuffer &buf)
+{
+	buf.m_Pointer = m_Pointer;
+	buf.m_Size = m_Size;
+	m_Pointer = 0;
+	m_Size = 0;
 }
 
 bool RegistryKey::Create(HKEY hKey, LPCSTR lpKey, LPSTR lpClass, DWORD nOptions, REGSAM samDesired)
@@ -747,6 +862,8 @@ void CThread::WaitForThreadShutdown()
 
 void CThread::StartThread()
 {
+	if (m_ThreadHandle)
+		return;
 	DWORD dwThreadId; 
 	m_ThreadHandle = CreateThread(0, THREAD_STACKSIZE, ThreadProc, (LPVOID)this, 0, &dwThreadId);
 	if (m_ThreadHandle == 0)

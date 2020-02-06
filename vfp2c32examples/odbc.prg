@@ -1,10 +1,8 @@
 #INCLUDE vfp2c.h
 
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_ODBC flag set
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_ALL)
 
 LOCAL lnCon, lValue, lnRet, laInfo[1]
 lnCon = SQLCONNECT('mysql','root','*******')

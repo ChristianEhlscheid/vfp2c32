@@ -33,16 +33,16 @@ const __int64 MAX_INT64				= 0x7FFFFFFFFFFFFFFF;
 const unsigned __int64 MIN_UINT64	= 0;
 const unsigned __int64 MAX_UINT64	= 0xFFFFFFFFFFFFFFFF;
 
-const int VFP2C_VFP_MAX_ARRAY_ROWS		= 65000;
-const int VFP2C_VFP_MAX_PROPERTY_NAME	= 253;
-const int VFP2C_VFP_MAX_COLUMN_NAME		= 128;
-const int VFP2C_VFP_MAX_CURSOR_NAME		= 128;
-const int VFP2C_VFP_MAX_CHARCOLUMN		= 254;
-const int VFP2C_VFP_MAX_COLUMNS			= 255;
-const int VFP2C_VFP_MAX_FIELDNAME		= VFP2C_VFP_MAX_CURSOR_NAME + 1 + VFP2C_VFP_MAX_COLUMN_NAME;
+const unsigned long VFP2C_VFP_MAX_ARRAY_ROWS		= 65000;
+const unsigned long VFP2C_VFP_MAX_PROPERTY_NAME		= 253;
+const unsigned long VFP2C_VFP_MAX_COLUMN_NAME		= 128;
+const unsigned long VFP2C_VFP_MAX_CURSOR_NAME		= 128;
+const unsigned long VFP2C_VFP_MAX_CHARCOLUMN		= 254;
+const unsigned long VFP2C_VFP_MAX_COLUMNS			= 255;
+const unsigned long VFP2C_VFP_MAX_FIELDNAME			= VFP2C_VFP_MAX_CURSOR_NAME + 1 + VFP2C_VFP_MAX_COLUMN_NAME;
 
 inline bool StrEqual(char *pString, char *pString2) { return strcmp(pString, pString2) == 0; }
-inline bool StrIEqual(char *pString, char *pString2) { return stricmp(pString, pString2) == 0; }
+inline bool StrIEqual(char *pString, char *pString2) { return _stricmp(pString, pString2) == 0; }
 
 inline bool IsDigit(char pChar) { return pChar >= '0' && pChar <= '9'; }
 inline bool IsCharacter(char pChar) { return (pChar >= 'a' && pChar <= 'z') || (pChar >= 'A' && pChar <= 'Z'); }
@@ -132,6 +132,7 @@ unsigned __int64 _stdcall DoubleToUInt64(double nValue);
 __int64 _stdcall DoubleToInt64(double nValue);
 unsigned int _cdecl sprintfex(char *lpBuffer, const char *lpFormat, ...);
 unsigned int _stdcall printfex(char *lpBuffer, const char *lpFormat, va_list lpArgs);
+unsigned int _stdcall printfnex(char *lpBuffer, const char *lpFormat, unsigned int len, va_list lpArgs);
 static char* _stdcall cvt(double arg, int ndigits, int *decpt, int *sign, char *buf, int eflag);
 char* _stdcall strend(char *pString);
 int _stdcall skip_atoi(const char **s);

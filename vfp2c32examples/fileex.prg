@@ -6,14 +6,11 @@
 && FCreateEx and FOpenEx return the real windows file handle, you can use this handle for other API functions
 && you can also pass API handles not created with FCreateEx or FOpenEx to the functions FWriteEx, FPutsEx, FReadEx ect. ...
 
-&& prerequisites: if you want to use F(Un)LockFileEx - InitVFP2C32 must have been called with the VFP2C_INIT_FILE flag
-&& all other functions don't need any initialization
 
 #INCLUDE vfp2c.h
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
 SET LIBRARY TO vfp2c32.fll ADDITIVE
-INITVFP2C32(VFP2C_INIT_FILE)
 
 LOCAL lnHandle
 && create normal file for read/write with shared read/write/delete access for other processes

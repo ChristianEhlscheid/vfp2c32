@@ -439,6 +439,7 @@ FoxInfo VFP2CFuncs[] =
 	{"AWindows", (FPFI) AWindows, 3, "CI.I"},
 	{"AWindowsEx", (FPFI) AWindowsEx, 4, "CCI.I"},
 	{"AWindowProps", (FPFI) AWindowProps, 2, "CI"},
+	{"AMonitors", (FPFI) AMonitors, 1, "C"},
 	{"AResourceTypes", (FPFI) AResourceTypes, 2, "CI"},
 	{"AResourceNames", (FPFI) AResourceNames, 3, "CI?"},
 	{"AResourceLanguages", (FPFI) AResourceLanguages, 4, "CI??"},
@@ -552,6 +553,8 @@ FoxInfo VFP2CFuncs[] =
 #ifndef _THREADSAFE
 	{"FindFileChange", (FPFI) FindFileChange, 4, "CLIC"},
 	{"CancelFileChange", (FPFI) CancelFileChange, 1, "I"},
+	{"FindFileChangeEx", (FPFI) FindFileChangeEx, 5, "CLIC.I"},
+	{"CancelFileChangeEx", (FPFI) CancelFileChangeEx, 1, "I"},
 	{"FindRegistryChange", (FPFI) FindRegistryChange, 5, "ICLIC"},
 	{"CancelRegistryChange", (FPFI) CancelRegistryChange, 1, "I"},
 	{"AsyncWaitForObject", (FPFI) AsyncWaitForObject, 2, "IC"},

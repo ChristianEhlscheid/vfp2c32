@@ -17,15 +17,10 @@ DEFINE CLASS ExampleService3 AS ServiceBaseclass OLEPUBLIC
 #ENDIF
 			LOCAL lcDirectory
 			SET LIBRARY TO vfp2c32t.fll ADDITIVE
-			IF INITVFP2C32(VFP2C_INIT_MARSHAL) = .F.
-				LOCAL laError[1]
-				AERROREX('laError')
-				THROW CREATEOBJECT('Win32Exception', m.laError[1], m.laError[2], m.laError[3])
-			ENDIF
 			THIS.oServiceController = m.loServiceController
 			THIS.oWorkerThread = CreateThreadObject('VFPExampleService.ExampleWorker3', THIS, .T.)
 			m.lcDirectory = ADDBS(FULLPATH(CURDIR())) + 'watchedfolder'
-			&& by the following call is syncronous 
+			&& the following call is syncronous 
 			THIS.oWorkerThread.Object.Initialize(m.lcDirectory)
 			THIS.oWorkerThread.ThreadFunc()
 		CATCH TO loExc
