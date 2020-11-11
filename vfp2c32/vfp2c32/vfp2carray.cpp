@@ -10,13 +10,13 @@ void _fastcall ASplitStr(ParamBlk *parm)
 try
 {
 	unsigned char *pSubString;
-	int nRows, nRemain, xj, nSubStrLen = p3.ev_long;
+	int nRows, nRemain, xj, nSubStrLen = vp3.ev_long;
 
 	if (nSubStrLen <= 0)
 		throw E_INVALIDPARAMS;
 
-	FoxArray pArray(p1);
-	FoxString pString(p2, 0);
+	FoxArray pArray(vp1);
+	FoxString pString(vp2, 0);
 
 	nRows = pString.Len() / nSubStrLen;
 	nRemain = pString.Len() % nSubStrLen;
@@ -54,7 +54,7 @@ void _fastcall ASum(ParamBlk *parm)
 {
 try
 {
-	FoxArray vArray(r1);
+	FoxArray vArray(rp1);
 	FoxValue vValue;
 	double Sum;
 	CCY SumCur;
@@ -64,10 +64,10 @@ try
 
 	if (PCount() == 1)
         TargetDim = 1;
-	else if (p2.ev_long < 0)
+	else if (vp2.ev_long < 0)
 		throw E_INVALIDPARAMS;
 	else
-		TargetDim = static_cast<unsigned int>(p2.ev_long);
+		TargetDim = static_cast<unsigned int>(vp2.ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);
@@ -112,9 +112,11 @@ try
 					else
 					{
 						SumCur.QuadPart += vValue->ev_currency.QuadPart;
-						__asm seto Overflow;
+#if !defined(_WIN64)
+ 						__asm seto Overflow;
 						if (Overflow)
 							throw E_CURRENCYOVERFLOW;
+#endif
 					}
 				}
 				else if (vValue.Vartype() == '0');
@@ -148,17 +150,17 @@ void _fastcall AAverage(ParamBlk *parm)
 	union __AAverageValues* pValues = 0;
 try
 {
-	FoxArray vArray(r1);
+	FoxArray vArray(rp1);
 	FoxValue vValue;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim, MaxElements, ValueCount = 0;
 	char Type = '0';
 
 	if (PCount() == 1)
         TargetDim = 1;
-	else if (p2.ev_long < 0)
+	else if (vp2.ev_long < 0)
 		throw E_INVALIDPARAMS;
 	else
-		TargetDim = static_cast<unsigned int>(p2.ev_long);
+		TargetDim = static_cast<unsigned int>(vp2.ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);
@@ -175,7 +177,7 @@ try
 	}
 
 	MaxElements = (StopDim - StartDim + 1) * Rows;
-	union __AAverageValues* pValues = new union __AAverageValues[MaxElements];
+	pValues = new union __AAverageValues[MaxElements];
 
 	unsigned int CurrentRow, CurrentDim;
 	for (CurrentDim = StartDim; CurrentDim <= StopDim; CurrentDim++)
@@ -254,7 +256,7 @@ void _fastcall AMax(ParamBlk *parm)
 {
 try
 {
-	FoxArray vArray(r1);
+	FoxArray vArray(rp1);
 	FoxValue vValue;
 	double Max;
 	CCY MaxCur;
@@ -263,10 +265,10 @@ try
 
 	if (PCount() == 1)
         TargetDim = 1;
-	else if (p2.ev_long < 0)
+	else if (vp2.ev_long < 0)
 		throw E_INVALIDPARAMS;
 	else
-		TargetDim = static_cast<unsigned int>(p2.ev_long);
+		TargetDim = static_cast<unsigned int>(vp2.ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);
@@ -349,7 +351,7 @@ void _fastcall AMin(ParamBlk *parm)
 {
 try
 {
-	FoxArray vArray(r1);
+	FoxArray vArray(rp1);
 	FoxValue vValue;
 	double Min;
 	CCY MinCur;
@@ -358,10 +360,10 @@ try
 
 	if (PCount() == 1)
         TargetDim = 1;
-	else if (p2.ev_long < 0)
+	else if (vp2.ev_long < 0)
 		throw E_INVALIDPARAMS;
 	else
-		TargetDim = static_cast<unsigned int>(p2.ev_long);
+		TargetDim = static_cast<unsigned int>(vp2.ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);

@@ -152,21 +152,16 @@ typedef struct _FILEATTRIBUTEINFO {
 class BrowseCallback
 {
 public:
-	BrowseCallback() { pBuffer.Size(VFP2C_MAX_CALLBACKBUFFER); }
-
-	CStr pCallback;
-	CStr pBuffer;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
 };
 
 class OpenfileCallback
 {
 public:
-	OpenfileCallback() { pBuffer.Size(VFP2C_MAX_CALLBACKBUFFER); vRetVal.ev_type = '0'; }
-
+	OpenfileCallback() { vRetVal.ev_type = '0'; }
 	int nErrorNo;
 	Value vRetVal;
-	CStr pCallback;
-	CStr pBuffer;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
 };
 
 // typedef's for runtime dynamic linking
@@ -202,7 +197,7 @@ void _fastcall AFileAttributes(ParamBlk *parm);
 void _fastcall AFileAttributesEx(ParamBlk *parm);
 void _fastcall ADirectoryInfo(ParamBlk *parm);
 #pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
-void _stdcall ADirectoryInfoSubRoutine(LPDIRECTORYINFO pDirInfo, CStr& pDirectory) throw(int);
+void _stdcall ADirectoryInfoSubRoutine(LPDIRECTORYINFO pDirInfo, CStrBuilder<MAX_PATH+1>& pDirectory) throw(int);
 void _fastcall GetFileTimes(ParamBlk *parm);
 void _fastcall SetFileTimes(ParamBlk *parm);
 void _fastcall GetFileSizeLib(ParamBlk *parm);

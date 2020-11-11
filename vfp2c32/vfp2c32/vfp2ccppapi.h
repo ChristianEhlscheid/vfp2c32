@@ -145,7 +145,11 @@ inline void ResetArrayLocator(Locator &pLoc, int nColumns = 1)
 
 /* overloaded Return function to return values to FoxPro without thinking about type issues */
 inline void Return(char *pString) { _RetChar(pString); }
+#if !defined(_WIN64)
+inline void Return(void *pPointer){ _RetFloat(static_cast<double>(reinterpret_cast<unsigned __int64>(pPointer)), 20, 0); }
+#else
 inline void Return(void *pPointer){ _RetInt(reinterpret_cast<int>(pPointer), 11); }
+#endif
 inline void Return(__int8 nValue) { _RetInt(nValue, 4); }
 inline void Return(unsigned __int8 nValue) { _RetInt(nValue, 3); }
 inline void Return(short nValue) { _RetInt(nValue, 6); }
@@ -154,6 +158,8 @@ inline void Return(int nValue) { _RetInt(nValue, 11); }
 inline void Return(unsigned int nValue) { _RetFloat(nValue, 10, 0); }
 inline void Return(long nValue) { _RetInt(nValue, 11); }
 inline void Return(unsigned long nValue) { _RetFloat(nValue, 10, 0); }
+inline void Return(__int64 nValue) { _RetFloat(static_cast<double>(nValue), 20, 0); }
+inline void Return(unsigned __int64 nValue) { _RetFloat(static_cast<double>(nValue), 20, 0); }
 inline void Return(double nValue) { _RetFloat(nValue, 20, 16); }
 inline void Return(double nValue, int nDecimals) { _RetFloat(nValue, 20, nDecimals); }
 inline void Return(float nValue) { _RetFloat(nValue, 20, 7); }
@@ -418,6 +424,29 @@ private:
 	static int m_MinorVersion;
 };
 
+class AutoYieldLock
+{
+public:
+	AutoYieldLock()
+	{ 
+		m_Value.ev_type = '0';
+		if (_Evaluate(&m_Value, "_VFP.AutoYield") == 0 && m_Value.ev_length > 0)
+		{
+			_Execute("_VFP.AutoYield = .F.");
+		}
+	}
+
+	~AutoYieldLock()
+	{
+		if (m_Value.ev_type == 'L' && m_Value.ev_length > 0)
+		{
+			_Execute("_VFP.AutoYield = .T.");
+		}
+	}
+private:
+	Value m_Value;
+};
+
 // thin wrappers around Value structure to quickly initialize to a specific type
 struct ValueEx : public Value
 {
@@ -521,6 +550,12 @@ struct Int64Value : public Value
 	Int64Value(__int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
 };
 
+struct UInt64Value : public Value
+{
+	UInt64Value() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
+	UInt64Value(unsigned __int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
+};
+
 struct PointerValue : public Value
 {
 	PointerValue() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
@@ -558,6 +593,7 @@ public:
 	FoxValue& LockObject();
 	FoxValue& UnlockObject();
 	FoxValue& FreeObject();
+	IDispatch* GetIDispatch();
 
 	// operators
 	FoxValue& operator=(Locator &pLoc);
@@ -1005,6 +1041,7 @@ public:
 	FoxArray& operator=(bool bBool);
 	FoxArray& operator=(double nValue);
 	FoxArray& operator=(__int64 nValue);
+	FoxArray& operator=(unsigned __int64 nValue);
 
 	bool operator!();
 	operator bool();
@@ -1090,6 +1127,281 @@ private:
 	unsigned int m_Rows;
 	char **m_pStrings;
 	FoxValue *m_pValues;
+};
+
+struct CStrView;
+
+template<int nArgCount>
+class FoxComCallback
+{
+public:
+	FoxComCallback() : m_Object(0), m_DispId(0) 
+	{
+		InitParameters();
+	}
+
+	FoxComCallback(Value &pObject, FoxString &pMethod) : m_Object(0), m_DispId(0)
+	{
+		InitParameters();
+		Initialize(pObject, pMethod);
+	}
+
+	~FoxComCallback()
+	{
+		if (m_Object)
+			m_Object->Release();
+	}
+
+	void Release()
+	{
+		if (m_Object)
+		{
+			m_Object->Release();
+			m_Object = 0;
+		}
+	}
+
+	void Initialize(IDispatch *pObject, FoxString &pMethod)
+	{
+		m_Object = pObject;
+		if (m_Object == 0)
+			throw E_INVALIDPARAMS;
+		InitDispId(pMethod);
+	}
+
+	void Initialize(FoxObject &pObject, FoxString &pMethod)
+	{
+		m_Object = pObject.GetIDispatch();;
+		if (m_Object == 0)
+			throw E_INVALIDPARAMS;
+		InitDispId(pMethod);
+	}
+
+	inline void SetParameterCount(int nArgs)
+	{
+		assert(nArgs >= 0 && nArgs <= nArgCount);
+		m_Disp.cArgs = nArgs;
+		m_Disp.rgvarg = &m_Args[nArgCount - nArgs];
+	}
+
+	inline void SetParameter(int nArg, wchar_t* pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_BSTR;
+		vararg->bstrVal = SysAllocString(pValue);
+	}
+
+	inline void SetParameter(int nArg, CStrView pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_ARRAY | VT_UI1; 
+		vararg->parray = &m_SafeArray[m_Disp.cArgs - nArg];
+		vararg->parray->pvData = pValue.Data;
+		vararg->parray->rgsabound[0].cElements = pValue.Len;
+	}
+
+	inline void SetParameter(int nArg, const char* pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_ARRAY | VT_UI1;
+		vararg->parray = &m_SafeArray[m_Disp.cArgs - nArg];
+		vararg->parray->pvData = (PVOID)pValue;
+		vararg->parray->rgsabound[0].cElements = strlen(pValue);
+	}
+
+	inline void SetParameter(int nArg, char* pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_ARRAY | VT_UI1;
+		vararg->parray = &m_SafeArray[m_Disp.cArgs - nArg];
+		vararg->parray->pvData = pValue;
+		vararg->parray->rgsabound[0].cElements = strlen(pValue);
+	}
+
+	inline void SetParameter(int nArg, bool pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_I2;
+		vararg->boolVal = pValue ? 0xFFFF : 0;
+	}
+
+	inline void SetParameter(int nArg, void* pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_UI4;
+		vararg->ulVal = reinterpret_cast<unsigned int>(pValue);
+	}
+
+	inline void SetParameter(int nArg, short pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_I2;
+		vararg->iVal = pValue;
+	}
+
+	inline void SetParameter(int nArg, int pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_I4;
+		vararg->lVal = pValue;
+	}
+	
+	inline void SetParameter(int nArg, long pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_I4;
+		vararg->lVal = pValue;
+	}
+
+	inline void SetParameter(int nArg, unsigned int pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_UI4;
+		vararg->ulVal = pValue;
+	}
+
+	inline void SetParameter(int nArg, unsigned long pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_UI4;
+		vararg->ulVal = pValue;
+	}
+
+	inline void SetParameter(int nArg, double pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		vararg->vt = VT_R8;
+		vararg->dblVal = pValue;
+	}
+
+	inline void FreeParameter(int nArg, wchar_t* pValue)
+	{
+		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+		if (vararg->bstrVal)
+		{
+			SysFreeString(vararg->bstrVal);
+			vararg->bstrVal = 0;
+		}
+	}
+
+	inline void FreeParameter(int nArg, CStrView pValue) { }
+	inline void FreeParameter(int nArg, char* pValue) { }
+	inline void FreeParameter(int nArg, const char* pValue) { }
+	inline void FreeParameter(int nArg, bool pValue) { }
+	inline void FreeParameter(int nArg, void* pValue) { }
+	inline void FreeParameter(int nArg, short pValue) { }
+	inline void FreeParameter(int nArg, int pValue) { }
+	inline void FreeParameter(int nArg, long pValue) { }
+	inline void FreeParameter(int nArg, unsigned int pValue) { }
+	inline void FreeParameter(int nArg, unsigned long pValue) { }
+	inline void FreeParameter(int nArg, double pValue) { }
+
+	inline HRESULT Call()
+	{ 
+		UINT errorArg;
+		EXCEPINFO excinfo;
+		HRESULT hr = m_Object->Invoke(m_DispId, IID_NULL, 0, DISPATCH_METHOD, &m_Disp, 0, &excinfo, &errorArg);
+		return hr;
+	}
+
+	template<typename T1>
+	inline HRESULT Call(T1 pParm1)
+	{
+		assert(nArgCount >= 1);
+		SetParameterCount(1);
+		SetParameter(1, pParm1);
+		HRESULT hr = Call();
+		FreeParameter(1, pParm1);
+		return hr;
+	}
+
+	template<typename T1, typename T2>
+	inline HRESULT Call(T1 pParm1, T2 pParm2)
+	{
+		assert(nArgCount >= 2);
+		SetParameterCount(2);
+		SetParameter(1, pParm1);
+		SetParameter(2, pParm2);
+		HRESULT hr = Call();
+		FreeParameter(1, pParm1);
+		FreeParameter(2, pParm2);
+		return hr;
+	}
+
+	template<typename T1, typename T2, typename T3>
+	inline HRESULT Call(T1 pParm1, T2 pParm2, T3 pParm3)
+	{
+		assert(nArgCount >= 3);
+		SetParameterCount(3);
+		SetParameter(1, pParm1);
+		SetParameter(2, pParm2);
+		SetParameter(3, pParm3);
+		HRESULT hr = Call();
+		FreeParameter(1, pParm1);
+		FreeParameter(2, pParm2);
+		FreeParameter(3, pParm3);
+		return hr;
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	inline HRESULT Call(T1 pParm1, T2 pParm2, T3 pParm3, T4 pParm4)
+	{
+		assert(nArgCount >= 4);
+		SetParameterCount(3);
+		SetParameter(1, pParm1);
+		SetParameter(2, pParm2);
+		SetParameter(3, pParm3);
+		SetParameter(4, pParm4);
+		HRESULT hr = Call();
+		FreeParameter(1, pParm1);
+		FreeParameter(2, pParm2);
+		FreeParameter(3, pParm3);
+		FreeParameter(4, pParm4);
+		return hr;
+	}
+
+	operator bool() {
+		return m_Object != 0;
+	}
+
+private:
+
+	inline void InitDispId(FoxString &pMethod)
+	{
+		CComBSTR methodName;
+		methodName.Attach(pMethod.ToBSTR());
+		HRESULT hr = m_Object->GetIDsOfNames(IID_NULL, &methodName, 1, VFP2CTls::Tls().ConvCP, &m_DispId);
+		if (FAILED(hr))
+		{
+			SaveWin32Error("IDispatch::GetIDsOfNames", hr);
+			throw E_APIERROR;
+		}
+	}
+
+	inline void InitParameters()
+	{
+		m_Disp.rgvarg = m_Args;
+		m_Disp.rgdispidNamedArgs = 0;
+		m_Disp.cArgs = nArgCount;
+		m_Disp.cNamedArgs = 0;
+		for(int xj = 0; xj < nArgCount; xj++)
+		{
+			VariantInit(&m_Args[xj]);
+			m_SafeArray[xj].cDims = 1;
+			m_SafeArray[xj].fFeatures = FADF_STATIC;
+			m_SafeArray[xj].cbElements = 1;
+			m_SafeArray[xj].cLocks = 0;
+			m_SafeArray[xj].pvData = 0;
+			m_SafeArray[xj].rgsabound[0].cElements = 0;
+			m_SafeArray[xj].rgsabound[0].lLbound = 0;
+		}
+	}
+
+	IDispatch *m_Object;
+	DISPID m_DispId;
+	DISPPARAMS m_Disp;
+	VARIANTARG m_Args[nArgCount];
+	SAFEARRAY m_SafeArray[nArgCount];
 };
 
 // helper class which holds the current timezone information (singleton - use GetTsi to get instance)
@@ -1345,6 +1657,25 @@ inline FoxValue& FoxValue::FreeObject()
 		m_Value.ev_object = 0;
 	}
 	return *this;
+}
+
+inline IDispatch* FoxValue::GetIDispatch()
+{
+	IDispatch* pObject;
+	char* VarName = "__VFP2C32_TEMP_OBJECT";
+	char* VarName2 = "__VFP2C32_TEMP_COMOBJECT";
+	char* pCommand = "m.__VFP2C32_TEMP_COMOBJECT = _VFP.Eval('m.__VFP2C32_TEMP_OBJECT')";
+	char* pCommand2 = "GetIDispatch(m.__VFP2C32_TEMP_COMOBJECT)";
+	Value pDisp = {'0'};
+	FoxVariable pFoxObject(VarName, false);
+	FoxVariable pComObject(VarName2, false);
+	pFoxObject = m_Value;
+	Execute(pCommand);
+	::Evaluate(pDisp, pCommand2);
+	pObject = reinterpret_cast<IDispatch*>(pDisp.ev_long);
+	if (pObject)
+		pObject->AddRef();
+	return pObject;
 }
 
 inline FoxValue& FoxValue::operator=(Locator &pLoc)
@@ -1767,6 +2098,16 @@ inline FoxArray& FoxArray::operator=(__int64 nValue)
 	assert(m_Loc.l_NTI);
 	int nErrorNo;
 	Int64Value vTmp(nValue);
+	if (nErrorNo = _Store(&m_Loc,&vTmp))
+		throw nErrorNo;
+	return *this;
+}
+
+inline FoxArray& FoxArray::operator=(unsigned __int64 nValue)
+{
+	assert(m_Loc.l_NTI);
+	int nErrorNo;
+	UInt64Value vTmp(nValue);
 	if (nErrorNo = _Store(&m_Loc,&vTmp))
 		throw nErrorNo;
 	return *this;

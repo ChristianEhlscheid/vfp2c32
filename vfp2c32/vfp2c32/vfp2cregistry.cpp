@@ -12,10 +12,10 @@ void _fastcall CreateRegistryKey(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
-	FoxString pKey(p2);
-	REGSAM nKeyRights = (PCount() < 3) ? KEY_ALL_ACCESS : p3.ev_long;
-	DWORD nOptions = (PCount() < 4) ? REG_OPTION_NON_VOLATILE : p4.ev_long;
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
+	FoxString pKey(vp2);
+	REGSAM nKeyRights = (PCount() < 3) ? KEY_ALL_ACCESS : vp3.ev_long;
+	DWORD nOptions = (PCount() < 4) ? REG_OPTION_NON_VOLATILE : vp4.ev_long;
 	FoxString pClass(parm,5);
 	RegistryKey hKey;
 	hKey.Create(hRoot, pKey, pClass, nOptions, nKeyRights);
@@ -31,9 +31,9 @@ void _fastcall DeleteRegistryKey(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
-	FoxString pKey(p2);
-	bool bShell = PCount() == 2 || p3.ev_long != REG_DELETE_NORMAL;
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
+	FoxString pKey(vp2);
+	bool bShell = PCount() == 2 || vp3.ev_long != REG_DELETE_NORMAL;
 	RegistryKey hKey;
 
 	Return(hKey.Delete(hRoot,pKey,bShell));
@@ -48,9 +48,9 @@ void _fastcall OpenRegistryKey(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
-	FoxString pKeyName(p2);
-	REGSAM nKeyRights = (PCount() == 2) ? KEY_ALL_ACCESS : (REGSAM)p3.ev_long;
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
+	FoxString pKeyName(vp2);
+	REGSAM nKeyRights = (PCount() == 2) ? KEY_ALL_ACCESS : (REGSAM)vp3.ev_long;
 
 	RegistryKey hKey;
 
@@ -65,7 +65,7 @@ catch(int nErrorNo)
 
 void _fastcall CloseRegistryKey(ParamBlk *parm)
 {
-	LONG nApiRet = RegCloseKey(reinterpret_cast<HKEY>(p1.ev_long));
+	LONG nApiRet = RegCloseKey(reinterpret_cast<HKEY>(vp1.ev_long));
 	if (nApiRet != ERROR_SUCCESS)
 	{
 		SaveWin32Error("RegCloseKey", nApiRet);
@@ -77,7 +77,7 @@ void _fastcall ReadRegistryKey(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
 	FoxString pValueName(parm,2);
 	FoxString pKeyName(parm,3);
 	FoxString pType(parm, 4);
@@ -264,15 +264,15 @@ void _fastcall WriteRegistryKey(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
 	FoxString pData(parm,2,0);
 	FoxMemo pMemo(parm, 2);
 	FoxString pValueName(parm,3);
 	FoxString pKeyName(parm,4);
 	RegistryKey hKey;
-	char cType = Vartype(p2);
+	char cType = Vartype(vp2);
 	BYTE *pValueData;
-	DWORD nValueSize, nValueType = PCount() == 5 ? p5.ev_long : 0;
+	DWORD nValueSize, nValueType = PCount() == 5 ? vp5.ev_long : 0;
 	DWORD nDWord;
 	unsigned __int64 nQWord;
 
@@ -302,24 +302,24 @@ try
 
 			if (nValueType == REG_INTEGER || nValueType == REG_DWORD)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_long);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_long);
 				nValueSize = sizeof(int);
 			}
 			else if (nValueType == REG_QWORD)
 			{
-				nQWord = static_cast<unsigned __int64>(p2.ev_long);
+				nQWord = static_cast<unsigned __int64>(vp2.ev_long);
 				pValueData = reinterpret_cast<BYTE*>(&nQWord);
 				nValueSize = sizeof(unsigned __int64);
 			}
 			else if (nValueType == REG_DOUBLE)
 			{
-				p2.ev_real = static_cast<double>(p2.ev_long);
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_real);
+				vp2.ev_real = static_cast<double>(vp2.ev_long);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_real);
 				nValueSize = sizeof(double);
 			}
 			else if (nValueType == REG_BINARY)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_long);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_long);
 				nValueSize = sizeof(int);
 			}
 			else
@@ -332,30 +332,30 @@ try
 
 			if (nValueType == REG_DOUBLE)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_real);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_real);
 				nValueSize = sizeof(double);
 			}
 			else if (nValueType == REG_DWORD)
 			{
-				nDWord = static_cast<DWORD>(p2.ev_real);
+				nDWord = static_cast<DWORD>(vp2.ev_real);
 				pValueData = reinterpret_cast<BYTE*>(&nDWord);
 				nValueSize = sizeof(DWORD);
 			}
 			else if (nValueType == REG_QWORD)
 			{
-				nQWord = static_cast<unsigned __int64>(p2.ev_real);
+				nQWord = static_cast<unsigned __int64>(vp2.ev_real);
 				pValueData = reinterpret_cast<BYTE*>(&nQWord);
 				nValueSize = sizeof(unsigned __int64);
 			}
 			else if (nValueType == REG_INTEGER)
 			{
-				p2.ev_long = static_cast<int>(p2.ev_real);
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_long);
+				vp2.ev_long = static_cast<int>(vp2.ev_real);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_long);
 				nValueSize = sizeof(int);
 			}
 			else if (nValueType == REG_BINARY)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_real);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_real);
 				nValueSize = sizeof(double);
 			}
 			else
@@ -369,7 +369,7 @@ try
 			
 			if (nValueType == REG_DATE || nValueType == REG_DATETIME || nValueType == REG_DOUBLE || nValueType == REG_BINARY)
 			{
-		        pValueData = reinterpret_cast<BYTE*>(&p2.ev_real);
+		        pValueData = reinterpret_cast<BYTE*>(&vp2.ev_real);
 				nValueSize = sizeof(double);
 			}
 			else
@@ -382,7 +382,7 @@ try
 
 			if (nValueType == REG_DATETIME || nValueType == REG_DOUBLE || nValueType == REG_BINARY)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_real);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_real);
 				nValueSize = sizeof(double);
 			}
 			else
@@ -395,7 +395,7 @@ try
 
 			if (nValueType == REG_LOGICAL || nValueType == REG_DWORD || nValueType == REG_DWORD_BIG_ENDIAN || nValueType == REG_INTEGER || nValueType == REG_BINARY)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_length);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_length);
 				nValueSize = sizeof(DWORD);
 			}	
 			else
@@ -408,7 +408,7 @@ try
 
 			if (nValueType == REG_MONEY || nValueType == REG_BINARY)
 			{
-				pValueData = reinterpret_cast<BYTE*>(&p2.ev_currency.QuadPart);
+				pValueData = reinterpret_cast<BYTE*>(&vp2.ev_currency.QuadPart);
 				nValueSize = sizeof(unsigned __int64);
 			}
 			else
@@ -417,7 +417,7 @@ try
 
 		case 'R':
 			{
-				if (!IsMemoRef(r2))
+				if (!IsMemoRef(rp2))
 					throw E_INVALIDPARAMS;
 
 				unsigned int nLen;
@@ -462,10 +462,10 @@ void _fastcall ARegistryKeys(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
-	HKEY hRoot = reinterpret_cast<HKEY>(p2.ev_long);
-	FoxString pKeyName(p3);
-	DWORD dwFlags = PCount() == 4 ? p4.ev_long : 0;
+	FoxArray pArray(vp1);
+	HKEY hRoot = reinterpret_cast<HKEY>(vp2.ev_long);
+	FoxString pKeyName(vp3);
+	DWORD dwFlags = PCount() == 4 ? vp4.ev_long : 0;
 
 	RegistryKey hKey;
 
@@ -542,10 +542,10 @@ void _fastcall ARegistryValues(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
-	HKEY hRoot = reinterpret_cast<HKEY>(p2.ev_long);
-	FoxString pKeyName(p3);
-	DWORD dwFlags = PCount() == 4 ? p4.ev_long : 0;
+	FoxArray pArray(vp1);
+	HKEY hRoot = reinterpret_cast<HKEY>(vp2.ev_long);
+	FoxString pKeyName(vp3);
+	DWORD dwFlags = PCount() == 4 ? vp4.ev_long : 0;
 
 	RegistryKey hKey;
 	FoxString pValueName;
@@ -677,9 +677,9 @@ void _fastcall RegistryValuesToObject(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
-	FoxString pKeyName(p2);
-	FoxObject pObject(p3);
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
+	FoxString pKeyName(vp2);
+	FoxObject pObject(vp3);
 
 	RegistryKey hKey;
 	FoxString pValue;
@@ -788,9 +788,9 @@ void _fastcall RegistryHiveToObject(ParamBlk *parm)
 {
 try
 {
-	HKEY hRoot = reinterpret_cast<HKEY>(p1.ev_long);
-	FoxString pKeyName(p2);
-	FoxObject pObject(p3);
+	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
+	FoxString pKeyName(vp2);
+	FoxObject pObject(vp3);
 	RegistryHiveSubroutine(hRoot,pKeyName,pObject);
 }
 catch(int nErrorNo)

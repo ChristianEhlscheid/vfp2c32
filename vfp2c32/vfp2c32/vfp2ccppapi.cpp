@@ -77,7 +77,24 @@ void _stdcall ReleaseObjectRef(char *pName, NTI nVarNti)
 	}
 }
 
-
+IDispatch* _stdcall GetIDispatchFromObject(Value &pVal)
+{
+	IDispatch* pObject;
+	char* VarName = "__VFP2C32_TEMP_OBJECT";
+	char* VarName2 = "__VFP2C32_TEMP_COMOBJECT";
+	char* pCommand = "m.__VFP2C32_TEMP_COMOBJECT = _VFP.Eval('m.__VFP2C32_TEMP_OBJECT')";
+	char* pCommand2 = "GetIDispatch(m.__VFP2C32_TEMP_COMOBJECT)";
+	Value pDisp = {'0'};
+	FoxVariable pFoxObject(VarName, false);
+	FoxVariable pComObject(VarName2, false);
+	pFoxObject = pVal;
+	Execute(pCommand);
+	Evaluate(pDisp, pCommand2);
+	pObject = reinterpret_cast<IDispatch*>(pDisp.ev_long);
+	if (pObject)
+		pObject->AddRef();
+	return pObject;
+}
 
 /* implementation of C++ wrapper classes over FoxPro datatypes */
 

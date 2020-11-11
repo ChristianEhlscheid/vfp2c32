@@ -66,16 +66,16 @@ typedef struct _SQLCOLUMNDATA {
 	Locator lField;
 	SQLHSTMT hStmt;
 	SQLPOINTER pData;
-	SQLUINTEGER nSize;
+	SQLULEN nSize;
 	SQLSMALLINT nSQLType;
 	SQLSMALLINT nCType;
 	SQLSMALLINT nScale;
 	SQLSMALLINT bNullable;
 	SQLSMALLINT bBinary;
 	SQLUSMALLINT nColNo;
-	BOOL bUnsigned;
-	BOOL bMoney;
-	SQLINTEGER nDisplaySize;
+	SQLLEN bUnsigned;
+	SQLLEN bMoney;
+	SQLLEN nDisplaySize;
 	SQLLEN nBufferSize;
 	SQLLEN nIndicator;
 	BOOL bBindColumn;
@@ -99,7 +99,7 @@ typedef struct _SQLPARAMDATA {
 	SQLUSMALLINT nParmNo;		// number of parameter (1 based)
 	SQLUINTEGER nSize;			// size of parameter
 	SQLINTEGER nBufferSize;		// buffersize for output parameters
-	SQLINTEGER nIndicator;		// for output parameters, indicator if the parameter was set and it's size
+	SQLLEN nIndicator;		// for output parameters, indicator if the parameter was set and it's size
 	SQLSMALLINT nParmDirection; // input, input/output or output parameter ?
 	SQLINTEGER nPrecision;		// precision of numeric/datetime/interval types
 	SQLSMALLINT nScale;			// scale of numeric types
@@ -137,7 +137,7 @@ typedef struct _SQLSTATEMENT {
 	SQLINTEGER nSQLLen;
 	int nResultset;
 	int nCallbackInterval;
-	SQLINTEGER nRowsTotal;
+	SQLLEN nRowsTotal;
 	int nRowsFetched;
 	DWORD nFlags;
 	Value vGetDataBuffer;

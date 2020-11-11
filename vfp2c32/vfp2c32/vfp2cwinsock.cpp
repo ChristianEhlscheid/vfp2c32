@@ -84,7 +84,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxArray pArray(p1);
+	FoxArray pArray(vp1);
 	FoxString pIp(VFP2C_MAX_IP_LEN);
 
 	LPHOSTENT lpHost;
@@ -139,7 +139,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pIp(p1);
+	FoxString pIp(vp1);
 	FoxArray pArray;
 	FoxString pBuffer(VFP2C_MAX_IP_LEN);
 	LPHOSTENT lpHost = 0;
@@ -168,7 +168,7 @@ try
 		unsigned int nCount;
 		for (nCount = 0; (lpHost->h_addr_list[nCount]); nCount++);
 
-		pArray.Dimension(p2,nCount);
+		pArray.Dimension(vp2,nCount);
 
 		unsigned int nRow = 1;
 		for (unsigned int xj = 0; xj < nCount; xj++)

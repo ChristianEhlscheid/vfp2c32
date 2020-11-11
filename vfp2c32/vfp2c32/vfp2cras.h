@@ -31,15 +31,13 @@ class RasPhonebookDlgCallback
 public:
 	RasPhonebookDlgCallback() {};
 	~RasPhonebookDlgCallback() {};
-	void SetCallback(char *pCallback);
+	void SetCallback(FoxString &pCallback);
 	void CallbackTxt(DWORD dwEvent, LPTSTR pszText);
 	void Callback(DWORD dwEvent, LPVOID pData);
-	static void _stdcall RasPhonebookDlgCallbackFunc(DWORD dwCallbackId, DWORD dwEvent, LPTSTR pszText, LPVOID pData);
+	static void _stdcall RasPhonebookDlgCallbackFunc(ULONG_PTR dwCallbackId, DWORD dwEvent, LPTSTR pszText, LPVOID pData);
 
 private:
-	CStr m_Callback;
-	CStr m_CallbackTxt;
-	CStr m_Buffer;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
 };
 
 class RasDialCallback
@@ -47,14 +45,13 @@ class RasDialCallback
 public:
 	RasDialCallback() {};
 	~RasDialCallback() {};
-	void SetCallback(char *pCallback);
+	void SetCallback(FoxString &pCallback);
 	DWORD Callback(DWORD dwSubEntry, HRASCONN hrasconn, UINT unMsg,
 					RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError);
 	static DWORD _stdcall RasDialCallbackFunc(DWORD dwCallbackId, DWORD dwSubEntry, HRASCONN hrasconn, UINT unMsg,
 											RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError);
 private:
-	CStr m_Callback;
-	CStr m_Buffer;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
 };
 
 class RasNotifyThread : public CThread
@@ -65,16 +62,16 @@ public:
 
 	virtual void SignalThreadAbort();
 	virtual DWORD Run();
+	virtual void Release();
 
-	bool Setup(HRASCONN hConn, DWORD dwFlags, char *pCallback);
+	bool Setup(HRASCONN hConn, DWORD dwFlags, FoxString &pCallback);
 
 private:
-	CStr m_Callback;
-	CStr m_Buffer;
 	CEvent m_RasEvent;
 	CEvent m_AbortEvent;
     HRASCONN m_Conn;
 	DWORD m_Flags;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
 };
 
 #ifdef __cplusplus

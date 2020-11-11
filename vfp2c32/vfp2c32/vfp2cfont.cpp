@@ -12,17 +12,17 @@ void _fastcall AFontInfo(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	FoxObject pFontInfo;
 	pFontInfo.EmptyObject();
 
 	LANGID dwLanguage;
 	USHORT dwPlatform;
 
-	if (PCount() < 2 || Vartype(p2) == '0')
+	if (PCount() < 2 || Vartype(vp2) == '0')
 		dwLanguage = GetSystemDefaultLangID();
 
-	if (PCount() < 3 || Vartype(p3) == '0')
+	if (PCount() < 3 || Vartype(vp3) == '0')
 		dwPlatform = PLATFORMID_WINDOWS; // default to Windows platform
 
 	BOOL bApiRet;

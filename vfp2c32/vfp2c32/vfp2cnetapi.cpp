@@ -56,14 +56,15 @@ try
 	if (fpNetFileEnum == 0)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(p1,1,5);
+	FoxArray pArray(vp1,1,5);
 	FoxWString pServerName(parm,2, '0');
 	FoxWString pBasePath(parm,3, '0');
 	FoxWString pUserName(parm,4, '0');
 	FoxString pNetInfo(NETAPI_INFO_SIZE);
 	NetApiBuffer pBuffer;
 
-	DWORD nRow = 1, hResume = 0, dwTotal = 0, dwEntries = 0, dwRows = 0;
+	DWORD nRow = 1, dwTotal = 0, dwEntries = 0, dwRows = 0;
+	DWORD_PTR hResume = 0;
 	LPFILE_INFO_3 pFileInfo3;
 	NET_API_STATUS nApiRet;
 
@@ -121,9 +122,9 @@ try
 	if (fpNetServerEnum == 0)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(p1);
-	DWORD dwServerType = PCount() >= 2 && p2.ev_long ? p2.ev_long : SV_TYPE_SERVER;
-	DWORD dwLevel = PCount() >= 3 && p3.ev_long ? (p3.ev_long == 1 ? 101 : 100) : 101;
+	FoxArray pArray(vp1);
+	DWORD dwServerType = PCount() >= 2 && vp2.ev_long ? vp2.ev_long : SV_TYPE_SERVER;
+	DWORD dwLevel = PCount() >= 3 && vp3.ev_long ? (vp3.ev_long == 1 ? 101 : 100) : 101;
 	FoxWString pDomain(parm, 4, '0');
 
 	NetApiBuffer pBuffer;
@@ -203,14 +204,14 @@ try
 	if (fpNetRemoteTOD == 0)
 		throw E_NOENTRYPOINT;
 
-	FoxWString pServerName(p1);
+	FoxWString pServerName(vp1);
 	FoxDateTime pTime;
 	TimeZone eTimeZone;
 	if (PCount() == 2)
 	{
-		if (p2.ev_long < 1 || p2.ev_long > 3)
+		if (vp2.ev_long < 1 || vp2.ev_long > 3)
 			throw E_INVALIDPARAMS;
-		eTimeZone = static_cast<TimeZone>(p2.ev_long);
+		eTimeZone = static_cast<TimeZone>(vp2.ev_long);
 	}
 	else
 		eTimeZone = UTC;

@@ -3,11 +3,14 @@
 #INCLUDE "vfp2c.h"
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
-SET LIBRARY TO vfp2c32.fll ADDITIVE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
 
 && monitor a directory for changes
 LOCAL lcDir
-m.lcDir = GETDIR('', '', 'Select directory to watch for changes')
+&& m.lcDir = GETDIR('', '', 'Select directory to watch for changes')
+m.lcDir = 'C:\temp'
+*!*	m.lcDir = GETENV("TMP")
+*!*	m.lcDir = 'C:\'
 IF !EMPTY(m.lcDir)
 	PUBLIC loFileMonitor
 	loFileMonitor = CREATEOBJECT('FileSystemWatcherEx')
@@ -46,6 +49,30 @@ ENDIF
 *!*			CLOSEREGISTRYKEY(lnKey)
 *!*		ENDIF
 *!*	ENDTRY
+
+DEFINE CLASS FoxCallbackTest AS Custom
+
+	nCalls = 0
+
+	FUNCTION Test
+		LPARAMETERS lbComCallback
+		THIS.nCalls = 0		
+		IF m.lbComCallback
+			RETURN CallbackTest("CallbackFunc", THIS)
+		ELSE
+			RETURN CallbackTest("THIS.CallbackFunc")
+		ENDIF
+	ENDFUNC
+
+	FUNCTION CallbackFunc
+		LPARAMETERS xj, cString
+		IF xj = 1
+			? xj, "" + cString
+		ENDIF
+		THIS.nCalls = THIS.nCalls + 1 
+	ENDFUNC
+
+ENDDEFINE
 
 DEFINE CLASS AsyncWatcher AS Custom
 
@@ -105,48 +132,36 @@ DEFINE CLASS FileSystemWatcher AS AsyncWatcher
 	
 ENDDEFINE
 
-DEFINE CLASS FileSystemWatcherEx AS AsyncWatcher
+DEFINE CLASS FileSystemWatcherEx AS Custom
 
-	PROTECTED oWatchedDirs
-	oWatchedDirs = .NULL.
-	
-	FUNCTION Init
-		DODEFAULT()
-		THIS.oWatchedDirs = CREATEOBJECT('Collection')
+	nCounter = 0
+
+	FUNCTION Destroy
+		THIS.Stop()
 	ENDFUNC
-	
+
 	FUNCTION Stop
 		LPARAMETERS cPath
-		LOCAL lnHandle
 		DO CASE
 			CASE VARTYPE(m.cPath) = 'L'
 				CancelFileChangeEx(0)
-				THIS.oWatchedDirs = CREATEOBJECT('Collection')
-			CASE VARTYPE(m.cPath) = 'C'
-				m.cPath = ADDBS(LOWER(m.cPath))
-				m.lnHandle = THIS.oWatchedDirs.Item(m.cPath)
-				THIS.oWatchedDirs.Remove(m.cPath)
-				CancelFileChangeEx(m.lnHandle)
+			CASE INLIST(VARTYPE(m.cPath), 'N', 'C')
+				CancelFileChangeEx(m.cPath)
 		ENDCASE
 	ENDFUNC
 	
 	FUNCTION Watch
 		LPARAMETERS cPath, bWatchSubtree, nFilter
 		LOCAL lnHandle
-		m.lnHandle = FindFileChangeEx(m.cPath, m.bWatchSubtree, m.nFilter, THIS.cPublicName + '.FolderChanged')
-		IF m.lnHandle > 0
-			THIS.oWatchedDirs.Add(m.lnHandle, ADDBS(LOWER(m.cPath)))
-		ENDIF
+		m.lnHandle = FindFileChangeEx(m.cPath, m.bWatchSubtree, m.nFilter, 'FolderChanged', THIS)
 	ENDFUNC
 	
 	&& callback function that gets called in asyncronous mode
 	&& it's up to you to implement it in a reasable manner
-	&& defines 
 	FUNCTION FolderChanged
 		LPARAMETERS hHandle, nReason, cPath, cPath2
+		THIS.nCounter = THIS.nCounter + 1 
 		DO CASE
-			CASE m.nReason = 0
-				? 'Function: ' + m.cPath + " failed. ErrorNo. ", m.cPath2
 			CASE m.nReason = 1
 				? 'File added: ' + m.cPath
 			CASE m.nReason = 2
@@ -154,8 +169,12 @@ DEFINE CLASS FileSystemWatcherEx AS AsyncWatcher
 			CASE m.nReason = 3
 				? 'File modified: ' + m.cPath
 			CASE m.nReason = 4
-				? 'File renamed from: ' + m.cPath + ' to: ' + m.cPath2
+				? 'File renamed from: ' + m.cPath + CHR(13) + CHR(10) + ' to: ' +  m.cPath2
+			CASE m.nReason = 0
+				? 'Error watching path: ' + m.cPath + " - ErrorNo: " + m.cPath2
+				&& error is either GetLastError from ReadDirectoryChangesW or E_INSUFEMORY in an out of memory situation
 		ENDCASE
+		THIS.Stop(m.hHandle)
 	ENDFUNC
 	
 ENDDEFINE

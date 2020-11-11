@@ -81,11 +81,11 @@ void _fastcall CreateSQLDataSource(ParamBlk *parm)
 {
 try
 {
-	FoxString pDsn(p1,2);
-	FoxString pDriver(p2);
+	FoxString pDsn(vp1,2);
+	FoxString pDriver(vp2);
 
 	BOOL bRetVal;
-	UINT nDSNType = p3.ev_long & ODBC_SYSTEM_DSN ? ODBC_ADD_SYS_DSN : ODBC_ADD_DSN;
+	UINT nDSNType = vp3.ev_long & ODBC_SYSTEM_DSN ? ODBC_ADD_SYS_DSN : ODBC_ADD_DSN;
 
 	if (!(bRetVal = SQLConfigDataSource(0,nDSNType,pDriver,pDsn)))
 		SaveODBCInstallerError("SQLConfigDataSource");
@@ -102,11 +102,11 @@ void _fastcall DeleteSQLDataSource(ParamBlk *parm)
 {
 try
 {
-	FoxString pDsn(p1);
-	FoxString pDriver(p2,2);
+	FoxString pDsn(vp1);
+	FoxString pDriver(vp2,2);
 
 	BOOL bRetVal;
-	UINT nDSNType = p3.ev_long == ODBC_SYSTEM_DSN ? ODBC_REMOVE_SYS_DSN : ODBC_REMOVE_DSN;
+	UINT nDSNType = vp3.ev_long == ODBC_SYSTEM_DSN ? ODBC_REMOVE_SYS_DSN : ODBC_REMOVE_DSN;
 	char aDSNName[SQL_MAX_DSN_LENGTH_EX] = "DSN=";
 
 	if (pDsn.Len() > SQL_MAX_DSN_LENGTH)
@@ -129,11 +129,11 @@ void _fastcall ChangeSQLDataSource(ParamBlk *parm)
 {
 try
 {
-	FoxString pDsn(p1,2);
-	FoxString pDriver(p2,2);
+	FoxString pDsn(vp1,2);
+	FoxString pDriver(vp2,2);
 
 	BOOL bRetVal;
-	UINT nDSNType = p3.ev_long == ODBC_SYSTEM_DSN ? ODBC_CONFIG_SYS_DSN : ODBC_CONFIG_DSN;
+	UINT nDSNType = vp3.ev_long == ODBC_SYSTEM_DSN ? ODBC_CONFIG_SYS_DSN : ODBC_CONFIG_DSN;
 
 	if (!(bRetVal = SQLConfigDataSource(0,nDSNType,pDriver,pDsn)))
 		SaveODBCInstallerError("SQLConfigDataSource");
@@ -154,7 +154,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxArray pArray(p1,1,2);
+	FoxArray pArray(vp1,1,2);
 	FoxString pDatasource(SQL_MAX_DSN_LENGTH+1);
 	FoxString pDescription(ODBC_MAX_DESCRIPTION_LEN);
 	SQLRETURN nApiRet;
@@ -164,9 +164,9 @@ try
 
 	if (PCount() == 2)
 	{
-		if (p2.ev_long == ODBC_USER_DSN)
+		if (vp2.ev_long == ODBC_USER_DSN)
 			nFilter = SQL_FETCH_FIRST_USER;
-		else if (p2.ev_long == ODBC_SYSTEM_DSN)
+		else if (vp2.ev_long == ODBC_SYSTEM_DSN)
 			nFilter = SQL_FETCH_FIRST_SYSTEM;
 		else
 			throw E_INVALIDPARAMS;
@@ -208,7 +208,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxArray pArray(p1,1,2);
+	FoxArray pArray(vp1,1,2);
 	FoxString pDriver(ODBC_MAX_DRIVER_LEN);
 	FoxString pAttributes(ODBC_MAX_ATTRIBUTES_LEN);
 	SQLRETURN nApiRet;
@@ -247,8 +247,8 @@ void _fastcall SQLGetPropEx(ParamBlk *parm)
 try
 {
 	FoxString pCursor(parm,1);
-	FoxString pConAttribute(p2);
-	FoxReference pRef(r3);
+	FoxString pConAttribute(vp2);
+	FoxReference pRef(rp3);
 	FoxString pBuffer;
 	FoxValue vConHandle;
 
@@ -258,15 +258,15 @@ try
 	SQLHDBC hConHandle = 0;
 	SQLRETURN nApiRet;
 
-	if (Vartype(p1) == 'I' || Vartype(p1) == 'N')
+	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
 	{
-		DWORD nHandle = Vartype(p1) == 'I' ? p1.ev_long : static_cast<DWORD>(p1.ev_real);
+		DWORD nHandle = Vartype(vp1) == 'I' ? vp1.ev_long : static_cast<DWORD>(vp1.ev_real);
 		if (nHandle)
 			sprintfex(aEvalFunc,"INT(SQLGETPROP(%U,'ODBChdbc'))",nHandle);
 		else
 			bEvalHandle = false;
 	}
-	else if (Vartype(p1) == 'C')
+	else if (Vartype(vp1) == 'C')
 		sprintfex(aEvalFunc,"INT(SQLGETPROP(CURSORGETPROP('ConnectHandle','%S'),'ODBChdbc'))",(char*)pCursor);
 	else
 		throw E_INVALIDPARAMS;
@@ -343,7 +343,7 @@ void _fastcall SQLSetPropEx(ParamBlk *parm)
 try
 {
 	FoxString pCursor(parm,1);
-	FoxString pConAttribute(p2);
+	FoxString pConAttribute(vp2);
 	FoxString pProperty(parm,3);
 	FoxValue vConHandle;
 
@@ -353,15 +353,15 @@ try
 	SQLHDBC hConHandle = 0;
 	SQLRETURN nApiRet;
 
-	if (Vartype(p1) == 'I' || Vartype(p1) == 'N')
+	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
 	{
-		DWORD nHandle = Vartype(p1) == 'I' ? p1.ev_long : static_cast<DWORD>(p1.ev_real);
+		DWORD nHandle = Vartype(vp1) == 'I' ? vp1.ev_long : static_cast<DWORD>(vp1.ev_real);
 		if (nHandle)
-	        sprintfex(aEvalFunc, "INT(SQLGETPROP(%U,'ODBChdbc'))", p1.ev_long);
+	        sprintfex(aEvalFunc, "INT(SQLGETPROP(%U,'ODBChdbc'))", vp1.ev_long);
 		else
 			bEvalHandle = false;
 	}
-	else if (Vartype(p1) == 'C')
+	else if (Vartype(vp1) == 'C')
 		sprintfex(aEvalFunc, "INT(SQLGETPROP(CURSORGETPROP('ConnectHandle','%S'),'ODBChdbc'))", (char*)pCursor);
 	else
 		throw E_INVALIDPARAMS;
@@ -374,29 +374,29 @@ try
 
 	if (pConAttribute.ICompare("TRACE"))
 	{
-		if (Vartype(p3) != 'L')
+		if (Vartype(vp3) != 'L')
 			throw E_INVALIDPARAMS;
 		
-		nApiRet = SQLSetConnectAttr(hConHandle,SQL_ATTR_TRACE,(SQLPOINTER)p3.ev_length,SQL_IS_UINTEGER);
+		nApiRet = SQLSetConnectAttr(hConHandle,SQL_ATTR_TRACE,(SQLPOINTER)vp3.ev_length,SQL_IS_UINTEGER);
 	}
 	else if (pConAttribute.ICompare("TRACEFILE"))
 	{
-		if (Vartype(p3) != 'C')
+		if (Vartype(vp3) != 'C')
 			throw E_INVALIDPARAMS;
 		
 		nApiRet = SQLSetConnectAttr(hConHandle,SQL_ATTR_TRACEFILE,pProperty,pProperty.Len());
 	}
 	else if (pConAttribute.ICompare("PERFDATA"))
 	{
-		if (Vartype(p3) != 'L')
+		if (Vartype(vp3) != 'L')
 			throw E_INVALIDPARAMS;
 		
-		p3.ev_length = p3.ev_length ? SQL_PERF_START : SQL_PERF_STOP;
-		nApiRet = SQLSetConnectAttr(hConHandle,SQL_COPT_SS_PERF_DATA,(SQLPOINTER)p3.ev_length,SQL_IS_INTEGER);
+		vp3.ev_length = vp3.ev_length ? SQL_PERF_START : SQL_PERF_STOP;
+		nApiRet = SQLSetConnectAttr(hConHandle,SQL_COPT_SS_PERF_DATA,(SQLPOINTER)vp3.ev_length,SQL_IS_INTEGER);
 	}
 	else if (pConAttribute.ICompare("PERFDATAFILE"))
 	{
-		if (Vartype(p3) != 'C')
+		if (Vartype(vp3) != 'C')
 			throw E_INVALIDPARAMS;
 		
 		nApiRet = SQLSetConnectAttr(hConHandle,SQL_COPT_SS_PERF_DATA_LOG,pProperty,SQL_NTS);
@@ -447,7 +447,7 @@ void _fastcall SQLExecEx(ParamBlk *parm)
 	SQLINTEGER nSQLLen;
 	SQLRETURN nApiRet;
 	LPSQLSTATEMENT pStmt = 0;
-	IntValue vRowCount(0);
+	DoubleValue vRowCount(0.0, 0);
 	BOOL bAbort = FALSE;
 	bool prepared = PCount() == 1;
 	int nErrorNo = VFP2C_Init_Odbc();
@@ -456,7 +456,7 @@ void _fastcall SQLExecEx(ParamBlk *parm)
 
 	if (prepared)
 	{
-		pStmt = (LPSQLSTATEMENT)p1.ev_long;
+		pStmt = (LPSQLSTATEMENT)vp1.ev_long;
 		pStmt->nResultset = 0;
 
 	// if statement contained parameters parse them out
@@ -492,7 +492,7 @@ void _fastcall SQLExecEx(ParamBlk *parm)
 		// if statement contained parameters parse them out
 		if (pStmt->nNoOfParms)
 		{
-			pStmt->pSQLSend = (char*)malloc(Len(p2)+1);
+			pStmt->pSQLSend = (char*)malloc(Len(vp2)+1);
 			if (!pStmt->pSQLSend)
 			{
 				nErrorNo = E_INSUFMEMORY;
@@ -527,7 +527,7 @@ void _fastcall SQLExecEx(ParamBlk *parm)
 		else // no parameters in SQL statement .. just send it as it is ..
 		{
 			pStmt->pSQLSend = pStmt->pSQLInput;
-			nSQLLen = Len(p2);
+			nSQLLen = Len(vp2);
 		}
 	}
 
@@ -582,7 +582,8 @@ SQLResultSetProcessing:
 		// no resultset ..(UPDATE, DELETE, INSERT or other statement ...)
 		if (pStmt->pArrayName)
 		{
-			nApiRet = SQLRowCount(pStmt->hStmt,&vRowCount.ev_long);
+			SQLLEN nRowCount;
+			nApiRet = SQLRowCount(pStmt->hStmt,&nRowCount);
 			if (nApiRet == SQL_ERROR)
 			{
 				SafeODBCStmtError("SQLRowCount", pStmt->hStmt);
@@ -601,6 +602,7 @@ SQLResultSetProcessing:
 			if (nErrorNo = _Store(&pStmt->lArrayLoc, &pStmt->vCursorName))
 				goto ErrorOut;
 
+			vRowCount.ev_real = (double)nRowCount;
 			pStmt->lArrayLoc.l_sub2 = 2;
 			if (nErrorNo = _Store(&pStmt->lArrayLoc, &vRowCount))
 				goto ErrorOut;
@@ -696,7 +698,7 @@ SQLResultSetProcessing:
 			if (nErrorNo = _Store(&pStmt->lArrayLoc, &pStmt->vCursorName))
 				goto ErrorOut;
 
-			vRowCount.ev_long = pStmt->nRowsFetched;
+			vRowCount.ev_real = (double)pStmt->nRowsFetched;
 			pStmt->lArrayLoc.l_sub2 = 2;
 			if (nErrorNo = _Store(&pStmt->lArrayLoc, &vRowCount))
 				goto ErrorOut;
@@ -742,11 +744,11 @@ SQLResultSetChecking:
 		goto ErrorOut;
 
 	// we're finished .. clean up everything ...
+	Return(pStmt->nResultset);
 	if (prepared)
 		SQLFreeParameterEx(pStmt);
 	else
 		SQLReleaseStatement(parm, pStmt, false);
-	Return(pStmt->nResultset);
 	return;
 
 	ErrorOut:
@@ -784,7 +786,7 @@ void _fastcall SQLPrepareEx(ParamBlk *parm)
 	// if statement contained parameters parse them out
 	if (pStmt->nNoOfParms)
 	{
-		pStmt->pSQLSend = (char*)malloc(p2.ev_length+1);
+		pStmt->pSQLSend = (char*)malloc(vp2.ev_length+1);
 		if (!pStmt->pSQLSend)
 		{
 			nErrorNo = E_INSUFMEMORY;
@@ -810,7 +812,7 @@ void _fastcall SQLPrepareEx(ParamBlk *parm)
 	else // no parameters in SQL statement .. just send it as it is ..
 	{
 		pStmt->pSQLSend = pStmt->pSQLInput;
-		pStmt->nSQLLen = p2.ev_length;
+		pStmt->nSQLLen = vp2.ev_length;
 	}
 
 	// 4.
@@ -840,7 +842,7 @@ void _fastcall SQLPrepareEx(ParamBlk *parm)
 
 void _fastcall SQLCancelEx(ParamBlk *parm)
 {
-	LPSQLSTATEMENT pStmt = (LPSQLSTATEMENT)p1.ev_long;
+	LPSQLSTATEMENT pStmt = (LPSQLSTATEMENT)vp1.ev_long;
 	if (pStmt)
 	{
 		SQLReleaseStatement(parm, pStmt, false);
@@ -871,11 +873,12 @@ LPSQLSTATEMENT _stdcall SQLAllocStatement(ParamBlk *parm, int *nErrorNo, bool pr
 		return pStmt;
 	}
 	LockHandle(pStmt->vCursorName);
+	pStmt->vCursorName.ev_type = 'C';
 	pStmt->pCursorName = HandleToPtr(pStmt->vCursorName);
 
-	if (PCount() >= 5 && p5.ev_long)
+	if (PCount() >= 5 && vp5.ev_long)
 	{
-		pStmt->nFlags = p5.ev_long;
+		pStmt->nFlags = vp5.ev_long;
 		if (!(pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_DEST_VARIABLE | SQLEXECEX_REUSE_CURSOR)))
 			pStmt->nFlags |= SQLEXECEX_DEST_CURSOR;
 	}
@@ -897,36 +900,36 @@ LPSQLSTATEMENT _stdcall SQLAllocStatement(ParamBlk *parm, int *nErrorNo, bool pr
 	LockHandle(pStmt->vGetDataBuffer);
 	pStmt->pGetDataBuffer = HandleToPtr(pStmt->vGetDataBuffer);
 
-	if (!NullTerminateValue(p2))
+	if (!NullTerminateValue(vp2))
 	{
 		*nErrorNo = E_INSUFMEMORY;
 		return pStmt;
 	}
-	LockHandle(p2);
-	pStmt->pSQLInput = HandleToPtr(p2);
+	LockHandle(vp2);
+	pStmt->pSQLInput = HandleToPtr(vp2);
 
 	if (CheckOptionalParameterLen(parm,3))
 	{
-		if (!NullTerminateValue(p3))
+		if (!NullTerminateValue(vp3))
 		{
 			*nErrorNo = E_INSUFMEMORY;
 			return pStmt;
 		}
-		LockHandle(p3);
-		pStmt->pCursorNames = HandleToPtr(p3);
+		LockHandle(vp3);
+		pStmt->pCursorNames = HandleToPtr(vp3);
 		if (prepared)
 			pStmt->pCursorNames = strdup(pStmt->pCursorNames);
 	}
 	
 	if (CheckOptionalParameterLen(parm,4))
 	{
-		if (!NullTerminateValue(p4))
+		if (!NullTerminateValue(vp4))
 		{
 			*nErrorNo = E_INSUFMEMORY;
 			return pStmt;
 		}
-		LockHandle(p4);
-		pStmt->pArrayName = HandleToPtr(p4);
+		LockHandle(vp4);
+		pStmt->pArrayName = HandleToPtr(vp4);
 		if (prepared)
 			pStmt->pArrayName = strdup(pStmt->pArrayName);
 	}
@@ -938,33 +941,33 @@ LPSQLSTATEMENT _stdcall SQLAllocStatement(ParamBlk *parm, int *nErrorNo, bool pr
 
 	if (CheckOptionalParameterLen(parm,6))
 	{
-		if (!NullTerminateValue(p6))
+		if (!NullTerminateValue(vp6))
 		{
 			*nErrorNo = E_INSUFMEMORY;
 			return pStmt;
 		}
-		LockHandle(p6);
-		pStmt->pCursorSchema = HandleToPtr(p6);
+		LockHandle(vp6);
+		pStmt->pCursorSchema = HandleToPtr(vp6);
 		if (prepared)
 			pStmt->pCursorSchema = strdup(pStmt->pCursorSchema);
 	}
 
 	if (CheckOptionalParameterLen(parm,7))
 	{
-		if (!NullTerminateValue(p7))
+		if (!NullTerminateValue(vp7))
 		{
 			*nErrorNo = E_INSUFMEMORY;
 			return pStmt;
 		}
-		LockHandle(p7);
-		pStmt->pParamSchema = HandleToPtr(p7);
+		LockHandle(vp7);
+		pStmt->pParamSchema = HandleToPtr(vp7);
 		if (prepared)
 			pStmt->pParamSchema = strdup(pStmt->pParamSchema);
 	}
 
 	if (CheckOptionalParameterLen(parm,8))
 	{
-		if (Len(p8) > VFP2C_MAX_CALLBACKFUNCTION)
+		if (Len(vp8) > VFP2C_MAX_CALLBACKFUNCTION)
 		{
 			*nErrorNo = E_INVALIDPARAMS;
 			return pStmt;
@@ -974,12 +977,12 @@ LPSQLSTATEMENT _stdcall SQLAllocStatement(ParamBlk *parm, int *nErrorNo, bool pr
 			*nErrorNo = E_INVALIDPARAMS;
 			return pStmt;
 		}
-		if (!NullTerminateValue(p8))
+		if (!NullTerminateValue(vp8))
 		{
 			*nErrorNo = E_INSUFMEMORY;
 			return pStmt;
 		}
-        pCallbackFunc = HandleToPtr(p8);
+        pCallbackFunc = HandleToPtr(vp8);
 
 		if (pStmt->nFlags & SQLEXECEX_CALLBACK_INFO)
 		{
@@ -1018,8 +1021,8 @@ LPSQLSTATEMENT _stdcall SQLAllocStatement(ParamBlk *parm, int *nErrorNo, bool pr
 		}
 	}
 
-	if (PCount() >= 9 && p9.ev_long)
-		pStmt->nCallbackInterval = p9.ev_long;
+	if (PCount() >= 9 && vp9.ev_long)
+		pStmt->nCallbackInterval = vp9.ev_long;
 	else
 		pStmt->nCallbackInterval = 100;
 
@@ -1030,7 +1033,7 @@ LPSQLSTATEMENT _stdcall SQLAllocStatement(ParamBlk *parm, int *nErrorNo, bool pr
 	}
 
 	// 1.1 - build command to evaluate connection handle
-    sprintfex(aBuffer,"INT(SQLGETPROP(%U,'ODBChdbc'))", p1.ev_long);
+    sprintfex(aBuffer,"INT(SQLGETPROP(%U,'ODBChdbc'))", vp1.ev_long);
 
 	// 1.2 - evaluate connection handle
 	if (*nErrorNo = _Evaluate(&vConHandle, aBuffer))
@@ -1065,15 +1068,15 @@ void _stdcall SQLReleaseStatement(ParamBlk *parm, LPSQLSTATEMENT pStmt, bool pre
 		return;
 
 	if (prepared) {
-		UnlockHandle(p2);
+		UnlockHandle(vp2);
 		if (pStmt->pCursorNames)
-			UnlockHandle(p3);
+			UnlockHandle(vp3);
 		if (pStmt->pArrayName)
-			UnlockHandle(p4);
+			UnlockHandle(vp4);
 		if (pStmt->pCursorSchema)
-			UnlockHandle(p6);
+			UnlockHandle(vp6);
 		if (pStmt->pParamSchema)
-			UnlockHandle(p7);
+			UnlockHandle(vp7);
 		return;
 	}
 
@@ -1088,7 +1091,7 @@ void _stdcall SQLReleaseStatement(ParamBlk *parm, LPSQLSTATEMENT pStmt, bool pre
 	if (pStmt->pSQLInput)
 	{
 		if (!pStmt->bPrepared)
-			UnlockHandle(p2);
+			UnlockHandle(vp2);
 		if (pStmt->pSQLSend != pStmt->pSQLInput)
 			free(pStmt->pSQLSend);
 	}
@@ -1096,13 +1099,13 @@ void _stdcall SQLReleaseStatement(ParamBlk *parm, LPSQLSTATEMENT pStmt, bool pre
 	if (!pStmt->bPrepared)
 	{
 		if (pStmt->pCursorNames)
-			UnlockHandle(p3);
+			UnlockHandle(vp3);
 		if (pStmt->pArrayName)
-			UnlockHandle(p4);
+			UnlockHandle(vp4);
 		if (pStmt->pCursorSchema)
-			UnlockHandle(p6);
+			UnlockHandle(vp6);
 		if (pStmt->pParamSchema)
-			UnlockHandle(p7);
+			UnlockHandle(vp7);
 	} 
 	else
 	{
@@ -4927,31 +4930,31 @@ void _fastcall TableUpdateEx(ParamBlk *parm)
 	int nErrorNo, nFlags, nParmCount;
 	char aExeBuffer[VFP2C_MAX_FUNCTIONBUFFER];
 
-    nFlags = p2.ev_long;
+    nFlags = vp2.ev_long;
 	if (!(nFlags & (TABLEUPDATEEX_CURRENT_ROW | TABLEUPDATEEX_ALL_ROWS)))
 		nFlags |= TABLEUPDATEEX_CURRENT_ROW;
 	if (!(nFlags & (TABLEUPDATEEX_KEY_ONLY | TABLEUPDATEEX_KEY_AND_MODIFIED)))
 		nFlags |= TABLEUPDATEEX_KEY_AND_MODIFIED;
 
-	if (!NullTerminateHandle(p3) || !NullTerminateHandle(p4) || !NullTerminateHandle(p5))
+	if (!NullTerminateHandle(vp3) || !NullTerminateHandle(vp4) || !NullTerminateHandle(vp5))
 		RaiseError(E_INSUFMEMORY);
 
-	LockHandle(p3);
-	LockHandle(p4);
-	LockHandle(p5);
-	pCursor = HandleToPtr(p3);
-	pTable = HandleToPtr(p4);
-	pKeyFields = HandleToPtr(p5);
+	LockHandle(vp3);
+	LockHandle(vp4);
+	LockHandle(vp5);
+	pCursor = HandleToPtr(vp3);
+	pTable = HandleToPtr(vp4);
+	pKeyFields = HandleToPtr(vp5);
 
 	if (VALID_STRING_EX(6))
 	{
-		if (!NullTerminateHandle(p6))
+		if (!NullTerminateHandle(vp6))
 		{
 			nErrorNo = E_INSUFMEMORY;
 			goto ErrorOut;
 		}
-		LockHandle(p6);
-		pColumns = HandleToPtr(p6);
+		LockHandle(vp6);
+		pColumns = HandleToPtr(vp6);
 	}
 
 	pSQL = malloc(VFP2C_ODBC_MAX_SQLSTATEMENT);
@@ -5034,20 +5037,20 @@ ModifiedCheck:
 		goto ModifiedCheck;
 
 	Finish:
-		UnlockHandle(p3);
-		UnlockHandle(p4);
-		UnlockHandle(p5);
+		UnlockHandle(vp3);
+		UnlockHandle(vp4);
+		UnlockHandle(vp5);
 		if (VALID_STRING_EX(6))
-			UnlockHandle(p6);
+			UnlockHandle(vp6);
 		free(pSQL);
 		return;
 
 	ErrorOut:
-		UnlockHandle(p3);
-		UnlockHandle(p4);
-		UnlockHandle(p5);
+		UnlockHandle(vp3);
+		UnlockHandle(vp4);
+		UnlockHandle(vp5);
 		if (VALID_STRING_EX(6))
-			UnlockHandle(p6);
+			UnlockHandle(vp6);
 		if (pSQL)
 			free(pSQL);
 		RaiseError(nErrorNo);

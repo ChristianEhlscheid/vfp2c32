@@ -1,8 +1,6 @@
 #ifndef _VFP2CCOM_H__
 #define _VFP2CCOM_H__
 
-void _stdcall GetIDispatchFromObject(Value &pVal, void** pDisp);
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,7 +23,7 @@ void _fastcall CreateGuid(ParamBlk *parm);
 void _fastcall RegisterActiveObjectLib(ParamBlk *parm);
 void _fastcall RegisterObjectAsFileMoniker(ParamBlk *parm);
 void _fastcall RevokeActiveObjectLib(ParamBlk *parm);
-IDispatch * _stdcall GetIDispatch(IDispatch *pObject);
+__declspec(dllexport) IDispatch * _stdcall GetIDispatch(IDispatch *pObject);
 
 /*
 void _fastcall Sys3095Ex(ParamBlk *parm);

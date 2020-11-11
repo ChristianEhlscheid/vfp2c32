@@ -17,8 +17,7 @@ static CThreadManager goUrlThreads;
 
 UrlDownload::UrlDownload() : m_bCallback(false), m_bAsync(false), m_nAborted(0), m_ulObjRefCount(0)
 {
-	m_Buffer.Size(VFP2C_MAX_CALLBACKBUFFER);
-	m_Callback.Size(VFP2C_MAX_CALLBACKBUFFER); 
+
 }
 
 DWORD UrlDownloadThread::Run()
@@ -29,6 +28,11 @@ DWORD UrlDownloadThread::Run()
 void UrlDownloadThread::SignalThreadAbort()
 {
 	m_Download.Abort(THREAD_ABORT_FLAG);
+}
+
+void UrlDownloadThread::Release()
+{
+	delete this;
 }
 
 void UrlDownloadThread::SetParams(char *pUrl, char *pFile, char *pCallback)
@@ -92,12 +96,12 @@ STDMETHODIMP UrlDownload::OnProgress(ULONG ulProgress,
 {
 	if (m_bCallback)
 	{
-		m_Buffer.Format(m_Callback, ulProgress, ulProgressMax, ulStatusCode);
+		m_Callback.AppendFormatBase("(%U,%U,%U)", ulProgress, ulProgressMax, ulStatusCode);
 
 		if (!m_bAsync)
 		{
 			FoxValue vRetVal;
-			if (_Evaluate(vRetVal, m_Buffer) == 0)
+			if (_Evaluate(vRetVal, m_Callback) == 0)
 			{
 				if (vRetVal.Vartype() == 'L')
 					return vRetVal->ev_length ? S_OK : E_ABORT;
@@ -116,7 +120,7 @@ STDMETHODIMP UrlDownload::OnProgress(ULONG ulProgress,
 				if (nCount - m_nTickCount > 500 || nCount < m_nTickCount)
 				{
 					m_nTickCount = nCount;
-					char *pCommand = m_Buffer.Strdup();
+					char *pCommand = m_Callback.Strdup();
 					if (pCommand)
 						PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
 				}
@@ -136,17 +140,17 @@ STDMETHODIMP UrlDownload::OnStopBinding(HRESULT hr, LPCWSTR lpStatus)
 	{
 		if (!m_bAsync)
 		{
-			m_Buffer.Format(m_Callback, 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
-			_Execute(m_Buffer);
+			m_Callback.AppendFormatBase("(%U,%U,%U)", 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
+			_Execute(m_Callback);
 		}
 		else
 		{
 			if (!m_nAborted)
-				m_Buffer.Format(m_Callback, 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
+				m_Callback.AppendFormatBase("(%U,%U,%U)", 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
 			else
-				m_Buffer.Format(m_Callback, 0, 0, BINDSTATUS_DOWNLOAD_ABORTED);
+				m_Callback.AppendFormatBase("(%U,%U,%U)", 0, 0, BINDSTATUS_DOWNLOAD_ABORTED);
 
-			char *pCommand = m_Buffer.Strdup();
+			char *pCommand = m_Callback.Strdup();
 			if (pCommand)
 				PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
 		}
@@ -174,7 +178,7 @@ void UrlDownload::SetCallBack(char *pCallTo)
 	if (pCallTo && strlen(pCallTo))
 	{
 		m_Callback = pCallTo;
-		m_Callback += "(%U,%U,%U)";
+		m_Callback.SetFormatBase();
 		m_bCallback = true;
 	}
 	else
@@ -224,10 +228,10 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pUrl(p1);
-	FoxString pFile(p2);
+	FoxString pUrl(vp1);
+	FoxString pFile(vp2);
 	FoxString pCallback(parm,3);
-	bool bAsync = PCount() == 4 && p4.ev_length > 0;
+	bool bAsync = PCount() == 4 && vp4.ev_length > 0;
 
 	if (bAsync && !pCallback.Len())
 		throw E_INVALIDPARAMS;
@@ -271,7 +275,7 @@ void _fastcall AbortUrlDownloadToFileEx(ParamBlk *parm)
 {
 try
 {
-	CThread *pThread = reinterpret_cast<CThread*>(p1.ev_long);
+	CThread *pThread = reinterpret_cast<CThread*>(vp1.ev_long);
 	Return(goUrlThreads.AbortThread(pThread));
 }
 catch(int nErrorNo)

@@ -185,7 +185,7 @@ void _fastcall VFP2CSys(ParamBlk *parm)
 {
 try
 {
-	switch (p1.ev_long)
+	switch (vp1.ev_long)
 	{
 		case 1: /* library's HINSTANCE/HMODULE */
 			if (PCount() == 2)
@@ -200,11 +200,11 @@ try
 		case 3: /* set or return Unicode conversion codepage */
 			if (PCount() == 2)
 			{
-				if (Vartype(p2) == 'I' || Vartype(p2) == 'N')
+				if (Vartype(vp2) == 'I' || Vartype(vp2) == 'N')
 				{
-					if (IsValidCodePage((UINT)p2.ev_long))
+					if (IsValidCodePage((UINT)vp2.ev_long))
 					{
-						VFP2CTls::Tls().ConvCP = (UINT)p2.ev_long;
+						VFP2CTls::Tls().ConvCP = (UINT)vp2.ev_long;
 						Return(true);
 					}
 					else
@@ -237,15 +237,15 @@ try
 	FoxString pMessage(VFP2C_ERROR_MESSAGE_LEN);
 	
 	if (PCount() == 2)
-		nLanguage = p2.ev_long;
+		nLanguage = vp2.ev_long;
 	else if (PCount() == 3)
 	{
-		nLanguage = p2.ev_long;
-		lpModule = reinterpret_cast<LPCVOID>(p3.ev_long);
+		nLanguage = vp2.ev_long;
+		lpModule = reinterpret_cast<LPCVOID>(vp3.ev_long);
 		nFlags |= FORMAT_MESSAGE_FROM_HMODULE;
 	}
 
-	pMessage.Len(FormatMessage(nFlags, lpModule, p1.ev_long, nLanguage, pMessage, pMessage.Size(), 0));
+	pMessage.Len(FormatMessage(nFlags, lpModule, vp1.ev_long, nLanguage, pMessage, pMessage.Size(), 0));
 
 	if (pMessage.Len())
 		pMessage.Return();
@@ -272,7 +272,7 @@ try
 		return;
 	}
 
-	FoxArray pArray(p1, tls.ErrorCount+1, 4);
+	FoxArray pArray(vp1, tls.ErrorCount+1, 4);
 	FoxString pErrorInfo(VFP2C_ERROR_MESSAGE_LEN);
 	FoxValue vNullValue;
 
@@ -553,8 +553,8 @@ FoxInfo VFP2CFuncs[] =
 #ifndef _THREADSAFE
 	{"FindFileChange", (FPFI) FindFileChange, 4, "CLIC"},
 	{"CancelFileChange", (FPFI) CancelFileChange, 1, "I"},
-	{"FindFileChangeEx", (FPFI) FindFileChangeEx, 5, "CLIC.I"},
-	{"CancelFileChangeEx", (FPFI) CancelFileChangeEx, 1, "I"},
+	{"FindFileChangeEx", (FPFI) FindFileChangeEx, 5, "CLIC.O"},
+	{"CancelFileChangeEx", (FPFI) CancelFileChangeEx, 1, "?"},
 	{"FindRegistryChange", (FPFI) FindRegistryChange, 5, "ICLIC"},
 	{"CancelRegistryChange", (FPFI) CancelRegistryChange, 1, "I"},
 	{"AsyncWaitForObject", (FPFI) AsyncWaitForObject, 2, "IC"},

@@ -120,7 +120,9 @@ BOOL _stdcall UnicodeToAnsiBuf(LPWSTR pWString, DWORD nStrLen, char *pBuffer, DW
 
 // misc C utility functions
 unsigned short _stdcall CharPosN(const char *pString, const char pSearched, unsigned short nMaxPos);
+#if !defined(_WIN64)
 unsigned int _stdcall strnlen(const char *s, unsigned long count);
+#endif
 unsigned int _stdcall strdblnlen(const char *s, unsigned long count);
 unsigned int _stdcall strdblcount(const char *pString, unsigned long nMaxLen);
 unsigned int _stdcall wstrnlen(const wchar_t *pString, unsigned int nMaxLen);

@@ -43,10 +43,17 @@ int RuntimeAssembler::CodeSize()
 
 void RuntimeAssembler::Prolog()
 {
+#if !defined(_WIN64)
 	Push(EBP);
 	Mov(EBP,ESP);
 	if (m_VarCount >= 0)
 		Sub(ESP, -m_Vars[m_VarCount].nOffset);
+#else
+	Push(EBP);
+	Mov(EBP,ESP);
+	if (m_VarCount >= 0)
+		Sub(ESP, -m_Vars[m_VarCount].nOffset);
+#endif
 }
 
 void RuntimeAssembler::Epilog(bool bCDecl)
@@ -558,7 +565,19 @@ void RuntimeAssembler::Add(REGISTER nReg, unsigned int nBytes)
 		*(char*)m_CS++ = nBytes;
 	}
 }
+#if defined(_WIN64)
 
+void RuntimeAssembler::Add(REGISTER nReg, __int64 nBytes)
+{
+
+}
+
+void RuntimeAssembler::Add(REGISTER nReg, unsigned __int64 nBytes)
+{
+
+}
+#endif
+	
 void RuntimeAssembler::Add(REGISTER nReg, REGISTER nReg2)
 {
 	if (nReg <= EDI)

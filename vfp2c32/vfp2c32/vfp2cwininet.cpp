@@ -57,13 +57,13 @@ void _fastcall InitWinInet(ParamBlk *parm)
 try
 {
 	FoxString pAgent(parm,1);
-	DWORD dwFlags = PCount() >= 2 ? p2.ev_long : 0;
+	DWORD dwFlags = PCount() >= 2 ? vp2.ev_long : 0;
 	FoxString pProxy(parm,3);
 	FoxString pProxyByPass(parm,4);
 	DWORD dwAccess;
 
 	if (PCount() >= 5)
-		dwAccess = p5.ev_long;
+		dwAccess = vp5.ev_long;
 	else if (pProxy > 0 || pProxyByPass > 0)
 		dwAccess = INTERNET_OPEN_TYPE_PROXY;
 	else
@@ -124,11 +124,11 @@ try
 		throw E_APIERROR;
 	}
 
-	FoxString pServer(p1);
+	FoxString pServer(vp1);
 	FoxString pUser(parm,2);
 	FoxString pPassword(parm,3);
-	INTERNET_PORT nPort = PCount() >= 4 && p4.ev_long ? (INTERNET_PORT)p4.ev_long : INTERNET_DEFAULT_FTP_PORT;
-	DWORD nFlags = PCount() >= 5 ? p5.ev_long : 0;
+	INTERNET_PORT nPort = PCount() >= 4 && vp4.ev_long ? (INTERNET_PORT)vp4.ev_long : INTERNET_DEFAULT_FTP_PORT;
+	DWORD nFlags = PCount() >= 5 ? vp5.ev_long : 0;
 
 	HINTERNET hConn = InternetConnect(ghInternet,pServer,nPort,pUser,pPassword,INTERNET_SERVICE_FTP,nFlags,0);
 	
@@ -156,7 +156,7 @@ try
 		throw E_APIERROR;
 	}
 
-	HINTERNET hConn = (HINTERNET)p1.ev_long;
+	HINTERNET hConn = (HINTERNET)vp1.ev_long;
 	if (!InternetCloseHandle(hConn))
 	{
 		SaveWininetError("InternetCloseHandle", GetLastError());
@@ -179,11 +179,11 @@ try
 		throw E_APIERROR;
 	}
 
-	HINTERNET hConn = (HINTERNET)p1.ev_long;
-	FoxString pSource(p2);
-	FoxString pDest(p3);
+	HINTERNET hConn = (HINTERNET)vp1.ev_long;
+	FoxString pSource(vp2);
+	FoxString pDest(vp3);
 	FoxString pCallback(parm,4);
-	bool bAsync = p5.ev_length > 0;
+	bool bAsync = vp5.ev_length > 0;
 
 	if (pCallback > VFP2C_MAX_CALLBACKFUNCTION)
 		throw E_INVALIDPARAMS;
@@ -273,7 +273,7 @@ try
 		throw E_APIERROR;
 	}
 
-	HINTERNET hConn = (HINTERNET)p1.ev_long;
+	HINTERNET hConn = (HINTERNET)vp1.ev_long;
 	DWORD dwLen = MAX_PATH;
     FoxString pDirectory(dwLen);
 	if (FtpGetCurrentDirectory(hConn,pDirectory,&dwLen))
@@ -300,8 +300,8 @@ try
 		throw E_APIERROR;
 	}
 
-	HINTERNET hConn = (HINTERNET)p1.ev_long;
-    FoxString pDirectory(p2);
+	HINTERNET hConn = (HINTERNET)vp1.ev_long;
+    FoxString pDirectory(vp2);
 	if (!FtpSetCurrentDirectory(hConn,pDirectory))
 	{
 		SaveWininetError("FtpSetCurrentDirectory", GetLastError());
@@ -316,7 +316,7 @@ catch(int nErrorNo)
 
 void _fastcall AFTPFiles(ParamBlk *parm)
 {
-	HINTERNET hConn = (HINTERNET)p1.ev_long;
+	HINTERNET hConn = (HINTERNET)vp1.ev_long;
 	HINTERNET hSearch = 0;
 	int nErrorNo = 0, nFileCount = 0, nDest;
 	char *pDestination, *pSearchString, *pFileName;
@@ -332,22 +332,22 @@ void _fastcall AFTPFiles(ParamBlk *parm)
 	WIN32_FIND_DATA sFiles;
 	char aExeBuffer[VFP2C_MAX_FUNCTIONBUFFER];
 
-	if (!NullTerminateHandle(p2) || !NullTerminateHandle(p3))
+	if (!NullTerminateHandle(vp2) || !NullTerminateHandle(vp3))
 		RaiseError(E_INSUFMEMORY);
 
-	LockHandle(p2);
-	LockHandle(p3);
+	LockHandle(vp2);
+	LockHandle(vp3);
 
-	pDestination = HandleToPtr(p2);
-	pSearchString = HandleToPtr(p3);
+	pDestination = HandleToPtr(vp2);
+	pSearchString = HandleToPtr(vp3);
 	
-	nFlags = PCount() >= 4 ? p4.ev_long : 0;
-	nDest = PCount() >= 5 ? p5.ev_long : ADIREX_DEST_ARRAY;
+	nFlags = PCount() >= 4 ? vp4.ev_long : 0;
+	nDest = PCount() >= 5 ? vp5.ev_long : ADIREX_DEST_ARRAY;
 
 	if (!(nDest & (ADIREX_DEST_ARRAY | ADIREX_DEST_CURSOR)))
 		nDest |= ADIREX_DEST_ARRAY;
 
-	nFileFilter = p6.ev_long ? p6.ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
+	nFileFilter = vp6.ev_long ? vp6.ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
 	bEnumFakeDirs = nFileFilter & FILE_ATTRIBUTE_FAKEDIRECTORY;
 	nFileFilter &= ~FILE_ATTRIBUTE_FAKEDIRECTORY;
 
@@ -531,15 +531,15 @@ void _fastcall AFTPFiles(ParamBlk *parm)
 
 Success:
 
-	UnlockHandle(p2);
-	UnlockHandle(p3);
+	UnlockHandle(vp2);
+	UnlockHandle(vp3);
 	FreeHandleEx(vFileName);
 	RET_INTEGER(nFileCount);
 	return;
 	
 	ErrorOut:
-		UnlockHandle(p2);
-		UnlockHandle(p3);
+		UnlockHandle(vp2);
+		UnlockHandle(vp3);
 		FreeHandleEx(vFileName);
 		if (hSearch)
 			InternetCloseHandle(hSearch);

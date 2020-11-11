@@ -33,6 +33,7 @@
 				MinimalRebuild="FALSE"
 				ExceptionHandling="TRUE"
 				BasicRuntimeChecks="0"
+				SmallerTypeCheck="TRUE"
 				RuntimeLibrary="3"
 				BufferSecurityCheck="FALSE"
 				EnableFunctionLevelLinking="FALSE"
@@ -55,7 +56,7 @@
 				IgnoreDefaultLibraryNames="msvcrt; msvcprtd"
 				ModuleDefinitionFile=""
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)/vfp2c32.pdb"
+				ProgramDatabaseFile="$(OutDir)/vfp2c32d.pdb"
 				SubSystem="2"
 				LargeAddressAware="1"
 				OptimizeReferences="2"
@@ -111,13 +112,14 @@
 				ExceptionHandling="TRUE"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="FALSE"
+				EnableEnhancedInstructionSet="1"
 				TreatWChar_tAsBuiltInType="TRUE"
 				UsePrecompiledHeader="0"
 				ExpandAttributedSource="FALSE"
 				AssemblerOutput="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
-				DebugInformationFormat="0"
+				DebugInformationFormat="1"
 				CallingConvention="2"
 				CompileAs="2"/>
 			<Tool
@@ -131,6 +133,8 @@
 				IgnoreDefaultLibraryNames="msvcprt"
 				ModuleDefinitionFile=""
 				GenerateDebugInformation="FALSE"
+				GenerateMapFile="FALSE"
+				MapFileName=""
 				SubSystem="2"
 				LargeAddressAware="1"
 				OptimizeReferences="2"
@@ -199,7 +203,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				IgnoreDefaultLibraryNames="msvcprt"
 				ModuleDefinitionFile=""
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)/vfp2c32.pdb"
+				ProgramDatabaseFile="$(OutDir)/vfp2c32rd.pdb"
 				SubSystem="2"
 				LargeAddressAware="1"
 				OptimizeReferences="2"
@@ -272,7 +276,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				IgnoreDefaultLibraryNames="msvcrt; msvcprtd"
 				ModuleDefinitionFile=""
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)/vfp2c32.pdb"
+				ProgramDatabaseFile="$(OutDir)/vfp2c32td.pdb"
 				SubSystem="2"
 				LargeAddressAware="1"
 				OptimizeReferences="2"
@@ -324,6 +328,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				ExceptionHandling="TRUE"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="FALSE"
+				EnableEnhancedInstructionSet="1"
 				TreatWChar_tAsBuiltInType="TRUE"
 				UsePrecompiledHeader="0"
 				ExpandAttributedSource="FALSE"
@@ -411,7 +416,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				IgnoreDefaultLibraryNames="msvcprt"
 				ModuleDefinitionFile=""
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)/vfp2c32.pdb"
+				ProgramDatabaseFile="$(OutDir)/vfp2c32trd.pdb"
 				SubSystem="2"
 				LargeAddressAware="1"
 				OptimizeReferences="2"
@@ -1474,6 +1479,9 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			</File>
 			<File
 				RelativePath=".\vfp2ciphelper.h">
+			</File>
+			<File
+				RelativePath=".\vfp2clockfree.h">
 			</File>
 			<File
 				RelativePath=".\vfp2cmarshal.h">

@@ -170,10 +170,10 @@ void _fastcall ADirEx(ParamBlk *parm)
 {
 try
 {
-	FoxString pDestination(p1);
-	FoxString pSearchString(p2);
-	DWORD nFileFilter = PCount() >= 3 && p3.ev_long ? p3.ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
-	int nDest = PCount() >= 4 && p4.ev_long ? p4.ev_long : ADIREX_DEST_ARRAY;
+	FoxString pDestination(vp1);
+	FoxString pSearchString(vp2);
+	DWORD nFileFilter = PCount() >= 3 && vp3.ev_long ? vp3.ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
+	int nDest = PCount() >= 4 && vp4.ev_long ? vp4.ev_long : ADIREX_DEST_ARRAY;
 
 	FoxString pFileName(MAX_PATH+1);
 	FoxArray pArray;
@@ -182,10 +182,7 @@ try
 	FoxInt64 pFileSize;
 	FileSearch pSearch;
 	FoxDateTimeLiteral pCreationTime, pAccessTime, pWriteTime;
-
-	CStr pCallback;
-	CStr pCallbackCmd;
-
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
 	bool bToLocal = (nDest & ADIREX_UTC_TIMES) == 0;
 	bool bEnumFakeDirs = (nFileFilter & FILE_ATTRIBUTE_FAKEDIRECTORY) != 0;
 	nFileFilter &= ~FILE_ATTRIBUTE_FAKEDIRECTORY;
@@ -221,9 +218,8 @@ try
 	}
 	else // destination is callback procedure
 	{
-		pCallbackCmd.Size(VFP2C_MAX_CALLBACKBUFFER);
 		pCallback = pDestination;
-		pCallback += "('%S','%S',%S,%S,%S,%0F,%U)";
+		pCallback.SetFormatBase();
 	}
 	
 	if (!pSearch.FindFirst(pSearchString))
@@ -326,10 +322,11 @@ try
 				pWriteTime.Convert(pSearch.File.ftLastWriteTime,bToLocal);
 				nFileSize = (double)pSearch.Filesize();
 	            
-				pCallbackCmd.Format(pCallback, pSearch.File.cFileName, pSearch.File.cAlternateFileName, 
-									(char*)pCreationTime, (char*)pAccessTime, (char*)pWriteTime, nFileSize, pSearch.File.dwFileAttributes);
+				pCallback.AppendFormatBase("('%S','%S',%S,%S,%S,%0F,%U)", pSearch.File.cFileName, 
+						pSearch.File.cAlternateFileName, (char*)pCreationTime, (char*)pAccessTime, 
+						(char*)pWriteTime, nFileSize, pSearch.File.dwFileAttributes);
 
-				vRetVal.Evaluate(pCallbackCmd);
+				vRetVal.Evaluate(pCallback);
 				if (vRetVal.Vartype() != 'L' || !vRetVal->ev_length)
 					break;
 			} // endif nFileFilter
@@ -369,13 +366,13 @@ void _fastcall ADirectoryInfo(ParamBlk *parm)
 {
 try
 {
-	if (p2.ev_length > MAXFILESEARCHPARAM)
+	if (vp2.ev_length > MAXFILESEARCHPARAM)
 		throw E_INVALIDPARAMS;
 
-	FoxArray pArray(p1,3,1);
-	FoxString pDirectory(p2);
+	FoxArray pArray(vp1,3,1);
+	FoxString pDirectory(vp2);
 	FoxInt64 pFileSize;
-	CStr pSearch(MAX_PATH);
+	CStrBuilder<MAX_PATH+1> pSearch;
 
 	DIRECTORYINFO sDirInfo = {0,0,0,0};
 
@@ -394,10 +391,10 @@ catch (int nErrorNo)
 }
 }
 
-void _stdcall ADirectoryInfoSubRoutine(LPDIRECTORYINFO pDirInfo, CStr& pDirectory) throw(int)
+void _stdcall ADirectoryInfoSubRoutine(LPDIRECTORYINFO pDirInfo, CStrBuilder<MAX_PATH+1>& pDirectory) throw(int)
 {
 	FileSearch pSearch;
-	CStr pFileSearch(MAX_PATH);
+	CStrBuilder<MAX_PATH+1> pFileSearch;
 
 	if (pDirectory.Len() > MAXFILESEARCHPARAM)
 	{
@@ -438,9 +435,9 @@ void _fastcall AFileAttributes(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1,5,1);
-	FoxString pFileName(p2);
-	bool bToLocal = PCount() == 2 || !p3.ev_length;
+	FoxArray pArray(vp1,5,1);
+	FoxString pFileName(vp2);
+	bool bToLocal = PCount() == 2 || !vp3.ev_length;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
 	WIN32_FILE_ATTRIBUTE_DATA sFileAttribs;
@@ -479,9 +476,9 @@ void _fastcall AFileAttributesEx(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1,9,1);
-	FoxString pFileName(p2);
-	bool bToLocal = PCount() == 2 || !p3.ev_length;
+	FoxArray pArray(vp1,9,1);
+	FoxString pFileName(vp2);
+	bool bToLocal = PCount() == 2 || !vp3.ev_length;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
 	ApiHandle hFile;
@@ -533,18 +530,18 @@ void _fastcall GetFileTimes(ParamBlk *parm)
 {
 try
 {
-	if (Vartype(r2) != 'R' && Vartype(r2) != '0')
+	if (Vartype(rp2) != 'R' && Vartype(rp2) != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 3 && (Vartype(r3) != 'R' && Vartype(r3) != '0'))
+	if (PCount() >= 3 && (Vartype(rp3) != 'R' && Vartype(rp3) != '0'))
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 4 && (Vartype(r4) != 'R' && Vartype(r4) != '0'))
+	if (PCount() >= 4 && (Vartype(rp4) != 'R' && Vartype(rp4) != '0'))
 		throw E_INVALIDPARAMS;
 
-	FoxString pFileName(p1);
-	FoxReference pCreationTime(r2), pAccessTime(r3), pWriteTime(r4);
-	bool bToLocal = PCount() < 5 || !p5.ev_length;
+	FoxString pFileName(vp1);
+	FoxReference pCreationTime(rp2), pAccessTime(rp3), pWriteTime(rp4);
+	bool bToLocal = PCount() < 5 || !vp5.ev_length;
 	FoxDateTime pFileTime;
 	ApiHandle hFile;
 
@@ -563,7 +560,7 @@ try
 		throw E_APIERROR;
 	}
 
-	if (Vartype(r2) == 'R')
+	if (Vartype(rp2) == 'R')
 	{
 		pFileTime = sCreationTime;
 		if (bToLocal)
@@ -571,7 +568,7 @@ try
 		pCreationTime = pFileTime;
 	}
 
-	if (PCount() >= 3 && Vartype(r3) == 'R')
+	if (PCount() >= 3 && Vartype(rp3) == 'R')
 	{
 		pFileTime = sAccessTime;
 		if (bToLocal)
@@ -579,7 +576,7 @@ try
 		pAccessTime = pFileTime;
 	}
 
-	if (PCount() >= 4 && Vartype(r4) == 'R')
+	if (PCount() >= 4 && Vartype(rp4) == 'R')
 	{
 		pFileTime = sWriteTime;
 		if (bToLocal)
@@ -599,18 +596,18 @@ try
 {
 	bool bCreation, bAccess, bWrite;
 
-	if (Vartype(p2) == 'T')
-		bCreation = p2.ev_real != 0.0;
-	else if (Vartype(p2) == '0')
+	if (Vartype(vp2) == 'T')
+		bCreation = vp2.ev_real != 0.0;
+	else if (Vartype(vp2) == '0')
 		bCreation = false;
 	else
 		throw E_INVALIDPARAMS;
 
 	if (PCount() >= 3)
 	{
-		if (Vartype(p3) == 'T')
-			bAccess = p3.ev_real != 0.0;
-		else if (Vartype(p3) == '0')
+		if (Vartype(vp3) == 'T')
+			bAccess = vp3.ev_real != 0.0;
+		else if (Vartype(vp3) == '0')
 			bAccess = false;
 		else
 			throw E_INVALIDPARAMS;
@@ -620,9 +617,9 @@ try
 
 	if (PCount() >= 4)
 	{
-		if (Vartype(p4) == 'T')
-			bWrite = p4.ev_real != 0.0;
-		else if (Vartype(p4) == '0')
+		if (Vartype(vp4) == 'T')
+			bWrite = vp4.ev_real != 0.0;
+		else if (Vartype(vp4) == '0')
 			bWrite = false;
 		else
 			throw E_INVALIDPARAMS;
@@ -633,8 +630,8 @@ try
 	if (!bCreation && !bAccess && !bWrite)
 		throw E_INVALIDPARAMS;
 
-	FoxString pFileName(p1);
-	bool bToUTC = PCount() < 5 || p5.ev_length;
+	FoxString pFileName(vp1);
+	bool bToUTC = PCount() < 5 || vp5.ev_length;
 	ApiHandle hFile;
 	FoxDateTime pTime;
 
@@ -649,7 +646,7 @@ try
 
 	if (bCreation)
 	{
-		pTime = p2;
+		pTime = vp2;
 		if (bToUTC)
 			pTime.ToUTC();
 		sCreationTime = pTime;
@@ -657,7 +654,7 @@ try
 
 	if (bAccess)
 	{
-		pTime = p3;
+		pTime = vp3;
 		if (bToUTC)
 			pTime.ToUTC();
 		sAccessTime = pTime;
@@ -665,7 +662,7 @@ try
 
     if (bWrite)
 	{
-		pTime = p4;
+		pTime = vp4;
 		if (bToUTC)
 			pTime.ToUTC();
 		sWriteTime = pTime;
@@ -687,7 +684,7 @@ void _fastcall GetFileSizeLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	FoxInt64 pFileSize;
 	ApiHandle hFile;
 	LARGE_INTEGER sSize;
@@ -718,7 +715,7 @@ void _fastcall GetFileAttributesLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	DWORD nAttribs;
     
 	nAttribs = GetFileAttributes(pFileName.Fullpath());
@@ -739,9 +736,9 @@ void _fastcall SetFileAttributesLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 
-	if (!SetFileAttributes(pFileName.Fullpath(),p2.ev_long))
+	if (!SetFileAttributes(pFileName.Fullpath(),vp2.ev_long))
 	{
 		SaveWin32Error("SetFileAttributes", GetLastError());
 		throw E_APIERROR;
@@ -757,7 +754,7 @@ void _fastcall GetFileOwner(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	FoxString pOwner(MAX_PATH);
 	FoxString pDomain(MAX_PATH);
 	CBuffer pDescBuffer;
@@ -811,18 +808,18 @@ try
 	pOwner.Len(dwOwnerLen);
 	pDomain.Len(dwDomainLen);
 
-	FoxReference rOwner(r2);
+	FoxReference rOwner(rp2);
     rOwner = pOwner;
 
 	if (PCount() >= 3)
 	{
-		FoxReference rDomain(r3);
+		FoxReference rDomain(rp3);
 		rDomain = pDomain;
 	}
 
 	if (PCount() >= 4)
 	{
-		FoxReference rSid(r4);
+		FoxReference rSid(rp4);
 		rSid = SidType;
 	}
 }
@@ -836,7 +833,7 @@ void _fastcall GetLongPathNameLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	FoxString pLongFileName(MAX_PATH+1);
 	
 	pLongFileName.Len(GetLongPathName(pFileName.Fullpath(), pLongFileName, MAX_PATH+1));
@@ -857,7 +854,7 @@ void _fastcall GetShortPathNameLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	FoxString pShortName(MAX_PATH+1);
 
 	pShortName.Len(GetShortPathName(pFileName.Fullpath(),pShortName,MAX_PATH+1));
@@ -879,10 +876,10 @@ void _fastcall CopyFileExLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pSource(p1);
-	FoxString pDest(p2);
+	FoxString pSource(vp1);
+	FoxString pDest(vp2);
 	FoxString pCallback(parm,3);
-	DWORD dwShareMode = PCount() == 4 ? p4.ev_long : 0;
+	DWORD dwShareMode = PCount() == 4 ? vp4.ev_long : 0;
 	bool bRetVal;
 	FILEPROGRESSPARAM sProgress = {0};
 
@@ -906,10 +903,10 @@ void _fastcall MoveFileExLib(ParamBlk *parm)
 {
 try
 {
- 	FoxString pSource(p1);
- 	FoxString pDest(p2);
+ 	FoxString pSource(vp1);
+ 	FoxString pDest(vp2);
 	FoxString pCallback(parm,3);
-	DWORD dwShareMode = PCount() == 4 ? p4.ev_long : 0;
+	DWORD dwShareMode = PCount() == 4 ? vp4.ev_long : 0;
 	bool bCrossVolume, bRetVal;
 	FILEPROGRESSPARAM sProgress = {0};
 
@@ -1046,8 +1043,8 @@ void _fastcall CompareFileTimes(ParamBlk *parm)
 {
 try
 {
-	FoxString pFile1(p1);
-	FoxString pFile2(p2);
+	FoxString pFile1(vp1);
+	FoxString pFile2(vp2);
 	int nRetVal;
 
 	nRetVal = CompareFileTimesEx(pFile1.Fullpath(),pFile2.Fullpath());
@@ -1063,7 +1060,7 @@ void _fastcall DeleteFileEx(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	
 	pFileName.Fullpath();
 	if (pFileName.Len() <= MAX_PATH)
@@ -1086,7 +1083,7 @@ void _fastcall DeleteDirectory(ParamBlk *parm)
 {
 try
 {
-	FoxString pDirectory(p1);
+	FoxString pDirectory(vp1);
 	DeleteDirectoryEx(pDirectory);
 }
 catch(int nErrorNo)
@@ -1117,10 +1114,10 @@ try
 	}
 
 	FoxString pFolder(MAX_PATH+1);
-	FoxReference pRef(r2);
-	BOOL bCreateDir = PCount() >= 3 ? p3.ev_length : FALSE;
+	FoxReference pRef(rp2);
+	BOOL bCreateDir = PCount() >= 3 ? vp3.ev_length : FALSE;
 
-	if (fpGetSpecialFolder(WTopHwnd(),pFolder,p1.ev_long, bCreateDir))
+	if (fpGetSpecialFolder(WTopHwnd(),pFolder,vp1.ev_long, bCreateDir))
 	{
 		pFolder.Len(strlen(pFolder));
 		pRef = pFolder;
@@ -1139,14 +1136,14 @@ void _fastcall SHCopyFiles(ParamBlk *parm)
 {
 try
 {
-	FoxString pFrom(p1,2);
-	FoxString pTo(p2,2);
+	FoxString pFrom(vp1,2);
+	FoxString pTo(vp2,2);
 	FoxString pTitle(parm,4);
 
 	SHFILEOPSTRUCT sFileOp = {0};
 
 	sFileOp.wFunc = FO_COPY;
-	sFileOp.fFlags = (FILEOP_FLAGS)p3.ev_long;
+	sFileOp.fFlags = (FILEOP_FLAGS)vp3.ev_long;
 	sFileOp.hwnd = WTopHwnd();
 
 	sFileOp.pFrom = pFrom;
@@ -1176,13 +1173,13 @@ void _fastcall SHDeleteFiles(ParamBlk *parm)
 {
 try
 {
-	FoxString pFile(p1,2);
+	FoxString pFile(vp1,2);
 	FoxString pTitle(parm,3);
 
 	SHFILEOPSTRUCT sFileOp = {0};
 
 	sFileOp.wFunc = FO_DELETE;
-	sFileOp.fFlags = (FILEOP_FLAGS)p2.ev_long;
+	sFileOp.fFlags = (FILEOP_FLAGS)vp2.ev_long;
 	sFileOp.hwnd = WTopHwnd();
 
 	sFileOp.pFrom = pFile;
@@ -1211,14 +1208,14 @@ void _fastcall SHMoveFiles(ParamBlk *parm)
 {
 try
 {
-	FoxString pFrom(p1,2);
-	FoxString pTo(p2,2);
+	FoxString pFrom(vp1,2);
+	FoxString pTo(vp2,2);
 	FoxString pTitle(parm,4);
 
 	SHFILEOPSTRUCT sFileOp = {0};
     
 	sFileOp.wFunc = FO_MOVE;
-	sFileOp.fFlags = (FILEOP_FLAGS)p3.ev_long;
+	sFileOp.fFlags = (FILEOP_FLAGS)vp3.ev_long;
 	sFileOp.hwnd = WTopHwnd();
 
 	sFileOp.pFrom = pFrom;
@@ -1248,18 +1245,18 @@ void _fastcall SHRenameFiles(ParamBlk *parm)
 {
 try
 {
-	FoxString pFrom(p1,2);
-	FoxString pTo(p2,2);
+	FoxString pFrom(vp1,2);
+	FoxString pTo(vp2,2);
 	FoxString pTitle(parm,4);
 
 	SHFILEOPSTRUCT sFileOp = {0};
 
 	sFileOp.wFunc = FO_RENAME;
-	sFileOp.fFlags = (FILEOP_FLAGS)p3.ev_long;
+	sFileOp.fFlags = (FILEOP_FLAGS)vp3.ev_long;
 	sFileOp.hwnd = WTopHwnd();
 
-	sFileOp.pFrom = HandleToPtr(p1);
-	sFileOp.pTo = HandleToPtr(p2);
+	sFileOp.pFrom = HandleToPtr(vp1);
+	sFileOp.pTo = HandleToPtr(vp2);
 
 	if (pTitle.Len())
 	{
@@ -1285,8 +1282,8 @@ void _fastcall SHBrowseFolder(ParamBlk *parm)
 {
 try
 {
-	FoxString pTitle(p1);
-	FoxReference pRef(r3);
+	FoxString pTitle(vp1);
+	FoxReference pRef(rp3);
 	FoxWString pRootFolder(parm,4);
 	FoxString pCallback(parm,5);
 	FoxString pFolder(MAX_PATH);
@@ -1341,7 +1338,7 @@ try
 	if (pCallback.Len())
 	{
 		sCallback.pCallback = pCallback;
-		sCallback.pCallback += "(%U,%U,%U)";
+		sCallback.pCallback.SetFormatBase();
 	}
 
 	sBrow.lpfn = pCallback.Len() ? SHBrowseCallback : 0;
@@ -1350,7 +1347,7 @@ try
 	sBrow.hwndOwner = WTopHwnd();
 	sBrow.pszDisplayName = aDisplayName;
 	sBrow.lpszTitle = pTitle;
-	sBrow.ulFlags = p2.ev_long;
+	sBrow.ulFlags = vp2.ev_long;
 
 	pIdl = SHBrowseForFolder(&sBrow);
 
@@ -1380,9 +1377,9 @@ try
 {
 	FoxValue vRetVal;
 	BrowseCallback *lpBC = reinterpret_cast<BrowseCallback*>(lpData);
-	lpBC->pBuffer.Format(lpBC->pCallback, hwnd, uMsg, lParam);
+	lpBC->pCallback.AppendFormatBase("(%U,%U,%U)", hwnd, uMsg, lParam);
 
-	vRetVal.Evaluate(lpBC->pBuffer);
+	vRetVal.Evaluate(lpBC->pCallback);
 	if (vRetVal.Vartype() == 'I')
 		nRetVal = vRetVal->ev_long;
 	else if (vRetVal.Vartype() == 'L')
@@ -1416,14 +1413,14 @@ try
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 1 && p1.ev_long)
-		sFile.Flags = p1.ev_long & ~(OFN_ENABLETEMPLATE | OFN_ENABLETEMPLATEHANDLE | OFN_ALLOWMULTISELECT);
+	if (PCount() >= 1 && vp1.ev_long)
+		sFile.Flags = vp1.ev_long & ~(OFN_ENABLETEMPLATE | OFN_ENABLETEMPLATEHANDLE | OFN_ALLOWMULTISELECT);
 	else
 		sFile.Flags = OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_NODEREFERENCELINKS | 
 			OFN_FILEMUSTEXIST |	OFN_DONTADDTORECENT;
 
 	if (PCount() >= 6)
-		sFile.FlagsEx = p6.ev_long;
+		sFile.FlagsEx = vp6.ev_long;
 
 	sFile.lStructSize = sizeof(OPENFILENAME);
 	sFile.Flags |= OFN_ENABLEHOOK;
@@ -1545,13 +1542,13 @@ try
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 1 && p1.ev_long)
-		sFile.Flags = p1.ev_long & ~(OFN_ENABLETEMPLATE | OFN_ENABLETEMPLATEHANDLE);
+	if (PCount() >= 1 && vp1.ev_long)
+		sFile.Flags = vp1.ev_long & ~(OFN_ENABLETEMPLATE | OFN_ENABLETEMPLATEHANDLE);
 	else
 		sFile.Flags = OFN_EXPLORER | OFN_NOCHANGEDIR;
 
 	if (PCount() >= 6)
-		sFile.FlagsEx = p6.ev_long;
+		sFile.FlagsEx = vp6.ev_long;
 
 	sFile.lStructSize = sizeof(OPENFILENAME);
 	// set callback procedure 
@@ -1580,7 +1577,7 @@ try
 	{
 		sFile.lCustData = (LPARAM)&sCallbackParam;
 		sCallbackParam.pCallback = pCallback;
-		sCallbackParam.pCallback += "(%I,%U,%I)";
+		sCallbackParam.pCallback.SetFormatBase();
 	}
 
 	if (GetSaveFileName(&sFile)) {
@@ -1633,16 +1630,16 @@ UINT_PTR _stdcall GetFileNameCallback(HWND hDlg, UINT uMsg, WPARAM wParam, LPARA
 	{
 		lpOpfn = reinterpret_cast<LPOPENFILENAME>(lParam);
 		if (lpOpfn->lCustData)
-			SetWindowLong(hDlg, GWL_USERDATA, static_cast<LONG>(lpOpfn->lCustData));
+			SetWindowLongPtr(hDlg, GWLP_USERDATA, static_cast<LONG>(lpOpfn->lCustData));
 	}
 	else if (uMsg == WM_NOTIFY)
 	{
-		lpCallback = reinterpret_cast<OpenfileCallback*>(GetWindowLong(hDlg,GWL_USERDATA));
+		lpCallback = reinterpret_cast<OpenfileCallback*>(GetWindowLongPtr(hDlg,GWLP_USERDATA));
 		if (lpCallback)
 		{
 			lpHdr = reinterpret_cast<NMHDR*>(lParam);
-			lpCallback->pBuffer.Format(lpCallback->pCallback, lpHdr->hwndFrom, lpHdr->idFrom, lpHdr->code);
-			lpCallback->nErrorNo = _Evaluate(&lpCallback->vRetVal, lpCallback->pBuffer);
+			lpCallback->pCallback.AppendFormatBase("(%I,%U,%I)", lpHdr->hwndFrom, lpHdr->idFrom, lpHdr->code);
+			lpCallback->nErrorNo = _Evaluate(&lpCallback->vRetVal, lpCallback->pCallback);
 			if (!lpCallback->nErrorNo)
 			{
 				if (Vartype(lpCallback->vRetVal) == 'I')
@@ -1666,7 +1663,7 @@ void _fastcall ADriveInfo(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
+	FoxArray pArray(vp1);
 	FoxString pDrive = "X:\\";
 	ApiHandle hDriveHandle;
 	
@@ -1734,7 +1731,7 @@ void _fastcall AVolumes(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1, 1);
+	FoxArray pArray(vp1, 1);
 	VolumeSearch pSearch;
 
 	if (pSearch.FindFirst())
@@ -1766,8 +1763,8 @@ void _fastcall AVolumeMountPoints(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1, 1);
-	FoxString pVolume(p2);
+	FoxArray pArray(vp1, 1);
+	FoxString pVolume(vp2);
 	VolumeMountPointSearch pSearch;
 
 	if (pSearch.FindFirst(pVolume))
@@ -1816,8 +1813,8 @@ try
 		}
 	}
 
-	FoxArray pArray(p1);
-	FoxString pVolume(p2);
+	FoxArray pArray(vp1);
+	FoxString pVolume(vp2);
 	FoxString pBuffer(2048);
 	DWORD dwLen; 
 
@@ -1871,8 +1868,8 @@ void _fastcall AVolumeInformation(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1, 5);
-	FoxString pRootPath(p2, 2);
+	FoxArray pArray(vp1, 5);
+	FoxString pRootPath(vp2, 2);
 	FoxString pVolumeName(MAX_PATH+1);
 	FoxString pFileSystemName(MAX_PATH+1);
 	DWORD dwVolumeSerialNumber, dwMaximumComponentLen, dwFileSystemFlags;
@@ -1945,7 +1942,7 @@ void _fastcall ExpandEnvironmentStringsLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pEnvString(p1);
+	FoxString pEnvString(vp1);
 	FoxString pEnvBuffer(MAX_ENVSTRING_BUFFER);
 
 	pEnvBuffer.Len(ExpandEnvironmentStrings(pEnvString, pEnvBuffer, pEnvBuffer.Size()));
@@ -2175,12 +2172,12 @@ void _fastcall FCreateEx(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 
 	HANDLE hFile;
 	DWORD dwAccess, dwShare, dwFlags;
 
-	MapFileAccessFlags(PCount() >= 2 ? p2.ev_long : FILE_ATTRIBUTE_NORMAL, PCount() >= 3 ? p3.ev_long : 2, PCount() >= 4 ? p4.ev_long : 0, &dwAccess, &dwShare, &dwFlags);
+	MapFileAccessFlags(PCount() >= 2 ? vp2.ev_long : FILE_ATTRIBUTE_NORMAL, PCount() >= 3 ? vp3.ev_long : 2, PCount() >= 4 ? vp4.ev_long : 0, &dwAccess, &dwShare, &dwFlags);
 
 	if (pFileName.Len() <= MAX_PATH)
 		hFile = CreateFile(pFileName, dwAccess, dwShare, 0, CREATE_ALWAYS, dwFlags, 0);
@@ -2214,14 +2211,14 @@ void _fastcall FOpenEx(ParamBlk *parm)
 {
 try
 {
-	FoxString pFileName(p1);
+	FoxString pFileName(vp1);
 	HANDLE hFile;
 	DWORD dwAccess, dwShare, dwFlags;
 
 	// get a free entry in our file handle array
 	pFileName.Fullpath();
 
-	MapFileAccessFlags(PCount() >= 2 ? p2.ev_long : 0, PCount() >= 3 ? p3.ev_long : 2, PCount() >= 4 ? p4.ev_long : 0, &dwAccess, &dwShare, &dwFlags);
+	MapFileAccessFlags(PCount() >= 2 ? vp2.ev_long : 0, PCount() >= 3 ? vp3.ev_long : 2, PCount() >= 4 ? vp4.ev_long : 0, &dwAccess, &dwShare, &dwFlags);
 
 	if (pFileName.Len() <= MAX_PATH)
         hFile = CreateFile(pFileName,dwAccess,dwShare,0,OPEN_EXISTING,dwFlags,0);
@@ -2256,7 +2253,7 @@ void _fastcall FCloseEx(ParamBlk *parm)
 try
 {
 	BOOL bApiRet;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	VFP2CTls& tls = VFP2CTls::Tls();
 
 	if (hFile != INVALID_HANDLE_VALUE)
@@ -2292,8 +2289,8 @@ try
 {
 	BOOL bApiRet;
 	DWORD dwRead;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
-	FoxString pData(p2.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
+	FoxString pData(vp2.ev_long);
 
 	bApiRet = ReadFile(hFile, pData, pData.Size(), &dwRead, 0);
 	if (!bApiRet)
@@ -2312,16 +2309,16 @@ void _fastcall FWriteEx(ParamBlk *parm)
 {
 try
 {
-	if (PCount() == 3 && p3.ev_long < 0)
+	if (PCount() == 3 && vp3.ev_long < 0)
 		throw E_INVALIDPARAMS;
 
 	BOOL bApiRet;
 	DWORD dwWritten, dwLength;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
-	FoxString pData(p2,0);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
+	FoxString pData(vp2,0);
 
-	if (PCount() == 3 && pData.Len() >= static_cast<DWORD>(p3.ev_long))
-		dwLength = p3.ev_long;
+	if (PCount() == 3 && pData.Len() >= static_cast<DWORD>(vp3.ev_long))
+		dwLength = vp3.ev_long;
 	else
 		dwLength = pData.Len();
 
@@ -2346,8 +2343,8 @@ try
 {
 	BOOL bApiRet;
 	unsigned char *pData, *pOrigData;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
-	int dwLen = PCount() == 2 ? p2.ev_long : 256;
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
+	int dwLen = PCount() == 2 ? vp2.ev_long : 256;
 	int bCarri = 0;
 	LONG dwRead, dwBuffer;
 	LARGE_INTEGER distance;
@@ -2415,16 +2412,16 @@ void _fastcall FPutsEx(ParamBlk *parm)
 {
 try
 {
-	if (PCount() == 3 && p3.ev_long < 0)
+	if (PCount() == 3 && vp3.ev_long < 0)
 		throw E_INVALIDPARAMS;
 
 	BOOL bApiRet;
 	DWORD dwWritten, dwLength;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
-	FoxString pData(p2,2);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
+	FoxString pData(vp2,2);
 
-	if (PCount() == 3 && pData.Len() >= static_cast<DWORD>(p3.ev_long))
-		dwLength = p3.ev_long;
+	if (PCount() == 3 && pData.Len() >= static_cast<DWORD>(vp3.ev_long))
+		dwLength = vp3.ev_long;
 	else
 		dwLength = pData.Len();
 
@@ -2451,12 +2448,12 @@ void _fastcall FSeekEx(ParamBlk *parm)
 {
 try
 {
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	LARGE_INTEGER nFilePos;
 	FoxInt64 pNewFilePos;
-	DWORD dwMove = PCount() == 3 ? p3.ev_long : FILE_BEGIN;
+	DWORD dwMove = PCount() == 3 ? vp3.ev_long : FILE_BEGIN;
 
-	nFilePos.QuadPart = static_cast<__int64>(p2.ev_real);
+	nFilePos.QuadPart = static_cast<__int64>(vp2.ev_real);
 	nFilePos.LowPart = SetFilePointer(hFile, nFilePos.LowPart, &nFilePos.HighPart, dwMove);
 	if (nFilePos.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
 	{
@@ -2477,7 +2474,7 @@ void _fastcall FEoFEx(ParamBlk *parm)
 {
 try
 {
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	LARGE_INTEGER nCurr, nEof;
 	DWORD dwLastError, nReset;
 
@@ -2528,14 +2525,14 @@ void _fastcall FChSizeEx(ParamBlk *parm)
 {
 try
 {
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	BOOL bApiRet;
 	LARGE_INTEGER nSize;
 	LARGE_INTEGER nCurrPos;
 	DWORD dwRet, dwLastError;
 	FoxInt64 pFilePos;
 
-	nSize.QuadPart = static_cast<__int64>(p2.ev_real);
+	nSize.QuadPart = static_cast<__int64>(vp2.ev_real);
     
 	// save current file pointer
 	nCurrPos.HighPart = 0;
@@ -2599,7 +2596,7 @@ void _fastcall FFlushEx(ParamBlk *parm)
 try
 {
 	BOOL bApiRet;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	bApiRet = FlushFileBuffers(hFile);
 	if (!bApiRet)
 		SaveWin32Error("FlushFileBuffers", GetLastError());
@@ -2617,20 +2614,20 @@ void _fastcall FLockFile(ParamBlk *parm)
 try
 {
 	BOOL bApiRet;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	LARGE_INTEGER nOffset, nLen;
 
-	if (Vartype(p2) == 'I')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_long);
-	else if (Vartype(p2) == 'N')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_real);
+	if (Vartype(vp2) == 'I')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_long);
+	else if (Vartype(vp2) == 'N')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
-	if (Vartype(p3) == 'I')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_long);
-	else if (Vartype(p3) == 'N')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_real);
+	if (Vartype(vp3) == 'I')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_long);
+	else if (Vartype(vp3) == 'N')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
@@ -2651,20 +2648,20 @@ void _fastcall FUnlockFile(ParamBlk *parm)
 try
 {
 	BOOL bApiRet;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	LARGE_INTEGER nOffset, nLen;
 
-	if (Vartype(p2) == 'I')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_long);
-	else if (Vartype(p2) == 'N')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_real);
+	if (Vartype(vp2) == 'I')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_long);
+	else if (Vartype(vp2) == 'N')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
-	if (Vartype(p3) == 'I')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_long);
-	else if (Vartype(p3) == 'N')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_real);
+	if (Vartype(vp3) == 'I')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_long);
+	else if (Vartype(vp3) == 'N')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
@@ -2685,22 +2682,22 @@ void _fastcall FLockFileEx(ParamBlk *parm)
 try
 {
 	BOOL bApiRet;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
-	DWORD dwFlags = PCount() == 4 ? p4.ev_long : 0;
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
+	DWORD dwFlags = PCount() == 4 ? vp4.ev_long : 0;
 	LARGE_INTEGER nOffset, nLen;
 	OVERLAPPED sOverlap;
 
-	if (Vartype(p2) == 'I')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_long);
-	else if (Vartype(p2) == 'N')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_real);
+	if (Vartype(vp2) == 'I')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_long);
+	else if (Vartype(vp2) == 'N')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
-	if (Vartype(p3) == 'I')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_long);
-	else if (Vartype(p3) == 'N')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_real);
+	if (Vartype(vp3) == 'I')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_long);
+	else if (Vartype(vp3) == 'N')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
@@ -2726,21 +2723,21 @@ void _fastcall FUnlockFileEx(ParamBlk *parm)
 try
 {
 	BOOL bApiRet;
-	HANDLE hFile = reinterpret_cast<HANDLE>(p1.ev_long);
+	HANDLE hFile = reinterpret_cast<HANDLE>(vp1.ev_long);
 	LARGE_INTEGER nOffset, nLen;
 	OVERLAPPED sOverlap;
 
-	if (Vartype(p2) == 'I')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_long);
-	else if (Vartype(p2) == 'N')
-		nOffset.QuadPart = static_cast<__int64>(p2.ev_real);
+	if (Vartype(vp2) == 'I')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_long);
+	else if (Vartype(vp2) == 'N')
+		nOffset.QuadPart = static_cast<__int64>(vp2.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
-	if (Vartype(p3) == 'I')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_long);
-	else if (Vartype(p3) == 'N')
-		nLen.QuadPart = static_cast<__int64>(p3.ev_real);
+	if (Vartype(vp3) == 'I')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_long);
+	else if (Vartype(vp3) == 'N')
+		nLen.QuadPart = static_cast<__int64>(vp3.ev_real);
 	else
 		throw E_INVALIDPARAMS;
 
@@ -2764,7 +2761,7 @@ void _fastcall AFHandlesEx(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);	
+	FoxArray pArray(vp1);	
 	VFP2CTls& tls = VFP2CTls::Tls();
 	size_t nHandleCnt = tls.FileHandles.GetCount();
 

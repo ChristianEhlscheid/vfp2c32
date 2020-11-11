@@ -16,9 +16,52 @@ static const int ASM_MAX_LABELS		= 32;
 static const int ASM_MAX_JUMPS			= 64;
 static const int ASM_MAX_CODE_BUFFER	= 2048;
 
+#if defined(_WIN64)
+#define SIZEOF_INT 4
+#else
+#define SIZEOF_INT 8
+#endif
+
 typedef enum _REGISTER {
-// 32bit Registers
+#if defined(_WIN64)
+// 128 bit Registers
+	XMM0 = 0,
+	XMM1,
+	XMM2,
+	XMM3,
+	XMM4,
+	XMM5,
+	XMM6,
+	XMM7,
+	XMM8,
+	XMM9,
+	XMM10,
+	XMM11,
+	XMM12,
+	XMM13,
+	XMM14,
+	XMM15,
+// 64 bit Registers
+	RAX,
+	RBX,
+	RCX, 
+	RDX,
+	RBP,
+	RSI,
+	RDI,
+	RSP,
+	R8,
+	R9,
+	R10,
+	R11,
+	R12,
+	R13,
+	R14,
+	R15,
+#else
 	EAX = 0,
+#endif
+// 32bit Registers
 	ECX,
 	EDX,
 	EBX,
@@ -47,7 +90,19 @@ typedef enum _REGISTER {
 } REGISTER;
 
 typedef enum _RELREGISTER {
+#if defined(_WIN64)
+	RRAX = 0,
+	RRBX,
+	RRCX, 
+	RRDX,
+	RRBP,
+	RRSI,
+	RRDI,
+	RRSP,
+	REAX,
+#else
 	REAX = 0,
+#endif
 	RECX,
 	REDX,
 	REBX,
@@ -151,6 +206,10 @@ public:
 	void Sub(REGISTER nReg, REGISTER nReg2);
 	void Add(REGISTER nReg, int nBytes);
 	void Add(REGISTER nReg, unsigned int nBytes);
+#if defined(_WIN64)
+	void Add(REGISTER nReg, __int64 nBytes);
+	void Add(REGISTER nReg, unsigned __int64 nBytes);
+#endif
 	void Add(REGISTER nReg, REGISTER nReg2);
 	void Dec(REGISTER nReg);
 	void Inc(REGISTER nReg);

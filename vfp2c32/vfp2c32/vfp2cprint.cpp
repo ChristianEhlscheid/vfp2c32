@@ -14,7 +14,7 @@ void _fastcall APrintersEx(ParamBlk *parm)
 {
 try
 {
- 	FoxArray pArray(p1);
+ 	FoxArray pArray(vp1);
    	FoxString pName(parm,2);
 	FoxString pData(1024);
 	FoxObject pObject;
@@ -26,12 +26,12 @@ try
 	LPPRINTER_INFO_4 pInfo4;
 	LPPRINTER_INFO_5 pInfo5;
 
-	DWORD dwFlags = PCount() >= 3 && p3.ev_long ? p3.ev_long : PRINTER_ENUM_LOCAL;
-	DWORD dwLevel = PCount() >= 4 && p4.ev_long ? p4.ev_long : 2;
-	DWORD dwDest = PCount() >= 5 && p5.ev_long ? p5.ev_long : APRINT_DEST_ARRAY;
+	DWORD dwFlags = PCount() >= 3 && vp3.ev_long ? vp3.ev_long : PRINTER_ENUM_LOCAL;
+	DWORD dwLevel = PCount() >= 4 && vp4.ev_long ? vp4.ev_long : 2;
+	DWORD dwDest = PCount() >= 5 && vp5.ev_long ? vp5.ev_long : APRINT_DEST_ARRAY;
 	DWORD dwBytes, dwCount;
 
-	if (Vartype(p2) != '0' && Vartype(p2) != 'C')
+	if (Vartype(vp2) != '0' && Vartype(vp2) != 'C')
 		throw E_INVALIDPARAMS;
 
 	if (dwLevel != 1 && dwLevel != 2 && dwLevel != 4 && dwLevel != 5)
@@ -233,8 +233,8 @@ void _fastcall APrintJobs(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
-	FoxString pPrinter(p2);
+	FoxArray pArray(vp1);
+	FoxString pPrinter(vp2);
 	FoxString pJob(PRINT_ENUM_BUFFER);
 	FoxDateTime pDateTime;
 	FoxObject pObject;
@@ -244,8 +244,8 @@ try
 	LPJOB_INFO_1 pJobInfo;
 	LPJOB_INFO_2 pJobInfo2;
 
-	dwLevel = PCount() >= 3 ? p3.ev_long : 1;
-	dwDest = PCount() >= 4 ? p4.ev_long : APRINT_DEST_ARRAY;
+	dwLevel = PCount() >= 3 ? vp3.ev_long : 1;
+	dwDest = PCount() >= 4 ? vp4.ev_long : APRINT_DEST_ARRAY;
 
 	if (dwLevel != 1 && dwLevel != 2)
 		throw E_INVALIDPARAMS;
@@ -408,7 +408,7 @@ void _fastcall APrinterForms(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
+	FoxArray pArray(vp1);
 	FoxString pPrinter(parm,2);
 	FoxString pForm(PRINT_ENUM_BUFFER);
 	PrinterHandle hPrinter;
@@ -478,11 +478,11 @@ void _fastcall APaperSizes(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
-	FoxString pPrinter(p2);
-	FoxString pPort(p3);
+	FoxArray pArray(vp1);
+	FoxString pPrinter(vp2);
+	FoxString pPort(vp3);
 	FoxDouble pDouble(4);
-	int nUnit = PCount() == 4 ? p4.ev_long : PAPERSIZE_UNIT_MM;
+	int nUnit = PCount() == 4 ? vp4.ev_long : PAPERSIZE_UNIT_MM;
 
 	if (nUnit < PAPERSIZE_UNIT_MM || nUnit > PAPERSIZE_UNIT_POINT)
 		throw E_INVALIDPARAMS;
@@ -549,9 +549,9 @@ void _fastcall APrinterTrays(ParamBlk *parm)
 {
 try
 {
-	FoxArray pArray(p1);
-	FoxString pPrinter(p2);
-	FoxString pPort(p3);
+	FoxArray pArray(vp1);
+	FoxString pPrinter(vp2);
+	FoxString pPort(vp3);
 	FoxString pBinName(PRINT_TRAY_BUFFER);
 	DWORD nBins;
 	LPWORD pBinPtr;

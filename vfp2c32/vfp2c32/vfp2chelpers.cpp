@@ -458,100 +458,6 @@ bool CStr::operator==(const char *pString) const
 	return nRet == 0;
 }
 
-CStringBuilder& CStringBuilder::Format(const char* format, ...)
-{
-	va_list lpArgs;
-	va_start(lpArgs, format);
-	m_Length = printfex(m_String, format, lpArgs);
-	va_end(lpArgs);
-	return *this;
-};
-
-CStringBuilder& CStringBuilder::AppendFromat(const char* format, ...)
-{
-	unsigned int len;
-	va_list lpArgs;
-	va_start(lpArgs, format);
-	len = printfex(m_String + m_Length, format, lpArgs);
-	va_end(lpArgs);
-	m_Length += len;
-	return *this;
-}
-
-CStringBuilder& CStringBuilder::operator=(const CStringBuilder &pString)
-{
-	if (pString.Len() >= m_Size)
-		throw E_INSUFMEMORY;
-	m_Length = pString.Len();
-	memcpy(m_String, pString, m_Length + 1);
-	return *this;
-}
-
-CStringBuilder& CStringBuilder::operator=(const FoxString &pString)
-{
-	if (pString.Len() >= m_Size)
-		throw E_INSUFMEMORY;
-	m_Length = pString.Len();
-	memcpy(m_String, pString, m_Length + 1);
-	return *this;
-}
-
-CStringBuilder& CStringBuilder::operator=(const char *pString)
-{
-	size_t len = strlen(pString);
-	if (len >= m_Size)
-		throw E_INSUFMEMORY;
-	m_Length = len;
-	memcpy(m_String, pString, len + 1);
-	return *this;
-}
-
-CStringBuilder& CStringBuilder::operator+=(const CStringBuilder &pString)
-{
-	if (m_Length + pString.Len() >= m_Size)
-		throw E_INSUFMEMORY;
-	memcpy(m_String + m_Length, pString, pString.Len() + 1);
-	m_Length += pString.Len();
-	return *this;
-}
-
-CStringBuilder& CStringBuilder::operator+=(const FoxString &pString)
-{
-	if (m_Length + pString.Len() >= m_Size)
-		throw E_INSUFMEMORY;
-	memcpy(m_String + m_Length, pString, pString.Len() + 1);
-	m_Length += pString.Len();
-	return *this;
-}
-
-CStringBuilder& CStringBuilder::operator+=(const char *pString)
-{
-	size_t len = strlen(pString);
-	if (len + m_Length >= m_Size)
-		throw E_INSUFMEMORY;
-	memcpy(m_String + m_Length, pString, len + 1);
-	m_Length += len;
-	return *this;
-}
-
-bool CStringBuilder::operator==(const CStringBuilder &pString) const
-{
-	if (m_Length != pString.Len())
-		return false;
-	return strcmp(m_String, pString) == 0;
-}
-
-bool CStringBuilder::operator==(const FoxString &pString) const
-{
-	if (m_Length != pString.Len())
-		return false;
-	return strcmp(m_String, pString) == 0;
-}
-
-bool CStringBuilder::operator==(const char *pString) const
-{
-	return strcmp(m_String, pString) == 0;
-}
 
 CBuffer::CBuffer(unsigned int nSize)
 {
@@ -857,7 +763,12 @@ CThread::~CThread()
 
 void CThread::WaitForThreadShutdown()
 {
-	WaitForSingleObject(m_ThreadHandle, INFINITE);
+	WaitForThreadShutdown(INFINITE);
+}
+
+void CThread::WaitForThreadShutdown(DWORD nTimeout)
+{
+	WaitForSingleObject(m_ThreadHandle, nTimeout);
 }
 
 void CThread::StartThread()
@@ -882,10 +793,15 @@ DWORD _stdcall CThread::ThreadProc(LPVOID lpParm)
 	CThreadManager *pManager = pThread->GetThreadManager();
 	pManager->EnterCriticalSection();
 	if (!pThread->IsShutdown())
-		delete pThread;
+		pThread->Release();
 	pManager->LeaveCriticalSection();
 
 	return dwRet;
+}
+
+void CThread::Release()
+{
+	delete this;
 }
 
 bool CThreadManager::Initialize()

@@ -99,15 +99,15 @@ void _fastcall BindEventsEx(ParamBlk *parm)
 {
 	LPWINDOWSUBCLASS lpSubclass = 0;
 	LPMSGCALLBACK lpMsg = 0;
-	UINT uMsg = p2.ev_long;
+	UINT uMsg = vp2.ev_long;
 try
 {
 	int nErrorNo = VFP2C_Init_Callback();
 	if (nErrorNo)
 		throw nErrorNo;
 
-	HWND hHwnd = reinterpret_cast<HWND>(p1.ev_long);
-	FoxString pCallback(p4);
+	HWND hHwnd = reinterpret_cast<HWND>(vp1.ev_long);
+	FoxString pCallback(vp4);
 	FoxString pParameters(parm,5);
 
 	DWORD nFlags;
@@ -120,15 +120,15 @@ try
 	if (pCallback.Len() > VFP2C_MAX_CALLBACK_FUNCTION)
 		throw E_INVALIDPARAMS;
 
-	if (Vartype(p3) != 'O' && Vartype(p3) != '0')
+	if (Vartype(vp3) != 'O' && Vartype(vp3) != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 5 && Vartype(p5) != 'C' && Vartype(p5) != '0')
+	if (PCount() >= 5 && Vartype(vp5) != 'C' && Vartype(vp5) != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 6 && p6.ev_long)
+	if (PCount() >= 6 && vp6.ev_long)
 	{
-		nFlags = p6.ev_long;
+		nFlags = vp6.ev_long;
 		if (!(nFlags & (BINDEVENTSEX_CALL_BEFORE | BINDEVENTSEX_CALL_AFTER | BINDEVENTSEX_RETURN_VALUE)))
 			nFlags |= BINDEVENTSEX_CALL_BEFORE;
 		// check nFlags for invalid combinations
@@ -151,13 +151,13 @@ try
 	// get existing struct for uMsg or create a new one
 	lpMsg = AddMsgCallback(lpSubclass,uMsg);
 
-	CreateSubclassMsgThunkProc(lpSubclass,lpMsg,pCallback,pParameters,nFlags,Vartype(p3) == 'O');
+	CreateSubclassMsgThunkProc(lpSubclass,lpMsg,pCallback,pParameters,nFlags,Vartype(vp3) == 'O');
 	
 	// if callback on object, store object reference to public variable
-	if (Vartype(p3) == 'O')
+	if (Vartype(vp3) == 'O')
 	{
 		sprintfex(aObjectName,BINDEVENTSEX_OBJECT_SCHEME,bClassProc,hHwnd,uMsg);
-        StoreObjectRef(aObjectName,lpMsg->nObject,p3);
+        StoreObjectRef(aObjectName,lpMsg->nObject,vp3);
 	}
 	Return(reinterpret_cast<void*>(lpSubclass->pDefaultWndProc));
 }
@@ -182,11 +182,11 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	HWND hHwnd = reinterpret_cast<HWND>(p1.ev_long);
-	UINT uMsg = static_cast<UINT>(p2.ev_long);
+	HWND hHwnd = reinterpret_cast<HWND>(vp1.ev_long);
+	UINT uMsg = static_cast<UINT>(vp2.ev_long);
 	LPWINDOWSUBCLASS lpSubclass;
 	LPMSGCALLBACK lpMsg = 0;
-	bool bClassProc = PCount() == 3 && p3.ev_length;
+	bool bClassProc = PCount() == 3 && vp3.ev_length;
 
 	// get reference to struct for the hWnd, if none is found - the window was not subclassed
 	lpSubclass = FindWindowSubclass(hHwnd, bClassProc);
@@ -398,35 +398,35 @@ void _stdcall SubclassWindow(LPWINDOWSUBCLASS lpSubclass) throw(int)
 
 	if (!lpSubclass->bClassProc)
 	{
-		lpSubclass->pDefaultWndProc = (WNDPROC)GetWindowLong(lpSubclass->hHwnd,GWL_WNDPROC);
+		lpSubclass->pDefaultWndProc = (WNDPROC)GetWindowLongPtr(lpSubclass->hHwnd,GWLP_WNDPROC);
 		if (!lpSubclass->pDefaultWndProc)
 		{
-			SaveWin32Error("GetWindowLong", GetLastError());
+			SaveWin32Error("GetWindowLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 		
 		CreateSubclassThunkProc(lpSubclass);
 
-		if (!SetWindowLong(lpSubclass->hHwnd,GWL_WNDPROC,(LONG)lpSubclass->pWindowThunk))
+		if (!SetWindowLongPtr(lpSubclass->hHwnd,GWLP_WNDPROC,(LONG)lpSubclass->pWindowThunk))
 		{
-			SaveWin32Error("SetWindowLong", GetLastError());
+			SaveWin32Error("SetWindowLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 	}
 	else
 	{
-		lpSubclass->pDefaultWndProc = (WNDPROC)GetClassLong(lpSubclass->hHwnd,GCL_WNDPROC);
+		lpSubclass->pDefaultWndProc = (WNDPROC)GetClassLongPtr(lpSubclass->hHwnd,GCLP_WNDPROC);
 		if (!lpSubclass->pDefaultWndProc)
 		{
-			SaveWin32Error("GetClassLong", GetLastError());
+			SaveWin32Error("GetClassLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 		
 		CreateSubclassThunkProc(lpSubclass);
 
-		if (!SetClassLong(lpSubclass->hHwnd,GCL_WNDPROC,(LONG)lpSubclass->pWindowThunk))
+		if (!SetClassLongPtr(lpSubclass->hHwnd,GCLP_WNDPROC,(LONG)lpSubclass->pWindowThunk))
 		{
-			SaveWin32Error("SetClassLong", GetLastError());
+			SaveWin32Error("SetClassLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 	}
@@ -436,17 +436,17 @@ void _stdcall UnsubclassWindow(LPWINDOWSUBCLASS lpSubclass)
 {
 	if (!lpSubclass->bClassProc)
 	{
-		if (!SetWindowLong(lpSubclass->hHwnd,GWL_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
+		if (!SetWindowLongPtr(lpSubclass->hHwnd,GWLP_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
 		{
-			SaveWin32Error("SetWindowLong", GetLastError());
+			SaveWin32Error("SetWindowLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 	}
 	else
 	{
-		if (!SetClassLong(lpSubclass->hHwnd,GCL_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
+		if (!SetClassLongPtr(lpSubclass->hHwnd,GCLP_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
 		{
-			SaveWin32Error("SetClassLong", GetLastError());
+			SaveWin32Error("SetClassLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 		UnsubclassWindowEx(lpSubclass);
@@ -463,12 +463,12 @@ void _stdcall UnsubclassWindowExCallback(HWND hHwnd, LPARAM lParam)
 	LPWINDOWSUBCLASS lpSubclass = (LPWINDOWSUBCLASS)lParam;
 	void* nProc;
 	
-	nProc = (void*)GetWindowLong(hHwnd,GWL_WNDPROC);
+	nProc = (void*)GetWindowLongPtr(hHwnd,GWLP_WNDPROC);
 	if (nProc == lpSubclass->pWindowThunk)
 	{
-		if (!SetWindowLong(hHwnd,GWL_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
+		if (!SetWindowLongPtr(hHwnd,GWLP_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
 		{
-			SaveWin32Error("SetWindowLong", GetLastError());
+			SaveWin32Error("SetWindowLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 	}
@@ -488,12 +488,12 @@ void _stdcall UnsubclassWindowExCallbackChild(HWND hHwnd, LPARAM lParam)
 	LPWINDOWSUBCLASS lpSubclass = (LPWINDOWSUBCLASS)lParam;
 	void* nProc;
 	
-	nProc = (void*)GetWindowLong(hHwnd,GWL_WNDPROC);
+	nProc = (void*)GetWindowLongPtr(hHwnd,GWLP_WNDPROC);
 	if (nProc == lpSubclass->pWindowThunk)
 	{
-		if (!SetWindowLong(hHwnd,GWL_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
+		if (!SetWindowLongPtr(hHwnd,GWLP_WNDPROC,(LONG)lpSubclass->pDefaultWndProc))
 		{
-			SaveWin32Error("SetWindowLong", GetLastError());
+			SaveWin32Error("SetWindowLongPtr", GetLastError());
 			throw E_APIERROR;
 		}
 	}
@@ -550,6 +550,12 @@ void _stdcall CreateSubclassThunkProc(LPWINDOWSUBCLASS lpSubclass)
 	
 	lpSubclass->pWindowThunk = AllocThunk(rasm.CodeSize());
 	rasm.WriteCode(lpSubclass->pWindowThunk);
+
+	if (FlushInstructionCache(GetCurrentProcess(), lpSubclass->pWindowThunk, rasm.CodeSize()))
+	{
+		SaveWin32Error("FlushInstructionCache", GetLastError());
+		throw E_APIERROR;
+	}
 
 	lpSubclass->pHookWndRetCall = rasm.LabelAddress("CallWindowProc");
 	lpSubclass->pHookWndRetEax = rasm.LabelAddress("End");
@@ -763,7 +769,7 @@ void _stdcall CreateSubclassMsgThunkProc(LPWINDOWSUBCLASS lpSubclass, LPMSGCALLB
 		rasm.Push((AVALUE)lpMsg->pCallbackFunction);
 		rasm.Push((AVALUE)lpSubclass->aCallbackBuffer);
 		rasm.Call((FUNCPTR)sprintfex);
-		rasm.Add(ESP,nParmCount*sizeof(int));	// add esp, no of parameters * sizeof stack increment
+		rasm.Add(ESP,nParmCount*SIZEOF_INT);	// add esp, no of parameters * sizeof stack increment
 	}
 
 	if (nFlags & BINDEVENTSEX_CALL_BEFORE)
@@ -911,11 +917,11 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pCallback(p1);
-	FoxString pRetVal(p2);
-	FoxString pParams(p3);
+	FoxString pCallback(vp1);
+	FoxString pRetVal(vp2);
+	FoxString pParams(vp3);
 	
-	DWORD nSyncFlag = PCount() == 5 ? p5.ev_long : CALLBACK_SYNCRONOUS;
+	DWORD nSyncFlag = PCount() == 5 ? vp5.ev_long : CALLBACK_SYNCRONOUS;
 	bool bCDeclCallConv = (nSyncFlag & CALLBACK_CDECL) > 0; // is CALLBACK_CDECL set?
 	nSyncFlag &= ~CALLBACK_CDECL; // remove CALLBACK_CDECL from nSyncFlag
 	nSyncFlag = nSyncFlag ? nSyncFlag : CALLBACK_SYNCRONOUS; // set nSyncFlag to default CALLBACK_SYNCRONOUS if it is 0
@@ -937,10 +943,10 @@ try
 
 	pFunc = NewCallbackFunc();
 
-	if (PCount() >= 4 && Vartype(p4) == 'O')
+	if (PCount() >= 4 && Vartype(vp4) == 'O')
 	{
 		sprintfex(aObjectName,CALLBACKFUNC_OBJECT_SCHEME,pFunc);
-		StoreObjectRef(aObjectName,pFunc->nObject,p4);
+		StoreObjectRef(aObjectName,pFunc->nObject,vp4);
 		strcpy(pFunc->aCallbackBuffer, aObjectName);
 		strcat(pFunc->aCallbackBuffer,".");
 	}
@@ -964,7 +970,7 @@ try
 	{
 		rasm.Push(VFP2C_MAX_CALLBACK_BUFFER);
 		rasm.Call((FUNCPTR)malloc);
-		rasm.Add(ESP,sizeof(int));
+		rasm.Add(ESP,SIZEOF_INT);
 
 		rasm.Cmp(EAX,0);
 		rasm.Je("ErrorOut");
@@ -1326,7 +1332,7 @@ catch(int nErrorNo)
 
 void _fastcall DestroyCallbackFunc(ParamBlk *parm)
 {
-	Return(DeleteCallbackFunc(reinterpret_cast<void*>(p1.ev_long)));
+	Return(DeleteCallbackFunc(reinterpret_cast<void*>(vp1.ev_long)));
 }
 
 LRESULT _stdcall AsyncCallbackWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

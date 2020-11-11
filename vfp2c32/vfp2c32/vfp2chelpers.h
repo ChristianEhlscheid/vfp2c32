@@ -4,10 +4,13 @@
 #include <windows.h>
 #include <shlwapi.h>
 #include <assert.h>
+#include <atlbase.h>
 #include <atlcoll.h>
 #include "vfp2ccppapi.h"
 
+#if !defined(_WIN64)
 #define VER_SUITE_WH_SERVER 0x8000
+#endif
 
 typedef void (_stdcall *PGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
 
@@ -66,6 +69,12 @@ inline bool COs::GreaterOrEqual(WindowsVersion vVersion)
 	return m_Version >= vVersion;
 }
 
+typedef struct CStrView
+{
+	char *Data;
+	unsigned int Len;
+} CStrView, *LPCStrView;
+
 /* Some helper classes */
 class CStr
 {
@@ -104,36 +113,206 @@ private:
 	unsigned int m_Length;
 };
 
-class CStringBuilder
+template<int nBufferSize>
+class CStrBuilder
 {
 public:
-	CStringBuilder(char* buffer, unsigned int buffersize) : m_String(buffer), m_Size(buffersize), m_Length(0) {}
+	CStrBuilder() : m_Length(0), m_Base(0) { m_String[0] = '\0'; }
+	
 	unsigned int Len() const { return m_Length; }
-	CStringBuilder& Len(unsigned int nLen) { assert(nLen <= m_Size); m_Length = nLen; return *this; }
 
-	CStringBuilder& Format(const char* format, ...);
-	CStringBuilder& AppendFromat(const char* format, ...);
+	CStrBuilder& Len(unsigned int nLen)
+	{
+	 assert(nLen < sizeof(m_String));
+	 m_Length = nLen;
+	 return *this;
+	}
 
-	CStringBuilder& operator=(const CStringBuilder &pString);
-	CStringBuilder& operator=(const FoxString &pString);
-	CStringBuilder& operator=(const char *pString);
+	unsigned int Size() const { return sizeof(m_String); }
 
-	CStringBuilder& operator+=(const CStringBuilder &pString);
-	CStringBuilder& operator+=(const FoxString &pString);
-	CStringBuilder& operator+=(const char *pString);
+	CStrBuilder& SetFormatBase()
+	{
+		m_Base = m_Length;
+		return *this;
+	}
 
-	bool operator==(const CStringBuilder &pString) const;
-	bool operator==(const FoxString &pString) const;
-	bool operator==(const char *pString) const;
+	unsigned int GetFormatBase()
+	{
+		return m_Base;
+	}
 
-	operator char*() const { return m_String; }
-	operator unsigned char*() const { return reinterpret_cast<unsigned char*>(m_String); }
-	operator void*() const { return reinterpret_cast<void*>(m_String); }
+	CStrBuilder& Format(const char* format, ...)
+	{
+		va_list lpArgs;
+		va_start(lpArgs, format);
+		m_Length = printfex(m_String, format, lpArgs);
+		va_end(lpArgs);
+		return *this;
+	}
+
+	CStrBuilder& AppendFormat(const char* format, ...)
+	{
+		va_list lpArgs;
+		va_start(lpArgs, format);
+		m_Length += printfex(m_String + m_Length, format, lpArgs);
+		va_end(lpArgs);
+		return *this;
+	}
+
+	CStrBuilder& AppendFormatBase(const char* format, ...)
+	{
+		va_list lpArgs;
+		va_start(lpArgs, format);
+		m_Length = m_Base + printfex(m_String + m_Base, format, lpArgs);
+		va_end(lpArgs);
+		return *this;
+	}
+
+	CStrBuilder& AddBs()
+	{
+		assert(m_Length < sizeof(m_String));
+		if (m_Length && m_String[m_Length-1] != '\\')
+		{
+			m_String[m_Length] = '\\';
+			m_String[m_Length+1] = '\0';
+			m_Length++;
+		}
+		return *this;
+
+	}
+
+	CStrBuilder& AddBsWc()
+	{
+		if (m_Length && m_String[m_Length-1] != '\\')
+		{
+			assert(m_Length + 2 < sizeof(m_String));
+			m_String[m_Length] = '\\';
+			m_String[m_Length+1] = '*';
+			m_String[m_Length+2] = '\0';
+			m_Length += 2;
+		}
+		else if (m_Length && m_String[m_Length-1] != '*')
+		{
+			assert(m_Length + 1 < sizeof(m_String));
+			m_String[m_Length] = '*';
+			m_String[m_Length+1] = '\0';
+			m_Length++;
+		}
+		return *this;
+	}
+
+	CStrBuilder& LongPathName()
+	{
+		DWORD count = GetLongPathName(m_String, m_String, sizeof(m_String));
+		if (count >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		m_Length = count;
+		return *this;
+	}
+
+	bool CompareToBase(CStrBuilder &pString)
+	{
+		if (m_Base != pString.Len())
+			return false;
+		return memcmp(m_String, pString, pString.Len()) == 0;
+	}
+
+	char* Strdup() const
+	{
+		char *pString = (char*)new char[m_Length+1];
+		if (pString)
+			memcpy(pString, m_String, m_Length+1);
+		return pString;
+	}
+
+	CStrBuilder& operator=(const CStrBuilder &pString)
+	{
+		if (pString.Len() >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		m_Length = pString.Len();
+		memcpy(m_String, pString, m_Length + 1);
+		return *this;
+	}
+
+	CStrBuilder& operator=(const FoxString &pString)
+	{
+		if (pString.Len() >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		m_Length = pString.Len();
+		memcpy(m_String, pString, m_Length);
+		m_String[m_Length] = '\0';
+		return *this;
+	}
+
+	CStrBuilder& operator=(const char *pString)
+	{
+		size_t len = strlen(pString);
+		if (len >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		m_Length = len;
+		memcpy(m_String, pString, len + 1);
+		return *this;
+	}
+
+	CStrBuilder& operator+=(const CStrBuilder &pString)
+	{
+		if (m_Length + pString.Len() >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		memcpy(m_String + m_Length, pString, pString.Len() + 1);
+		m_Length += pString.Len();
+		return *this;
+	}
+
+	CStrBuilder& operator+=(const FoxString &pString)
+	{
+		if (m_Length + pString.Len() >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		memcpy(m_String + m_Length, pString, pString.Len() + 1);
+		m_Length += pString.Len();
+		return *this;
+	}
+
+	CStrBuilder& operator+=(const char *pString)
+	{
+		size_t len = strlen(pString);
+		if (len + m_Length >= sizeof(m_String))
+			throw E_INSUFMEMORY;
+		memcpy(m_String + m_Length, pString, len + 1);
+		m_Length += len;
+		return *this;
+	}
+
+	bool operator==(const CStrBuilder &pString) const
+	{
+		if (m_Length != pString.Len())
+			return false;
+		return strcmp(m_String, pString) == 0;
+	}
+
+	bool operator==(const FoxString &pString) const
+	{
+		if (m_Length != pString.Len())
+			return false;
+		return strcmp(m_String, pString) == 0;
+	}
+
+	bool operator==(const char *pString) const
+	{
+		return strcmp(m_String, pString) == 0;
+	}
+
+	operator char*() { return reinterpret_cast<char*>(m_String); } 
+	operator unsigned char*() { return reinterpret_cast<unsigned char*>(m_String); }
+	operator void*() { return reinterpret_cast<void*>(m_String); } 
+	operator const char*() const { return reinterpret_cast<const char*>(m_String); } 
+	operator const unsigned char*() const { return reinterpret_cast<const unsigned char*>(m_String); }
+	operator const void*() const { return reinterpret_cast<const void*>(m_String); } 
+	operator const CStrView() const { CStrView val = { const_cast<char*>(reinterpret_cast<const char*>(m_String)), m_Length }; return val; }
 
 private:
-	char *m_String;
-	unsigned int m_Size;
 	unsigned int m_Length;
+	unsigned int m_Base;
+	char m_String[nBufferSize];
 };
 
 class CBuffer
@@ -230,6 +409,7 @@ private:
 	DWORD m_ValueIndex;
 };
 
+
 template<class T>
 class ComPtr
 {
@@ -278,6 +458,8 @@ public:
 private:
 	LPVOID m_Pointer;
 };
+
+
 
 class CCriticalSection
 {
@@ -343,17 +525,18 @@ public:
 	CThread(CThreadManager &pManager) : m_ThreadManager(&pManager), m_ThreadHandle(0), m_AbortFlag(0) { }
 	~CThread();
 	void WaitForThreadShutdown();
+	void WaitForThreadShutdown(DWORD nTimeout);
 	void StartThread();
 	CThreadManager* GetThreadManager() { return m_ThreadManager; }
 	bool IsShutdown() { return m_AbortFlag == THREAD_SHUTDOWN_FLAG; }
 	void AbortThread(long reason) { m_AbortFlag = reason; SignalThreadAbort(); }
-	
+	virtual void Release() = 0;
 	virtual void SignalThreadAbort() = 0;
 	virtual DWORD Run() = 0;
 
 	static DWORD _stdcall ThreadProc(LPVOID lpParm);
 
-private:
+protected:
 	long m_AbortFlag;
 	HANDLE m_ThreadHandle;
 	CThreadManager *m_ThreadManager;

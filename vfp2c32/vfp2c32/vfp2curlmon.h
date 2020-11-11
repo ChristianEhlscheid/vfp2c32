@@ -47,8 +47,7 @@ private:
 	bool m_bCallback;
 	bool m_bAsync;
 	UINT m_ulObjRefCount;
-	CStr m_Callback;
-	CStr m_Buffer;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
 };
 
 class UrlDownloadThread : public CThread
@@ -59,7 +58,7 @@ public:
 
 	virtual void SignalThreadAbort();
 	virtual DWORD Run();
-
+	virtual void Release();
 	void SetParams(char *pUrl, char *pFile, char *pCallback);
 
 protected:

@@ -1447,12 +1447,14 @@ unsigned __int64 _stdcall StringToUInt64(char *pString, unsigned int nLen) throw
 	return nUInt;
 }
 
+#if !defined(_WIN64)
 unsigned int _stdcall strnlen(const char *s, unsigned long count)
 {
   const char *sc;
   for (sc = s; *sc != '\0' && count--; ++sc);
   return sc - s;
 }
+#endif
 
 unsigned int _stdcall strdblnlen(const char *s, unsigned long count)
 {
@@ -1586,8 +1588,9 @@ unsigned int _stdcall printfex(char *lpBuffer, const char *lpFormat, va_list lpA
 {
 	char *lpString;
 	char *lpStringParm;
+	wchar_t* lpWStringParm;
 	double nDouble;
-	int nPrecision, nUseLength;
+	int nPrecision, nUseLength, nChars;
 	
 	for (lpString = lpBuffer ; *lpFormat ; lpFormat++)
 	{
@@ -1658,6 +1661,25 @@ unsigned int _stdcall printfex(char *lpBuffer, const char *lpFormat, va_list lpA
 			*lpString++ = va_arg(lpArgs,char);
 			continue;
 			
+		case 'W':
+			lpWStringParm = va_arg(lpArgs,wchar_t*);
+			nPrecision = va_arg(lpArgs,int);
+			if (nPrecision > 0)
+			{
+				nChars = WideCharToMultiByte(VFP2CTls::Tls().ConvCP, 0, lpWStringParm, nPrecision, lpString, nPrecision, 0, 0);
+				lpString += nChars;
+			}
+			continue;
+
+		case 'T':
+			lpStringParm = va_arg(lpArgs,char*);
+			nPrecision = va_arg(lpArgs,int);
+			if (lpStringParm)
+			{
+				while ((*lpStringParm) && nPrecision--) *lpString++ = *lpStringParm++;
+			}
+			continue;			
+
 		default:
 			if (*lpFormat != '%') *lpString++ = '%';
 			if (*lpFormat)

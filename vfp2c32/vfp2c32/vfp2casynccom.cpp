@@ -1054,17 +1054,20 @@ void _fastcall CreateThreadObject(ParamBlk *parm)
 	CThreadedComObject* pObject = 0;
 try
 {
-	FoxWString pComClass(p1);
-	bool bSyncronousAccess = PCount() >= 3 ? (p3.ev_length > 0) : false;
-	DWORD dwContext = (PCount() >= 4 && p4.ev_long) ? p4.ev_long : CLSCTX_INPROC_SERVER;
-	DWORD dwStackSize = PCount() == 5 ? p5.ev_long : 0x10000; // default to 64KB of thread stack size
+	FoxWString pComClass(vp1);
+	bool bSyncronousAccess = PCount() >= 3 ? (vp3.ev_length > 0) : false;
+	DWORD dwContext = (PCount() >= 4 && vp4.ev_long) ? vp4.ev_long : CLSCTX_INPROC_SERVER;
+	DWORD dwStackSize = PCount() == 5 ? vp5.ev_long : 0x10000; // default to 64KB of thread stack size
 
 	IDispatch* pCallback = 0;
 	if (PCount() >= 2)
 	{
-		if (Vartype(p2) == 'O')
-			GetIDispatchFromObject(p2, (void**)&pCallback);
-		else if (Vartype(p2) != '0')
+		if (Vartype(vp2) == 'O')
+		{
+			FoxObject pObject(vp2);
+			pCallback = pObject.GetIDispatch();
+		}
+		else if (Vartype(vp2) != '0')
 			throw E_INVALIDPARAMS;
 	}
 

@@ -32,7 +32,7 @@ try
 
 	pTempVar = pFllFileName;
 	// declare additional functions not nativly exported by the FLL
-	Execute("DECLARE INTEGER GetIDispatch IN (m.__VFP2C_FLL_FILENAME) OBJECT");
+	Execute("DECLARE INTEGER _GetIDispatch@4 IN (m.__VFP2C_FLL_FILENAME) AS GetIDispatch OBJECT");
 }
 catch(int nErrorNo)
 {
@@ -40,36 +40,7 @@ catch(int nErrorNo)
 }
 }
 
-void _stdcall GetIDispatchFromObject(Value &pVal, void** pDisp)
-{
-	char* VarName = "__VFP2C32_TEMP_COMOBJECT";
-	HRESULT hr;
-	VARIANT vResult;
-	FoxVariable pTmpObject(VarName, false);
-	FoxValue vObject;
-	IDispatch *pVFP;
-	VariantInit(&vResult);
-
-	pTmpObject = pVal;
-	vObject.Evaluate("SYS(3095,_VFP)");
-	pVFP = (IDispatch*)vObject->ev_long;
-	LPOLESTR pMethod = L"Eval";
-	DISPID dispidEval;
-	hr = pVFP->GetIDsOfNames(IID_NULL, &pMethod, 1, 1033, &dispidEval);
-	if (SUCCEEDED(hr))
-	{
-		CComBSTR pCommand(L"m.__VFP2C32_TEMP_COMOBJECT");
-		VARIANTARG Arg;
-		DISPPARAMS DispParams = {&Arg, 0, 1, 0};
-		Arg.vt = VT_BSTR;
-		Arg.bstrVal = pCommand;
-		hr = pVFP->Invoke(dispidEval, IID_NULL, 0, DISPATCH_METHOD, &DispParams, &vResult, 0, 0);
-		if (SUCCEEDED(hr))
-			*pDisp = vResult.pdispVal;
-	}
-}
-
-IDispatch * _stdcall GetIDispatch(IDispatch *pObject)
+IDispatch* _stdcall GetIDispatch(IDispatch *pObject)
 {
 	return pObject;
 }
@@ -78,7 +49,7 @@ void _fastcall CLSIDFromProgIDLib(ParamBlk *parm)
 {
 try
 {
-	FoxWString pProgId(p1);
+	FoxWString pProgId(vp1);
 	FoxString pClsId(sizeof(GUID));
 	HRESULT hr;
 
@@ -112,7 +83,7 @@ try
 	LPGUID pGuid;
 	GUID sGuid;
 
-	if (Vartype(p1) == 'C')
+	if (Vartype(vp1) == 'C')
 	{
 		if (pClsId.Len() == sizeof(GUID))
 			pGuid = (LPGUID)(void*)pClsId;
@@ -128,10 +99,10 @@ try
 			pGuid = &sGuid;
 		}
 	}
-	else if (Vartype(p1) == 'I')
-		pGuid = (LPGUID)p1.ev_long;
-	else if (Vartype(p1) == 'N')
-		pGuid = (LPGUID)(ULONG)p1.ev_real;
+	else if (Vartype(vp1) == 'I')
+		pGuid = (LPGUID)vp1.ev_long;
+	else if (Vartype(vp1) == 'N')
+		pGuid = (LPGUID)(ULONG)vp1.ev_real;
 	else
 		throw E_INVALIDPARAMS;
 
@@ -156,7 +127,7 @@ void _fastcall CLSIDFromStringLib(ParamBlk *parm)
 {
 try
 {
-	FoxWString pString(p1);
+	FoxWString pString(vp1);
 	FoxString pClsId(sizeof(GUID));
 	HRESULT hr;
 
@@ -188,12 +159,12 @@ try
 	LPGUID pGuid;
 	wchar_t aGuidString[GUID_STRING_LEN];
 
-	if (Vartype(p1) == 'C' && Len(p1) == sizeof(GUID))
+	if (Vartype(vp1) == 'C' && Len(vp1) == sizeof(GUID))
 		pGuid = (LPGUID)(void*)pClsId;
-	else if (Vartype(p1) == 'I')
-		pGuid = (LPGUID)p1.ev_long;
-	else if (Vartype(p1) == 'N')
-		pGuid = (LPGUID)(ULONG)p1.ev_real;
+	else if (Vartype(vp1) == 'I')
+		pGuid = (LPGUID)vp1.ev_long;
+	else if (Vartype(vp1) == 'N')
+		pGuid = (LPGUID)(ULONG)vp1.ev_real;
 	else
 		throw E_INVALIDPARAMS;
 
@@ -221,8 +192,8 @@ try
 	GUID sGuid1, sGuid2;
 
 	// convert GUID1
-	if (Vartype(p1) == 'C')
-	{	if (Len(p1) == sizeof(GUID))
+	if (Vartype(vp1) == 'C')
+	{	if (Len(vp1) == sizeof(GUID))
 			pGuid1 = (LPGUID)(void*)pGuidParm1;
 		else
 		{
@@ -237,17 +208,17 @@ try
 			pGuid1 = &sGuid1;
 		}
 	}
-	else if (Vartype(p1) == 'I')
-		pGuid1 = (LPGUID)p1.ev_long;
-    else if (Vartype(p1) == 'N')
-		pGuid1 = (LPGUID)(ULONG)p1.ev_real;
+	else if (Vartype(vp1) == 'I')
+		pGuid1 = (LPGUID)vp1.ev_long;
+    else if (Vartype(vp1) == 'N')
+		pGuid1 = (LPGUID)(ULONG)vp1.ev_real;
 	else
 		throw E_INVALIDPARAMS;
 
 	// convert GUID2
-	if (Vartype(p2) == 'C')
+	if (Vartype(vp2) == 'C')
 	{
-		if (Len(p2) == sizeof(GUID))
+		if (Len(vp2) == sizeof(GUID))
 			pGuid2 = (LPGUID)(void*)pGuidParm2;
 		else
 		{
@@ -262,10 +233,10 @@ try
 			pGuid2 = &sGuid2;
 		}
 	}
-	else if (Vartype(p2) == 'I')
-		pGuid2 = (LPGUID)p2.ev_long;
-    else if (Vartype(p2) == 'N')
-		pGuid2 = (LPGUID)(ULONG)p2.ev_real;
+	else if (Vartype(vp2) == 'I')
+		pGuid2 = (LPGUID)vp2.ev_long;
+    else if (Vartype(vp2) == 'N')
+		pGuid2 = (LPGUID)(ULONG)vp2.ev_real;
 	else
 		throw E_INVALIDPARAMS;
 
@@ -296,19 +267,19 @@ try
 		throw E_APIERROR;
 	}
 
-	if (PCount() == 0 || p1.ev_long == CREATE_GUID_ANSI)
+	if (PCount() == 0 || vp1.ev_long == CREATE_GUID_ANSI)
 	{
 		pGuidString.Size(GUID_STRING_LEN);
 		nRetVal = StringFromGUID2((REFGUID)*pGuid,aGuidString,GUID_STRING_LEN);
 		pGuidString = aGuidString;
 	}
-	else if (p1.ev_long == CREATE_GUID_UNICODE)
+	else if (vp1.ev_long == CREATE_GUID_UNICODE)
 	{
 		pGuidString.Size(GUID_STRING_LEN*sizeof(wchar_t));
 		nRetVal = StringFromGUID2((REFGUID)*pGuid,(LPOLESTR)(char*)pGuidString,GUID_STRING_LEN);
 		pGuidString.Len((nRetVal - 1) * sizeof(wchar_t));
 	}
-	else if (p1.ev_long == CREATE_GUID_BINARY)
+	else if (vp1.ev_long == CREATE_GUID_BINARY)
 	{
 		pGuidString.Size(sizeof(GUID));
 		memcpy(pGuidString,pGuid,sizeof(GUID));
@@ -328,7 +299,8 @@ void _fastcall RegisterActiveObjectLib(ParamBlk *parm)
 {
 try
 {
-	FoxWString pProgId(p2);
+	FoxObject pObject(vp1);
+	FoxWString pProgId(vp2);
 
 	HRESULT hr;
 	DWORD nRotKey = 0;
@@ -336,7 +308,7 @@ try
 	FoxValue vUnk;
 	CLSID sClsId;
 
-	GetIDispatchFromObject(p1, (void**)&pUnk);
+	pUnk = reinterpret_cast<IUnknown*>(pObject.GetIDispatch());
 
 	hr = CLSIDFromProgID(pProgId,&sClsId);
 	if (FAILED(hr))
@@ -363,7 +335,7 @@ catch(int nErrorNo)
 void _fastcall RevokeActiveObjectLib(ParamBlk *parm)
 {
 	HRESULT hr;
-	hr = RevokeActiveObject(p1.ev_long, 0);
+	hr = RevokeActiveObject(vp1.ev_long, 0);
 	if (FAILED(hr))
 	{
 		SaveWin32Error("RevokeActiveObject", hr);
@@ -375,8 +347,9 @@ void _fastcall RegisterObjectAsFileMoniker(ParamBlk *parm)
 {
 try
 {
-	FoxWString pProgId(p2);
-	FoxWString pFileName(p3);
+	FoxObject pObject(vp1);
+	FoxWString pProgId(vp2);
+	FoxWString pFileName(vp3);
 
 	ComPtr<LPRUNNINGOBJECTTABLE> pIRot;
 	ComPtr<LPSTORAGE> pIStorage;
@@ -388,7 +361,7 @@ try
 	FoxValue vUnk;
 	IID sClsId, spClsId;
 
-	GetIDispatchFromObject(p1, (void**)&pUnk);
+	pUnk = reinterpret_cast<IUnknown*>(pObject.GetIDispatch());
 
 	hr = CLSIDFromProgID(pProgId,&spClsId);
 	if (FAILED(hr))
@@ -476,7 +449,7 @@ void _fastcall IsObjectActive(ParamBlk *parm)
 {
 try
 {
-	FoxWString pMoniker(p1);
+	FoxWString pMoniker(vp1);
 	FoxString pClassName(parm,2);
 	ComPtr<IRunningObjectTable*> pIRot;
 	ComPtr<IMoniker*> pIMoniker;
@@ -556,9 +529,9 @@ try
 	if (!fpLoadTypeLibEx)
 		throw E_NOENTRYPOINT;
 
-	FoxString pDllName(p1);
-	FoxWString pWDllName(p1);
-	FoxWString pCoClass(p2);
+	FoxString pDllName(vp1);
+	FoxWString pWDllName(vp1);
+	FoxWString pCoClass(vp2);
 
 	ComPtr<ITypeLib*> pLib;
 	ComPtr<IClassFactory*> pFactory;
@@ -666,8 +639,8 @@ void _fastcall CoRegisterComDll(ParamBlk *parm)
 	RegisteredComDll *pDll = new RegisteredComDll();
 try
 {
-	FoxString pDllName(p1);
-	FoxWString pWDllName(p1);
+	FoxString pDllName(vp1);
+	FoxWString pWDllName(vp1);
 
 	pDll->RegisterDll(pDllName,pWDllName);
 	glRegisteredComDlls.push_back(pDll);
@@ -681,7 +654,7 @@ catch(int nErrorNo)
 
 void _fastcall CoUnregisterComDll(ParamBlk *parm)
 {
-	FoxString pDllName(p1);
+	FoxString pDllName(vp1);
 	HMODULE hDll = GetModuleHandle(pDllName);
 
 	RegisteredComDll *pDll = 0;
@@ -816,17 +789,17 @@ void _fastcall IDispatch_Invoke(ParamBlk *parm)
 {
 try
 {
-	FoxWString pMethod(p2);
+	FoxWString pMethod(vp2);
 	FoxArray pParmTypes(parm, 3, '0');
-	LCID nLocale = PCount() >= 4 && Vartype(p4) == 'N' && p4.ev_long ? (LCID)p4.ev_long : LOCALE_USER_DEFAULT;
+	LCID nLocale = PCount() >= 4 && Vartype(vp4) == 'N' && vp4.ev_long ? (LCID)vp4.ev_long : LOCALE_USER_DEFAULT;
 
 	IDispatch *pDisp;
 
-	if (Vartype(p1) == 'I' || Vartype(p1) == 'N')
-		pDisp = (IDispatch*)p1.ev_long;
-	else if (Vartype(p1) == 'C')
+	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+		pDisp = (IDispatch*)vp1.ev_long;
+	else if (Vartype(vp1) == 'C')
 	{
-		FoxString pObject(p1);
+		FoxString pObject(vp1);
 		if (pObject.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 			throw E_INVALIDPARAMS;
 		
@@ -908,13 +881,13 @@ void _fastcall IDispatch_AsyncInvoke(ParamBlk *parm)
 	ComCall *pCall = 0;
 try
 {
-	FoxWString pComClass(p1);
-	FoxWString pMethod(p2);
+	FoxWString pComClass(vp1);
+	FoxWString pMethod(vp2);
 	FoxArray pParameters(parm,3,'0');
-	FoxString pResultObject(p4);
-	FoxWString pResultMethod(p5);
-	LCID nLocale = PCount() >= 6 && p6.ev_long ? (LCID)p6.ev_long : LOCALE_USER_DEFAULT;
-	DWORD dwContext = PCount() == 7 ? p7.ev_long : CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER;
+	FoxString pResultObject(vp4);
+	FoxWString pResultMethod(vp5);
+	LCID nLocale = PCount() >= 6 && vp6.ev_long ? (LCID)vp6.ev_long : LOCALE_USER_DEFAULT;
+	DWORD dwContext = PCount() == 7 ? vp7.ev_long : CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER;
 
 	FoxValue vUnk;	
 	IUnknown *pUnk;

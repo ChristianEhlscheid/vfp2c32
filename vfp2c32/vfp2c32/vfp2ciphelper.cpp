@@ -203,17 +203,17 @@ try
 	if (!fpIcmpCreateFile)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(p1);
-	FoxString pHost(p2);
+	FoxArray pArray(vp1);
+	FoxString pHost(vp2);
 	FoxString pIpBuffer(VFP2C_MAX_IP_LEN);
 	IcmpFile pIcmp;
 
-	BYTE nTTL = PCount() >= 3 && p3.ev_long ? static_cast<BYTE>(p3.ev_long) : 30;
-	BYTE nTos = PCount() >= 4 && p4.ev_long ? static_cast<BYTE>(p4.ev_long) : 0;
-	DWORD dwTimeout = PCount() >= 5 && p5.ev_long ? p5.ev_long : 3000;
-	WORD nDataSize = PCount() >= 6 && p6.ev_long ? static_cast<WORD>(p6.ev_long) : 32;
-	bool bDontFragment = PCount() >= 7 && p7.ev_length;
-	int nPingCount = PCount() >= 8 && p8.ev_long ? p8.ev_long : 1;
+	BYTE nTTL = PCount() >= 3 && vp3.ev_long ? static_cast<BYTE>(vp3.ev_long) : 30;
+	BYTE nTos = PCount() >= 4 && vp4.ev_long ? static_cast<BYTE>(vp4.ev_long) : 0;
+	DWORD dwTimeout = PCount() >= 5 && vp5.ev_long ? vp5.ev_long : 3000;
+	WORD nDataSize = PCount() >= 6 && vp6.ev_long ? static_cast<WORD>(vp6.ev_long) : 32;
+	bool bDontFragment = PCount() >= 7 && vp7.ev_length;
+	int nPingCount = PCount() >= 8 && vp8.ev_long ? vp8.ev_long : 1;
 
 	unsigned long Ip;
 	LPHOSTENT lpHostEnt;

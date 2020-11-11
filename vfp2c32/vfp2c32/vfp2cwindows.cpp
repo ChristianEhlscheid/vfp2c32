@@ -12,8 +12,9 @@ void _fastcall GetWindowTextEx(ParamBlk *parm)
 try
 {
 	FoxString pRetVal;
-	HWND hHwnd = reinterpret_cast<HWND>(p1.ev_long);
-	DWORD nLen, nApiRet, nLastError;
+	HWND hHwnd = reinterpret_cast<HWND>(vp1.ev_long);
+	DWORD nApiRet, nLastError;
+	DWORD_PTR nLen;
 
 	nApiRet = SendMessageTimeout(hHwnd,WM_GETTEXTLENGTH,0,0,SMTO_BLOCK,1000,&nLen);
 	if (!nApiRet)
@@ -52,10 +53,10 @@ void _fastcall GetWindowRectEx(ParamBlk *parm)
 {
 try
 {
-	FoxArray pCoords(p2, 4, 1);
+	FoxArray pCoords(vp2, 4, 1);
 	RECT sRect;
 
-	if (!GetWindowRect(reinterpret_cast<HWND>(p1.ev_long), &sRect))
+	if (!GetWindowRect(reinterpret_cast<HWND>(vp1.ev_long), &sRect))
 	{
 		SaveWin32Error("GetWindowRect",GetLastError());
 		throw E_APIERROR;
@@ -82,8 +83,8 @@ try
 	MONITORINFO sMonInfo;
 	int nMonitors, nX, nY;
 
-	hSource = reinterpret_cast<HWND>(p1.ev_long);
-	hParent = PCount() == 2 ? reinterpret_cast<HWND>(p2.ev_long) : 0;
+	hSource = reinterpret_cast<HWND>(vp1.ev_long);
+	hParent = PCount() == 2 ? reinterpret_cast<HWND>(vp2.ev_long) : 0;
 
 	if (hParent)
 	{
@@ -159,7 +160,7 @@ void _fastcall ADesktopArea(ParamBlk *parm)
 {
 try
 {
-	FoxArray pCoords(p1,4,1);
+	FoxArray pCoords(vp1,4,1);
 	RECT sRect;
 	
 	if (!SystemParametersInfo(SPI_GETWORKAREA,0,(PVOID)&sRect,0))
@@ -183,30 +184,30 @@ void _fastcall MessageBoxExLib(ParamBlk *parm)
 {
 try
 {
-	FoxString pText(p1);
+	FoxString pText(vp1);
 	FoxString pCaption(parm, 3);
 	FoxString pIcon(parm, 5);
 
 	MSGBOXPARAMS sParms = {0};
 	sParms.cbSize = sizeof(MSGBOXPARAMS);
 	sParms.lpszText = pText;
-	sParms.dwStyle = PCount() >= 2 ? p2.ev_long : 0;
+	sParms.dwStyle = PCount() >= 2 ? vp2.ev_long : 0;
 
 	if (PCount() >= 3)
 	{
-		if (Vartype(p3) == 'C')
+		if (Vartype(vp3) == 'C')
 			sParms.lpszCaption = pCaption;
-		else if (Vartype(p3) != '0')
+		else if (Vartype(vp3) != '0')
 			throw E_INVALIDPARAMS;
 	}
 
 	if (PCount() >= 4)
 	{
-		if (Vartype(p4) == 'I')
-			sParms.hwndOwner = reinterpret_cast<HWND>(p4.ev_long);
-		else if (Vartype(p4) == 'N')
-			sParms.hwndOwner = reinterpret_cast<HWND>(static_cast<DWORD>(p4.ev_real));
-		else if (Vartype(p4) == '0')
+		if (Vartype(vp4) == 'I')
+			sParms.hwndOwner = reinterpret_cast<HWND>(vp4.ev_long);
+		else if (Vartype(vp4) == 'N')
+			sParms.hwndOwner = reinterpret_cast<HWND>(static_cast<DWORD>(vp4.ev_real));
+		else if (Vartype(vp4) == '0')
 			sParms.hwndOwner = WTopHwnd();
 		else
 			throw E_INVALIDPARAMS;
@@ -220,13 +221,13 @@ try
 		DWORD dwStyleAdd = MB_USERICON;
 		DWORD dwStyleRemove = MB_ICONSTOP | MB_ICONQUESTION | MB_ICONEXCLAMATION | MB_ICONINFORMATION;
 
-		if (Vartype(p5) == 'I')
-			sParms.lpszIcon = MAKEINTRESOURCE(p5.ev_long);
-		else if (Vartype(p5) == 'N')
-			sParms.lpszIcon = MAKEINTRESOURCE(static_cast<DWORD>(p5.ev_real));
-		else if (Vartype(p5) == 'C')
+		if (Vartype(vp5) == 'I')
+			sParms.lpszIcon = MAKEINTRESOURCE(vp5.ev_long);
+		else if (Vartype(vp5) == 'N')
+			sParms.lpszIcon = MAKEINTRESOURCE(static_cast<DWORD>(vp5.ev_real));
+		else if (Vartype(vp5) == 'C')
 			sParms.lpszIcon = pIcon;
-		else if (Vartype(p5) == '0')
+		else if (Vartype(vp5) == '0')
 		{
 			dwStyleAdd = 0;
 			dwStyleRemove = 0;
@@ -240,11 +241,11 @@ try
 
 	if (PCount() >= 6)
 	{	
-		if (Vartype(p6) == 'I')
-			sParms.hInstance = reinterpret_cast<HINSTANCE>(p6.ev_long);
-		else if (Vartype(p6) == 'N')
-			sParms.hInstance = reinterpret_cast<HINSTANCE>(static_cast<DWORD>(p6.ev_long));
-		else if (Vartype(p6) == '0')
+		if (Vartype(vp6) == 'I')
+			sParms.hInstance = reinterpret_cast<HINSTANCE>(vp6.ev_long);
+		else if (Vartype(vp6) == 'N')
+			sParms.hInstance = reinterpret_cast<HINSTANCE>(static_cast<DWORD>(vp6.ev_long));
+		else if (Vartype(vp6) == '0')
 		{
 			if (sParms.dwStyle & MB_USERICON)
 				sParms.hInstance = GetModuleHandle(NULL);
@@ -257,16 +258,16 @@ try
 
 	if (PCount() >= 7)
 	{
-		if (Vartype(p7) == 'I')
-			sParms.dwContextHelpId = p7.ev_long;
-		else if (Vartype(p7) == 'N')
-			sParms.dwContextHelpId = static_cast<DWORD>(p7.ev_long);
-		else if (Vartype(p7) != '0')
+		if (Vartype(vp7) == 'I')
+			sParms.dwContextHelpId = vp7.ev_long;
+		else if (Vartype(vp7) == 'N')
+			sParms.dwContextHelpId = static_cast<DWORD>(vp7.ev_long);
+		else if (Vartype(vp7) != '0')
 			throw E_INVALIDPARAMS;
 	}
 
 	if (PCount() == 8)
-		sParms.dwLanguageId = p8.ev_long;
+		sParms.dwLanguageId = vp8.ev_long;
 	else
 		sParms.dwLanguageId = GetUserDefaultUILanguage();
 

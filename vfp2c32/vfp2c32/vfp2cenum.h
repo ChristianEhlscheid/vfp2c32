@@ -31,8 +31,7 @@ class WindowEnumParam
 {
 public:
 	FoxArray pArray;
-	CStr pBuffer;
-	CStr pCallback;
+	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
 };
 
 class WindowEnumParamEx
