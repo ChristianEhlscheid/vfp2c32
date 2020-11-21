@@ -21,6 +21,7 @@ VFP2CTls::VFP2CTls()
 	ZeroMemory(ErrorInfo, sizeof(ErrorInfo));
 	InitStatus = 0;
 	ConvCP = CP_ACP; 
+	SqlUnicodeConversion = TRUE;
 #ifdef _DEBUG
 	DbgInfo = 0;
 	TrackAlloc = FALSE;

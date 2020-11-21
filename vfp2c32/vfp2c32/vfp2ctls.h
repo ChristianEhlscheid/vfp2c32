@@ -43,6 +43,8 @@ public:
 	DWORD InitStatus;
 	/* codepage for Unicode character conversion */
 	UINT ConvCP; 
+	/* convert Unicode data to ANSI in SQLExecEx */
+	BOOL SqlUnicodeConversion;
 
 #ifdef _DEBUG
 	LPDBGALLOCINFO DbgInfo;

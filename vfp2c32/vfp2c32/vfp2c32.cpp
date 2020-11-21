@@ -217,6 +217,21 @@ try
 				Return(VFP2CTls::Tls().ConvCP);
 			break;
 
+		case 4:
+			if (PCount() == 2)
+			{
+				if (Vartype(vp2) == 'L')
+				{
+					VFP2CTls::Tls().SqlUnicodeConversion = vp2.ev_length;
+					Return(true);
+				}
+				else
+					throw E_INVALIDPARAMS;
+			}
+			else
+				Return(VFP2CTls::Tls().SqlUnicodeConversion > 0);
+			break;
+
 		default: /* else wrong parameter */
 			throw E_INVALIDPARAMS;
 	}

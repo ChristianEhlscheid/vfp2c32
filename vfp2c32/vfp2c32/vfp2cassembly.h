@@ -58,10 +58,11 @@ typedef enum _REGISTER {
 	R13,
 	R14,
 	R15,
+// 32bit Registers
+	EAX,
 #else
 	EAX = 0,
 #endif
-// 32bit Registers
 	ECX,
 	EDX,
 	EBX,

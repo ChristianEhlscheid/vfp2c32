@@ -1321,6 +1321,7 @@ int _stdcall SQLPrepareColumnBindings(LPSQLSTATEMENT pStmt)
 {
 	SQLRETURN nApiRet;
 	SQLUINTEGER bGetDataExt;
+	BOOL bUnicodeConversion = VFP2CTls::Tls().SqlUnicodeConversion;
 	LPSQLCOLUMNDATA lpCS = pStmt->pColumnData;
 	BOOL bBindCol = TRUE;
     int nColNo = 0;
@@ -1771,18 +1772,35 @@ int _stdcall SQLPrepareColumnBindings(LPSQLSTATEMENT pStmt)
 			}
 			else
 			{
-				if (!AllocHandleEx(lpCS->vData,lpCS->nSize + 1))
-					return E_INSUFMEMORY;
-				LockHandle(lpCS->vData);
-				lpCS->pData = HandleToPtr(lpCS->vData);
-				lpCS->nBufferSize = lpCS->nSize + 1;
-				lpCS->nCType = SQL_C_CHAR;
-				lpCS->aVFPType = 'C';
-				lpCS->bBindColumn = bBindCol;
-				if (!IsVariableRef(lpCS->lField))
-					lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				{
+					if (!AllocHandleEx(lpCS->vData, lpCS->nSize + 1))
+						return E_INSUFMEMORY;
+					LockHandle(lpCS->vData);
+					lpCS->pData = HandleToPtr(lpCS->vData);
+					lpCS->nBufferSize = lpCS->nSize + 1;
+					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+					lpCS->aVFPType = 'C';
+					lpCS->bBindColumn = bBindCol;
+					if (!IsVariableRef(lpCS->lField))
+						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					else
+						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+				}
 				else
-					lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+				{
+					lpCS->vData.ev_handle = pStmt->vGetDataBuffer.ev_handle;
+					lpCS->pData = pStmt->pGetDataBuffer;
+					lpCS->nBufferSize = VFP2C_ODBC_MAX_BUFFER;
+					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+					lpCS->aVFPType = 'M';
+					lpCS->bBindColumn = FALSE;
+					if (!IsVariableRef(lpCS->lField))
+						lpCS->pStore = bUnicodeConversion ? SQLStoreMemoChar : SQLStoreMemoWChar;
+					else
+						lpCS->pStore = bUnicodeConversion ? SQLStoreMemoCharVar : SQLStoreMemoWCharVar;
+					bBindCol = bGetDataExt;
+				}
 			}
 			break;
 
@@ -1842,7 +1860,7 @@ int _stdcall SQLPrepareColumnBindings(LPSQLSTATEMENT pStmt)
 					LockHandle(lpCS->vData);
 					lpCS->pData = HandleToPtr(lpCS->vData);
 					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_CHAR;
+					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
 					lpCS->aVFPType = 'C';
 					lpCS->bBindColumn = bBindCol;
 					if (!IsVariableRef(lpCS->lField))
@@ -1856,13 +1874,23 @@ int _stdcall SQLPrepareColumnBindings(LPSQLSTATEMENT pStmt)
 					lpCS->vData.ev_handle = pStmt->vGetDataBuffer.ev_handle;
 					lpCS->pData = pStmt->pGetDataBuffer;
 					lpCS->nBufferSize = VFP2C_ODBC_MAX_BUFFER;
-					lpCS->nCType = SQL_C_CHAR;
+					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
 					lpCS->aVFPType = 'M';
 					lpCS->bBindColumn = FALSE;
-					if (!IsVariableRef(lpCS->lField))
-						lpCS->pStore = SQLStoreMemoChar;
+					if (bUnicodeConversion)
+					{
+						if (!IsVariableRef(lpCS->lField))
+							lpCS->pStore = SQLStoreMemoChar;
+						else
+							lpCS->pStore = SQLStoreMemoCharVar;
+					}
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+					{
+						if (!IsVariableRef(lpCS->lField))
+							lpCS->pStore = SQLStoreMemoWChar;
+						else
+							lpCS->pStore = SQLStoreMemoWCharVar;
+					}
 					bBindCol = bGetDataExt;
 				}
 			}
@@ -1920,14 +1948,24 @@ int _stdcall SQLPrepareColumnBindings(LPSQLSTATEMENT pStmt)
 				lpCS->vData.ev_handle = pStmt->vGetDataBuffer.ev_handle;
 				lpCS->pData = pStmt->pGetDataBuffer;
 				lpCS->nBufferSize = VFP2C_ODBC_MAX_BUFFER;
-				lpCS->nCType = SQL_C_CHAR;
+				lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
 				lpCS->aVFPType = 'M';
 				lpCS->bBindColumn = FALSE;
 				bBindCol = bGetDataExt;
-				if (!IsVariableRef(lpCS->lField))
-					lpCS->pStore = SQLStoreMemoChar;
+				if (bUnicodeConversion)
+				{
+					if (!IsVariableRef(lpCS->lField))
+						lpCS->pStore = SQLStoreMemoChar;
+					else
+						lpCS->pStore = SQLStoreMemoCharVar;
+				}
 				else
-					lpCS->pStore = SQLStoreMemoCharVar;
+				{
+					if (!IsVariableRef(lpCS->lField))
+						lpCS->pStore = SQLStoreMemoWChar;
+					else
+						lpCS->pStore = SQLStoreMemoWCharVar;
+				}
 			}
 			break;
 
