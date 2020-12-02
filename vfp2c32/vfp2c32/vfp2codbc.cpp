@@ -743,8 +743,8 @@ SQLResultSetChecking:
 	if (nErrorNo = SQLSaveOutputParameters(pStmt))
 		goto ErrorOut;
 
-	// we're finished .. clean up everything ...
 	Return(pStmt->nResultset);
+	// we're finished .. clean up everything ...
 	if (prepared)
 		SQLFreeParameterEx(pStmt);
 	else
@@ -3038,6 +3038,25 @@ int _stdcall SQLCreateCursor(LPSQLSTATEMENT pStmt, char *pCursorName)
 
 	for (nColNo = 1; nColNo <= pStmt->nNoOfCols; nColNo++)
 	{
+		if ((lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q') && lpCS->nSize > 254)
+		{
+			SaveCustomErrorEx("SqlExecEx", "Invalid cursor schema for field '%S': length '%I'", 0, lpCS->aColName, lpCS->nSize);
+			nErrorNo = E_APIERROR;
+			goto ErrorOut;
+		}
+		else if ((lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F') && (lpCS->nSize > 20 || lpCS->nScale > 19))
+		{
+			SaveCustomErrorEx("SqlExecEx", "Invalid cursor schema for field '%S': length '%I', scale: '%I'", 0, lpCS->aColName, lpCS->nSize, lpCS->nScale);
+			nErrorNo = E_APIERROR;
+			goto ErrorOut;
+		}
+		else if (lpCS->aVFPType == 'B' && lpCS->nSize > 18)
+		{
+			SaveCustomErrorEx("SqlExecEx", "Invalid cursor schema for field '%S': length '%I', scale: '%I'", 0, lpCS->aColName, lpCS->nSize, lpCS->nScale);
+			nErrorNo = E_APIERROR;
+			goto ErrorOut;
+		}
+
 		lArrayLoc.l_sub1++;
 
 		// store fieldname
@@ -3068,7 +3087,7 @@ int _stdcall SQLCreateCursor(LPSQLSTATEMENT pStmt, char *pCursorName)
 		// store field scale
 		lArrayLoc.l_sub2 = 4;
 		// if the VFP datatype if none of the below ones .. the field scale is unneccesary
-		if (lpCS->aVFPType == 'B' || lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F')
+		if (lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F')
 			vNumeric.ev_long = lpCS->nScale;
 		else
 			vNumeric.ev_long = 0;
