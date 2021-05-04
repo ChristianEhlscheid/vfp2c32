@@ -488,6 +488,10 @@
 			<param name="Local" value="pages\findfilechange.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="FindFileChangeEx">
+			<param name="Local" value="pages\findfilechangeex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="FindRegistryChange">
 			<param name="Local" value="pages\findregistrychange.html">
 			</OBJECT>
@@ -626,10 +630,6 @@
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="IcmpPing">
 			<param name="Local" value="pages\icmpping.html">
-			</OBJECT>
-		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="InitVFP2C32">
-			<param name="Local" value="pages\initvfp2c32.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="Int642Str">
@@ -1952,10 +1952,6 @@
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="FormatMessageEx">
 			<param name="Local" value="pages\formatmessageex.html">
-			</OBJECT>
-		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="InitVFP2C32">
-			<param name="Local" value="pages\initvfp2c32.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="VFP2CSys">

@@ -168,6 +168,7 @@ void _fastcall ASQLDataSources(ParamBlk *parm);
 void _fastcall ASQLDrivers(ParamBlk *parm);
 void _fastcall SQLGetPropEx(ParamBlk *parm);
 void _fastcall SQLSetPropEx(ParamBlk *parm);
+void _fastcall DBSetPropEx(ParamBlk *parm);
 void _fastcall SQLExecEx(ParamBlk *parm);
 void _fastcall SQLPrepareEx(ParamBlk *parm);
 void _fastcall SQLCancelEx(ParamBlk *parm);

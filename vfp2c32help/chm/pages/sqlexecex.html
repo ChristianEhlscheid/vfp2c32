@@ -69,7 +69,7 @@ Of course you cannot embedd any parameters if you set this flag.</td></tr>
 </p>
 <div class="blockheader"><p class="note">Note</p></div>
 <div class="block"><p>Long typenames like 'Numeric' or 'Character' are <strong>NOT</strong> supported! <br />
-If you query the database for Unicode character data the default is to convert to Ansi. If you want to get the unicode data unmodified you can specify NOCPTRANS for the column in the schema. e.g.<br />
+If you query the database for Unicode character data the default is to convert to Ansi (you can control character type conversion globally with <a href="/pages/vfp2csys.html">VFP2CSys</a>(4)). If you want to get the unicode data unmodified you can specify NOCPTRANS for the column in the schema. e.g.<br />
 "yourUnicodeSmallText C(254) NOCPTRANS, yourUnicodeLongtext M NOCPTRANS"<br />
 <br />
 If you convert a unicode column to types 'W' or 'Q' the data will also be in Unicode format.

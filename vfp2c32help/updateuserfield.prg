@@ -12,54 +12,13 @@ CATCH
 	USE vfp2cintelli IN 0 ALIAS vi SHARED
 ENDTRY	
 
-*!*	LOCAL lcTip, lcFuncs, xj
-*!*	lcTip = ''
-
-*!*	LOCAL laDefs[15]
-*!*	laDefs[1] = 'VFP2C_INIT_MARSHAL'
-*!*	laDefs[2] = 'VFP2C_INIT_ENUM'
-*!*	laDefs[3] = 'VFP2C_INIT_ASYNC'
-*!*	laDefs[4] = 'VFP2C_INIT_FILE'
-*!*	laDefs[5] = 'VFP2C_INIT_WINSOCK'
-*!*	laDefs[6] = 'VFP2C_INIT_ODBC'
-*!*	laDefs[7] = 'VFP2C_INIT_PRINT'
-*!*	laDefs[8] = 'VFP2C_INIT_NETAPI'
-*!*	laDefs[9] = 'VFP2C_INIT_CALLBACK'
-*!*	laDefs[10] = 'VFP2C_INIT_SERVICES'
-*!*	laDefs[11] = 'VFP2C_INIT_WINDOWS'
-*!*	laDefs[12] = 'VFP2C_INIT_RAS'
-*!*	laDefs[13] = 'VFP2C_INIT_IPHELPER'
-*!*	laDefs[14] = 'VFP2C_INIT_URLMON'
-*!*	laDefs[15] = 'VFP2C_INIT_WININET'
-
-*!*	FOR m.xj = 1 TO ALEN(laDefs,1)
-*!*		SELECT expanded FROM vi WHERE ALLTRIM(initflag) == laDefs[xj] INTO CURSOR vifuncs
-
-*!*		lcFuncs = ''
-*!*		SELECT vifuncs
-*!*		SCAN
-*!*			lcFuncs = lcFuncs + IIF(EMPTY(lcFuncs),'', ', ') + ALLTRIM(vifuncs.expanded) 
-*!*		ENDSCAN
-
-*!*		lcTip = lcTip + m.laDefs[xj] + CHR(13) + lcFuncs + CHR(13)
-*!*	ENDFOR
-
-*!*	USE IN SELECT('vifuncs')
-
-*!*	SELECT vi
-*!*	LOCATE FOR ALLTRIM(expanded) == 'VFP2CINITVFP2C32TIP1'
-*!*	IF FOUND()
-*!*		REPLACE tip WITH m.lcTip
-*!*	ENDIF
-
 WAIT WINDOW 'Updating "USER" field' NOWAIT NOCLEAR
 
-LOCAL lcUser, laFields[5]
+LOCAL lcUser, laFields[4]
 laFields[1] = 'expanded'
-laFields[2] = 'initflag'
-laFields[3] = 'returnval'
-laFields[4] = 'descrip'
-laFields[5] = 'remarks'
+laFields[2] = 'returnval'
+laFields[3] = 'descrip'
+laFields[4] = 'remarks'
 
 SELECT vi
 SCAN

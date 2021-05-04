@@ -553,7 +553,7 @@ FoxInfo VFP2CFuncs[] =
 	{"BindEventsEx", (FPFI) BindEventsEx, 6, "II?C.?.I"},
 	{"UnbindEventsEx", (FPFI) UnbindEventsEx, 3, "I.I.L"},
 	/* C callback function emulation */
-	{"CreateCallbackFunc", (FPFI) CreateCallbackFunc, 5, "CCC.O.I"},
+	{"CreateCallbackFunc", (FPFI) CreateCallbackFunc, 5, "CCC.?.I"},
 	{"DestroyCallbackFunc", (FPFI) DestroyCallbackFunc, 1, "I"},
 #endif
 

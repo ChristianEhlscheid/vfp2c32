@@ -33,18 +33,6 @@ If you need to pass C style arrays to a C library you'll want to have a look at 
 <div class="block"><pre id="code_33O0ZZMWB">&& somewhere at your programs startup code
 #INCLUDE vfp2c.h
 SET LIBRARY TO vfp2c32.fll ADDITIVE 
-IF !InitVFP2C32(VFP2C_INIT_ALL) && you can vary the initialization parameter depending on what functions of the FLL you intend to use
-  LOCAL laError[1], lnCount, xj, lcError
-  lnCount = AERROREX('laError') 
-  lcError = 'VFP2C32 Library initialization failed:' + CHR(13)
-  FOR xj = 1 TO lnCount
-    lcError = lcError + ;
-    'Error No : ' + TRANSFORM(laError[1]) + CHR(13) + ;
-    'Function : ' + laError[2] + CHR(13) + ;
-    'Message : "' + laError[3] + '"'
-  ENDFOR
-  && show/log error and abort program initialization ..
-ENDIF
 </pre></div>
 
 <h2>Deployment</h2>

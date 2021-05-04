@@ -943,12 +943,17 @@ try
 
 	pFunc = NewCallbackFunc();
 
-	if (PCount() >= 4 && Vartype(vp4) == 'O')
+	if (PCount() >= 4)
 	{
-		sprintfex(aObjectName,CALLBACKFUNC_OBJECT_SCHEME,pFunc);
-		StoreObjectRef(aObjectName,pFunc->nObject,vp4);
-		strcpy(pFunc->aCallbackBuffer, aObjectName);
-		strcat(pFunc->aCallbackBuffer,".");
+		if (Vartype(vp4) == 'O')
+		{
+			sprintfex(aObjectName,CALLBACKFUNC_OBJECT_SCHEME,pFunc);
+			StoreObjectRef(aObjectName,pFunc->nObject,vp4);
+			strcpy(pFunc->aCallbackBuffer, aObjectName);
+			strcat(pFunc->aCallbackBuffer,".");
+		}
+		else if (Vartype(vp4) != '0')
+			throw E_INVALIDPARAMS;
 	}
  
 	nParmCount = pParams.GetWordCount(',');

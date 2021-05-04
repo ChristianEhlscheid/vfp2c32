@@ -21,23 +21,23 @@
 <tr><th>Option</th><th>Return value</th></tr>
 <tr><td>1</td><td>HMODULE of vfp2c32.fll</td></tr>
 <tr><td>2</td><td>HANDLE to library internal heap used for marshaling</td></tr>
-<tr><td>3</td><td>HWND of the window used for callbacks</td></tr>
-<tr><td>4</td><td>default codepage used for Ansi - Unicode conversion</td></tr>
+<tr><td>3</td><td>default codepage used for Ansi - Unicode conversion - defaults to CP_ACP</td></tr>
+<tr><td>4</td><td>automatic Unicode to Ansi conversion in SqlExecEx - defaults to .T.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p2">nNewValue (optional)</a></dt>
 <dd><p>The following options can be altered.</p>
 <table>
 <tr><th>Option</th><th>Description</th></tr>
-<tr><td>4</td><td>nNewValue should contain a new codepage value which is used in all Ansi to Unicode string conversions</td></tr>
+<tr><td>3</td><td>nNewValue should be a new codepage value which is used in all Ansi to Unicode string conversions</td></tr>
+<tr><td>4</td><td>nNewValue should be .T. or .F.</td></tr>
 </table></dd></dl>
 <h2>Return Value</h2>
-<p>The returnvalue depends on the passed in value.</p>
+<p>The return value depends on the passed in value.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
 <p><a href="/pages/aerrorex.html">AErrorEx</a><br />
 <a href="/pages/formatmessageex.html">FormatMessageEx</a><br />
-<a href="/pages/initvfp2c32.html">InitVFP2C32</a><br />
 </p>
 
 
