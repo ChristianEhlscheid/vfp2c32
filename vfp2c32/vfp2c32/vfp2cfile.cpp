@@ -237,18 +237,9 @@ void _stdcall VFP2C_Destroy_File(VFP2CTls& tls)
 
 void _fastcall ADirEx(ParamBlk *parm)
 {
-	return iADirExCommon(parm, false);
-}
-
-void _fastcall ADirREx(ParamBlk *parm)
-{
-	return iADirExCommon(parm, true);
-}
-
-void _fastcall iADirExCommon(ParamBlk *parm, bool tlRecurse)
-{
 try
 {
+	bool llRecurse;
 	FoxString pDestination(vp1);
 	FoxString pSearchString(vp2);
 	DWORD nFileFilter = PCount() >= 3 && vp3.ev_long ? vp3.ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
@@ -260,7 +251,6 @@ try
 	FoxCursor pCursor;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
-	FileSearch pSearch(tlRecurse);
 	FoxDateTimeLiteral pCreationTime, pAccessTime, pWriteTime;
 	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
 	bool bToLocal = (nDest & ADIREX_UTC_TIMES) == 0;
@@ -269,6 +259,22 @@ try
 
 	unsigned int nFileCnt = 0;
 	PADIREXFILTER fpFilterFunc;
+
+	if (nDest & (ADIREX_DEST_ARRAY_RECURSE | ADIREX_DEST_CURSOR_RECURSE | ADIREX_DEST_CALLBACK_RECURSE))
+	{
+		// Set the flag and swap the values out
+		llRecurse = true;
+
+		// Set them back to normal parameters
+		     if (nDest & ADIREX_DEST_ARRAY_RECURSE)			nDest = ((nDest & ~ADIREX_DEST_ARRAY_RECURSE)    | ADIREX_DEST_ARRAY);
+		else if (nDest & ADIREX_DEST_CURSOR_RECURSE)		nDest = ((nDest & ~ADIREX_DEST_CURSOR_RECURSE)   | ADIREX_DEST_CURSOR);
+		else if (nDest & ADIREX_DEST_CALLBACK_RECURSE)		nDest = ((nDest & ~ADIREX_DEST_CALLBACK_RECURSE) | ADIREX_DEST_CALLBACK);
+
+	} else {
+		// Not recursing
+		llRecurse = false;
+	}
+	FileSearch pSearch(llRecurse);
 
 	if (!(nDest & (ADIREX_DEST_ARRAY | ADIREX_DEST_CURSOR | ADIREX_DEST_CALLBACK)))
 		nDest |= ADIREX_DEST_ARRAY;
@@ -318,7 +324,7 @@ try
 					continue;
 				
 				nFileCnt = pArray.Grow();
-				if (tlRecurse)
+				if (llRecurse)
 				{
 					// Include pathname
 					sprintf(pathname, "%s%s", pSearch.File.folder, pSearch.File.f.cFileName);
@@ -366,7 +372,7 @@ try
 
 				nFileCnt++;
 				pCursor.AppendBlank();
-				if (tlRecurse)
+				if (llRecurse)
 				{
 					// Include pathname
 					sprintf(pathname, "%s%s", pSearch.File.folder, pSearch.File.f.cFileName);
@@ -420,7 +426,7 @@ try
 				pWriteTime.Convert(pSearch.File.f.ftLastWriteTime,bToLocal);
 				nFileSize = (double)pSearch.Filesize();
 
-				if (tlRecurse)
+				if (llRecurse)
 				{
 					// Include pathname
 					sprintf(pathname, "%s%s", pSearch.File.folder, pSearch.File.f.cFileName);

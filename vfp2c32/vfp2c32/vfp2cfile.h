@@ -7,13 +7,16 @@
 #include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
 
-const int ADIREX_DEST_ARRAY		= 0x01;
-const int ADIREX_DEST_CURSOR	= 0x02;
-const int ADIREX_DEST_CALLBACK	= 0x04;
-const int ADIREX_FILTER_ALL		= 0x08;
-const int ADIREX_FILTER_NONE	= 0x10;
-const int ADIREX_FILTER_EXACT	= 0x20;
-const int ADIREX_UTC_TIMES		= 0x40;
+const int ADIREX_DEST_ARRAY				= 0x01;
+const int ADIREX_DEST_CURSOR			= 0x02;
+const int ADIREX_DEST_CALLBACK			= 0x04;
+const int ADIREX_FILTER_ALL				= 0x08;
+const int ADIREX_FILTER_NONE			= 0x10;
+const int ADIREX_FILTER_EXACT			= 0x20;
+const int ADIREX_UTC_TIMES				= 0x40;
+const int ADIREX_DEST_ARRAY_RECURSE		= 0x80;
+const int ADIREX_DEST_CURSOR_RECURSE	= 0x100;
+const int ADIREX_DEST_CALLBACK_RECURSE	= 0x200;
 
 const int FILE_OVERWRITE_ASK		= 0;
 const int FILE_OVERWRITE_YES		= 1;
