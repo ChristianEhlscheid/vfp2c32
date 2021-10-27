@@ -495,6 +495,7 @@ FoxInfo VFP2CFuncs[] =
 
 	/* file system functions */
 	{"ADirEx",(FPFI) ADirEx, 4, "CC.I.I"},
+	{"ADirREx",(FPFI) ADirREx, 4, "CC.I.I"},
 	{"AFileAttributes", (FPFI) AFileAttributes, 3, "CC.L"},
 	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 3, "CC.L"},
 	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "CC"},

@@ -42,36 +42,52 @@ const int MAXFILESEARCHPARAM		= MAX_PATH - 3;
 const int FILE_ATTRIBUTE_FAKEDIRECTORY	= 0x80000000;
 const int SECURITY_DESCRIPTOR_LEN		= 256;
 
+struct SFile
+{
+	char				folder[_MAX_PATH];
+	char				wildcard[_MAX_PATH];
+	WIN32_FIND_DATA		f;
+	HANDLE				handle;
+};
+
 class FileSearch
 {
 public:
-	FileSearch() : m_Handle(INVALID_HANDLE_VALUE) {}
-	~FileSearch() { if (m_Handle != INVALID_HANDLE_VALUE) FindClose(m_Handle); }
+	FileSearch() : m_StackEntry(-1) { File.handle = INVALID_HANDLE_VALUE; }
+	FileSearch(bool tlRecurse) : m_StackEntry(-1)
+	{
+		File.handle = INVALID_HANDLE_VALUE;
+		m_Recurse = tlRecurse;
+	}
+	~FileSearch() { if (File.handle != INVALID_HANDLE_VALUE) FindClose(File.handle); }
 
 	bool FindFirst(char *pSearch);
+	bool iFindFirst(char *pSearch);
 	bool FindNext();
 	bool IsFakeDir() const;
 	const char* Filename() const;
 	unsigned __int64 Filesize() const;
 
-	WIN32_FIND_DATA File;
+	SFile File;
 private:
-	HANDLE m_Handle;
+	bool m_Recurse;
+	SFile m_Stack[130];
+	int m_StackEntry;
 };
 
 inline const char* FileSearch::Filename() const
 {
-	if (File.cFileName[0] != '\0')
-		return &File.cFileName[0];
+	if (File.f.cFileName[0] != '\0')
+		return &File.f.cFileName[0];
 	else
-		return &File.cAlternateFileName[0];
+		return &File.f.cAlternateFileName[0];
 }
 
 inline unsigned __int64 FileSearch::Filesize() const
 {
 	ULARGE_INTEGER nSize;
-	nSize.HighPart = File.nFileSizeHigh;
-	nSize.LowPart = File.nFileSizeLow;
+	nSize.HighPart = File.f.nFileSizeHigh;
+	nSize.LowPart = File.f.nFileSizeLow;
 	return nSize.QuadPart;
 }
 
@@ -188,6 +204,8 @@ extern "C" {
 void _stdcall VFP2C_Destroy_File(VFP2CTls& tls);
 
 void _fastcall ADirEx(ParamBlk *parm);
+void _fastcall ADirREx(ParamBlk *parm);
+void _fastcall iADirExCommon(ParamBlk *parm, bool tlRecurse);
 bool _stdcall AdirExFilter_All(DWORD nAttributes, DWORD nFilter);
 bool _stdcall AdirExFilter_One(DWORD nAttributes, DWORD nFilter);
 bool _stdcall AdirExFilter_None(DWORD nAttributes, DWORD nFilter);

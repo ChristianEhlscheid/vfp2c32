@@ -21,8 +21,42 @@ static PGETVOLUMEPATHNAMESFORVOLUMENAME fpGetVolumePathNamesForVolumeName = 0;
 // Filesearch class implementation
 bool FileSearch::FindFirst(char *pSearch)
 {
-	m_Handle = FindFirstFile(pSearch,&File);
-	if (m_Handle == INVALID_HANDLE_VALUE)
+	if (m_Recurse)
+	{
+		// Reset our stack for recursive file operations
+		for ( ; m_StackEntry >= 0; --m_StackEntry)
+		{
+			if (m_Stack[m_StackEntry].handle != INVALID_HANDLE_VALUE)
+			{
+				FindClose(m_Stack[m_StackEntry].handle);
+				memset(&m_Stack[m_StackEntry], 0, sizeof(m_Stack[m_StackEntry]));
+				m_Stack[m_StackEntry].handle = INVALID_HANDLE_VALUE;
+			}
+		}
+		m_StackEntry = -1;
+		memset(&File, 0, sizeof(File));
+	}
+	return iFindFirst(pSearch);
+}
+
+bool FileSearch::iFindFirst(char *pSearch)
+{
+	int lnLength;
+
+	// Break out out path and our wildcard
+	memcpy(File.folder, pSearch, strlen(pSearch));
+	memcpy(File.wildcard, File.folder, sizeof(File.folder));
+	PathStripPath(File.wildcard);
+	File.folder[strlen(File.folder) - strlen(File.wildcard)] = 0;
+	lnLength = strlen(File.folder);
+	if (lnLength == 0)
+		GetCurrentDirectory(sizeof(File.folder), File.folder);
+
+	if (File.folder[lnLength - 1] != '\\')
+		strcat(File.folder, "\\");
+
+	File.handle = FindFirstFile(pSearch, &File.f);
+	if (File.handle == INVALID_HANDLE_VALUE)
 	{
 		DWORD nLastError = GetLastError();
 		if (nLastError == ERROR_FILE_NOT_FOUND)
@@ -38,14 +72,34 @@ bool FileSearch::FindFirst(char *pSearch)
 
 bool FileSearch::FindNext()
 {
-	BOOL bNext = FindNextFile(m_Handle,&File);
+	char subdir[_MAX_PATH];
+
+	BOOL bNext = FindNextFile(File.handle,&File.f);
 	if (bNext == FALSE)
 	{
 		DWORD nLastError = GetLastError();
         if (nLastError == ERROR_NO_MORE_FILES)
 		{
-			FindClose(m_Handle);
-			m_Handle = INVALID_HANDLE_VALUE;
+			if (m_Recurse)
+			{
+				// Unwind
+				while (m_StackEntry >= 0)
+				{
+					// Close this handle
+					FindClose(File.handle);
+
+					// Grab the next one
+					memcpy(&File, &m_Stack[m_StackEntry--], sizeof(File));
+					bNext = FindNextFile(File.handle, &File.f);
+					if (bNext)
+						goto check_directory;
+
+				}
+				// If we get here, we're done
+				m_StackEntry = -1;
+			}
+			FindClose(File.handle);
+			File.handle = INVALID_HANDLE_VALUE;
 			return false;
 		}
 		else
@@ -53,14 +107,29 @@ bool FileSearch::FindNext()
 			SaveWin32Error("FindNextFile", nLastError);
 			throw E_APIERROR;
 		}
+
+	} else if (m_Recurse) {
+		// We found a file, if it's a folder we need to recurse down
+check_directory:
+		if ((File.f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+		{
+			// Recurse
+			if (!IsFakeDir())
+			{
+				// Going deeper
+				memcpy(&m_Stack[++m_StackEntry], &File, sizeof(File));
+				sprintf(subdir, "%s%s\\%s", File.folder, File.f.cFileName, File.wildcard);
+				iFindFirst(subdir);
+			}
+		}
 	}
 	return true;
 }
 
 bool FileSearch::IsFakeDir() const
 {
-	if ((File.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0)
-		return strcmp(File.cFileName,".") == 0 || strcmp(File.cFileName,"..") == 0;
+	if ((File.f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0)
+		return strcmp(File.f.cFileName,".") == 0 || strcmp(File.f.cFileName,"..") == 0;
 	else
 		return false;
 }
@@ -168,19 +237,30 @@ void _stdcall VFP2C_Destroy_File(VFP2CTls& tls)
 
 void _fastcall ADirEx(ParamBlk *parm)
 {
+	return iADirExCommon(parm, false);
+}
+
+void _fastcall ADirREx(ParamBlk *parm)
+{
+	return iADirExCommon(parm, true);
+}
+
+void _fastcall iADirExCommon(ParamBlk *parm, bool tlRecurse)
+{
 try
 {
 	FoxString pDestination(vp1);
 	FoxString pSearchString(vp2);
 	DWORD nFileFilter = PCount() >= 3 && vp3.ev_long ? vp3.ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
 	int nDest = PCount() >= 4 && vp4.ev_long ? vp4.ev_long : ADIREX_DEST_ARRAY;
+	char pathname[_MAX_PATH];
 
 	FoxString pFileName(MAX_PATH+1);
 	FoxArray pArray;
 	FoxCursor pCursor;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
-	FileSearch pSearch;
+	FileSearch pSearch(tlRecurse);
 	FoxDateTimeLiteral pCreationTime, pAccessTime, pWriteTime;
 	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
 	bool bToLocal = (nDest & ADIREX_UTC_TIMES) == 0;
@@ -232,32 +312,41 @@ try
 	{
 		do 
 		{
-			if (fpFilterFunc(pSearch.File.dwFileAttributes,nFileFilter))
+			if (fpFilterFunc(pSearch.File.f.dwFileAttributes,nFileFilter))
 			{
 				if (!bEnumFakeDirs && pSearch.IsFakeDir())
 					continue;
 				
 				nFileCnt = pArray.Grow();
-				pArray(nFileCnt,1) = pFileName = pSearch.File.cFileName;
-				pArray(nFileCnt,2) = pFileName = pSearch.File.cAlternateFileName;
+				if (tlRecurse)
+				{
+					// Include pathname
+					sprintf(pathname, "%s%s", pSearch.File.folder, pSearch.File.f.cFileName);
+					pArray(nFileCnt,1) = pFileName = pathname;
 
-				pFileTime = pSearch.File.ftCreationTime;
+				} else {
+					// Just the filename
+					pArray(nFileCnt,1) = pFileName = pSearch.File.f.cFileName;
+				}
+				pArray(nFileCnt,2) = pFileName = pSearch.File.f.cAlternateFileName;
+
+				pFileTime = pSearch.File.f.ftCreationTime;
 				if (bToLocal)
 					pFileTime.ToLocal();
 				pArray(nFileCnt,3) = pFileTime;
 
-				pFileTime = pSearch.File.ftLastAccessTime;
+				pFileTime = pSearch.File.f.ftLastAccessTime;
 				if (bToLocal)
 					pFileTime.ToLocal();
 				pArray(nFileCnt,4) = pFileTime;
 
-				pFileTime = pSearch.File.ftLastWriteTime;
+				pFileTime = pSearch.File.f.ftLastWriteTime;
 				if (bToLocal)
 					pFileTime.ToLocal();
 				pArray(nFileCnt,5) = pFileTime;
 
 				pArray(nFileCnt,6) = pFileSize = pSearch.Filesize();
-				pArray(nFileCnt,7) = pSearch.File.dwFileAttributes;
+				pArray(nFileCnt,7) = pSearch.File.f.dwFileAttributes;
 
 			} // endif nFileFilter
 
@@ -269,7 +358,7 @@ try
 	{
 		do 
 		{
-			if (fpFilterFunc(pSearch.File.dwFileAttributes,nFileFilter))
+			if (fpFilterFunc(pSearch.File.f.dwFileAttributes,nFileFilter))
 			{
 
 				if (!bEnumFakeDirs && pSearch.IsFakeDir())
@@ -277,26 +366,35 @@ try
 
 				nFileCnt++;
 				pCursor.AppendBlank();
-				pCursor(0) = pFileName = pSearch.File.cFileName;
-				pCursor(1) = pFileName = pSearch.File.cAlternateFileName;
+				if (tlRecurse)
+				{
+					// Include pathname
+					sprintf(pathname, "%s%s", pSearch.File.folder, pSearch.File.f.cFileName);
+					pCursor(0) = pFileName = pathname;
 
-				pFileTime = pSearch.File.ftCreationTime;
+				} else {
+					// Just the filename
+					pCursor(0) = pFileName = pSearch.File.f.cFileName;
+				}
+				pCursor(1) = pFileName = pSearch.File.f.cAlternateFileName;
+
+				pFileTime = pSearch.File.f.ftCreationTime;
 				if (bToLocal)
 					pFileTime.ToLocal();
 				pCursor(2) = pFileTime;
 
-				pFileTime = pSearch.File.ftLastAccessTime;
+				pFileTime = pSearch.File.f.ftLastAccessTime;
 				if (bToLocal)
 					pFileTime.ToLocal();
 				pCursor(3) = pFileTime;
 
-				pFileTime = pSearch.File.ftLastWriteTime;
+				pFileTime = pSearch.File.f.ftLastWriteTime;
 				if (bToLocal)
 					pFileTime.ToLocal();
 				pCursor(4) = pFileTime;
 
 				pCursor(5) = pFileSize = pSearch.Filesize();
-				pCursor(6) = pSearch.File.dwFileAttributes;
+				pCursor(6) = pSearch.File.f.dwFileAttributes;
 
 			} // endif nFileFilter
 
@@ -311,20 +409,30 @@ try
 
 		do 
 		{
-			if (fpFilterFunc(pSearch.File.dwFileAttributes,nFileFilter))
+			if (fpFilterFunc(pSearch.File.f.dwFileAttributes,nFileFilter))
 			{
 				if (!bEnumFakeDirs && pSearch.IsFakeDir())
 					continue;
 				
 				nFileCnt++;
-				pCreationTime.Convert(pSearch.File.ftCreationTime,bToLocal);
-				pAccessTime.Convert(pSearch.File.ftLastAccessTime,bToLocal);
-				pWriteTime.Convert(pSearch.File.ftLastWriteTime,bToLocal);
+				pCreationTime.Convert(pSearch.File.f.ftCreationTime,bToLocal);
+				pAccessTime.Convert(pSearch.File.f.ftLastAccessTime,bToLocal);
+				pWriteTime.Convert(pSearch.File.f.ftLastWriteTime,bToLocal);
 				nFileSize = (double)pSearch.Filesize();
-	            
-				pCallback.AppendFormatBase("('%S','%S',%S,%S,%S,%0F,%U)", pSearch.File.cFileName, 
-						pSearch.File.cAlternateFileName, (char*)pCreationTime, (char*)pAccessTime, 
-						(char*)pWriteTime, nFileSize, pSearch.File.dwFileAttributes);
+
+				if (tlRecurse)
+				{
+					// Include pathname
+					sprintf(pathname, "%s%s", pSearch.File.folder, pSearch.File.f.cFileName);
+
+				} else {
+					// Just the filename
+					sprintf(pathname, "%s", pSearch.File.f.cFileName);
+				}
+
+				pCallback.AppendFormatBase("('%S','%S',%S,%S,%S,%0F,%U)", pathname, 
+						pSearch.File.f.cAlternateFileName, (char*)pCreationTime, (char*)pAccessTime, 
+						(char*)pWriteTime, nFileSize, pSearch.File.f.dwFileAttributes);
 
 				vRetVal.Evaluate(pCallback);
 				if (vRetVal.Vartype() != 'L' || !vRetVal->ev_length)
@@ -410,7 +518,7 @@ void _stdcall ADirectoryInfoSubRoutine(LPDIRECTORYINFO pDirInfo, CStrBuilder<MAX
 
 	do 
 	{
-		if (pSearch.File.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		if (pSearch.File.f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		{
 			if (pSearch.IsFakeDir())
 				continue;
@@ -2009,7 +2117,7 @@ void _stdcall DeleteDirectoryEx(const char *pDirectory) throw(int)
 
 	do
 	{
-		if (pFileSearch.File.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		if (pFileSearch.File.f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		{
 			if (pFileSearch.IsFakeDir())
 				continue;
@@ -2022,7 +2130,7 @@ void _stdcall DeleteDirectoryEx(const char *pDirectory) throw(int)
 		{
 			pFile = pPath;
 			pFile += pFileSearch.Filename();
-			DeleteFileExEx(pFile,pFileSearch.File.dwFileAttributes);
+			DeleteFileExEx(pFile,pFileSearch.File.f.dwFileAttributes);
 		}
 	} while (pFileSearch.FindNext());
 
