@@ -1,0 +1,22 @@
+To get it to compile in VS2019, I had to do these steps:
+
+1.  I had to set the [b]include directory[/b] to include the pro_ext.h provided by Visual FoxPro in the VS2019 project on the Debug and Release (Right-click "vfp2c32" project, properties, C/C++, General, Additional Include Directories):
+[code]C:\Program Files (x86)\Microsoft Visual FoxPro 9\Samples\API[/code]
+
+2.  I had to set the [b]Additional Library Directories[/b] to include the VFP winapims.lib library (Right-click "vfp2c32" project, properties, Linker, General, Additional Library Directories):
+[code]C:\Program Files (x86)\Microsoft Visual FoxPro 9\Samples\API[/code]
+
+3.  I had to add [b]Preprocessor[/b] directives (Right-click "vfp2c32 project, properties, C/C++, Preprocessor, Preprocessor Definitions):
+[code]_ALLOW_RTCc_IN_STL;WINDOWS_IGNORE_PACKING_MISMATCH;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;[/code]
+
+4.  I had to add an additional library to include support for _vsnwprintf_s() (Right-click "vfp2c32" project, properties, Linker, Input, Additional Dependencies):
+[code]legacy_stdio_definitions.lib[/code]
+
+5.  Turn off SAFESEH (Right-click "vfp2c32" project, properties, Linker, Advanced, Image Has Safe Exception Handlers):
+[code]No (/SAFESEH:NO)[/code]
+
+After all that it compiled.  Press F7 to do a build.
+
+-- 
+Rick C. Hodgin
+
