@@ -60,9 +60,14 @@ bool FileSearch::iFindFirst(char *pSearch)
 	{
 		DWORD nLastError = GetLastError();
 		if (nLastError == ERROR_FILE_NOT_FOUND)
-			return false;
-		else
 		{
+			return false;
+
+		} else {
+			// Did we access something we can't access while recursing?
+			if (m_Recurse)
+				return false;	// Yes, keep going, but ignore the thing we cannot access
+
 			SaveWin32Error("FindFirstFile", nLastError);
 			throw E_APIERROR;
 		}
@@ -72,9 +77,10 @@ bool FileSearch::iFindFirst(char *pSearch)
 
 bool FileSearch::FindNext()
 {
-	char subdir[_MAX_PATH];
+	BOOL	bNext;
+	char	subdir[_MAX_PATH];
 
-	BOOL bNext = FindNextFile(File.handle,&File.f);
+	bNext = FindNextFile(File.handle, &File.f);
 	if (bNext == FALSE)
 	{
 		DWORD nLastError = GetLastError();
@@ -82,6 +88,7 @@ bool FileSearch::FindNext()
 		{
 			if (m_Recurse)
 			{
+skip_this_file:
 				// Unwind
 				while (m_StackEntry >= 0)
 				{
@@ -101,9 +108,12 @@ bool FileSearch::FindNext()
 			FindClose(File.handle);
 			File.handle = INVALID_HANDLE_VALUE;
 			return false;
-		}
-		else
-		{
+
+		} else {
+			// Did we access something we can't access while recursing?
+			if (m_Recurse)
+				goto skip_this_file;
+
 			SaveWin32Error("FindNextFile", nLastError);
 			throw E_APIERROR;
 		}
