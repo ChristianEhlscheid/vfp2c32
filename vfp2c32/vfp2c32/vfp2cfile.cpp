@@ -66,7 +66,10 @@ bool FileSearch::iFindFirst(char *pSearch)
 		} else {
 			// Did we access something we can't access while recursing?
 			if (m_Recurse)
+			{
+				memset(File.f.cFileName, 0, sizeof(File.f.cFileName));
 				return false;	// Yes, keep going, but ignore the thing we cannot access
+			}
 
 			SaveWin32Error("FindFirstFile", nLastError);
 			throw E_APIERROR;
@@ -79,6 +82,7 @@ bool FileSearch::FindNext()
 {
 	BOOL	bNext;
 	char	subdir[_MAX_PATH];
+
 
 	bNext = FindNextFile(File.handle, &File.f);
 	if (bNext == FALSE)
