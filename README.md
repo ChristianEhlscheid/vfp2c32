@@ -15,3 +15,9 @@ Christian Ehlscheid - [c.ehlscheid AT gmx.de.](mailto:c.ehlscheid@gmx.de)
 
 ## Collaborators
 Eric Selje
+
+## Donation welcome
+I've spend some considerable amount of my spare time to develop this library over the years, 
+if this library was any value to you please consider making a small donation.
+
+[Donate](https://www.paypal.com/donate/?hosted_button_id=FGZRLA8SWT8UC)
