@@ -6,7 +6,7 @@ Parts of this project
 * an executable to run Visual FoxPro COM server's as a windows service (vfp2srvhost/vfpsrvhost.exe)
 
 ## Download latest release here
-[2.0.0.19](https://github.com/ChristianEhlscheid/vfp2c32/releases/download/2.0.0.19/vfp2c32.zip)
+[2.0.0.23](https://github.com/ChristianEhlscheid/vfp2c32/releases/download/2.0.0.23/vfp2c32.zip)
 
 ## First steps
 Have a look at the [CHM helpfile](/vfp2c32help/chm/vfp2c32.chm?raw=true)
