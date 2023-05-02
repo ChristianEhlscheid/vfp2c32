@@ -3,7 +3,13 @@
 
 #include <windows.h>
 #include <atlcoll.h>
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
+#include "vfp2cdatastructure.h"
+#include "vfp2ctls.h"
 
 const int VFP2C_MAX_ERRORS					= 8;
 const unsigned int VFP2C_ERROR_MESSAGE_LEN	= 1024;
@@ -30,10 +36,14 @@ typedef struct _DBGALLOCINFO {
 } DBGALLOCINFO, *LPDBGALLOCINFO;
 #endif
 
+class WindowSubclass;
+class CallbackFunction;
+
 class VFP2CTls
 {
 public:
 	VFP2CTls();
+	~VFP2CTls();
 
 	/* array of VFP2CERROR structs for storing Win32, custom & ODBC errors */
 	VFP2CERROR ErrorInfo[VFP2C_MAX_ERRORS];
@@ -57,9 +67,14 @@ public:
 	/* default timeout for winsock calls */
 	DWORD DefaultWinsockTimeout;
 
-	CAtlList<HANDLE> FileHandles;
-
-	//
+	CArray<WindowSubclass*> WindowSubclasses;
+	CArray<CallbackFunction*> CallbackFunctions;
+	CArray<HANDLE> FileHandles;
+	HANDLE GetJitHeap();
+#if defined(_WIN64)
+	CArray<RUNTIME_FUNCTION> RuntimeFunctions;
+	DWORD64 JitBaseAddress;
+#endif
 	static void _stdcall OnLoad();
 	static void _stdcall OnUnload();
 	static VFP2CTls& _stdcall Tls();
@@ -78,6 +93,7 @@ public:
 	static HMODULE NetApi32;
 
 private:
+	HANDLE JitHeap;
 	static void _stdcall FreeGlobalResources();
 };
 

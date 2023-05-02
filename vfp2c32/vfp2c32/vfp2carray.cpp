@@ -1,22 +1,21 @@
-#include "pro_ext.h"
 #include "vfp2c32.h"
 #include "vfp2carray.h"
-#include "vfp2cutil.h"
-#include "vfp2ccppapi.h"
-#include "vfpmacros.h"
 
-void _fastcall ASplitStr(ParamBlk *parm)
+void _fastcall ASplitStr(ParamBlkEx& parm)
 {
 try
 {
 	unsigned char *pSubString;
-	int nRows, nRemain, xj, nSubStrLen = vp3.ev_long;
+	int nRows, nRemain, xj, nSubStrLen = parm(3)->ev_long;
 
 	if (nSubStrLen <= 0)
+	{
+		SaveCustomError("ASplitStr", "Parameter nLen <= 0");
 		throw E_INVALIDPARAMS;
+	}
 
-	FoxArray pArray(vp1);
-	FoxString pString(vp2, 0);
+	FoxArray pArray(parm(1));
+	FoxString pString(parm(2), 0);
 
 	nRows = pString.Len() / nSubStrLen;
 	nRemain = pString.Len() % nSubStrLen;
@@ -50,11 +49,11 @@ catch (int nErrorNo)
 }
 }
 
-void _fastcall ASum(ParamBlk *parm)
+void _fastcall ASum(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray vArray(rp1);
+	FoxArray vArray(parm(1));
 	FoxValue vValue;
 	double Sum;
 	CCY SumCur;
@@ -62,12 +61,15 @@ try
 	char Type = '0';
 	bool Overflow = false;
 
-	if (PCount() == 1)
+	if (parm.PCount() == 1)
         TargetDim = 1;
-	else if (vp2.ev_long < 0)
+	else if (parm(2)->ev_long < 0)
+	{
+		SaveCustomError("ASum", "Parameter 2 < 0, no valid dimension");
 		throw E_INVALIDPARAMS;
+	}
 	else
-		TargetDim = static_cast<unsigned int>(vp2.ev_long);
+		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);
@@ -145,22 +147,25 @@ union __AAverageValues
 	__int64 Currency;
 };
 
-void _fastcall AAverage(ParamBlk *parm)
+void _fastcall AAverage(ParamBlkEx& parm)
 {
 	union __AAverageValues* pValues = 0;
 try
 {
-	FoxArray vArray(rp1);
+	FoxArray vArray(parm(1));
 	FoxValue vValue;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim, MaxElements, ValueCount = 0;
 	char Type = '0';
 
-	if (PCount() == 1)
+	if (parm.PCount() == 1)
         TargetDim = 1;
-	else if (vp2.ev_long < 0)
+	else if (parm(2)->ev_long < 0)
+	{
+		SaveCustomError("AAverage", "Parameter 2 < 0, no valid dimension");
 		throw E_INVALIDPARAMS;
+	}
 	else
-		TargetDim = static_cast<unsigned int>(vp2.ev_long);
+		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);
@@ -252,23 +257,26 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AMax(ParamBlk *parm)
+void _fastcall AMax(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray vArray(rp1);
+	FoxArray vArray(parm(1));
 	FoxValue vValue;
 	double Max;
 	CCY MaxCur;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim;
 	char Type = '0';
 
-	if (PCount() == 1)
+	if (parm.PCount() == 1)
         TargetDim = 1;
-	else if (vp2.ev_long < 0)
+	else if (parm(2)->ev_long < 0)
+	{
+		SaveCustomError("AMax", "Parameter 2 < 0, no valid dimension");
 		throw E_INVALIDPARAMS;
+	}
 	else
-		TargetDim = static_cast<unsigned int>(vp2.ev_long);
+		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);
@@ -347,23 +355,26 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AMin(ParamBlk *parm)
+void _fastcall AMin(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray vArray(rp1);
+	FoxArray vArray(parm(1));
 	FoxValue vValue;
 	double Min;
 	CCY MinCur;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim;
 	char Type = '0';
 
-	if (PCount() == 1)
+	if (parm.PCount() == 1)
         TargetDim = 1;
-	else if (vp2.ev_long < 0)
+	else if (parm(2)->ev_long < 0)
+	{
+		SaveCustomError("AMin", "Parameter 2 < 0, no valid dimension");
 		throw E_INVALIDPARAMS;
+	}
 	else
-		TargetDim = static_cast<unsigned int>(vp2.ev_long);
+		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
 
 	vArray.ValidateDimension(TargetDim);
 	Rows = vArray.ALen(Dims);

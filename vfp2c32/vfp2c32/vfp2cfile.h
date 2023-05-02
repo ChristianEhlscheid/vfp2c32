@@ -1,19 +1,30 @@
 #ifndef _VFP2CFILE_H__
 #define _VFP2CFILE_H__
 
-#include <shlwapi.h>
+// #include <shlwapi.h>
 #include <shlobj.h>
 
-#include "vfp2chelpers.h"
-#include "vfp2ccppapi.h"
+const int ADIREX_DEST_ARRAY				= 0x01;
+const int ADIREX_DEST_CURSOR			= 0x02;
+const int ADIREX_DEST_CALLBACK			= 0x04;
+const int ADIREX_FILTER_ALL				= 0x08;
+const int ADIREX_FILTER_NONE			= 0x10;
+const int ADIREX_FILTER_EXACT			= 0x20;
+const int ADIREX_UTC_TIMES				= 0x40;
+const int ADIREX_RECURSIVE				= 0x80;
+const int ADIREX_DISABLE_FSREDIRECTION	= 0x100;
+const int ADIREX_FULLPATH				= 0x200;
 
-const int ADIREX_DEST_ARRAY		= 0x01;
-const int ADIREX_DEST_CURSOR	= 0x02;
-const int ADIREX_DEST_CALLBACK	= 0x04;
-const int ADIREX_FILTER_ALL		= 0x08;
-const int ADIREX_FILTER_NONE	= 0x10;
-const int ADIREX_FILTER_EXACT	= 0x20;
-const int ADIREX_UTC_TIMES		= 0x40;
+// not defined in the old VS 6
+#if !defined(FIND_FIRST_EX_LARGE_FETCH)
+#define FIND_FIRST_EX_LARGE_FETCH	0x00000002
+#endif
+
+#if !defined(COPY_FILE_NO_BUFFERING)
+#define COPY_FILE_NO_BUFFERING		0x00001000
+#endif
+
+const int MAX_WIDE_PATH				= 32767 + 1;
 
 const int FILE_OVERWRITE_ASK		= 0;
 const int FILE_OVERWRITE_YES		= 1;
@@ -36,43 +47,279 @@ const int VFP2C_MAX_DEVICE_NAME		= 1024;
 
 const int VFP2C_FILE_LINE_BUFFER	= 32;
 
-const int MAXFILESEARCHPARAM		= MAX_PATH - 3;
+#define FILE_UNICODE_EXTENSION	"\\\\?\\"
 
 // additional file attribute to filter "." & ".." directory's
-const int FILE_ATTRIBUTE_FAKEDIRECTORY	= 0x80000000;
+const unsigned int FILE_ATTRIBUTE_FAKEDIRECTORY	= 0x80000000;
 const int SECURITY_DESCRIPTOR_LEN		= 256;
+
+class FileSearch; // forward declartion
+
+class FileSearchStorage
+{
+public:
+	FileSearchStorage(int nOffset = 0) : m_ToLocalTime(false), m_Index_Filename(0 + nOffset),
+		m_Index_Dosfilename(1 + nOffset), m_Index_Creationtime(2 + nOffset), m_Index_Accesstime(3 + nOffset),
+		m_Index_Writetime(4 + nOffset), m_Index_Filesize(5 + nOffset), m_Index_Fileattribs(6 + nOffset) { }
+	virtual void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	virtual void Finalize() { };
+	virtual bool Store(FileSearch* pFileSearch) { return true; };
+	// we need a virtual destructor - otherwise the destructor of objects in the descending classes don't run and then causing potential memory leaks
+	virtual ~FileSearchStorage() { };
+
+protected:
+	FoxString	m_FileName;
+	FoxDateTime m_FileTime;
+	FoxInt64	m_FileSize;
+	bool		m_ToLocalTime;
+	int m_Index_Filename;
+	int m_Index_Dosfilename;
+	int m_Index_Accesstime;
+	int m_Index_Creationtime;
+	int m_Index_Writetime;
+	int m_Index_Filesize;
+	int m_Index_Fileattribs;
+};
+
+class FileSearchStorageArray : public FileSearchStorage
+{
+public:
+	FileSearchStorageArray() : FileSearchStorage(1) {}
+	void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	void Finalize();
+	bool Store(FileSearch* pFileSearch);
+private:
+	FoxArray	m_Array;
+};
+
+class FileSearchStorageCursor : public FileSearchStorage
+{
+public:
+	FileSearchStorageCursor() : FileSearchStorage(0) {}
+	void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	void Finalize() { };
+	bool Store(FileSearch* pFileSearch);
+private:
+	FoxCursor	m_Cursor;
+};
+
+class FileSearchStorageCallback : public FileSearchStorage
+{
+public:
+	FileSearchStorageCallback() : FileSearchStorage(0) {}
+	void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	void Finalize() {};
+	bool Store(FileSearch* pFileSearch);
+private:
+	FoxDateTimeLiteral m_CreationTime, m_AccessTime, m_WriteTime;
+	CDynamicFoxCallback m_Callback;
+};
+
+typedef struct FileSearchEntry
+{
+public:
+	DWORD		Attributes;
+	CStringView Path;
+
+	unsigned int BlockSize()
+	{
+		return sizeof(DWORD) + Path.BlockSize();
+	}
+
+	void ToBlock(char* pAddress)
+	{
+		*reinterpret_cast<DWORD*>(pAddress) = Attributes;
+		pAddress += sizeof(DWORD);
+		Path.ToBlock(pAddress);
+	}
+
+	void FromBlock(char* pAddress)
+	{
+		Attributes = *reinterpret_cast<DWORD*>(pAddress);
+		Path.FromBlock(pAddress + sizeof(DWORD));
+	}
+} FileSearchEntry;
+
+typedef void(*FileSearchReverseFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWORD nFileAttributes);
 
 class FileSearch
 {
 public:
-	FileSearch() : m_Handle(INVALID_HANDLE_VALUE) {}
-	~FileSearch() { if (m_Handle != INVALID_HANDLE_VALUE) FindClose(m_Handle); }
+	FileSearch(bool lRecurse, CStringView pSearchPath, DWORD nFileFilter, CStringView pDestination, int nDest, bool bToLocalTime, int nMaxRecursion, bool bDisableFsRedirection, CStringView pFields);
+	~FileSearch();
 
-	bool FindFirst(char *pSearch);
+	unsigned int ExecuteSearch();
+	void ExecuteReverse(FileSearchReverseFunc pCallback);
+	bool FindFirst();
 	bool FindNext();
+	bool IsRealDirectory() const;
 	bool IsFakeDir() const;
-	const char* Filename() const;
-	unsigned __int64 Filesize() const;
+	CStringView FileName();
+	CStringView AlternateFileName();
+	unsigned __int64 FileSize() const;
+	int FileAttributes() const;
+	FILETIME CreationTime() const;
+	FILETIME LastAccessTime() const;
+	FILETIME LastWriteTime() const;
 
-	WIN32_FIND_DATA File;
 private:
-	HANDLE m_Handle;
+	static DWORD GetFindFirstFlags();
+	static void SetFindFirstFlags(DWORD dwFlags);
+	static DWORD FindFirstFlags;
+	bool FindFirstRecurse();
+	bool FindNextRecurse();
+	bool FindFirstReverse();
+	bool FindNextReverse();
+	bool MatchFile() const;
+	void DisableFsRedirection();
+	void RevertFsRedirection();
+	bool IsFakeDirName() const;
+	bool IgnorableSearchError(DWORD nLastError, bool bIgnoreAccessDenied = false) const;
+
+	typedef bool(*FileFilterFunc)(DWORD nAttributes, DWORD nFilter);
+	static bool Filter_All(DWORD nAttributes, DWORD nFilter);
+	static bool Filter_One(DWORD nAttributes, DWORD nFilter);
+	static bool Filter_None(DWORD nAttributes, DWORD nFilter);
+	static bool Filter_Exact(DWORD nAttributes, DWORD nFilter);
+
+
+	FileFilterFunc		m_FilterFunc;
+	DWORD				m_FilterFilter;
+	int					m_FileCount;
+	int					m_MaxRecursion;
+	int					m_RecursionLevel;
+	bool				m_Recurse;
+	bool				m_FilterFakeDirectory;
+	bool				m_DisableFsRedirection;
+	bool				m_WSearch;
+	bool				m_StoreFullPath;
+	FileSearchStorage* m_Storage;
+	HANDLE				m_Handle;
+	WIN32_FIND_DATA		m_Filedata;
+	WIN32_FIND_DATAW	m_WideFiledata;
+	WIN32_FIND_DATA*	m_CurrentFiledata;
+	CStrBuilder<MAX_WIDE_PATH>	m_Directory;
+	CStrBuilder<MAX_WIDE_PATH>	m_SubDirectory;
+	CStrBuilder<MAX_WIDE_PATH>	m_CompleteFilename;
+	CStrBuilder<MAX_WIDE_PATH>	m_StrBuilder;
+	CStrBuilder<MAX_WIDE_PATH>	m_SearchPattern;
+	CStrBuilder<MAX_PATH>	m_Wildcard;
+	CStrBuilder<MAX_PATH>	m_WStringConversion;
+	FoxWString<MAX_PATH>	m_WideWildcard;
+	FoxWString<MAX_PATH*2>	m_WideSearchPattern;
+	CUnboundBlockQueue<CStringView, 1024 * 64>  m_Subdirectories;
 };
 
-inline const char* FileSearch::Filename() const
+// no reparse points and fake directries ("." & "..")
+inline bool FileSearch::IsRealDirectory() const
 {
-	if (File.cFileName[0] != '\0')
-		return &File.cFileName[0];
-	else
-		return &File.cAlternateFileName[0];
+	return (FileAttributes() & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == FILE_ATTRIBUTE_DIRECTORY && !IsFakeDirName();
 }
 
-inline unsigned __int64 FileSearch::Filesize() const
+// reparse point or a fake directry ("." & "..")
+inline bool FileSearch::IsFakeDir() const
+{
+	return (FileAttributes() & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) == FILE_ATTRIBUTE_DIRECTORY && IsFakeDirName();
+}
+
+inline bool FileSearch::IsFakeDirName() const
+{
+	if (m_WSearch == false)
+		return (m_Filedata.cFileName[0] == '.' && m_Filedata.cFileName[1] == '\0') || (m_Filedata.cFileName[0] == '.' && m_Filedata.cFileName[1] == '.' && m_Filedata.cFileName[2] == '\0');
+	else
+		return (m_WideFiledata.cFileName[0] == L'.' && m_WideFiledata.cFileName[1] == L'\0') || (m_WideFiledata.cFileName[0] == L'.' && m_WideFiledata.cFileName[1] == L'.' && m_WideFiledata.cFileName[2] == L'\0');
+}
+
+inline CStringView FileSearch::FileName()
+{
+	if (m_WSearch == false)
+	{
+		if (m_SubDirectory.Len() == 0 && m_StoreFullPath == false)
+		{
+			if (m_Filedata.cFileName[0] != '\0')
+				return m_Filedata.cFileName;
+			else
+				return m_Filedata.cAlternateFileName;
+		}
+		else
+		{
+			if (m_Filedata.cFileName[0] != '\0')
+				m_CompleteFilename.AppendFromBase(m_Filedata.cFileName);
+			else
+				m_CompleteFilename.AppendFromBase(m_Filedata.cAlternateFileName);
+
+			return m_CompleteFilename;
+		}
+	}
+	else
+	{
+		if (m_SubDirectory.Len() == 0 && m_StoreFullPath == false)
+		{
+			if (m_WideFiledata.cFileName[0] != L'\0')
+				m_CompleteFilename = m_WideFiledata.cFileName;
+			else
+				m_CompleteFilename = m_WideFiledata.cAlternateFileName;
+		}
+		else
+		{
+			m_CompleteFilename.ResetToFormatBase();
+			if (m_WideFiledata.cFileName[0] != L'\0')
+				m_CompleteFilename += m_WideFiledata.cFileName;
+			else
+				m_CompleteFilename += m_WideFiledata.cAlternateFileName;
+		}
+		return m_CompleteFilename;
+	}
+}
+
+inline CStringView FileSearch::AlternateFileName()
+{
+	if (m_WSearch == false)
+		return m_Filedata.cAlternateFileName;
+	m_WStringConversion = m_WideFiledata.cAlternateFileName;
+	return m_WStringConversion;
+}
+
+inline bool FileSearch::MatchFile() const
+{
+	if (m_WSearch == false)
+		return PathMatchSpec(m_Filedata.cFileName, m_Wildcard) || PathMatchSpec(m_Filedata.cAlternateFileName, m_Wildcard);
+	else
+		return PathMatchSpecW(m_WideFiledata.cFileName, m_WideWildcard) || PathMatchSpecW(m_WideFiledata.cAlternateFileName, m_WideWildcard);
+}
+
+
+inline unsigned __int64 FileSearch::FileSize() const
 {
 	ULARGE_INTEGER nSize;
-	nSize.HighPart = File.nFileSizeHigh;
-	nSize.LowPart = File.nFileSizeLow;
+	nSize.HighPart = m_CurrentFiledata->nFileSizeHigh;
+	nSize.LowPart = m_CurrentFiledata->nFileSizeLow;
 	return nSize.QuadPart;
+}
+
+inline int FileSearch::FileAttributes() const
+{
+	return m_CurrentFiledata->dwFileAttributes;
+}
+
+inline FILETIME FileSearch::CreationTime() const
+{
+	return m_CurrentFiledata->ftCreationTime;
+}
+
+inline FILETIME FileSearch::LastAccessTime() const
+{
+	return m_CurrentFiledata->ftLastAccessTime;
+}
+
+inline FILETIME FileSearch::LastWriteTime() const
+{
+	return m_CurrentFiledata->ftLastWriteTime;
+}
+
+inline bool FileSearch::IgnorableSearchError(DWORD nLastError, bool bIgnoreAccessDenied) const
+{
+	return nLastError == ERROR_FILE_NOT_FOUND || (bIgnoreAccessDenied && nLastError == ERROR_ACCESS_DENIED);
 }
 
 class SwitchErrorMode
@@ -128,20 +375,22 @@ private:
 };
 
 // custom defines and types for file operations
-typedef struct _FILEPROGRESSPARAM {
-	char pFileProgress[VFP2C_MAX_CALLBACKBUFFER];
-	char pCallback[VFP2C_MAX_CALLBACKBUFFER];
-	bool bCallback;
-	bool bAborted;
-	Value vRetVal;
-} FILEPROGRESSPARAM, *LPFILEPROGRESSPARAM;
+typedef class FILEPROGRESSPARAM
+{
+	public:
+		FILEPROGRESSPARAM()
+		{
+			nStatus = 0;
+			vRetVal = 0;
+		}
+		void ConvertRetVal();
 
-typedef struct _DIRECTORYINFO {
-	int nNumberOfFiles;
-	int nNumberOfSubDirs;
-	double nDirSize;
-	int nErrorNo;
-} DIRECTORYINFO, *LPDIRECTORYINFO;
+		CFoxCallback pCallback;
+		LARGE_INTEGER nLastCallbackTime;
+		LARGE_INTEGER nCallbackLimiter;
+		DWORD  nStatus;
+		ValueEx vRetVal;
+} *LPFILEPROGRESSPARAM;
 
 typedef struct _FILEATTRIBUTEINFO {
 	DWORD nAttrib;
@@ -149,30 +398,25 @@ typedef struct _FILEATTRIBUTEINFO {
 	int nErrorNo;
 } FILEATTRIBUTEINFO, *LPFILEATTRIBUTEINFO;
 
-class BrowseCallback
-{
-public:
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
-};
-
 class OpenfileCallback
 {
 public:
-	OpenfileCallback() { vRetVal.ev_type = '0'; }
+	OpenfileCallback() { vRetVal = 0; }
 	int nErrorNo;
-	Value vRetVal;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
+	ValueEx vRetVal;
+	CFoxCallback pCallback;
 };
 
 // typedef's for runtime dynamic linking
 typedef BOOL (_stdcall *PGETSPECIALFOLDER)(HWND,LPSTR,int,BOOL); // SHGetSpecialFolderPathA (shell32.dll)
 typedef HRESULT (_stdcall *PSHILCREATEFROMPATH)(LPCWSTR,LPITEMIDLIST*,DWORD*); // SHILCreateFromPath (shell32.dll)
 typedef LPITEMIDLIST (_stdcall *PSHILCREATEFROMPATHEX)(LPCWSTR); // undocumented func #162 on shell32.dll
-const int SHILCREATEFROMPATHEXID = 162;
+#define SHILCREATEFROMPATHEXID	162
 
 typedef BOOL (_stdcall *PGETVOLUMEPATHNAMESFORVOLUMENAME)(LPCTSTR, LPTSTR, DWORD, PDWORD); // GetVolumePathNamesForVolumeName
 
-typedef bool (_stdcall *PADIREXFILTER)(DWORD, DWORD);
+// Wow64DisableWow64FsRedirection & Wow64RevertWow64FsRedirection
+typedef BOOL (_stdcall * PWOW64FSREDIRECTION)(PVOID* OldValue);
 
 /*
 typedef HANDLE (_stdcall *CREATETRANSACTION)(LPSECURITY_ATTRIBUTES, LPGUID, DWORD, DWORD, DWORD, DWORD, LPWSTR); // CreateTransaction
@@ -187,86 +431,79 @@ extern "C" {
 // function prototypes of vfp2cfile.c
 void _stdcall VFP2C_Destroy_File(VFP2CTls& tls);
 
-void _fastcall ADirEx(ParamBlk *parm);
-bool _stdcall AdirExFilter_All(DWORD nAttributes, DWORD nFilter);
-bool _stdcall AdirExFilter_One(DWORD nAttributes, DWORD nFilter);
-bool _stdcall AdirExFilter_None(DWORD nAttributes, DWORD nFilter);
-bool _stdcall AdirExFilter_Exact(DWORD nAttributes, DWORD nFilter);
-
-void _fastcall AFileAttributes(ParamBlk *parm);
-void _fastcall AFileAttributesEx(ParamBlk *parm);
-void _fastcall ADirectoryInfo(ParamBlk *parm);
-#pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
-void _stdcall ADirectoryInfoSubRoutine(LPDIRECTORYINFO pDirInfo, CStrBuilder<MAX_PATH+1>& pDirectory) throw(int);
-void _fastcall GetFileTimes(ParamBlk *parm);
-void _fastcall SetFileTimes(ParamBlk *parm);
-void _fastcall GetFileSizeLib(ParamBlk *parm);
-void _fastcall GetFileAttributesLib(ParamBlk *parm);
-void _fastcall SetFileAttributesLib(ParamBlk *parm);
-void _fastcall GetFileOwner(ParamBlk *parm);
-void _fastcall GetLongPathNameLib(ParamBlk *parm);
-void _fastcall GetShortPathNameLib(ParamBlk *parm);
-void _fastcall GetOpenFileNameLib(ParamBlk *parm);
-void _fastcall GetSaveFileNameLib(ParamBlk *parm);
+void _fastcall ADirEx(ParamBlkEx& parm);
+void _fastcall AFileAttributes(ParamBlkEx& parm);
+void _fastcall AFileAttributesEx(ParamBlkEx& parm);
+void _fastcall ADirectoryInfo(ParamBlkEx& parm);
+void _fastcall GetFileTimes(ParamBlkEx& parm);
+void _fastcall SetFileTimes(ParamBlkEx& parm);
+void _fastcall GetFileSizeLib(ParamBlkEx& parm);
+void _fastcall GetFileAttributesLib(ParamBlkEx& parm);
+void _fastcall SetFileAttributesLib(ParamBlkEx& parm);
+void _fastcall GetFileOwner(ParamBlkEx& parm);
+void _fastcall GetLongPathNameLib(ParamBlkEx& parm);
+void _fastcall GetShortPathNameLib(ParamBlkEx& parm);
+void _fastcall GetOpenFileNameLib(ParamBlkEx& parm);
+void _fastcall GetSaveFileNameLib(ParamBlkEx& parm);
 UINT_PTR _stdcall GetFileNameCallback(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
-void _fastcall ADriveInfo(ParamBlk *parm);
-void _fastcall AVolumes(ParamBlk *parm);
-void _fastcall AVolumeMountPoints(ParamBlk *parm);
-void _fastcall AVolumePaths(ParamBlk *parm);
-void _fastcall AVolumeInformation(ParamBlk *parm);
-void _fastcall GetWindowsDirectoryLib(ParamBlk *parm);
-void _fastcall GetSystemDirectoryLib(ParamBlk *parm);
-void _fastcall ExpandEnvironmentStringsLib(ParamBlk *parm);
-void _fastcall CopyFileExLib(ParamBlk *parm);
-void _fastcall MoveFileExLib(ParamBlk *parm);
-bool _stdcall CopyFileProgress(char *pSource, char *pDest, LPFILEPROGRESSPARAM pProgress, DWORD dwShareMode) throw(int);
-bool _stdcall MoveFileProgress(char *pSourceFile, char *pDestFile, DWORD nAttributes, bool bCrossVolume,
-				  LPFILEPROGRESSPARAM pProgress, DWORD dwShareMode) throw(int);
-void _fastcall CompareFileTimes(ParamBlk *parm);
-void _fastcall DeleteFileEx(ParamBlk *parm);
-void _fastcall DeleteDirectory(ParamBlk *parm);
+void _fastcall ADriveInfo(ParamBlkEx& parm);
+void _fastcall AVolumes(ParamBlkEx& parm);
+void _fastcall AVolumeMountPoints(ParamBlkEx& parm);
+void _fastcall AVolumePaths(ParamBlkEx& parm);
+void _fastcall AVolumeInformation(ParamBlkEx& parm);
+void _fastcall GetWindowsDirectoryLib(ParamBlkEx& parm);
+void _fastcall GetSystemDirectoryLib(ParamBlkEx& parm);
+void _fastcall ExpandEnvironmentStringsLib(ParamBlkEx& parm);
+void _fastcall CopyFileExLib(ParamBlkEx& parm);
+void _fastcall MoveFileExLib(ParamBlkEx& parm);
+void _fastcall CompareFileTimes(ParamBlkEx& parm);
+void _fastcall DeleteFileEx(ParamBlkEx& parm);
+void _fastcall DeleteDirectory(ParamBlkEx& parm);
 
 // extended VFP like file functions
-void _fastcall FCreateEx(ParamBlk *parm);
-void _fastcall FOpenEx(ParamBlk *parm);
-void _fastcall FCloseEx(ParamBlk *parm);
-void _fastcall FReadEx(ParamBlk *parm);
-void _fastcall FWriteEx(ParamBlk *parm);
-void _fastcall FGetsEx(ParamBlk *parm);
-void _fastcall FPutsEx(ParamBlk *parm);
-void _fastcall FSeekEx(ParamBlk *parm);
-void _fastcall FEoFEx(ParamBlk *parm);
-void _fastcall FChSizeEx(ParamBlk *parm);
-void _fastcall FFlushEx(ParamBlk *parm);
-void _fastcall FLockFile(ParamBlk *parm);
-void _fastcall FUnlockFile(ParamBlk *parm);
-void _fastcall FLockFileEx(ParamBlk *parm);
-void _fastcall FUnlockFileEx(ParamBlk *parm);
-void _fastcall AFHandlesEx(ParamBlk *parm);
+void _fastcall FCreateEx(ParamBlkEx& parm);
+void _fastcall FOpenEx(ParamBlkEx& parm);
+void _fastcall FCloseEx(ParamBlkEx& parm);
+void _fastcall FReadEx(ParamBlkEx& parm);
+void _fastcall FWriteEx(ParamBlkEx& parm);
+void _fastcall FGetsEx(ParamBlkEx& parm);
+void _fastcall FPutsEx(ParamBlkEx& parm);
+void _fastcall FSeekEx(ParamBlkEx& parm);
+void _fastcall FEoFEx(ParamBlkEx& parm);
+void _fastcall FChSizeEx(ParamBlkEx& parm);
+void _fastcall FFlushEx(ParamBlkEx& parm);
+void _fastcall FLockFile(ParamBlkEx& parm);
+void _fastcall FUnlockFile(ParamBlkEx& parm);
+void _fastcall FLockFileEx(ParamBlkEx& parm);
+void _fastcall FUnlockFileEx(ParamBlkEx& parm);
+void _fastcall AFHandlesEx(ParamBlkEx& parm);
+
+#pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
 void _stdcall MapFileAccessFlags(int nFileAttribs, int nAccess, int nShare, LPDWORD pAccess, LPDWORD pShare, LPDWORD pFlags) throw(int);
+#pragma warning(default : 4290) // enable warning 4290 - VC++ doesn't implement throw ...
 
 // shell api wrappers
-void _fastcall SHSpecialFolder(ParamBlk *parm);
-void _fastcall SHMoveFiles(ParamBlk *parm);
-void _fastcall SHCopyFiles(ParamBlk *parm);
-void _fastcall SHDeleteFiles(ParamBlk *parm);
-void _fastcall SHRenameFiles(ParamBlk *parm);
-void _fastcall SHBrowseFolder(ParamBlk *parm);
+void _fastcall SHSpecialFolder(ParamBlkEx& parm);
+void _fastcall SHMoveFiles(ParamBlkEx& parm);
+void _fastcall SHCopyFiles(ParamBlkEx& parm);
+void _fastcall SHDeleteFiles(ParamBlkEx& parm);
+void _fastcall SHRenameFiles(ParamBlkEx& parm);
+void _fastcall SHBrowseFolder(ParamBlkEx& parm);
 int _stdcall SHBrowseCallback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData);
-
-bool _stdcall PathIsSameVolume(const char *pPath1, const char *pPath2) throw(int);
-bool _stdcall FileExists(const char *pFileName) throw(int);
-void _stdcall CreateDirectoryExEx(const char *pDirectory) throw(int);
-void _stdcall RemoveDirectoryEx(const char *pDirectory) throw(int);
-void _stdcall DeleteDirectoryEx(const char *pDirectory) throw(int);
-void _stdcall RemoveReadOnlyAttrib(const char *pFileName, DWORD nFileAttribs) throw(int);
-void _stdcall RemoveReadOnlyAttribW(const wchar_t *pFileName, DWORD nFileAttribs) throw(int);
-void _stdcall DeleteFileExEx(const char *pFileName, DWORD nFileAttribs) throw(int);
-void _stdcall DeleteFileExExW(const wchar_t *pFileName, DWORD nFileAttribs) throw(int);
-int _stdcall CompareFileTimesEx(const char *pSourceFile, const char *pDestFile)  throw(int);
 
 #ifdef __cplusplus
 }
 #endif // end of extern "C"
+
+DWORD _stdcall FileProgressCallback(LARGE_INTEGER TotalFileSize, LARGE_INTEGER TotalBytesTransferred, LARGE_INTEGER StreamSize, LARGE_INTEGER StreamBytesTransferred, DWORD dwStreamNumber,
+	DWORD dwCallbackReason, HANDLE hSourceFile, HANDLE hDestinationFile, LPVOID lpData);
+#pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
+void _stdcall RemoveDirectoryEx(CStringView pDirectory) throw(int);
+void _stdcall RemoveDirectoryEx(CWideStringView pDirectory) throw(int);
+void _stdcall RemoveReadOnlyAttrib(CStringView pFileName, DWORD nFileAttribs) throw(int);
+void _stdcall RemoveReadOnlyAttrib(CWideStringView pFileName, DWORD nFileAttribs) throw(int);
+void _stdcall DeleteFileExImpl(CStringView pFileName, DWORD nFileAttribs) throw(int);
+void _stdcall DeleteFileExImpl(CWideStringView pFileName, DWORD nFileAttribs) throw(int);
+#pragma warning(default : 4290) // enable warning 4290 - VC++ doesn't implement throw ...
 
 #endif // _VFP2CFILE_H__

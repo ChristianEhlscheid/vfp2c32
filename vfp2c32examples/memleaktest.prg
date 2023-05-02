@@ -6,7 +6,11 @@
 
 #INCLUDE vfp2c.h
 CD (FULLPATH(JUSTPATH(SYS(16))))
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
 SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
 
 && 1st step
 TRACKMEM(.T.) && enable memory allocation tracking in the library

@@ -1,18 +1,21 @@
 #include <windows.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2cwindows.h"
 #include "vfp2chelpers.h"
-#include "vfpmacros.h"
 #include "vfp2ccppapi.h"
 
-void _fastcall GetWindowTextEx(ParamBlk *parm)
+void _fastcall GetWindowTextEx(ParamBlkEx& parm)
 {
 try
 {
 	FoxString pRetVal;
-	HWND hHwnd = reinterpret_cast<HWND>(vp1.ev_long);
+	HWND hHwnd = parm(1)->Ptr<HWND>();
 	DWORD nApiRet, nLastError;
 	DWORD_PTR nLen;
 
@@ -49,14 +52,15 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetWindowRectEx(ParamBlk *parm)
+void _fastcall GetWindowRectEx(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pCoords(vp2, 4, 1);
+	FoxArray pCoords(parm(2), 4, 1);
 	RECT sRect;
+	HWND hwnd = parm(1)->Ptr<HWND>();
 
-	if (!GetWindowRect(reinterpret_cast<HWND>(vp1.ev_long), &sRect))
+	if (!GetWindowRect(hwnd, &sRect))
 	{
 		SaveWin32Error("GetWindowRect",GetLastError());
 		throw E_APIERROR;
@@ -73,7 +77,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CenterWindowEx(ParamBlk *parm)
+void _fastcall CenterWindowEx(ParamBlkEx& parm)
 {
 try
 {
@@ -83,8 +87,8 @@ try
 	MONITORINFO sMonInfo;
 	int nMonitors, nX, nY;
 
-	hSource = reinterpret_cast<HWND>(vp1.ev_long);
-	hParent = PCount() == 2 ? reinterpret_cast<HWND>(vp2.ev_long) : 0;
+	hSource = parm(1)->Ptr<HWND>();
+	hParent = parm.PCount() == 2 ? parm(2)->Ptr<HWND>() : 0;
 
 	if (hParent)
 	{
@@ -156,11 +160,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ADesktopArea(ParamBlk *parm)
+void _fastcall ADesktopArea(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pCoords(vp1,4,1);
+	FoxArray pCoords(parm(1),4,1);
 	RECT sRect;
 	
 	if (!SystemParametersInfo(SPI_GETWORKAREA,0,(PVOID)&sRect,0))
@@ -180,34 +184,32 @@ catch (int nErrorNo)
 }
 }
 
-void _fastcall MessageBoxExLib(ParamBlk *parm)
+void _fastcall MessageBoxExLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pText(vp1);
+	FoxString pText(parm(1));
 	FoxString pCaption(parm, 3);
 	FoxString pIcon(parm, 5);
 
 	MSGBOXPARAMS sParms = {0};
 	sParms.cbSize = sizeof(MSGBOXPARAMS);
 	sParms.lpszText = pText;
-	sParms.dwStyle = PCount() >= 2 ? vp2.ev_long : 0;
+	sParms.dwStyle = parm.PCount() >= 2 ? parm(2)->ev_long : 0;
 
-	if (PCount() >= 3)
+	if (parm.PCount() >= 3)
 	{
-		if (Vartype(vp3) == 'C')
+		if (parm(3)->Vartype() == 'C')
 			sParms.lpszCaption = pCaption;
-		else if (Vartype(vp3) != '0')
+		else if (parm(3)->Vartype() != '0')
 			throw E_INVALIDPARAMS;
 	}
 
-	if (PCount() >= 4)
+	if (parm.PCount() >= 4)
 	{
-		if (Vartype(vp4) == 'I')
-			sParms.hwndOwner = reinterpret_cast<HWND>(vp4.ev_long);
-		else if (Vartype(vp4) == 'N')
-			sParms.hwndOwner = reinterpret_cast<HWND>(static_cast<DWORD>(vp4.ev_real));
-		else if (Vartype(vp4) == '0')
+		if (parm(4)->Vartype() == 'I' || parm(4)->Vartype() == 'N')
+			sParms.hwndOwner = parm(4)->DynamicPtr<HWND>();
+		else if (parm(4)->Vartype() == '0')
 			sParms.hwndOwner = WTopHwnd();
 		else
 			throw E_INVALIDPARAMS;
@@ -216,18 +218,18 @@ try
 		sParms.hwndOwner = WTopHwnd();
 
 
-	if (PCount() >= 5)
+	if (parm.PCount() >= 5)
 	{
 		DWORD dwStyleAdd = MB_USERICON;
 		DWORD dwStyleRemove = MB_ICONSTOP | MB_ICONQUESTION | MB_ICONEXCLAMATION | MB_ICONINFORMATION;
 
-		if (Vartype(vp5) == 'I')
-			sParms.lpszIcon = MAKEINTRESOURCE(vp5.ev_long);
-		else if (Vartype(vp5) == 'N')
-			sParms.lpszIcon = MAKEINTRESOURCE(static_cast<DWORD>(vp5.ev_real));
-		else if (Vartype(vp5) == 'C')
+		if (parm(5)->Vartype() == 'I')
+			sParms.lpszIcon = MAKEINTRESOURCE(parm(5)->ev_long);
+		else if (parm(5)->Vartype() == 'N')
+			sParms.lpszIcon = MAKEINTRESOURCE(static_cast<DWORD>(parm(5)->ev_real));
+		else if (parm(5)->Vartype() == 'C')
 			sParms.lpszIcon = pIcon;
-		else if (Vartype(vp5) == '0')
+		else if (parm(5)->Vartype() == '0')
 		{
 			dwStyleAdd = 0;
 			dwStyleRemove = 0;
@@ -239,13 +241,11 @@ try
 		sParms.dwStyle &= ~dwStyleRemove;
 	}
 
-	if (PCount() >= 6)
+	if (parm.PCount() >= 6)
 	{	
-		if (Vartype(vp6) == 'I')
-			sParms.hInstance = reinterpret_cast<HINSTANCE>(vp6.ev_long);
-		else if (Vartype(vp6) == 'N')
-			sParms.hInstance = reinterpret_cast<HINSTANCE>(static_cast<DWORD>(vp6.ev_long));
-		else if (Vartype(vp6) == '0')
+		if (parm(6)->Vartype() == 'I' || parm(6)->Vartype() == 'N')
+			sParms.hInstance = parm(6)->DynamicPtr<HINSTANCE>();
+		else if (parm(6)->Vartype() == '0')
 		{
 			if (sParms.dwStyle & MB_USERICON)
 				sParms.hInstance = GetModuleHandle(NULL);
@@ -256,18 +256,18 @@ try
 	else if (sParms.dwStyle & MB_USERICON)
 		sParms.hInstance = GetModuleHandle(NULL);
 
-	if (PCount() >= 7)
+	if (parm.PCount() >= 7)
 	{
-		if (Vartype(vp7) == 'I')
-			sParms.dwContextHelpId = vp7.ev_long;
-		else if (Vartype(vp7) == 'N')
-			sParms.dwContextHelpId = static_cast<DWORD>(vp7.ev_long);
-		else if (Vartype(vp7) != '0')
+		if (parm(7)->Vartype() == 'I')
+			sParms.dwContextHelpId = parm(7)->ev_long;
+		else if (parm(7)->Vartype() == 'N')
+			sParms.dwContextHelpId = static_cast<DWORD>(parm(7)->ev_long);
+		else if (parm(7)->Vartype() != '0')
 			throw E_INVALIDPARAMS;
 	}
 
-	if (PCount() == 8)
-		sParms.dwLanguageId = vp8.ev_long;
+	if (parm.PCount() == 8)
+		sParms.dwLanguageId = parm(8)->ev_long;
 	else
 		sParms.dwLanguageId = GetUserDefaultUILanguage();
 

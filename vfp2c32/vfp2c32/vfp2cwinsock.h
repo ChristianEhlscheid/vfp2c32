@@ -15,8 +15,8 @@ void _stdcall SaveWinsockError(char *pFunction);
 int _stdcall VFP2C_Init_Winsock();
 void _stdcall VFP2C_Destroy_Winsock(VFP2CTls& tls);
 
-void _fastcall AIPAddresses(ParamBlk *parm);
-void _fastcall ResolveHostToIp(ParamBlk *parm);
+void _fastcall AIPAddresses(ParamBlkEx& parm);
+void _fastcall ResolveHostToIp(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

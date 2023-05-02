@@ -1,14 +1,7 @@
 #ifndef _VFP2CHELPERS_H__
 #define _VFP2CHELPERS_H__
 
-#include <windows.h>
-#include <shlwapi.h>
-#include <assert.h>
-#include <atlbase.h>
-#include <atlcoll.h>
-#include "vfp2ccppapi.h"
-
-#if !defined(_WIN64)
+#if !defined(_WIN64) && !defined(VER_SUITE_WH_SERVER)
 #define VER_SUITE_WH_SERVER 0x8000
 #endif
 
@@ -35,7 +28,9 @@ typedef enum WindowsVersion
 	Windows7,
 	WindowsServer2008,
 	WindowsServer2008R2,
-	WindowsX
+	Windows8,
+	Windows10,
+	WindowsX = 100
 } WindowsVersion;
 
 class COs
@@ -69,12 +64,6 @@ inline bool COs::GreaterOrEqual(WindowsVersion vVersion)
 	return m_Version >= vVersion;
 }
 
-typedef struct CStrView
-{
-	char *Data;
-	unsigned int Len;
-} CStrView, *LPCStrView;
-
 /* Some helper classes */
 class CStr
 {
@@ -89,23 +78,27 @@ public:
 	void Size(unsigned int nSize);
 
 	CStr& AddBs();
-	CStr& AddBsWc();
-	CStr& AddLastPath(const char *pPath);
+	CStr& AddBsWildcard();
+	CStr& AddLastPath(CStringView pPath);
 	CStr& Justpath();
+	CStr& PrependIfNotPresent(CStringView pString);
 	bool IsWildcardPath() const;
 	char* Strdup() const;
 	CStr& RegValueToPropertyName();
 	unsigned int Format(const char *pFormat,...);
 
 	CStr& operator=(const CStr &pString);
-	CStr& operator=(const char *pString);
+	CStr& operator=(CStringView pString);
+
 	CStr& operator+=(const CStr &pString);
-	CStr& operator+=(const char *pString);
-	bool operator==(const char *pString) const;
+	CStr& operator+=(const CStringView pString);
+
+	bool operator==(const CStringView pString) const;
 
 	operator char*() const { return m_String; }
 	operator unsigned char*() const { return reinterpret_cast<unsigned char*>(m_String); }
 	operator void*() const { return reinterpret_cast<void*>(m_String); }
+	operator CStringView() const { return CStringView(m_String, m_Length); }
 
 private:
 	char *m_String;
@@ -113,212 +106,10 @@ private:
 	unsigned int m_Length;
 };
 
-template<int nBufferSize>
-class CStrBuilder
-{
-public:
-	CStrBuilder() : m_Length(0), m_Base(0) { m_String[0] = '\0'; }
-	
-	unsigned int Len() const { return m_Length; }
-
-	CStrBuilder& Len(unsigned int nLen)
-	{
-	 assert(nLen < sizeof(m_String));
-	 m_Length = nLen;
-	 return *this;
-	}
-
-	unsigned int Size() const { return sizeof(m_String); }
-
-	CStrBuilder& SetFormatBase()
-	{
-		m_Base = m_Length;
-		return *this;
-	}
-
-	unsigned int GetFormatBase()
-	{
-		return m_Base;
-	}
-
-	CStrBuilder& Format(const char* format, ...)
-	{
-		va_list lpArgs;
-		va_start(lpArgs, format);
-		m_Length = printfex(m_String, format, lpArgs);
-		va_end(lpArgs);
-		return *this;
-	}
-
-	CStrBuilder& AppendFormat(const char* format, ...)
-	{
-		va_list lpArgs;
-		va_start(lpArgs, format);
-		m_Length += printfex(m_String + m_Length, format, lpArgs);
-		va_end(lpArgs);
-		return *this;
-	}
-
-	CStrBuilder& AppendFormatBase(const char* format, ...)
-	{
-		va_list lpArgs;
-		va_start(lpArgs, format);
-		m_Length = m_Base + printfex(m_String + m_Base, format, lpArgs);
-		va_end(lpArgs);
-		return *this;
-	}
-
-	CStrBuilder& AddBs()
-	{
-		assert(m_Length < sizeof(m_String));
-		if (m_Length && m_String[m_Length-1] != '\\')
-		{
-			m_String[m_Length] = '\\';
-			m_String[m_Length+1] = '\0';
-			m_Length++;
-		}
-		return *this;
-
-	}
-
-	CStrBuilder& AddBsWc()
-	{
-		if (m_Length && m_String[m_Length-1] != '\\')
-		{
-			assert(m_Length + 2 < sizeof(m_String));
-			m_String[m_Length] = '\\';
-			m_String[m_Length+1] = '*';
-			m_String[m_Length+2] = '\0';
-			m_Length += 2;
-		}
-		else if (m_Length && m_String[m_Length-1] != '*')
-		{
-			assert(m_Length + 1 < sizeof(m_String));
-			m_String[m_Length] = '*';
-			m_String[m_Length+1] = '\0';
-			m_Length++;
-		}
-		return *this;
-	}
-
-	CStrBuilder& LongPathName()
-	{
-		DWORD count = GetLongPathName(m_String, m_String, sizeof(m_String));
-		if (count >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		m_Length = count;
-		return *this;
-	}
-
-	bool CompareToBase(CStrBuilder &pString)
-	{
-		if (m_Base != pString.Len())
-			return false;
-		return memcmp(m_String, pString, pString.Len()) == 0;
-	}
-
-	char* Strdup() const
-	{
-		char *pString = (char*)new char[m_Length+1];
-		if (pString)
-			memcpy(pString, m_String, m_Length+1);
-		return pString;
-	}
-
-	CStrBuilder& operator=(const CStrBuilder &pString)
-	{
-		if (pString.Len() >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		m_Length = pString.Len();
-		memcpy(m_String, pString, m_Length + 1);
-		return *this;
-	}
-
-	CStrBuilder& operator=(const FoxString &pString)
-	{
-		if (pString.Len() >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		m_Length = pString.Len();
-		memcpy(m_String, pString, m_Length);
-		m_String[m_Length] = '\0';
-		return *this;
-	}
-
-	CStrBuilder& operator=(const char *pString)
-	{
-		size_t len = strlen(pString);
-		if (len >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		m_Length = len;
-		memcpy(m_String, pString, len + 1);
-		return *this;
-	}
-
-	CStrBuilder& operator+=(const CStrBuilder &pString)
-	{
-		if (m_Length + pString.Len() >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		memcpy(m_String + m_Length, pString, pString.Len() + 1);
-		m_Length += pString.Len();
-		return *this;
-	}
-
-	CStrBuilder& operator+=(const FoxString &pString)
-	{
-		if (m_Length + pString.Len() >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		memcpy(m_String + m_Length, pString, pString.Len() + 1);
-		m_Length += pString.Len();
-		return *this;
-	}
-
-	CStrBuilder& operator+=(const char *pString)
-	{
-		size_t len = strlen(pString);
-		if (len + m_Length >= sizeof(m_String))
-			throw E_INSUFMEMORY;
-		memcpy(m_String + m_Length, pString, len + 1);
-		m_Length += len;
-		return *this;
-	}
-
-	bool operator==(const CStrBuilder &pString) const
-	{
-		if (m_Length != pString.Len())
-			return false;
-		return strcmp(m_String, pString) == 0;
-	}
-
-	bool operator==(const FoxString &pString) const
-	{
-		if (m_Length != pString.Len())
-			return false;
-		return strcmp(m_String, pString) == 0;
-	}
-
-	bool operator==(const char *pString) const
-	{
-		return strcmp(m_String, pString) == 0;
-	}
-
-	operator char*() { return reinterpret_cast<char*>(m_String); } 
-	operator unsigned char*() { return reinterpret_cast<unsigned char*>(m_String); }
-	operator void*() { return reinterpret_cast<void*>(m_String); } 
-	operator const char*() const { return reinterpret_cast<const char*>(m_String); } 
-	operator const unsigned char*() const { return reinterpret_cast<const unsigned char*>(m_String); }
-	operator const void*() const { return reinterpret_cast<const void*>(m_String); } 
-	operator const CStrView() const { CStrView val = { const_cast<char*>(reinterpret_cast<const char*>(m_String)), m_Length }; return val; }
-
-private:
-	unsigned int m_Length;
-	unsigned int m_Base;
-	char m_String[nBufferSize];
-};
-
 class CBuffer
 {
 public:
-	CBuffer() : m_Pointer(0) {}
+	CBuffer() : m_Pointer(0), m_Size(0) { }
 	CBuffer(unsigned int nSize);
 	~CBuffer();
 
@@ -356,11 +147,30 @@ protected:
 class ApiHandle : public AbstractHandle
 {
 public:
-  	ApiHandle() {}
+	ApiHandle() {};
 	ApiHandle(HANDLE hHandle) { m_Handle = hHandle; }
-	~ApiHandle() { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); }
-	void operator=(HANDLE hHandle) { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); if (hHandle != NULL) m_Handle = hHandle; else m_Handle = INVALID_HANDLE_VALUE; }
-	void Close() { if (m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); m_Handle = INVALID_HANDLE_VALUE; }
+	~ApiHandle()
+	{ 
+		if (m_Handle != INVALID_HANDLE_VALUE)
+			CloseHandle(m_Handle);
+	}
+	void operator=(HANDLE hHandle)
+	{ 
+		if (m_Handle != INVALID_HANDLE_VALUE)
+			CloseHandle(m_Handle);
+		if (hHandle != INVALID_HANDLE_VALUE && hHandle != NULL)
+			m_Handle = hHandle;
+		else
+			m_Handle = INVALID_HANDLE_VALUE;
+	}
+	void Close()
+	{ 
+		if (m_Handle != INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(m_Handle);
+			m_Handle = INVALID_HANDLE_VALUE;
+		}
+	}
 };
 
 class PrinterHandle : public AbstractHandle
@@ -375,7 +185,7 @@ public:
 class RegistryKey
 {
 public:
-	RegistryKey() : m_Handle(0), m_Owner(true) { }
+	RegistryKey() : m_Handle(0), m_Owner(true), m_ValueIndex(0), m_KeyIndex(0) { }
 	~RegistryKey() { if (m_Handle != 0 && m_Owner) RegCloseKey(m_Handle); }
 
 	bool Create(HKEY hKey, LPCSTR lpKey, LPSTR lpClass = 0, DWORD nOptions = REG_OPTION_NON_VOLATILE,
@@ -409,57 +219,24 @@ private:
 	DWORD m_ValueIndex;
 };
 
-
-template<class T>
-class ComPtr
-{
-public:
-	ComPtr() : m_Pointer(0) {}
-	~ComPtr() { if (m_Pointer) m_Pointer->Release(); }
-
-	operator T() { return m_Pointer; }
-	operator T*() { return &m_Pointer; }
-	T operator->() { return m_Pointer; }
-	T operator=(int nValue) { if (m_Pointer) m_Pointer->Release(); m_Pointer = 0; return m_Pointer; }
-	T operator=(T pValue) { if (m_Pointer) m_Pointer->Release(); m_Pointer = pValue; return m_Pointer; }
-
-private:
-	T m_Pointer;
-};
-
-template<class T, int count>
-class ComPtrArray
-{
-public:
-	ComPtrArray() { ZeroMemory(m_Pointer, sizeof(m_Pointer)); }
-	~ComPtrArray() { for(int xj = 0; xj < count; xj++) if (m_Pointer[xj] != 0) m_Pointer[xj]->Release(); }
-
-	T operator[](int nIndex) { return m_Pointer[nIndex]; }
-	operator T*() { return m_Pointer; }
-
-private:
-	T m_Pointer[count];
-};
-
 class CoTaskPtr
 {
 public:
 	CoTaskPtr() : m_Pointer(0) {}
-	~CoTaskPtr() { if (m_Pointer != 0) CoTaskMemFree(m_Pointer); }
+	~CoTaskPtr() { if (m_Pointer) CoTaskMemFree(m_Pointer); }
 
 	operator LPITEMIDLIST() { return reinterpret_cast<LPITEMIDLIST>(m_Pointer); }
 	operator LPITEMIDLIST*() { return reinterpret_cast<LPITEMIDLIST*>(&m_Pointer); }
 	operator LPWSTR() { return reinterpret_cast<LPWSTR>(m_Pointer); }
 	operator LPWSTR*() { return reinterpret_cast<LPWSTR*>(&m_Pointer); }
 	operator LPVOID() { return m_Pointer; }
+	operator CWideStringView() { return CWideStringView(reinterpret_cast<wchar_t*>(m_Pointer)); }
 	void operator=(LPITEMIDLIST pList) { if (m_Pointer) CoTaskMemFree(m_Pointer); m_Pointer = pList; }
 	operator bool() { return m_Pointer > 0; }
 
 private:
 	LPVOID m_Pointer;
 };
-
-
 
 class CCriticalSection
 {

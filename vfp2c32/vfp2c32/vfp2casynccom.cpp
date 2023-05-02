@@ -4,23 +4,27 @@
 #include <atlbase.h>
 #include <atlsafe.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2ccom.h"
 #include "vfp2casynccom.h"
 #include "vfp2cutil.h"
-#include "vfpmacros.h"
 #include "vfp2ccppapi.h"
 
-CComCallInfo::CComCallInfo() 
+CComCallInfo::CComCallInfo(LONG nCallId, DISPID dispid, WORD wFlags, LCID lcid, HANDLE hAbortEvent) : 
+	m_CallId(nCallId), m_DispIdMember(dispid), m_Flags(wFlags), m_Lcid(lcid), m_AbortEvent(hAbortEvent), 
+	m_Aborted(false)
 {
 	m_DispParams.rgvarg = 0;
 	m_DispParams.rgdispidNamedArgs = 0;
 	m_DispParams.cArgs = 0;
 	m_DispParams.cNamedArgs = 0;
-	m_AbortEvent = 0;
-	m_Aborted = false;
 	m_StartTime.QuadPart = 0;
+	VariantInit(&m_CallContext);
 }
 
 CComCallInfo::~CComCallInfo()
@@ -111,8 +115,13 @@ STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, W
 			{
 				if (pvarResult)
 				{
+#if !defined(_WIN64)
 					pvarResult->vt = VT_I4;
 					pvarResult->lVal = (LONG)m_AbortEvent;
+#else
+					pvarResult->vt = VT_R8;
+					pvarResult->lVal = static_cast<double>(reinterpret_cast<UINT_PTR>(m_AbortEvent));
+#endif
 				}
 				hr = S_OK;
 			}
@@ -244,7 +253,7 @@ HRESULT CComCallInfo::Aborted(VARIANT *result)
 
 LONG CThreadedComObject::m_CallId = 0;
 
-CThreadedComObject::CThreadedComObject(wchar_t *pComClass, bool bSynchronousAccess) : m_RefCount(1), m_Disp(0), m_Callback(0), m_CallbackStream(0),
+CThreadedComObject::CThreadedComObject(wchar_t* pComClass, bool bSynchronousAccess) : m_RefCount(1), m_Disp(0), m_Callback(0), m_CallbackStream(0),
 															m_Callback_OnCallComplete(DISPID_UNKNOWN), m_Callback_OnError(DISPID_UNKNOWN), 
 															m_DispId_CallInfo(DISPID_UNKNOWN), m_ComClass(pComClass), m_Thread(0), 
 															m_AbortCallEvent(0), m_LastError(0), m_LastErrorFunction(0), 
@@ -486,7 +495,10 @@ STDMETHODIMP CThreadedComObject::Invoke(DISPID dispidMember, REFIID riid, LCID l
 
 		default:
 		{
-			CComCallInfo* ci = new CComCallInfo();
+			if (++m_CallId == 0)
+				++m_CallId;
+
+			CComCallInfo* ci = new CComCallInfo(m_CallId, dispidMember, wFlags, lcid, m_AbortCallEvent);
 			if (!ci)
 				return E_OUTOFMEMORY;
 
@@ -495,15 +507,7 @@ STDMETHODIMP CThreadedComObject::Invoke(DISPID dispidMember, REFIID riid, LCID l
 			if (FAILED(hr))
 				return hr;
 
-			if (++m_CallId == 0)
-				++m_CallId;
-
-			pCallInfo->m_CallId = m_CallId;
-			pCallInfo->m_DispIdMember = dispidMember;
-			pCallInfo->m_Flags = wFlags;
-			pCallInfo->m_Lcid = lcid;
 			m_CallContext.Detach(&pCallInfo->m_CallContext);
-			pCallInfo->m_AbortEvent = m_AbortCallEvent;
 
 			hr = QueueCall(pCallInfo);
 			if (FAILED(hr))
@@ -876,9 +880,7 @@ void CThreadedComObject::MessageLoop()
 {
 	MSG msg;
 	DWORD ret;
-	HANDLE handles[2];
-	handles[0] = m_CallEvent;
-	handles[1] = m_ShutdownEvent;
+	HANDLE handles[2] = { m_CallEvent, m_ShutdownEvent };
 
 	do 
 	{
@@ -1049,26 +1051,28 @@ unsigned int _stdcall CThreadedComObject::ThreadProc(void* lpParameter)
 	return 0;
 }
 
-void _fastcall CreateThreadObject(ParamBlk *parm)
+void _fastcall CreateThreadObject(ParamBlkEx& parm)
 {
 	CThreadedComObject* pObject = 0;
 try
 {
-	FoxWString pComClass(vp1);
-	bool bSyncronousAccess = PCount() >= 3 ? (vp3.ev_length > 0) : false;
-	DWORD dwContext = (PCount() >= 4 && vp4.ev_long) ? vp4.ev_long : CLSCTX_INPROC_SERVER;
-	DWORD dwStackSize = PCount() == 5 ? vp5.ev_long : 0x10000; // default to 64KB of thread stack size
-
-	IDispatch* pCallback = 0;
-	if (PCount() >= 2)
+	FoxWString<0> pComClass(parm(1));
+	bool bSyncronousAccess = parm.PCount() >= 3 ? (parm(3)->ev_length > 0) : false;
+	DWORD dwContext = (parm.PCount() >= 4 && parm(4)->ev_long) ? parm(4)->ev_long : CLSCTX_INPROC_SERVER;
+	DWORD dwStackSize = parm.PCount() == 5 ? parm(5)->ev_long : 0x10000; // default to 64KB of thread stack size
+	CComPtr<IDispatch> pCallback;
+	if (parm.PCount() >= 2)
 	{
-		if (Vartype(vp2) == 'O')
+		if (parm(2)->Vartype() == 'O')
 		{
-			FoxObject pObject(vp2);
+			FoxObject pObject(parm(2));
 			pCallback = pObject.GetIDispatch();
 		}
-		else if (Vartype(vp2) != '0')
+		else if (parm(2)->Vartype() != '0')
+		{
+			SaveCustomError("CreateThreadObject", "Invalid type '%s' for parameter 2.", parm(2)->Vartype());
 			throw E_INVALIDPARAMS;
+		}
 	}
 
 	pObject = new CThreadedComObject(pComClass, bSyncronousAccess);
@@ -1076,7 +1080,7 @@ try
 		throw E_INSUFMEMORY;
 
 	pObject->CreateObject(dwContext, pCallback, dwStackSize);
-
+	pCallback.Detach();
 	ReturnIDispatch(pObject);
 }
 catch(int nErrorNo)

@@ -63,7 +63,7 @@ typedef struct _SNTPPACKET
 extern "C" {
 #endif
 
-void _fastcall SyncToSNTPServer(ParamBlk *parm);
+void _fastcall SyncToSNTPServer(ParamBlkEx& parm);
 void _stdcall SystemTimeToSNTPTime(LPSYSTEMTIME pSysTime, LPSNTPTIME pSntpTime);
 void _stdcall SNTPTimeToSystemTime(LPSNTPTIME pSntpTime, LPSYSTEMTIME pSysTime);
 double _stdcall SNTPTimeToDouble(LPSNTPTIME pSntpTime);

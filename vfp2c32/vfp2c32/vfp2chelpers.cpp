@@ -1,12 +1,7 @@
-#include <windows.h>
 #include <shlwapi.h>
-#include <assert.h>
 #include <new>
 
-#include "pro_ext.h"
 #include "vfp2c32.h"
-#include "vfp2ccppapi.h"
-#include "vfp2cutil.h"
 #include "vfp2chelpers.h"
 
 WindowsVersion COs::m_Version;
@@ -201,40 +196,49 @@ CStr& CStr::AddBs()
 	return *this;
 }
 
-CStr& CStr::AddBsWc()
+CStr& CStr::AddBsWildcard()
 {
-	assert(m_String);
-	if (m_Length && m_String[m_Length-1] != '\\')
+	if (m_String && m_Length)
 	{
-		Size(m_Length+2);
-		m_String[m_Length] = '\\';
-		m_String[m_Length+1] = '*';
-		m_String[m_Length+2] = '\0';
-		m_Length += 2;
-	}
-	else if (m_Length && m_String[m_Length-1] != '*')
-	{
-		Size(m_Length+1);
-		m_String[m_Length] = '*';
-		m_String[m_Length+1] = '\0';
-		m_Length++;
+		unsigned int nLen = m_Length;
+		if (nLen > 1 && m_String[nLen - 2] == '\\' && m_String[nLen - 1] == '*')
+			return *this;
+
+		if (m_String[nLen - 1] == '\\')
+		{
+			Size(nLen + 1);
+			m_String[nLen] = '*';
+			m_String[nLen + 1] = '\0';
+			Len(nLen + 1);
+		}
+		else
+		{
+			Size(nLen + 2);
+			m_String[nLen] = '\\';
+			m_String[nLen + 1] = '*';
+			m_String[nLen + 2] = '\0';
+			Len(nLen + 2);
+		}
 	}
 	return *this;
 }
 
-CStr& CStr::AddLastPath(const char *pPath)
+CStr& CStr::AddLastPath(const CStringView pPath)
 {
 	assert(m_String);
-	int nStrLen = strlen(pPath) + 1;
-	const char *pLastBS = strrchr(pPath,'\\');
 
+	if (!pPath)
+		return *this;
+
+	int nStrLen = pPath.Len + 1;
+	const char *pLastBS = strrchr(pPath.Data,'\\');
 	AddBs();
 
 	if (pLastBS)
 	{
-		int nPathLen = nStrLen - (++pLastBS - pPath);
+		int nPathLen = nStrLen - (++pLastBS - pPath.Data);
 		Size(m_Length + nPathLen);
-		memcpy(&m_String[m_Length],pLastBS,nPathLen);
+		memcpy(&m_String[m_Length], pLastBS, nPathLen);
 		m_Length += nPathLen - 1;
 	}
 	return *this;
@@ -258,6 +262,21 @@ bool CStr::IsWildcardPath() const
 	return strchr(m_String,'*') > 0 || strchr(m_String,'?') > 0;
 }
 
+CStr& CStr::PrependIfNotPresent(const CStringView pString)
+{
+	if (pString)
+	{
+		if (Len() < pString.Len || memcmp(pString.Data, m_String, pString.Len) != 0)
+		{
+			Size(pString.Len + m_Length);
+			memmove(m_String + pString.Len, m_String, Len());
+			memcpy(m_String, pString.Data, pString.Len);
+			m_Length = pString.Len;
+		}
+	}
+	return *this;
+}
+
 char* CStr::Strdup() const
 {
 	assert(m_String);
@@ -276,7 +295,10 @@ CStr& CStr::RegValueToPropertyName()
 	if (*pName == '\0')
 	{
 		Size(sizeof("Standard"));
+
+#pragma warning(disable : 4996)
 		strcpy(m_String,"Standard");
+#pragma warning(default : 4996)
 		return *this;
 	}	
 
@@ -425,12 +447,13 @@ CStr& CStr::operator=(const CStr &pString)
 	return *this;
 }
 
-CStr& CStr::operator=(const char *pString)
+CStr& CStr::operator=(const CStringView pString)
 {
-	unsigned int nLen = strlen(pString) + 1;
-	Size(nLen);
-	memcpy(m_String,pString,nLen);
-	m_Length = nLen - 1;
+	unsigned int nSize = pString.Len + 1;
+	Size(nSize);
+	m_Length = pString.Len;
+	memcpy(m_String, pString.Data, m_Length);
+	m_String[m_Length] = '\0';
 	return *this;
 }
 
@@ -443,21 +466,25 @@ CStr& CStr::operator+=(const CStr &pString)
 	return *this;
 }
 
-CStr& CStr::operator+=(const char *pString)
+CStr& CStr::operator+=(const CStringView pString)
 {
-	unsigned int nLen = strlen(pString) + 1;
+	unsigned int nLen = pString.Len + 1;
 	Size(nLen + m_Length);
-	memcpy(m_String + m_Length, pString, nLen);
-	m_Length += nLen - 1;
+	memcpy(m_String + m_Length, pString.Data, nLen);
+	m_Length += pString.Len;
 	return *this;
 }
 
-bool CStr::operator==(const char *pString) const
+bool CStr::operator==(const CStringView pString) const
 {
-	int nRet = strcmp(m_String,pString);
-	return nRet == 0;
+	if (pString)
+	{
+		if (m_Length != pString.Len || m_String == 0)
+			return false;
+		return memcmp(m_String, pString.Data, pString.Len) == 0;
+	}
+	return m_String == 0;
 }
-
 
 CBuffer::CBuffer(unsigned int nSize)
 {

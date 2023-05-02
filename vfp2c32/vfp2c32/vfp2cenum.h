@@ -31,7 +31,7 @@ class WindowEnumParam
 {
 public:
 	FoxArray pArray;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> pCallback;
+	CFoxCallback pCallback;
 };
 
 class WindowEnumParamEx
@@ -77,36 +77,38 @@ extern "C" {
 #endif
 
 // function prototypes of vfp2cenum.c
-void _fastcall AWindowStations(ParamBlk *parm);
+void _fastcall AWindowStations(ParamBlkEx& parm);
 BOOL _stdcall WindowStationEnumCallback(LPSTR lpszWinSta, LPARAM nParam);
-void _fastcall ADesktops(ParamBlk *parm);
+void _fastcall ADesktops(ParamBlkEx& parm);
 BOOL _stdcall DesktopEnumCallback(LPCSTR lpszDesktop, LPARAM nParam);
-void _fastcall AWindows(ParamBlk *parm);
+void _fastcall AWindows(ParamBlkEx& parm);
 BOOL _stdcall WindowEnumCallback(HWND nHwnd, LPARAM nParam);
+void _fastcall AWindowsEx(ParamBlkEx& parm);
+BOOL _stdcall WindowEnumCallbackEx(HWND nHwnd, LPARAM nParam);
+void _fastcall AWindowProps(ParamBlkEx& parm);
+BOOL _stdcall WindowPropEnumCallback(HWND nHwnd, LPCSTR pPropName, HANDLE hData, DWORD_PTR nParam);
+void _fastcall AMonitors(ParamBlkEx& parm);
+BOOL _stdcall MonitorEnumCallback(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData);
+void _fastcall AProcesses(ParamBlkEx& parm);
+void _fastcall AProcessesPSAPI(ParamBlkEx& parm);
+void _fastcall AProcessThreads(ParamBlkEx& parm);
+void _fastcall AProcessModules(ParamBlkEx& parm);
+void _fastcall AProcessHeaps(ParamBlkEx& parm);
+void _fastcall AHeapBlocks(ParamBlkEx& parm);
+void _fastcall ReadProcessMemoryEx(ParamBlkEx& parm);
+void _fastcall AResourceTypes(ParamBlkEx& parm);
+BOOL _stdcall ResourceTypesEnumCallback(HANDLE hModule, LPSTR lpszType, LONG_PTR nParam);
+void _fastcall AResourceNames(ParamBlkEx& parm);
+BOOL _stdcall ResourceNamesEnumCallback(HANDLE hModule, LPCSTR lpszType, LPSTR lpszName, LONG_PTR nParam);
+void _fastcall AResourceLanguages(ParamBlkEx& parm);
+BOOL _stdcall ResourceLangEnumCallback(HANDLE hModule, LPCSTR lpszType, LPCSTR lpszName,
+									   WORD wIDLanguage, LONG_PTR nParam);
+void _fastcall AResolutions(ParamBlkEx& parm);
+void _fastcall ADisplayDevices(ParamBlkEx& parm);
+
 #pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
 BOOL _stdcall WindowEnumCallbackCall(HWND nHwnd, LPARAM nParam) throw(int);
-void _fastcall AWindowsEx(ParamBlk *parm);
-BOOL _stdcall WindowEnumCallbackEx(HWND nHwnd, LPARAM nParam);
-void _fastcall AWindowProps(ParamBlk *parm);
-BOOL _stdcall WindowPropEnumCallback(HWND nHwnd, LPCSTR pPropName, HANDLE hData, DWORD nParam);
-void _fastcall AMonitors(ParamBlk *parm);
-BOOL _stdcall MonitorEnumCallback(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData);
-void _fastcall AProcesses(ParamBlk *parm);
-void _fastcall AProcessesPSAPI(ParamBlk *parm);
-void _fastcall AProcessThreads(ParamBlk *parm);
-void _fastcall AProcessModules(ParamBlk *parm);
-void _fastcall AProcessHeaps(ParamBlk *parm);
-void _fastcall AHeapBlocks(ParamBlk *parm);
-void _fastcall ReadProcessMemoryEx(ParamBlk *parm);
-void _fastcall AResourceTypes(ParamBlk *parm);
-BOOL _stdcall ResourceTypesEnumCallback(HANDLE hModule, LPSTR lpszType, LONG nParam);
-void _fastcall AResourceNames(ParamBlk *parm);
-BOOL _stdcall ResourceNamesEnumCallback(HANDLE hModule, LPCSTR lpszType, LPSTR lpszName, LONG_PTR nParam);
-void _fastcall AResourceLanguages(ParamBlk *parm);
-BOOL _stdcall ResourceLangEnumCallback(HANDLE hModule, LPCSTR lpszType, LPCSTR lpszName,
-									   WORD wIDLanguage, LONG nParam);
-void _fastcall AResolutions(ParamBlk *parm);
-void _fastcall ADisplayDevices(ParamBlk *parm);
+#pragma warning(default : 4290)
 
 #ifdef __cplusplus
 }

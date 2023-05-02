@@ -2,6 +2,28 @@
 #DEFINE GWL_WNDPROC -4
 #DEFINE FORMAT_MESSAGE_FROM_SYSTEM 0x1000
 
+#INCLUDE "winkeys.h"
+
+CD (FULLPATH(JUSTPATH(SYS(16))))
+
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
+
+PUBLIC oHotKeyManager
+LOCAL lnAtom
+m.oHotKeyManager = CREATEOBJECT('cGlobalHotKeyManager')
+lnAtom = m.oHotKeyManager.RegHotKey(MOD_CONTROL, VK_F1)
+? "Ctrl + F1", lnAtom
+lnAtom = m.oHotKeyManager.RegHotKey(MOD_CONTROL, VK_F2)
+? "Ctrl + F2", lnAtom
+lnAtom = m.oHotKeyManager.RegHotKey(MOD_CONTROL, VK_F3)
+? "Ctrl + F3", lnAtom
+
+
+
 DEFINE CLASS cGlobalHotKeyManager AS Custom
 
 	PROTECTED aKeys[1,3]
@@ -14,7 +36,7 @@ DEFINE CLASS cGlobalHotKeyManager AS Custom
 		DECLARE INTEGER GlobalAddAtom IN WIN32API STRING lpString
 		DECLARE SHORT GlobalDeleteAtom IN WIN32API SHORT nAtom
 		DECLARE INTEGER GetLastError IN WIN32API
-		BINDEVENTSEX(_SCREEN.HWnd, WM_HOTKEY, THIS, 'HotKeyEvent', 'wParam, HIWORD(lParam), LOWORD(lParam)')
+		BINDEVENTSEX(_SCREEN.HWnd, WM_HOTKEY, THIS, 'HotKeyEvent', 'UNSIGNED(wParam), HIWORD(lParam), LOWORD(lParam)')
 	ENDFUNC
 	
 	FUNCTION Destroy
@@ -119,7 +141,7 @@ DEFINE CLASS cGlobalHotKeyManager AS Custom
 	ENDFUNC
 
 	FUNCTION HotKeyEvent
-		LPARAMETERS nHotKeyID, nKeyCode, nShiftAltCtrl	
+		LPARAMETERS nHotKeyID, nKeyCode, nShiftAltCtrl
 		WAIT WINDOW TRANSFORM(nHotKeyID) + ':' + TRANSFORM(nKeyCode) + '-' + TRANSFORM(nShiftAltCtrl) NOWAIT NOCLEAR
 	ENDFUNC
 

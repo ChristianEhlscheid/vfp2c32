@@ -5,11 +5,11 @@
 extern "C" {
 #endif
 
-void _fastcall ASplitStr(ParamBlk *parm);
-void _fastcall ASum(ParamBlk *parm);
-void _fastcall AAverage(ParamBlk *parm);
-void _fastcall AMax(ParamBlk *parm);
-void _fastcall AMin(ParamBlk *parm);
+void _fastcall ASplitStr(ParamBlkEx& parm);
+void _fastcall ASum(ParamBlkEx& parm);
+void _fastcall AAverage(ParamBlkEx& parm);
+void _fastcall AMax(ParamBlkEx& parm);
+void _fastcall AMin(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

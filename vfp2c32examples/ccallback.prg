@@ -3,7 +3,12 @@
 && CreateCallbackFunc
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
-SET LIBRARY TO vfp2c32.fll ADDITIVE
+
+IF TYPE("_WIN64") = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
 
 LOCAL loCallback
 DECLARE INTEGER EnumWindows IN user32.dll INTEGER, INTEGER
@@ -23,7 +28,7 @@ DEFINE CLASS WNDENUMPROC AS Exception
 		&& You can just ignore this since the callback functions created by CreateCallbackFunc always use
 		&& the _stdcall calling convention by design. (I've never seen a C Callback definition using another 
 		&& calling convention)
-		THIS.Address = CreateCallbackFunc('EnumWindowsCallback','BOOL','LONG, LONG',THIS)
+		THIS.Address = CreateCallbackFunc('EnumWindowsCallback','INTEGER','LONG, LONG',THIS)
 	ENDFUNC
 	
 	FUNCTION Destroy
@@ -34,10 +39,14 @@ DEFINE CLASS WNDENUMPROC AS Exception
 	
 	FUNCTION EnumWindowsCallback(hHwnd,lParam)
 		?hHwnd,lParam
-		RETURN .T.
+		RETURN 1
 	ENDFUNC
 	
 ENDDEFINE
+
+FUNCTION EnumWindowsCallbackEx()
+RETURN 1
+ENDFUNC
 
 
 

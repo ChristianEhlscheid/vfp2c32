@@ -1,7 +1,7 @@
-#ifndef _THREADSAFE
-
 #ifndef _VFP2CCALLBACK_H__
 #define _VFP2CCALLBACK_H__
+
+#include "vfp2ctls.h"
 
 const int VFP2C_MAX_TYPE_LEN				=  32;
 const int VFP2C_MAX_CALLBACK_FUNCTION		= 768;
@@ -15,39 +15,63 @@ const unsigned int BINDEVENTSEX_RETURN_VALUE	= 0x0004;
 const unsigned int BINDEVENTSEX_NO_RECURSION	= 0x0008;
 const unsigned int BINDEVENTSEX_CLASSPROC		= 0x0010;
 
-const unsigned int CALLBACK_SYNCRONOUS			= 1;
-const unsigned int CALLBACK_ASYNCRONOUS_POST	= 2;
-const unsigned int CALLBACK_ASYNCRONOUS_SEND	= 4;
-const unsigned int CALLBACK_CDECL				= 8;
+const unsigned int CALLBACK_SYNCRONOUS			= 0x01;
+const unsigned int CALLBACK_ASYNCRONOUS_POST	= 0x02;
+const unsigned int CALLBACK_ASYNCRONOUS_SEND	= 0x04;
+const unsigned int CALLBACK_CDECL				= 0x08;
+const unsigned int CALLBACK_STDCALL				= 0x10;
+const unsigned int CALLBACK_FASTCALL			= 0x20;
 
 const UINT WM_ASYNCCALLBACK	= WM_USER + 1;
 
-typedef struct _MSGCALLBACK {
-	UINT uMsg;
-	NTI nObject;
-	void* pCallbackThunk;
-	char* pCallbackFunction;
-	struct _MSGCALLBACK *next;
-} MSGCALLBACK, *LPMSGCALLBACK;
+class WindowMessageCallback
+{
+public:
+	WindowMessageCallback(UINT uMsg = 0);
+	void Release(WindowSubclass* pSubclass);
+	UINT m_Msg;
+	NTI m_Object;
+	void* m_CallbackThunk;
+	char* m_CallbackFunction;
+	bool m_ReturnValue;
+};
 
-typedef struct _WINDOWSUBCLASS {
-	HWND hHwnd;
-	WNDPROC pDefaultWndProc;
-	void* pWindowThunk;
-	void* pHookWndRetCall;
-	void* pHookWndRetEax;
-	LPMSGCALLBACK pBoundMessages;
-	bool bClassProc;
-	char aCallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
-	struct _WINDOWSUBCLASS *next;
-} WINDOWSUBCLASS, *LPWINDOWSUBCLASS;
+class WindowSubclass
+{
+public:
+	WindowSubclass();
+	~WindowSubclass();
+	void SubclassWindow(HWND hHwnd, bool bClassProc);
+	WindowMessageCallback* AddMessageCallback(UINT uMsg);
+	bool RemoveMessageCallback(UINT uMsg);
+	void CreateSubclassThunkProc();
+	void CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CStringView pCallback, CStringView pParameterList, DWORD nFlags, BOOL bObjectCall);
+	static WindowMessageCallback* _stdcall FindMessageCallback(WindowSubclass* pSubclass, UINT uMsg);
+	static WindowSubclass* _stdcall FindWindowSubclass(HWND hHwnd, bool bClassProc);
+	static void _stdcall ReleaseWindowSubclasses();
 
-typedef struct _CALLBACKFUNC {
-	char aCallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
-	NTI nObject;
-	void *pFuncAddress;
-	struct _CALLBACKFUNC *next;
-} CALLBACKFUNC, *LPCALLBACKFUNC;
+	HWND m_Hwnd;
+	WNDPROC m_DefaultWndProc;
+	void* m_WindowThunk;
+	CArray<WindowMessageCallback> m_BoundMessages;
+	bool m_ClassProc;
+	char m_CallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
+
+private:
+	void UnsubclassWindow();
+	static void UnsubclassWindowClassCallback(HWND hHwnd, LPARAM lParam);
+	static void UnsubclassWindowClassCallbackChild(HWND hHwnd, LPARAM lParam);
+};
+
+class CallbackFunction {
+public:
+	CallbackFunction();
+	~CallbackFunction();
+	static void ReleaseCallbackFuncs();
+	char m_CallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
+	NTI m_Object;
+	void *m_FuncAddress;
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,48 +80,16 @@ extern "C" {
 int _stdcall VFP2C_Init_Callback();
 void _stdcall VFP2C_Destroy_Callback(VFP2CTls& tls);
 
-void _fastcall CreateCallbackFunc(ParamBlk *parm);
-void _fastcall DestroyCallbackFunc(ParamBlk *parm);
+void _fastcall CreateCallbackFunc(ParamBlkEx& parm);
+void _fastcall DestroyCallbackFunc(ParamBlkEx& parm);
 
-void _fastcall BindEventsEx(ParamBlk *parm);
-void _fastcall UnbindEventsEx(ParamBlk *parm);
+void _fastcall BindEventsEx(ParamBlkEx& parm);
+void _fastcall UnbindEventsEx(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 } // extern C
 #endif
 
-#pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
-
-void _stdcall SubclassWindow(LPWINDOWSUBCLASS lpSubclass) throw(int);
-void _stdcall UnsubclassWindow(LPWINDOWSUBCLASS lpSubclass);
-void _stdcall UnsubclassWindowEx(LPWINDOWSUBCLASS lpSubclass) throw(int);
-void _stdcall UnsubclassWindowExCallback(HWND hHwnd, LPARAM lParam) throw(int);
-void _stdcall UnsubclassWindowExCallbackChild(HWND hHwnd, LPARAM lParam) throw(int);
-
-void _stdcall CreateSubclassThunkProc(LPWINDOWSUBCLASS lpSubclass);
-void _stdcall CreateSubclassMsgThunkProc(LPWINDOWSUBCLASS lpSubclass, LPMSGCALLBACK lpMsg, char *pCallback,
-										char *pParmDef, DWORD nFlags, BOOL bObjectCall);
-
-LPWINDOWSUBCLASS _stdcall NewWindowSubclass(HWND hHwnd, bool bClassProc) throw(int);
-void _stdcall FreeWindowSubclass(LPWINDOWSUBCLASS lpSubclass);
-void _stdcall RemoveWindowSubclass(LPWINDOWSUBCLASS lpSubclass);
-LPWINDOWSUBCLASS _stdcall FindWindowSubclass(HWND hHwnd, bool bClassProc);
-void _stdcall ReleaseWindowSubclasses();
-
-LPMSGCALLBACK _stdcall NewMsgCallback(UINT uMsg);
-void _stdcall FreeMsgCallback(LPWINDOWSUBCLASS pSubclass, LPMSGCALLBACK lpMsg);
-LPMSGCALLBACK AddMsgCallback(LPWINDOWSUBCLASS pSubclass, UINT uMsg);
-BOOL _stdcall RemoveMsgCallback(LPWINDOWSUBCLASS pSubclass, UINT uMsg);
-void* _stdcall FindMsgCallbackThunk(LPWINDOWSUBCLASS pSubclass, UINT uMsg);
-
-LPCALLBACKFUNC _stdcall NewCallbackFunc() throw(int);
-bool _stdcall DeleteCallbackFunc(void *pFuncAddress);
-void _stdcall ReleaseCallbackFuncs();
 LRESULT _stdcall AsyncCallbackWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-void* _stdcall AllocThunk(int nSize) throw(int);
-BOOL _stdcall FreeThunk(void *lpAddress);
-
 #endif // _VFP2CCALLBACK_H__
-
-#endif // _THREADSAFE

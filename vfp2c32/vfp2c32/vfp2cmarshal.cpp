@@ -1,13 +1,17 @@
 #include <windows.h>
 #include <stdio.h> // sprintf, memcpy and other common C library routines
 
-#include "pro_ext.h" // general FoxPro library header
+#if !defined(_WIN64)
+#include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2cutil.h"
+#include "vfp2cstring.h"
 #include "vfp2cmarshal.h"
 #include "vfp2ccppapi.h"
 #include "vfp2ctls.h"
-#include "vfpmacros.h"
 
 int _stdcall VFP2C_Init_Marshal()
 {
@@ -80,7 +84,14 @@ void _stdcall AddDebugAlloc(void* pPointer, int nSize)
 
 		_Evaluate(vProgInfo, "ALLTRIM(STR(LINENO())) + ':' + PROGRAM() + CHR(0)");
 		if (vProgInfo.Vartype() == 'C')
-			pProgInfo = strdup(vProgInfo.HandleToPtr());
+		{
+			pProgInfo = _strdup(vProgInfo.HandleToPtr());
+			vProgInfo.Release();
+		}
+		else
+		{
+			pProgInfo = 0;
+		}
 
 		pDbg->pPointer = pPointer;
 		pDbg->pProgInfo = pProgInfo;
@@ -133,7 +144,15 @@ void _stdcall ReplaceDebugAlloc(void* pOrig, void* pNew, int nSize)
 	{
 		_Evaluate(vProgInfo, "ALLTRIM(STR(LINENO())) + ':' + PROGRAM() + CHR(0)");
 		if (vProgInfo.Vartype() == 'C')
-			pProgInfo = strdup(vProgInfo.HandleToPtr());
+		{
+			pProgInfo = _strdup(vProgInfo.HandleToPtr());
+			vProgInfo.Release();
+		}
+		else
+		{
+			pProgInfo = 0;
+		}
+			
 
 		if (pDbg->pProgInfo)
 			free(pDbg->pProgInfo);
@@ -159,7 +178,7 @@ void _stdcall FreeDebugAlloc()
 	tls.DbgInfo = 0;
 }
 
-void _fastcall AMemLeaks(ParamBlk *parm)
+void _fastcall AMemLeaks(ParamBlkEx& parm)
 {
 try
 {
@@ -171,7 +190,7 @@ try
 		return;
 	}
 
-	FoxArray aMemLeaks(vp1);
+	FoxArray aMemLeaks(parm(1));
 	FoxString vMemInfo(VFP2C_ERROR_MESSAGE_LEN);
 	int nRows = 0;
 
@@ -187,7 +206,7 @@ try
 		aMemLeaks(nRows, 3) = vMemInfo = pDbg->pProgInfo;
 
 		vMemInfo.Len(min(pDbg->nSize,VFP2C_ERROR_MESSAGE_LEN));
-		memcpy(vMemInfo, pDbg->pPointer, vMemInfo.Len());
+		memcpy(vMemInfo.Ptr(), pDbg->pPointer, vMemInfo.Len());
 		aMemLeaks(nRows, 4) = vMemInfo;
 
 		pDbg = pDbg->next;
@@ -202,18 +221,18 @@ catch(int nErrorNo)
 }	
 }
 
-void _fastcall TrackMem(ParamBlk *parm)
+void _fastcall TrackMem(ParamBlkEx& parm)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
-	tls.TrackAlloc = static_cast<BOOL>(vp1.ev_length);
-	if (PCount() == 2 && vp2.ev_length)
+	tls.TrackAlloc = static_cast<BOOL>(parm(1)->ev_length);
+	if (parm.PCount() == 2 && parm(2)->ev_length)
 		FreeDebugAlloc();
 }
 
 #endif // DEBUG
 
 // FLL memory allocation functions using FLL's standard heap
-void _fastcall AllocMem(ParamBlk *parm)
+void _fastcall AllocMem(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
@@ -222,40 +241,40 @@ void _fastcall AllocMem(ParamBlk *parm)
 	void *pAlloc = 0;
 	__try
 	{
-		pAlloc = HeapAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, vp1.ev_long);
+		pAlloc = HeapAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, parm(1)->ev_long);
 	}
 	__except(SAVEHEAPEXCEPTION()) { }
 
 	if (pAlloc)
 	{
-		ADDDEBUGALLOC(pAlloc, vp1.ev_long);
+		ADDDEBUGALLOC(pAlloc, parm(1)->ev_long);
 		Return(pAlloc);
 	}
 	else
 		RaiseError(E_APIERROR);
 }
 
-void _fastcall AllocMemTo(ParamBlk *parm)
+void _fastcall AllocMemTo(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	void **pPointer = reinterpret_cast<void**>(vp1.ev_long);
+	void** pPointer = parm(1)->Ptr<void**>();
 	void *pAlloc = 0;
 
 	if (pPointer)
 	{
 		__try
 		{
-			pAlloc = HeapAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, vp2.ev_long);
+			pAlloc = HeapAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, parm(2)->ev_long);
 		}
 		__except(SAVEHEAPEXCEPTION()) { }
 	
 		if (pAlloc)
 		{
 			*pPointer = pAlloc;
-			ADDDEBUGALLOC(pAlloc,vp2.ev_long);
+			ADDDEBUGALLOC(pAlloc,parm(2)->ev_long);
 			Return(pAlloc);
 		}
 		else
@@ -265,25 +284,25 @@ void _fastcall AllocMemTo(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReAllocMem(ParamBlk *parm)
+void _fastcall ReAllocMem(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	void *pPointer = reinterpret_cast<void*>(vp1.ev_long);
+	void *pPointer = parm(1)->Ptr();
 	void *pAlloc = 0;
 	__try
 	{
 		if (pPointer)
 		{
-			pAlloc = HeapReAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, pPointer, vp2.ev_long);
-			REPLACEDEBUGALLOC(pPointer, pAlloc, vp2.ev_long);
+			pAlloc = HeapReAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, pPointer, parm(2)->ev_long);
+			REPLACEDEBUGALLOC(pPointer, pAlloc, parm(2)->ev_long);
 		}
 		else
 		{
-			pAlloc = HeapAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, vp2.ev_long);
-			ADDDEBUGALLOC(pAlloc, vp2.ev_long);
+			pAlloc = HeapAlloc(VFP2CTls::Heap, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, parm(2)->ev_long);
+			ADDDEBUGALLOC(pAlloc, parm(2)->ev_long);
 		}
     }
 	__except(SAVEHEAPEXCEPTION()) { }
@@ -294,9 +313,9 @@ void _fastcall ReAllocMem(ParamBlk *parm)
 		RaiseError(E_APIERROR);
 }
 
-void _fastcall FreeMem(ParamBlk *parm)
+void _fastcall FreeMem(ParamBlkEx& parm)
 {
-	void *pPointer = reinterpret_cast<void*>(vp1.ev_long);
+	void* pPointer = parm(1)->Ptr<void*>();
 	if (pPointer)
 	{
 		if (HeapFree(VFP2CTls::Heap,0, pPointer))
@@ -311,12 +330,12 @@ void _fastcall FreeMem(ParamBlk *parm)
 	}
 }
 
-void _fastcall FreePMem(ParamBlk *parm)
+void _fastcall FreePMem(ParamBlkEx& parm)
 {
 	void* pAlloc;
-	if (vp1.ev_long)
+	if (parm(1)->ev_long)
 	{
-		if ((pAlloc = *reinterpret_cast<void**>(vp1.ev_long)))
+		if ((pAlloc = *parm(1)->Ptr<void**>()))
 		{
 			if (HeapFree(VFP2CTls::Heap, 0, pAlloc))
 			{
@@ -331,23 +350,21 @@ void _fastcall FreePMem(ParamBlk *parm)
 	}
 }
 
-void _fastcall FreeRefArray(ParamBlk *parm)
+void _fastcall FreeRefArray(ParamBlkEx& parm)
 {
 	void **pAddress;
 	int nStartElement, nElements;
 	BOOL bApiRet = TRUE;
 
-	if (vp2.ev_long < 1 || vp2.ev_long > vp3.ev_long)
+	if (parm(2)->ev_long < 1 || parm(2)->ev_long > parm(3)->ev_long)
 		RaiseError(E_INVALIDPARAMS);
 
-	pAddress = reinterpret_cast<void**>(vp1.ev_long);
-	nStartElement = --vp2.ev_long;
-	nElements = vp3.ev_long;
+	pAddress = parm(1)->Ptr<void**>();
+	nStartElement = --parm(2)->ev_long;
+	nElements = parm(3)->ev_long;
 	pAddress += nStartElement;
 	nElements -= nStartElement;
 	
-	ResetWin32Errors();
-
 	while(nElements--)
 	{
 		if (*pAddress)
@@ -363,24 +380,24 @@ void _fastcall FreeRefArray(ParamBlk *parm)
 	Return(bApiRet == TRUE);
 }
 
-void _fastcall SizeOfMem(ParamBlk *parm)
+void _fastcall SizeOfMem(ParamBlkEx& parm)
 {
-	if (vp1.ev_long)
-		Return((int)HeapSize(VFP2CTls::Heap, 0, reinterpret_cast<void*>(vp1.ev_long)));
+	if (parm(1)->ev_long)
+		Return((int)HeapSize(VFP2CTls::Heap, 0, parm(1)->Ptr<void**>()));
 	else
 		Return(0);
 }
 
-void _fastcall ValidateMem(ParamBlk *parm)
+void _fastcall ValidateMem(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	Return(HeapValidate(VFP2CTls::Heap, 0, reinterpret_cast<void*>(vp1.ev_long)) > 0);
+	Return(HeapValidate(VFP2CTls::Heap, 0, parm(1)->Ptr<void**>()) > 0);
 }
 
-void _fastcall CompactMem(ParamBlk *parm)
+void _fastcall CompactMem(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
@@ -391,14 +408,14 @@ void _fastcall CompactMem(ParamBlk *parm)
 }
 
 // wrappers around GlobalAlloc, GlobalFree etc .. for movable memory objects ..
-void _fastcall AllocHGlobal(ParamBlk *parm)
+void _fastcall AllocHGlobal(ParamBlkEx& parm)
 {
 	HGLOBAL hMem;
-	UINT nFlags = PCount() == 2 ? vp2.ev_long : GMEM_MOVEABLE | GMEM_ZEROINIT;
-	hMem = GlobalAlloc(nFlags, vp1.ev_long);
+	UINT nFlags = parm.PCount() == 2 ? parm(2)->ev_long : GMEM_MOVEABLE | GMEM_ZEROINIT;
+	hMem = GlobalAlloc(nFlags, parm(1)->ev_long);
 	if (hMem)
 	{
-		ADDDEBUGALLOC(hMem, vp1.ev_long);
+		ADDDEBUGALLOC(hMem, parm(1)->ev_long);
 		Return(hMem);
 	}
 	else
@@ -408,9 +425,9 @@ void _fastcall AllocHGlobal(ParamBlk *parm)
 	}
 }
 
-void _fastcall FreeHGlobal(ParamBlk *parm)
+void _fastcall FreeHGlobal(ParamBlkEx& parm)
 {
-	HGLOBAL hHandle = reinterpret_cast<HGLOBAL>(vp1.ev_long);
+	HGLOBAL hHandle = parm(1)->Ptr<HGLOBAL>();
 	if (hHandle)
 	{
 		if (GlobalFree(hHandle) == 0)
@@ -425,15 +442,15 @@ void _fastcall FreeHGlobal(ParamBlk *parm)
 	}
 }
 
-void _fastcall ReAllocHGlobal(ParamBlk *parm)
+void _fastcall ReAllocHGlobal(ParamBlkEx& parm)
 {
-	HGLOBAL hHandle = reinterpret_cast<HGLOBAL>(vp1.ev_long);
-	UINT nFlags = PCount() == 2 ? GMEM_ZEROINIT : vp3.ev_long;
+	HGLOBAL hHandle = parm(1)->Ptr<HGLOBAL>();
+	UINT nFlags = parm.PCount() == 2 ? GMEM_ZEROINIT : parm(3)->ev_long;
 	HGLOBAL hMem;
-	hMem = GlobalReAlloc(hHandle, vp2.ev_long, nFlags);
+	hMem = GlobalReAlloc(hHandle, parm(2)->ev_long, nFlags);
 	if (hMem)
 	{
-		REPLACEDEBUGALLOC(vp1.ev_long, hMem, vp2.ev_long);
+		REPLACEDEBUGALLOC(parm(1)->Ptr<void*>(), hMem, parm(2)->ev_long);
 		Return(hMem);
 	}
 	else
@@ -443,9 +460,9 @@ void _fastcall ReAllocHGlobal(ParamBlk *parm)
 	}
 }
 
-void _fastcall LockHGlobal(ParamBlk *parm)
+void _fastcall LockHGlobal(ParamBlkEx& parm)
 {
-	HGLOBAL hHandle = reinterpret_cast<HGLOBAL>(vp1.ev_long);
+	HGLOBAL hHandle = parm(1)->Ptr<HGLOBAL>();
 	LPVOID pMem;
 	pMem = GlobalLock(hHandle);
 	if (pMem)
@@ -457,9 +474,9 @@ void _fastcall LockHGlobal(ParamBlk *parm)
 	}
 }
 
-void _fastcall UnlockHGlobal(ParamBlk *parm)
+void _fastcall UnlockHGlobal(ParamBlkEx& parm)
 {
-	HGLOBAL hHandle = reinterpret_cast<HGLOBAL>(vp1.ev_long);
+	HGLOBAL hHandle = parm(1)->Ptr<HGLOBAL>();
 	BOOL bRet;
 	DWORD nLastError;
 	
@@ -479,11 +496,11 @@ void _fastcall UnlockHGlobal(ParamBlk *parm)
 		Return(2);
 }
 
-void _fastcall AMemBlocks(ParamBlk *parm)
+void _fastcall AMemBlocks(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1,1,3);
+	FoxArray pArray(parm(1) ,1,3);
 	PROCESS_HEAP_ENTRY pEntry;
 	DWORD nLastError;
 	HANDLE hHeap = VFP2CTls::Heap;
@@ -528,139 +545,139 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall WriteInt8(ParamBlk *parm)
+void _fastcall WriteInt8(ParamBlkEx& parm)
 {
-	__int8 *pPointer = reinterpret_cast<__int8*>(vp1.ev_long);
+	__int8 *pPointer = parm(1)->Ptr<__int8*>();
 	if (pPointer)
-		*pPointer = static_cast<__int8>(vp2.ev_long);
+		*pPointer = static_cast<__int8>(parm(2)->ev_long);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePInt8(ParamBlk *parm)
+void _fastcall WritePInt8(ParamBlkEx& parm)
 {
-	__int8 **pPointer = reinterpret_cast<__int8**>(vp1.ev_long);
+	__int8** pPointer = parm(1)->Ptr<__int8**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = static_cast<__int8>(vp2.ev_long);
+            **pPointer = static_cast<__int8>(parm(2)->ev_long);
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteUInt8(ParamBlk *parm)
+void _fastcall WriteUInt8(ParamBlkEx& parm)
 {
-	unsigned __int8 *pPointer = reinterpret_cast<unsigned __int8*>(vp1.ev_long);
+	unsigned __int8 *pPointer = parm(1)->Ptr<unsigned __int8*>();
 	if (pPointer)
-		*pPointer = static_cast<unsigned __int8>(vp2.ev_long);
+		*pPointer = static_cast<unsigned __int8>(parm(2)->ev_long);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePUInt8(ParamBlk *parm)
+void _fastcall WritePUInt8(ParamBlkEx& parm)
 {
-	unsigned __int8 **pPointer = reinterpret_cast<unsigned __int8**>(vp1.ev_long);
+	unsigned __int8 **pPointer = parm(1)->Ptr<unsigned __int8**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = static_cast<unsigned __int8>(vp2.ev_long);
+            **pPointer = static_cast<unsigned __int8>(parm(2)->ev_long);
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteShort(ParamBlk *parm)
+void _fastcall WriteShort(ParamBlkEx& parm)
 {
-	short *pPointer = reinterpret_cast<short*>(vp1.ev_long);
+	short* pPointer = parm(1)->Ptr<short*>();
 	if (pPointer)
-		*pPointer = static_cast<short>(vp2.ev_long);
+		*pPointer = static_cast<short>(parm(2)->ev_long);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePShort(ParamBlk *parm)
+void _fastcall WritePShort(ParamBlkEx& parm)
 {
-	short **pPointer = reinterpret_cast<short**>(vp1.ev_long);
+	short **pPointer = parm(1)->Ptr<short**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = static_cast<short>(vp2.ev_long);
+            **pPointer = static_cast<short>(parm(2)->ev_long);
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteUShort(ParamBlk *parm)
+void _fastcall WriteUShort(ParamBlkEx& parm)
 {
-	unsigned short *pPointer = reinterpret_cast<unsigned short*>(vp1.ev_long);
+	unsigned short *pPointer = parm(1)->Ptr<unsigned short*>();
 	if (pPointer)
-		*pPointer = static_cast<unsigned short>(vp2.ev_long);
+		*pPointer = static_cast<unsigned short>(parm(2)->ev_long);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePUShort(ParamBlk *parm)
+void _fastcall WritePUShort(ParamBlkEx& parm)
 {
-	unsigned short **pPointer = reinterpret_cast<unsigned short**>(vp1.ev_long);
+	unsigned short **pPointer = parm(1)->Ptr<unsigned short**>(); 
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = static_cast<unsigned short>(vp2.ev_long);
+            **pPointer = static_cast<unsigned short>(parm(2)->ev_long);
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteInt(ParamBlk *parm)
+void _fastcall WriteInt(ParamBlkEx& parm)
 {
-	int *pPointer = reinterpret_cast<int*>(vp1.ev_long);
+	int *pPointer = parm(1)->Ptr<int*>();
 	if (pPointer)
-		*pPointer = vp2.ev_long;
+		*pPointer = parm(2)->ev_long;
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePInt(ParamBlk *parm)
+void _fastcall WritePInt(ParamBlkEx& parm)
 {
-	int **pPointer = reinterpret_cast<int**>(vp1.ev_long);
+	int **pPointer = parm(1)->Ptr<int**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = vp2.ev_long;
+            **pPointer = parm(2)->ev_long;
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteUInt(ParamBlk *parm)
+void _fastcall WriteUInt(ParamBlkEx& parm)
 {
-	unsigned int *pPointer = reinterpret_cast<unsigned int*>(vp1.ev_long);
+	unsigned int *pPointer = parm(1)->Ptr<unsigned int*>();
 	if (pPointer)
-		*pPointer = static_cast<unsigned int>(vp2.ev_real);
+		*pPointer = static_cast<unsigned int>(parm(2)->ev_real);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePUInt(ParamBlk *parm)
+void _fastcall WritePUInt(ParamBlkEx& parm)
 {
-	unsigned int **pPointer = reinterpret_cast<unsigned int**>(vp1.ev_long);
+	unsigned int **pPointer = parm(1)->Ptr<unsigned int**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = static_cast<unsigned int>(vp2.ev_real);
+            **pPointer = static_cast<unsigned int>(parm(2)->ev_real);
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteInt64(ParamBlk *parm)
+void _fastcall WriteInt64(ParamBlkEx& parm)
 {
 try
 {
-	__int64 *pPointer = reinterpret_cast<__int64*>(vp1.ev_long);
+	__int64 *pPointer = parm(1)->Ptr<__int64*>();
 	if (pPointer)
-		*pPointer = Value2Int64(vp2);
+		*pPointer = Value2Int64(parm(2));
 	else
 		throw E_INVALIDPARAMS;
 }
@@ -670,50 +687,15 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall WritePInt64(ParamBlk *parm)
+void _fastcall WritePInt64(ParamBlkEx& parm)
 {
 try
 {
-	__int64 **pPointer = reinterpret_cast<__int64**>(vp1.ev_long);
+	__int64 **pPointer = parm(1)->Ptr<__int64**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = Value2Int64(vp2);
-	}
-	else
-		throw E_INVALIDPARAMS;
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall WriteUInt64(ParamBlk *parm)
-{
-try
-{
-	unsigned __int64 *pPointer = reinterpret_cast<unsigned __int64*>(vp1.ev_long);
-	if (pPointer)
-		*pPointer = Value2UInt64(vp2);
-	else
-		throw E_INVALIDPARAMS;
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall WritePUInt64(ParamBlk *parm)
-{
-try
-{
-	unsigned __int64 **pPointer = reinterpret_cast<unsigned __int64**>(vp1.ev_long);
-	if (pPointer)
-	{
-		if ((*pPointer))
-            **pPointer = Value2UInt64(vp2);
+            **pPointer = Value2Int64(parm(2));
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -724,121 +706,156 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall WriteFloat(ParamBlk *parm)
+void _fastcall WriteUInt64(ParamBlkEx& parm)
 {
-	float *pPointer = reinterpret_cast<float*>(vp1.ev_long);
+try
+{
+	unsigned __int64 *pPointer = parm(1)->Ptr<unsigned __int64*>();
 	if (pPointer)
-		*pPointer = static_cast<float>(vp2.ev_real);
+		*pPointer = Value2UInt64(parm(2));
+	else
+		throw E_INVALIDPARAMS;
+}
+catch(int nErrorNo)
+{
+	RaiseError(nErrorNo);
+}
+}
+
+void _fastcall WritePUInt64(ParamBlkEx& parm)
+{
+try
+{
+	unsigned __int64 **pPointer = parm(1)->Ptr<unsigned __int64**>();
+	if (pPointer)
+	{
+		if ((*pPointer))
+            **pPointer = Value2UInt64(parm(2));
+	}
+	else
+		throw E_INVALIDPARAMS;
+}
+catch(int nErrorNo)
+{
+	RaiseError(nErrorNo);
+}
+}
+
+void _fastcall WriteFloat(ParamBlkEx& parm)
+{
+	float *pPointer = parm(1)->Ptr<float*>();
+	if (pPointer)
+		*pPointer = static_cast<float>(parm(2)->ev_real);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePFloat(ParamBlk *parm)
+void _fastcall WritePFloat(ParamBlkEx& parm)
 {
-	float **pPointer = reinterpret_cast<float**>(vp1.ev_long);
+	float **pPointer = parm(1)->Ptr<float**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = static_cast<float>(vp2.ev_real);
+            **pPointer = static_cast<float>(parm(2)->ev_real);
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteDouble(ParamBlk *parm)
+void _fastcall WriteDouble(ParamBlkEx& parm)
 {
-	double *pPointer = reinterpret_cast<double*>(vp1.ev_long);
+	double *pPointer = parm(1)->Ptr<double*>();
 	if (pPointer)
-		*pPointer = vp2.ev_real;
+		*pPointer = parm(2)->ev_real;
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePDouble(ParamBlk *parm)
+void _fastcall WritePDouble(ParamBlkEx& parm)
 {
-	double **pPointer = reinterpret_cast<double**>(vp1.ev_long);
+	double **pPointer = parm(1)->Ptr<double**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = vp2.ev_real;
+            **pPointer = parm(2)->ev_real;
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteLogical(ParamBlk *parm)
+void _fastcall WriteLogical(ParamBlkEx& parm)
 {
-	unsigned int *pPointer = reinterpret_cast<unsigned int*>(vp1.ev_long);
+	unsigned int *pPointer = parm(1)->Ptr<unsigned int*>();
 	if (pPointer)
-        *pPointer = vp2.ev_length;
+        *pPointer = parm(2)->ev_length;
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePLogical(ParamBlk *parm)
+void _fastcall WritePLogical(ParamBlkEx& parm)
 {
-	unsigned int **pPointer = reinterpret_cast<unsigned int**>(vp1.ev_long);
+	unsigned int **pPointer = parm(1)->Ptr<unsigned int**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = vp2.ev_length;
+            **pPointer = parm(2)->ev_length;
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePointer(ParamBlk *parm)
+void _fastcall WritePointer(ParamBlkEx& parm)
 {
-	void **pPointer = reinterpret_cast<void**>(vp1.ev_long);
-	unsigned int nPointer = static_cast<unsigned int>(vp2.ev_real);
+	void **pPointer = parm(1)->Ptr<void**>();
+	void* nValue = parm(2)->Ptr();
 	if (pPointer)
-		*pPointer = reinterpret_cast<void*>(nPointer);
+		*pPointer = nValue;
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePPointer(ParamBlk *parm)
+void _fastcall WritePPointer(ParamBlkEx& parm)
 {
-	void ***pPointer = reinterpret_cast<void***>(vp1.ev_long);
-	unsigned int nPointer = static_cast<unsigned int>(vp2.ev_real);
+	void ***pPointer = parm(1)->Ptr<void***>();
+	void* nValue = parm(2)->Ptr();
 	if (pPointer)
 	{
 		if ((*pPointer))
-            **pPointer = reinterpret_cast<void*>(nPointer);
+            **pPointer = nValue;
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteChar(ParamBlk *parm)
+void _fastcall WriteChar(ParamBlkEx& parm)
 {
-	char *pChar = reinterpret_cast<char*>(vp1.ev_long);
+	char* pChar = parm(1)->Ptr<char*>();
 	if (pChar)
-		*pChar = *HandleToPtr(vp2);
+		*pChar = *parm(2)->HandleToPtr();
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePChar(ParamBlk *parm)
+void _fastcall WritePChar(ParamBlkEx& parm)
 {
-	char **pChar = reinterpret_cast<char**>(vp1.ev_long);
+	char **pChar = parm(1)->Ptr<char**>();
 	if (pChar)
 	{
 		if ((*pChar))
-            **pChar = *HandleToPtr(vp2);
+            **pChar = *parm(2)->HandleToPtr();
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteWChar(ParamBlk *parm)
+void _fastcall WriteWChar(ParamBlkEx& parm)
 {
-	wchar_t *pString = reinterpret_cast<wchar_t*>(vp1.ev_long);
-	unsigned int nCodePage = PCount() == 2 ? VFP2CTls::Tls().ConvCP : vp3.ev_long;
+	wchar_t *pString = parm(1)->Ptr<wchar_t*>();
+	unsigned int nCodePage = parm.PCount() == 2 ? VFP2CTls::Tls().ConvCP : parm(3)->ev_long;
 	if (pString)
 	{
-		if (vp2.ev_length)
-			MultiByteToWideChar(nCodePage, 0, HandleToPtr(vp2), 1, pString, 1);
+		if (parm(2)->ev_length)
+			MultiByteToWideChar(nCodePage, 0, parm(2)->HandleToPtr(), 1, pString, 1);
 		else
 			*pString = L'\0';
 	}
@@ -846,63 +863,63 @@ void _fastcall WriteWChar(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePWChar(ParamBlk *parm)
+void _fastcall WritePWChar(ParamBlkEx& parm)
 {
-	wchar_t **pString = reinterpret_cast<wchar_t**>(vp1.ev_long);
-	unsigned int nCodePage = PCount() == 2 ? VFP2CTls::Tls().ConvCP : vp3.ev_long;
+	wchar_t** pString = parm(1)->Ptr<wchar_t**>();
+	unsigned int nCodePage = parm.PCount() == 2 ? VFP2CTls::Tls().ConvCP : parm(3)->ev_long;
 	if (pString)
 	{
 		if ((*pString))
 		{
-			if (vp2.ev_length)
-				MultiByteToWideChar(nCodePage, 0, HandleToPtr(vp2), 1, *pString, 1);
+			if (parm(2)->ev_length)
+				MultiByteToWideChar(nCodePage, 0, parm(2)->HandleToPtr(), 1, *pString, 1);
 			else
 				**pString = L'\0';
 		}
 	}
 }
 
-void _fastcall WriteCString(ParamBlk *parm)
+void _fastcall WriteCString(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	char *pPointer = reinterpret_cast<char*>(vp1.ev_long);
+	char* pPointer = parm(1)->Ptr<char*>();
 	char *pNewAddress = 0;
 
 	__try
 	{
 		if (pPointer)
 		{
-			pNewAddress = (char*)HeapReAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, pPointer, vp2.ev_length+1);
-			REPLACEDEBUGALLOC(pPointer, pNewAddress, vp2.ev_length+1);
+			pNewAddress = (char*)HeapReAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, pPointer, parm(2)->ev_length+1);
+			REPLACEDEBUGALLOC(pPointer, pNewAddress, parm(2)->ev_length+1);
 		}
 		else
 		{
-			pNewAddress = (char*)HeapAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, vp2.ev_length+1);
-			ADDDEBUGALLOC(pNewAddress, vp2.ev_length+1);
+			pNewAddress = (char*)HeapAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, parm(2)->ev_length+1);
+			ADDDEBUGALLOC(pNewAddress, parm(2)->ev_length+1);
 		}
 	}
 	__except(SAVEHEAPEXCEPTION()) { }
 
 	if (pNewAddress)
 	{
-		memcpy(pNewAddress, HandleToPtr(vp2), vp2.ev_length);
-		pNewAddress[vp2.ev_length] = '\0';
+		memcpy(pNewAddress, parm(2)->HandleToPtr(), parm(2)->ev_length);
+		pNewAddress[parm(2)->ev_length] = '\0';
 		Return((void*)pNewAddress);
 	}
 	else
 		RaiseError(E_APIERROR);
 }
 
-void _fastcall WriteGPCString(ParamBlk *parm)
+void _fastcall WriteGPCString(ParamBlkEx& parm)
 {
 	char *pNewAddress = 0;
-	HGLOBAL *pOldAddress = reinterpret_cast<HGLOBAL*>(vp1.ev_long);
-	SIZE_T dwLen = vp2.ev_length + 1;
+	HGLOBAL *pOldAddress = parm(1)->Ptr<HGLOBAL*>();
+	SIZE_T dwLen = parm(2)->ev_length + 1;
 
-	if (Vartype(vp2) == 'C' && pOldAddress)
+	if (parm(2)->Vartype() == 'C' && pOldAddress)
 	{
 		if ((*pOldAddress))
 		{
@@ -926,11 +943,11 @@ void _fastcall WriteGPCString(ParamBlk *parm)
 		}
 
 		*pOldAddress = pNewAddress;
-		memcpy(pNewAddress, HandleToPtr(vp2),vp2.ev_length);
-		pNewAddress[vp2.ev_length] = '\0';		
+		memcpy(pNewAddress, parm(2)->HandleToPtr(),parm(2)->ev_length);
+		pNewAddress[parm(2)->ev_length] = '\0';		
 		Return((void*)pNewAddress);
 	}
-	else if (Vartype(vp2) == '0' && pOldAddress)
+	else if (parm(2)->Vartype() == '0' && pOldAddress)
 	{
 		if ((*pOldAddress))
 		{
@@ -953,28 +970,28 @@ void _fastcall WriteGPCString(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WritePCString(ParamBlk *parm)
+void _fastcall WritePCString(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
 	char *pNewAddress = 0;
-	char **pOldAddress = reinterpret_cast<char**>(vp1.ev_long);
+	char **pOldAddress = parm(1)->Ptr<char**>();
 
-	if (Vartype(vp2) == 'C' && pOldAddress)
+	if (parm(2)->Vartype() == 'C' && pOldAddress)
 	{
 		__try
 		{
 			if ((*pOldAddress))
 			{
-				pNewAddress = (char*)HeapReAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, (*pOldAddress), vp2.ev_length+1);
-				REPLACEDEBUGALLOC(*pOldAddress, pNewAddress, vp2.ev_length);
+				pNewAddress = (char*)HeapReAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, (*pOldAddress), parm(2)->ev_length+1);
+				REPLACEDEBUGALLOC(*pOldAddress, pNewAddress, parm(2)->ev_length);
 			}
 			else
 			{
-				pNewAddress = (char*)HeapAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, vp2.ev_length+1);
-				ADDDEBUGALLOC(pNewAddress,vp2.ev_length);
+				pNewAddress = (char*)HeapAlloc(VFP2CTls::Heap, HEAP_GENERATE_EXCEPTIONS, parm(2)->ev_length+1);
+				ADDDEBUGALLOC(pNewAddress,parm(2)->ev_length);
 			}
 		}
 		__except(SAVEHEAPEXCEPTION()) { }
@@ -982,14 +999,14 @@ void _fastcall WritePCString(ParamBlk *parm)
 		if (pNewAddress)
 		{
 			*pOldAddress = pNewAddress;
-			memcpy(pNewAddress,HandleToPtr(vp2),vp2.ev_length);
-			pNewAddress[vp2.ev_length] = '\0';		
+			memcpy(pNewAddress,parm(2)->HandleToPtr(),parm(2)->ev_length);
+			pNewAddress[parm(2)->ev_length] = '\0';		
 			Return((void*)pNewAddress);
 		}
 		else
 			RaiseError(E_APIERROR);
 	}
-	else if (Vartype(vp2) == '0' && pOldAddress)
+	else if (parm(2)->Vartype() == '0' && pOldAddress)
 	{
 		if ((*pOldAddress))
 		{
@@ -1012,37 +1029,37 @@ void _fastcall WritePCString(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteCharArray(ParamBlk *parm)
+void _fastcall WriteCharArray(ParamBlkEx& parm)
 {
-	char *pPointer = reinterpret_cast<char*>(vp1.ev_long);
+	char* pPointer = parm(1)->Ptr<char*>();
 	if (pPointer)
 	{
-		if (PCount() == 2 || (long)vp2.ev_length < vp3.ev_long)
+		if (parm.PCount() == 2 || (long)parm(2)->ev_length < parm(3)->ev_long)
 		{
-			memcpy(pPointer, HandleToPtr(vp2),vp2.ev_length);
-			pPointer[vp2.ev_length] = '\0';
+			memcpy(pPointer, parm(2)->HandleToPtr(),parm(2)->ev_length);
+			pPointer[parm(2)->ev_length] = '\0';
 		}
 		else
 		{
-			memcpy(pPointer, HandleToPtr(vp2), vp3.ev_long);
-			pPointer[vp3.ev_long-1] = '\0';
+			memcpy(pPointer, parm(2)->HandleToPtr(), parm(3)->ev_long);
+			pPointer[parm(3)->ev_long-1] = '\0';
 		}
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteWString(ParamBlk *parm)
+void _fastcall WriteWString(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	wchar_t *pString = reinterpret_cast<wchar_t*>(vp1.ev_long);
-	unsigned int nCodePage = PCount() == 2 ? VFP2CTls::Tls().ConvCP : vp3.ev_long;
+	wchar_t *pString = parm(1)->Ptr<wchar_t*>();
+	unsigned int nCodePage = parm.PCount() == 2 ? VFP2CTls::Tls().ConvCP : parm(3)->ev_long;
 	wchar_t *pDest = 0;
 	int nStringLen, nBytesNeeded, nBytesWritten;	
-	nStringLen = vp2.ev_length;
+	nStringLen = parm(2)->ev_length;
 	nBytesNeeded = nStringLen * sizeof(wchar_t) + sizeof(wchar_t);
 
 	__try
@@ -1064,7 +1081,7 @@ void _fastcall WriteWString(ParamBlk *parm)
 	{
 		if (nStringLen)
 		{
-			nBytesWritten = MultiByteToWideChar(nCodePage, 0, HandleToPtr(vp2), nStringLen, pDest, nBytesNeeded);
+			nBytesWritten = MultiByteToWideChar(nCodePage, 0, parm(2)->HandleToPtr(), nStringLen, pDest, nBytesNeeded);
 			if (nBytesWritten)
 				pDest[nBytesWritten] = L'\0';
 			else
@@ -1079,20 +1096,20 @@ void _fastcall WriteWString(ParamBlk *parm)
 		RaiseError(E_APIERROR);
 }
 
-void _fastcall WritePWString(ParamBlk *parm)
+void _fastcall WritePWString(ParamBlkEx& parm)
 {
 	int nErrorNo = VFP2C_Init_Marshal();
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	wchar_t **pOld = reinterpret_cast<wchar_t**>(vp1.ev_long);
+	wchar_t **pOld = parm(1)->Ptr<wchar_t**>();
 	wchar_t *pDest = 0;
-	unsigned int nCodePage = PCount() == 2 ? VFP2CTls::Tls().ConvCP : vp3.ev_long;
+	unsigned int nCodePage = parm.PCount() == 2 ? VFP2CTls::Tls().ConvCP : parm(3)->ev_long;
 	int nStringLen, nBytesNeeded, nBytesWritten;
 
-	if (Vartype(vp2) == 'C' && pOld)
+	if (parm(2)->Vartype() == 'C' && pOld)
 	{
-		nStringLen = vp2.ev_length;
+		nStringLen = parm(2)->ev_length;
 		nBytesNeeded = nStringLen * sizeof(wchar_t) + sizeof(wchar_t);
 
 		__try
@@ -1112,7 +1129,7 @@ void _fastcall WritePWString(ParamBlk *parm)
 
 		if (pDest)
 		{
-			nBytesWritten = MultiByteToWideChar(nCodePage, 0, HandleToPtr(vp2), nStringLen, pDest, nBytesNeeded);
+			nBytesWritten = MultiByteToWideChar(nCodePage, 0, parm(2)->HandleToPtr(), nStringLen, pDest, nBytesNeeded);
 			if (nBytesWritten)
 			{
 				pDest[nBytesWritten] = L'\0';
@@ -1124,7 +1141,7 @@ void _fastcall WritePWString(ParamBlk *parm)
 		else
 			RaiseError(E_APIERROR);
 	}
-	else if (Vartype(vp2) == '0' && pOld)
+	else if (parm(2)->Vartype() == '0' && pOld)
 	{
 		if ((*pOld))
 		{
@@ -1147,19 +1164,19 @@ void _fastcall WritePWString(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteWCharArray(ParamBlk *parm)
+void _fastcall WriteWCharArray(ParamBlkEx& parm)
 {
-	wchar_t *pString = reinterpret_cast<wchar_t*>(vp1.ev_long);
-	unsigned int nCodePage = PCount() == 3 ? VFP2CTls::Tls().ConvCP : vp4.ev_long;
+	wchar_t *pString = parm(1)->Ptr<wchar_t*>();
+	unsigned int nCodePage = parm.PCount() == 3 ? VFP2CTls::Tls().ConvCP : parm(4)->ev_long;
 	int nBytesWritten, nArrayWidth, nStringLen;
-	nArrayWidth = vp3.ev_long - 1; // -1 for null terminator
-	nStringLen = vp2.ev_length;
+	nArrayWidth = parm(3)->ev_long - 1; // -1 for null terminator
+	nStringLen = parm(2)->ev_length;
 
 	if (pString)
 	{
 		if (nStringLen)
 		{
-			nBytesWritten = MultiByteToWideChar(nCodePage, 0, HandleToPtr(vp2), min(nStringLen,nArrayWidth), pString, nArrayWidth);
+			nBytesWritten = MultiByteToWideChar(nCodePage, 0, parm(2)->HandleToPtr(), min(nStringLen,nArrayWidth), pString, nArrayWidth);
 			if (nBytesWritten)
 				pString[nBytesWritten] = L'\0';
 			else
@@ -1172,27 +1189,27 @@ void _fastcall WriteWCharArray(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall WriteBytes(ParamBlk *parm)
+void _fastcall WriteBytes(ParamBlkEx& parm)
 {
-	void *pPointer = reinterpret_cast<void*>(vp1.ev_long);
+	void* pPointer = parm(1)->Ptr<void*>();
 	if (pPointer)
-		memcpy(pPointer, HandleToPtr(vp2), PCount() == 3 ? min(vp2.ev_length, (UINT)vp3.ev_long) : vp2.ev_length);
+		memcpy(pPointer, parm(2)->HandleToPtr(), parm.PCount() == 3 ? min(parm(2)->ev_length, (UINT)parm(3)->ev_long) : parm(2)->ev_length);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadInt8(ParamBlk *parm)
+void _fastcall ReadInt8(ParamBlkEx& parm)
 {
-	__int8 *pPointer = reinterpret_cast<__int8*>(vp1.ev_long);
+	__int8 *pPointer = parm(1)->Ptr<__int8*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPInt8(ParamBlk *parm)
+void _fastcall ReadPInt8(ParamBlkEx& parm)
 {
-	__int8 **pPointer = reinterpret_cast<__int8**>(vp1.ev_long);
+	__int8 **pPointer = parm(1)->Ptr<__int8**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1204,18 +1221,18 @@ void _fastcall ReadPInt8(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadUInt8(ParamBlk *parm)
+void _fastcall ReadUInt8(ParamBlkEx& parm)
 {
-	unsigned __int8 *pPointer = reinterpret_cast<unsigned __int8*>(vp1.ev_long);
+	unsigned __int8 *pPointer = parm(1)->Ptr<unsigned __int8*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPUInt8(ParamBlk *parm)
+void _fastcall ReadPUInt8(ParamBlkEx& parm)
 {
-	unsigned __int8 **pPointer = reinterpret_cast<unsigned __int8**>(vp1.ev_long);
+	unsigned __int8 **pPointer = parm(1)->Ptr<unsigned __int8**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1227,18 +1244,18 @@ void _fastcall ReadPUInt8(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadShort(ParamBlk *parm)
+void _fastcall ReadShort(ParamBlkEx& parm)
 {
-	short *pPointer = reinterpret_cast<short*>(vp1.ev_long);
+	short *pPointer = parm(1)->Ptr<short*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPShort(ParamBlk *parm)
+void _fastcall ReadPShort(ParamBlkEx& parm)
 {
-	short **pPointer = reinterpret_cast<short**>(vp1.ev_long);
+	short **pPointer = parm(1)->Ptr<short**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1250,18 +1267,18 @@ void _fastcall ReadPShort(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadUShort(ParamBlk *parm)
+void _fastcall ReadUShort(ParamBlkEx& parm)
 {
-	unsigned short *pPointer = reinterpret_cast<unsigned short*>(vp1.ev_long);
+	unsigned short *pPointer = parm(1)->Ptr<unsigned short*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPUShort(ParamBlk *parm)
+void _fastcall ReadPUShort(ParamBlkEx& parm)
 {
-	unsigned short **pPointer = reinterpret_cast<unsigned short**>(vp1.ev_long);
+	unsigned short **pPointer = parm(1)->Ptr<unsigned short**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1273,18 +1290,18 @@ void _fastcall ReadPUShort(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadInt(ParamBlk *parm)
+void _fastcall ReadInt(ParamBlkEx& parm)
 {
-	int *pPointer = reinterpret_cast<int*>(vp1.ev_long);
+	int *pPointer = parm(1)->Ptr<int*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPInt(ParamBlk *parm)
+void _fastcall ReadPInt(ParamBlkEx& parm)
 {
-	int **pPointer = reinterpret_cast<int**>(vp1.ev_long);
+	int **pPointer = parm(1)->Ptr<int**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1296,18 +1313,18 @@ void _fastcall ReadPInt(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadUInt(ParamBlk *parm)
+void _fastcall ReadUInt(ParamBlkEx& parm)
 {
-	unsigned int *pPointer = reinterpret_cast<unsigned int*>(vp1.ev_long);
+	unsigned int *pPointer = parm(1)->Ptr<unsigned int*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPUInt(ParamBlk *parm)
+void _fastcall ReadPUInt(ParamBlkEx& parm)
 {
-	unsigned int **pPointer = reinterpret_cast<unsigned int**>(vp1.ev_long);
+	unsigned int** pPointer = parm(1)->Ptr<unsigned int**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1319,14 +1336,14 @@ void _fastcall ReadPUInt(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadInt64(ParamBlk *parm)
+void _fastcall ReadInt64(ParamBlkEx& parm)
 {
-	__int64 *pPointer = reinterpret_cast<__int64*>(vp1.ev_long);
+	__int64 *pPointer = parm(1)->Ptr<__int64*>();
 	if (pPointer)
 	{
-		if (PCount() == 1 || vp2.ev_long == 1)
+		if (parm.PCount() == 1 || parm(2)->ev_long == 1)
 			ReturnInt64AsBinary(*pPointer);
-		else if (vp2.ev_long == 2)
+		else if (parm(2)->ev_long == 2)
 			ReturnInt64AsString(*pPointer);
 		else
 			ReturnInt64AsDouble(*pPointer);
@@ -1335,16 +1352,16 @@ void _fastcall ReadInt64(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPInt64(ParamBlk *parm)
+void _fastcall ReadPInt64(ParamBlkEx& parm)
 {
-	__int64 **pPointer = reinterpret_cast<__int64**>(vp1.ev_long);
+	__int64 **pPointer = parm(1)->Ptr<__int64**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
 		{
-			if (PCount() == 1 || vp2.ev_long == 1)
+			if (parm.PCount() == 1 || parm(2)->ev_long == 1)
 				ReturnInt64AsBinary(**pPointer);
-			else if (vp2.ev_long == 2)
+			else if (parm(2)->ev_long == 2)
 				ReturnInt64AsString(**pPointer);
 			else
 				ReturnInt64AsDouble(**pPointer);
@@ -1356,14 +1373,14 @@ void _fastcall ReadPInt64(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadUInt64(ParamBlk *parm)
+void _fastcall ReadUInt64(ParamBlkEx& parm)
 {
-	unsigned __int64 *pPointer = reinterpret_cast<unsigned __int64*>(vp1.ev_long);
+	unsigned __int64 *pPointer = parm(1)->Ptr<unsigned __int64*>();
 	if (pPointer)
 	{
-		if (PCount() == 1 || vp2.ev_long == 1)
+		if (parm.PCount() == 1 || parm(2)->ev_long == 1)
 			ReturnInt64AsBinary(*pPointer);
-		else if (vp2.ev_long == 2)
+		else if (parm(2)->ev_long == 2)
 			ReturnInt64AsString(*pPointer);
 		else
 			ReturnInt64AsDouble(*pPointer);
@@ -1372,16 +1389,16 @@ void _fastcall ReadUInt64(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPUInt64(ParamBlk *parm)
+void _fastcall ReadPUInt64(ParamBlkEx& parm)
 {
-	unsigned __int64 **pPointer = reinterpret_cast<unsigned __int64**>(vp1.ev_long);
+	unsigned __int64 **pPointer = parm(1)->Ptr<unsigned __int64**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
 		{
-			if (PCount() == 1 || vp2.ev_long == 1)
+			if (parm.PCount() == 1 || parm(2)->ev_long == 1)
 				ReturnInt64AsBinary(**pPointer);
-			else if (vp2.ev_long == 2)
+			else if (parm(2)->ev_long == 2)
 				ReturnInt64AsString(**pPointer);
 			else
 				ReturnInt64AsDouble(**pPointer);
@@ -1393,18 +1410,18 @@ void _fastcall ReadPUInt64(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadFloat(ParamBlk *parm)
+void _fastcall ReadFloat(ParamBlkEx& parm)
 {
-	float *pPointer = reinterpret_cast<float*>(vp1.ev_long);
+	float *pPointer = parm(1)->Ptr<float*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPFloat(ParamBlk *parm)
+void _fastcall ReadPFloat(ParamBlkEx& parm)
 {
-	float **pPointer = reinterpret_cast<float**>(vp1.ev_long);
+	float **pPointer = parm(1)->Ptr<float**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1416,18 +1433,18 @@ void _fastcall ReadPFloat(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadDouble(ParamBlk *parm)
+void _fastcall ReadDouble(ParamBlkEx& parm)
 {
-	double *pPointer = reinterpret_cast<double*>(vp1.ev_long);
+	double *pPointer = parm(1)->Ptr<double*>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPDouble(ParamBlk *parm)
+void _fastcall ReadPDouble(ParamBlkEx& parm)
 {
-	double **pPointer = reinterpret_cast<double**>(vp1.ev_long);
+	double **pPointer = parm(1)->Ptr<double**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1439,18 +1456,18 @@ void _fastcall ReadPDouble(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadLogical(ParamBlk *parm)
+void _fastcall ReadLogical(ParamBlkEx& parm)
 {
-	BOOL *pPointer = reinterpret_cast<BOOL*>(vp1.ev_long);
+	BOOL *pPointer = parm(1)->Ptr<BOOL*>();
 	if (pPointer)
 		_RetLogical(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPLogical(ParamBlk *parm)
+void _fastcall ReadPLogical(ParamBlkEx& parm)
 {
-	BOOL **pPointer = reinterpret_cast<BOOL**>(vp1.ev_long);
+	BOOL **pPointer = parm(1)->Ptr<BOOL**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1462,18 +1479,18 @@ void _fastcall ReadPLogical(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPointer(ParamBlk *parm)
+void _fastcall ReadPointer(ParamBlkEx& parm)
 {
-	void **pPointer = reinterpret_cast<void**>(vp1.ev_long);
+	void **pPointer = parm(1)->Ptr<void**>();
 	if (pPointer)
 		Return(*pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPPointer(ParamBlk *parm)
+void _fastcall ReadPPointer(ParamBlkEx& parm)
 {
-	void ***pPointer = reinterpret_cast<void***>(vp1.ev_long);
+	void ***pPointer = parm(1)->Ptr<void***>();
 	if (pPointer)
 	{
 		if ((*pPointer))
@@ -1485,16 +1502,17 @@ void _fastcall ReadPPointer(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadChar(ParamBlk *parm)
+void _fastcall ReadChar(ParamBlkEx& parm)
 {
-	StringValue cChar(1);
-	char *pPointer = reinterpret_cast<char*>(vp1.ev_long);
+	ValueEx cChar;
+	cChar.SetString(1);
+	char *pPointer = parm(1)->Ptr<char*>();
 	char *pChar;
 	if (pPointer)
 	{
-		if (AllocHandleEx(cChar,1))
+		if (cChar.AllocHandle(1))
 		{
-			pChar = HandleToPtr(cChar);
+			pChar = cChar.HandleToPtr();
 			*pChar = *pPointer;
 			Return(cChar);
 		}
@@ -1505,72 +1523,74 @@ void _fastcall ReadChar(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPChar(ParamBlk *parm)
+void _fastcall ReadPChar(ParamBlkEx& parm)
 {
-	StringValue cChar(1);
-	char **pPointer = reinterpret_cast<char**>(vp1.ev_long);
+	ValueEx cChar;
+	cChar.SetString(1);
+	char **pPointer = parm(1)->Ptr<char**>();
 	char *pChar;
 
 	if (pPointer)
 	{
 		if ((*pPointer))
 		{
-			if (AllocHandleEx(cChar,1))
+			if (cChar.AllocHandle(1))
 			{
-				pChar = HandleToPtr(cChar);
+				pChar = cChar.HandleToPtr();
 				*pChar = **pPointer;
 				Return(cChar);
 			}
 			else
 				RaiseError(E_INSUFMEMORY);
 		}
-		else if (PCount() == 1)
+		else if (parm.PCount() == 1)
 			ReturnNull();
 		else
-			Return(vp2);
+			parm(2)->Return();
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadCString(ParamBlk *parm)
+void _fastcall ReadCString(ParamBlkEx& parm)
 {
-	char *pPointer = reinterpret_cast<char*>(vp1.ev_long);
+	char *pPointer = parm(1)->Ptr<char*>();
 	if (pPointer)
 		Return(pPointer);
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPCString(ParamBlk *parm)
+void _fastcall ReadPCString(ParamBlkEx& parm)
 {
-	char **pPointer = reinterpret_cast<char**>(vp1.ev_long);
+	char **pPointer = parm(1)->Ptr<char**>();
 	if (pPointer)
 	{
 		if ((*pPointer))
             Return(*pPointer);
-		else if (PCount() == 1)
+		else if (parm.PCount() == 1)
 		{
 			char aNothing[1] = {'\0'};
 			Return(aNothing);
 		}
 		else
-			Return(vp2);
+			parm(2)->Return();
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadCharArray(ParamBlk *parm)
+void _fastcall ReadCharArray(ParamBlkEx& parm)
 {
-	StringValue vBuffer;
-	const char *pPointer = reinterpret_cast<const char*>(vp1.ev_long);
+	ValueEx vBuffer;
+	vBuffer.SetString();
+	const char *pPointer = parm(1)->Ptr<const char*>();
 
 	if (pPointer)
 	{
-		if (AllocHandleEx(vBuffer, vp2.ev_long))
+		if (vBuffer.AllocHandle(parm(2)->ev_long))
 		{
-			vBuffer.ev_length = strncpyex(HandleToPtr(vBuffer), pPointer, vp2.ev_long);
+			vBuffer.ev_length = strncpyex(vBuffer.HandleToPtr(), pPointer, parm(2)->ev_long);
 			Return(vBuffer);
 		}
 		else
@@ -1580,14 +1600,13 @@ void _fastcall ReadCharArray(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-
-
-void _fastcall ReadWString(ParamBlk *parm)
+void _fastcall ReadWString(ParamBlkEx& parm)
 {
-	StringValue vBuffer;
+	ValueEx vBuffer;
+	vBuffer.SetString();
 	int nStringLen, nBufferLen;
-	wchar_t* pString = reinterpret_cast<wchar_t*>(vp1.ev_long);
-	unsigned int nCodePage = PCount() == 1 ? VFP2CTls::Tls().ConvCP : vp2.ev_long;
+	wchar_t* pString = parm(1)->Ptr<wchar_t*>();
+	unsigned int nCodePage = parm.PCount() == 1 ? VFP2CTls::Tls().ConvCP : parm(2)->ev_long;
 
 	if (pString)
 	{
@@ -1595,9 +1614,9 @@ void _fastcall ReadWString(ParamBlk *parm)
 		if (nStringLen)
 		{
 			nBufferLen = nStringLen * sizeof(wchar_t) + sizeof(wchar_t);
-			if (AllocHandleEx(vBuffer, nBufferLen))
+			if (vBuffer.AllocHandle(nBufferLen))
 			{
-				nBufferLen = WideCharToMultiByte(nCodePage, 0, pString, nStringLen, HandleToPtr(vBuffer), nBufferLen, 0, 0);
+				nBufferLen = WideCharToMultiByte(nCodePage, 0, pString, nStringLen, vBuffer.HandleToPtr(), nBufferLen, 0, 0);
 				if (nBufferLen)
 				{
 					vBuffer.ev_length = (unsigned int)nBufferLen;
@@ -1617,11 +1636,12 @@ void _fastcall ReadWString(ParamBlk *parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadPWString(ParamBlk *parm)
+void _fastcall ReadPWString(ParamBlkEx& parm)
 {
-	StringValue vBuffer;
-	wchar_t **pString = reinterpret_cast<wchar_t**>(vp1.ev_long);
-	unsigned int nCodePage = PCount() > 1 && vp2.ev_long ? vp2.ev_long : VFP2CTls::Tls().ConvCP;
+	ValueEx vBuffer;
+	vBuffer.SetString();
+	wchar_t **pString = parm(1)->Ptr<wchar_t**>();
+	unsigned int nCodePage = parm.PCount() > 1 && parm(2)->ev_long ? parm(2)->ev_long : VFP2CTls::Tls().ConvCP;
 	int nStringLen, nBufferLen;
 
 	if (pString)
@@ -1632,9 +1652,9 @@ void _fastcall ReadPWString(ParamBlk *parm)
 			if (nStringLen)
 			{
 				nBufferLen = nStringLen * sizeof(wchar_t);
-				if (AllocHandleEx(vBuffer, nBufferLen))
+				if (vBuffer.AllocHandle(nBufferLen))
 				{
-					nBufferLen = WideCharToMultiByte(nCodePage, 0, *pString, nStringLen, HandleToPtr(vBuffer), nBufferLen, 0, 0);
+					nBufferLen = WideCharToMultiByte(nCodePage, 0, *pString, nStringLen, vBuffer.HandleToPtr(), nBufferLen, 0, 0);
 					if (nBufferLen)
 						vBuffer.ev_length = nBufferLen;
 					else
@@ -1645,31 +1665,32 @@ void _fastcall ReadPWString(ParamBlk *parm)
 			}
 			Return(vBuffer);
 		}
-		else if (PCount() < 3)
+		else if (parm.PCount() < 3)
 			Return(vBuffer);
 		else
-			Return(vp3);
+			parm(3)->Return();
 	}
 	else
 		RaiseError(E_INVALIDPARAMS);
 }
 
-void _fastcall ReadWCharArray(ParamBlk *parm)
+void _fastcall ReadWCharArray(ParamBlkEx& parm)
 {
-	StringValue vBuffer;
-	wchar_t *pString = reinterpret_cast<wchar_t*>(vp1.ev_long);
-	unsigned int nCodePage = PCount() == 2 ? VFP2CTls::Tls().ConvCP : vp3.ev_long;
+	ValueEx vBuffer;
+	vBuffer.SetString();
+	wchar_t *pString = parm(1)->Ptr<wchar_t*>();
+	unsigned int nCodePage = parm.PCount() == 2 ? VFP2CTls::Tls().ConvCP : parm(3)->ev_long;
 	int nBufferLen, nStringLen;
 
 	if (pString)
 	{
-		nStringLen = wstrnlen(pString, vp2.ev_long);
+		nStringLen = wstrnlen(pString, parm(2)->ev_long);
 		if (nStringLen)
 		{
 			nBufferLen = nStringLen * sizeof(wchar_t);
-			if (AllocHandleEx(vBuffer, nBufferLen))
+			if (vBuffer.AllocHandle(nBufferLen))
 			{
-				nBufferLen = WideCharToMultiByte(nCodePage, 0, pString, nStringLen, HandleToPtr(vBuffer), nBufferLen, 0, 0);
+				nBufferLen = WideCharToMultiByte(nCodePage, 0, pString, nStringLen, vBuffer.HandleToPtr(), nBufferLen, 0, 0);
 				if (nBufferLen)
 					vBuffer.ev_length = nBufferLen;
 				else
@@ -1686,15 +1707,16 @@ void _fastcall ReadWCharArray(ParamBlk *parm)
 
 
 
-void _fastcall ReadBytes(ParamBlk *parm)
+void _fastcall ReadBytes(ParamBlkEx& parm)
 {
-	StringValue vBuffer(vp2.ev_long);
-	void *pPointer = reinterpret_cast<void*>(vp1.ev_long);
+	ValueEx vBuffer;
+	vBuffer.SetString(parm(2)->ev_long);
+	void *pPointer = parm(1)->Ptr<void*>();
 	if (pPointer)
 	{
-		if (AllocHandleEx(vBuffer,vp2.ev_long))
+		if (vBuffer.AllocHandle(parm(2)->ev_long))
 		{
-			memcpy(HandleToPtr(vBuffer), pPointer, vp2.ev_long);
+			memcpy(vBuffer.HandleToPtr(), pPointer, parm(2)->ev_long);
 			Return(vBuffer);
 			return;
 		}
@@ -1716,7 +1738,7 @@ void _fastcall ReadBytes(ParamBlk *parm)
 		} \
 	}
 
-void _fastcall MarshalFoxArray2CArray(ParamBlk *parm)
+void _fastcall MarshalFoxArray2CArray(ParamBlkEx& parm)
 {
 try
 {
@@ -1724,8 +1746,8 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxArray vfpArray(rp2);
-	MarshalType Type = static_cast<MarshalType>(vp3.ev_long);
+	FoxArray vfpArray(parm(2));
+	MarshalType Type = static_cast<MarshalType>(parm(3)->ev_long);
 	FoxValue pValue;
 	HANDLE hHeap = VFP2CTls::Heap;
 
@@ -1733,9 +1755,9 @@ try
 	{
 		case CTYPE_SHORT:
 			{
-				short *CArray = reinterpret_cast<short*>(vp1.ev_long);
+				short *CArray = parm(1)->Ptr<short*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'N')
 						*CArray = static_cast<short>(pValue->ev_long);
 					else if (pValue.Vartype() != '0')
@@ -1747,9 +1769,9 @@ try
 
 		case CTYPE_USHORT:
 			{
-				unsigned short *CArray = reinterpret_cast<unsigned short*>(vp1.ev_long);
+				unsigned short *CArray = parm(1)->Ptr<unsigned short*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'N')
 						*CArray = static_cast<unsigned short>(pValue->ev_long);
 					else if (pValue.Vartype() != '0')
@@ -1761,9 +1783,9 @@ try
 
 		case CTYPE_INT:
 			{
-				int *CArray = reinterpret_cast<int*>(vp1.ev_long);
+				int *CArray = parm(1)->Ptr<int*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'N')
 						*CArray = pValue->ev_long;
 					else if (pValue.Vartype() != '0')
@@ -1775,9 +1797,9 @@ try
 
 		case CTYPE_UINT:
 			{
-				unsigned int *CArray = reinterpret_cast<unsigned int*>(vp1.ev_long);
+				unsigned int *CArray = parm(1)->Ptr<unsigned int*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'N')
 						*CArray = static_cast<unsigned int>(pValue->ev_long);
 					else if (pValue.Vartype() != '0')
@@ -1789,9 +1811,9 @@ try
 
 		case CTYPE_FLOAT:
 			{
-				float *CArray = reinterpret_cast<float*>(vp1.ev_long);
+				float *CArray = parm(1)->Ptr<float*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'N')
 						*CArray = static_cast<float>(pValue->ev_long);
 					else if (pValue.Vartype() != '0')
@@ -1803,9 +1825,9 @@ try
 
 		case CTYPE_DOUBLE:
 			{
-				double *CArray = reinterpret_cast<double*>(vp1.ev_long);
+				double *CArray = parm(1)->Ptr<double*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'N')
 						*CArray = pValue->ev_real;
 					else if (pValue.Vartype() != '0')
@@ -1817,9 +1839,9 @@ try
 
 		case CTYPE_BOOL:
 			{
-				BOOL *CArray = reinterpret_cast<BOOL*>(vp1.ev_long);
+				BOOL *CArray = parm(1)->Ptr<BOOL*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'L')
 						*CArray = pValue->ev_length;
 					else if (pValue.Vartype() != '0')
@@ -1831,9 +1853,9 @@ try
 
 		case CTYPE_CSTRING:
 			{
-				char **CArray = reinterpret_cast<char**>(vp1.ev_long);
+				char **CArray = parm(1)->Ptr<char**>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'C')
 					{
 						if (*CArray)
@@ -1867,11 +1889,11 @@ try
 
 		case CTYPE_WSTRING:
 			{
-				wchar_t **CArray = reinterpret_cast<wchar_t**>(vp1.ev_long);
+				wchar_t **CArray = parm(1)->Ptr<wchar_t**>();
 				int nCharsWritten;
-				unsigned int nCodePage = PCount() == 3 ? VFP2CTls::Tls().ConvCP : vp4.ev_long;
+				unsigned int nCodePage = parm.PCount() == 3 ? VFP2CTls::Tls().ConvCP : parm(4)->ev_long;
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'C')
 					{
 						if (*CArray)
@@ -1913,13 +1935,13 @@ try
 
 		case CTYPE_CHARARRAY:
 			{
-				if (PCount() < 4)
+				if (parm.PCount() < 4)
 					throw E_INVALIDPARAMS;
 
-				char *CArray = reinterpret_cast<char*>(vp1.ev_long);
-				unsigned int nCharCount, nLength = vp4.ev_long;
+				char *CArray = parm(1)->Ptr<char*>();
+				unsigned int nCharCount, nLength = parm(4)->ev_long;
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
                 	if (pValue.Vartype() == 'C')
 					{
 						nCharCount = min(pValue->ev_length, nLength);
@@ -1940,14 +1962,14 @@ try
 
 		case CTYPE_WCHARARRAY:
 			{
-				if (PCount() < 4)
+				if (parm.PCount() < 4)
 					throw E_INVALIDPARAMS;
 
-				wchar_t *CArray = reinterpret_cast<wchar_t*>(vp1.ev_long);
-				unsigned int nCodePage, nCharsWritten, nLength = vp4.ev_long;
-				nCodePage = PCount() == 4 ? VFP2CTls::Tls().ConvCP : vp5.ev_long;
+				wchar_t *CArray = parm(1)->Ptr<wchar_t*>();
+				unsigned int nCodePage, nCharsWritten, nLength = parm(4)->ev_long;
+				nCodePage = parm.PCount() == 4 ? VFP2CTls::Tls().ConvCP : parm(5)->ev_long;
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'C')
 					{
 						nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), min(pValue->ev_length, nLength), CArray, nLength);
@@ -1974,9 +1996,9 @@ try
 
 		case CTYPE_INT64:
 			{
-				__int64 *CArray = reinterpret_cast<__int64*>(vp1.ev_long);
+				__int64 *CArray = parm(1)->Ptr<__int64*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'Y')
 						*CArray = pValue->ev_currency.QuadPart;
 					else if (pValue.Vartype() == 'C' && pValue->ev_length == 8)
@@ -1992,9 +2014,9 @@ try
 
 		case CTYPE_UINT64:
 			{
-				unsigned __int64 *CArray = reinterpret_cast<unsigned __int64*>(vp1.ev_long);
+				unsigned __int64 *CArray = parm(1)->Ptr<unsigned __int64*>();
 				BEGIN_ARRAYLOOP()
-					pValue = vfpArray;
+					pValue = vfpArray();
 					if (pValue.Vartype() == 'Y')
 						*CArray = static_cast<unsigned __int64>(pValue->ev_currency.QuadPart);
 					else if (pValue.Vartype() == 'C' && pValue->ev_length == 8)
@@ -2018,7 +2040,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall MarshalCArray2FoxArray(ParamBlk *parm)
+void _fastcall MarshalCArray2FoxArray(ParamBlkEx& parm)
 {
 try
 {
@@ -2026,101 +2048,103 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxArray vfpArray(rp2);
-	MarshalType Type = static_cast<MarshalType>(vp3.ev_long);
+	FoxArray vfpArray(parm(2));
+	MarshalType Type = static_cast<MarshalType>(parm(3)->ev_long);
 
 	switch(Type)
 	{
 		case CTYPE_SHORT:
 			{
-				short *CArray = reinterpret_cast<short*>(vp1.ev_long);
+				short *CArray = parm(1)->Ptr<short*>();
 				FoxShort pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_USHORT:
 			{
-				unsigned short *CArray = reinterpret_cast<unsigned short*>(vp1.ev_long);
+				unsigned short *CArray = parm(1)->Ptr<unsigned short*>();
 				FoxUShort pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_INT:
 			{
-				int *CArray = reinterpret_cast<int*>(vp1.ev_long);
+				int *CArray = parm(1)->Ptr<int*>();
 				FoxInt pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_UINT:
 			{
-				unsigned int *CArray = reinterpret_cast<unsigned int*>(vp1.ev_long);
+				unsigned int *CArray = parm(1)->Ptr<unsigned int*>();
 				FoxUInt pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_FLOAT:
 			{
-				float *CArray = reinterpret_cast<float*>(vp1.ev_long);
+				float *CArray = parm(1)->Ptr<float*>();
 				FoxFloat pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_DOUBLE:
 			{
-				double *CArray = reinterpret_cast<double*>(vp1.ev_long);
+				double *CArray = parm(1)->Ptr<double*>();
 				FoxDouble pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_BOOL:
 			{
-				BOOL *CArray = reinterpret_cast<BOOL*>(vp1.ev_long);
+				BOOL *CArray = parm(1)->Ptr<BOOL*>();
 				FoxLogical pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_CSTRING:
 			{
-				char **CArray = reinterpret_cast<char**>(vp1.ev_long);
-				unsigned int nStringLen;
+				char **CArray = parm(1)->Ptr<char**>();
+				// unsigned int nStringLen;
 				FoxString pValue(256);
 				FoxValue pNull;
 
 				BEGIN_ARRAYLOOP()
 					if (*CArray)
 					{
+						/*
 						nStringLen = lstrlen(*CArray);
 						if (nStringLen > pValue.Size())
 							pValue.Size(nStringLen);
 						if (nStringLen)
 							memcpy(pValue, *CArray, nStringLen);
 						pValue.Len(nStringLen);
-						vfpArray = pValue;
+						*/
+						vfpArray() = pValue = *CArray;
 					}
 					else
-						vfpArray = pNull;
+						vfpArray() = pNull;
 					
 					CArray++;
 				END_ARRAYLOOP()
@@ -2129,9 +2153,9 @@ try
 
 		case CTYPE_WSTRING:
 			{
-				wchar_t **CArray = reinterpret_cast<wchar_t**>(vp1.ev_long);
+				wchar_t **CArray = parm(1)->Ptr<wchar_t**>();
 				unsigned int nByteCount, nWCharCount, nCharsWritten;
-				unsigned int nCodePage = PCount() == 3 ? VFP2CTls::Tls().ConvCP : vp4.ev_long;;
+				unsigned int nCodePage = parm.PCount() == 3 ? VFP2CTls::Tls().ConvCP : parm(4)->ev_long;;
 				FoxString pValue(512);
 				FoxValue pNull;
 
@@ -2156,10 +2180,10 @@ try
 						else
 							pValue.Len(0);
 
-						vfpArray = pValue;
+						vfpArray() = pValue;
 					}
 					else
-						vfpArray = pNull;
+						vfpArray() = pNull;
 				
 					CArray++;
 				END_ARRAYLOOP()
@@ -2168,14 +2192,14 @@ try
 
 		case CTYPE_CHARARRAY:
 			{
-				if (PCount() != 4)
+				if (parm.PCount() != 4)
 					throw E_INVALIDPARAMS;
 				
-				char *CArray = reinterpret_cast<char*>(vp1.ev_long);
-				unsigned int nLen = vp4.ev_long;
+				char *CArray = parm(1)->Ptr<char*>();
+				unsigned int nLen = parm(4)->ev_long;
 				FoxString pValue(nLen);
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue.StrnCpy(CArray, nLen);
+					vfpArray() = pValue.StrnCpy(CArray, nLen);
 					CArray += nLen;
 				END_ARRAYLOOP()
 			}
@@ -2183,12 +2207,12 @@ try
 
 		case CTYPE_WCHARARRAY:
 			{
-				if (PCount() < 4)
+				if (parm.PCount() < 4)
 					throw E_INVALIDPARAMS;
 
-				wchar_t *CArray = reinterpret_cast<wchar_t*>(vp1.ev_long);
-				int nCharCount, nLen = vp4.ev_long;
-				unsigned int nCodePage = PCount() == 4 ? VFP2CTls::Tls().ConvCP : vp5.ev_long;
+				wchar_t *CArray = parm(1)->Ptr<wchar_t*>();
+				int nCharCount, nLen = parm(4)->ev_long;
+				unsigned int nCodePage = parm.PCount() == 4 ? VFP2CTls::Tls().ConvCP : parm(5)->ev_long;
 				FoxString pValue(nLen);
 				
 				BEGIN_ARRAYLOOP()
@@ -2200,7 +2224,7 @@ try
 						SaveWin32Error("WideCharToMultiByte", GetLastError());
 						throw E_APIERROR;
 					}
-					vfpArray = pValue;
+					vfpArray() = pValue;
 					CArray += nLen;
 				END_ARRAYLOOP()
 			}
@@ -2208,20 +2232,20 @@ try
 
 		case CTYPE_INT64:
 			{
-				__int64 *CArray = reinterpret_cast<__int64*>(vp1.ev_long);
+				__int64 *CArray = parm(1)->Ptr<__int64*>();
 				FoxCurrency pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
 
 		case CTYPE_UINT64:
 			{
-				unsigned __int64 *CArray = reinterpret_cast<unsigned __int64*>(vp1.ev_long);
+				unsigned __int64 *CArray = parm(1)->Ptr<unsigned __int64*>();
 				FoxCurrency pValue;
 				BEGIN_ARRAYLOOP()
-					vfpArray = pValue = *CArray++;
+					vfpArray() = pValue = *CArray++;
 				END_ARRAYLOOP()
 			}
 			break;
@@ -2254,7 +2278,7 @@ catch(int nErrorNo)
 #define END_FIELDLOOP() \
 	}
 
-void _fastcall MarshalCursor2CArray(ParamBlk *parm)
+void _fastcall MarshalCursor2CArray(ParamBlkEx& parm)
 {
 try
 {
@@ -2263,15 +2287,15 @@ try
 		throw nErrorNo;
 
 	FoxValue pValue;
-	FoxString pCursorAndFields(vp2);
-	MarshalType Type = static_cast<MarshalType>(vp3.ev_long);
+	FoxString pCursorAndFields(parm(2));
+	MarshalType Type = static_cast<MarshalType>(parm(3)->ev_long);
 	FoxCursor pCursor;
 	VFP2CTls& tls = VFP2CTls::Tls();
-		
-	char CursorName[VFP_MAX_CURSOR_NAME];
-	char *pFieldNames = pCursorAndFields;
-	pFieldNames += GetWordNumN(CursorName, pCursorAndFields, '.', 1, VFP_MAX_CURSOR_NAME) + 1;
-	pCursor.Attach(CursorName, pFieldNames);
+
+	CStringView pCursorName = pCursorAndFields.GetWordNum(1, '.');
+	CStringView pFieldNames = pCursorAndFields.GetWordNum(2, '.');
+	// pFieldNames += GetWordNumN(CursorName, pCursorAndFields, '.', 1, VFP_MAX_CURSOR_NAME) + 1;
+	pCursor.Attach(pCursorName, pFieldNames);
 	pCursor.GoTop();
 	int nRecCount = pCursor.RecCount();
 	unsigned int nFieldCount = pCursor.FCount();
@@ -2280,7 +2304,7 @@ try
 	{
 		case CTYPE_SHORT:
 			{
-				short *CArray = reinterpret_cast<short*>(vp1.ev_long);
+				short *CArray = parm(1)->Ptr<short*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2295,7 +2319,7 @@ try
 
 		case CTYPE_USHORT:
 			{
-				unsigned short *CArray = reinterpret_cast<unsigned short*>(vp1.ev_long);
+				unsigned short *CArray = parm(1)->Ptr<unsigned short*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2310,7 +2334,7 @@ try
 
 		case CTYPE_INT:
 			{
-				int *CArray = reinterpret_cast<int*>(vp1.ev_long);
+				int *CArray = parm(1)->Ptr<int*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2325,7 +2349,7 @@ try
 
 		case CTYPE_UINT:
 			{
-				unsigned int *CArray = reinterpret_cast<unsigned int*>(vp1.ev_long);
+				unsigned int *CArray = parm(1)->Ptr<unsigned int*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2340,7 +2364,7 @@ try
 
 		case CTYPE_FLOAT:
 			{
-				float *CArray = reinterpret_cast<float*>(vp1.ev_long);
+				float *CArray = parm(1)->Ptr<float*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2355,7 +2379,7 @@ try
 
 		case CTYPE_DOUBLE:
 			{
-				double *CArray = reinterpret_cast<double*>(vp1.ev_long);
+				double *CArray = parm(1)->Ptr<double*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2370,7 +2394,7 @@ try
 
 		case CTYPE_BOOL:
 			{
-				BOOL *CArray = reinterpret_cast<BOOL*>(vp1.ev_long);
+				BOOL *CArray = parm(1)->Ptr<BOOL*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()										
 						pValue = pCursor(nFieldNo);
@@ -2385,7 +2409,7 @@ try
 
 		case CTYPE_CSTRING:
 			{
-				char **CArray = reinterpret_cast<char**>(vp1.ev_long);
+				char **CArray = parm(1)->Ptr<char**>();
 				char **pString;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2423,10 +2447,10 @@ try
 
 		case CTYPE_WSTRING:
 			{
-				wchar_t **CArray = reinterpret_cast<wchar_t**>(vp1.ev_long);
+				wchar_t **CArray = parm(1)->Ptr<wchar_t**>();
 				wchar_t **pString;
 				int nCharsWritten;
-				unsigned int nCodePage = PCount() == 3 ? VFP2CTls::Tls().ConvCP : vp4.ev_long;
+				unsigned int nCodePage = parm.PCount() == 3 ? VFP2CTls::Tls().ConvCP : parm(4)->ev_long;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2471,9 +2495,9 @@ try
 
 		case CTYPE_CHARARRAY:
 			{
-				char *CArray = reinterpret_cast<char*>(vp1.ev_long);
+				char *CArray = parm(1)->Ptr<char*>();
 				char *pString;
-				unsigned int nCharCount, nDimensionSize, nLength = vp4.ev_long;
+				unsigned int nCharCount, nDimensionSize, nLength = parm(4)->ev_long;
 				nDimensionSize = nRecCount * nLength;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2500,13 +2524,13 @@ try
 
 		case CTYPE_WCHARARRAY:
 			{
-				if (PCount() < 4)
+				if (parm.PCount() < 4)
 					throw E_INVALIDPARAMS;
 
-				wchar_t *CArray = reinterpret_cast<wchar_t*>(vp1.ev_long);
+				wchar_t *CArray = parm(1)->Ptr<wchar_t*>();
 				wchar_t *pString;
-				unsigned int nByteLen, nCharsWritten, nDimensionSize, nLen = vp4.ev_long;
-				unsigned int nCodePage = PCount() == 4 ? tls.ConvCP : vp5.ev_long;
+				unsigned int nByteLen, nCharsWritten, nDimensionSize, nLen = parm(4)->ev_long;
+				unsigned int nCodePage = parm.PCount() == 4 ? tls.ConvCP : parm(5)->ev_long;
 				nByteLen = nLen * sizeof(wchar_t);
 				nDimensionSize = nRecCount * nByteLen;
 				BEGIN_CURSORLOOP()
@@ -2540,7 +2564,7 @@ try
 
 		case CTYPE_INT64:
 			{
-				__int64 *CArray = reinterpret_cast<__int64*>(vp1.ev_long);
+				__int64 *CArray = parm(1)->Ptr<__int64*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2559,7 +2583,7 @@ try
 
 		case CTYPE_UINT64:
 			{
-				unsigned __int64 *CArray = reinterpret_cast<unsigned __int64*>(vp1.ev_long);
+				unsigned __int64 *CArray = parm(1)->Ptr<unsigned __int64*>();
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
@@ -2608,7 +2632,7 @@ catch(int nErrorNo)
 #define END_FIELDLOOP() \
 	}
 
-void _fastcall MarshalCArray2Cursor(ParamBlk *parm)
+void _fastcall MarshalCArray2Cursor(ParamBlkEx& parm)
 {
 try
 {
@@ -2616,13 +2640,13 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pCursorAndFields(vp2);
-	MarshalType Type = static_cast<MarshalType>(vp3.ev_long);
+	FoxString pCursorAndFields(parm(2));
+	MarshalType Type = static_cast<MarshalType>(parm(3)->ev_long);
 	FoxCursor pCursor;
 	VFP2CTls& tls = VFP2CTls::Tls();
 
 	unsigned int nFieldCount;
-	unsigned int nRowCount = vp4.ev_long;
+	unsigned int nRowCount = parm(4)->ev_long;
 	char CursorName[VFP_MAX_CURSOR_NAME];
 	char *pFieldNames = pCursorAndFields;
 	pFieldNames += GetWordNumN(CursorName, pCursorAndFields, '.', 1, VFP_MAX_CURSOR_NAME) + 1;
@@ -2634,7 +2658,7 @@ try
 	{
 		case CTYPE_SHORT:
 			{
-				short *CArray = reinterpret_cast<short*>(vp1.ev_long);
+				short *CArray = parm(1)->Ptr<short*>();
 				FoxShort pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2646,7 +2670,7 @@ try
 
 		case CTYPE_USHORT:
 			{
-				unsigned short *CArray = reinterpret_cast<unsigned short*>(vp1.ev_long);
+				unsigned short *CArray = parm(1)->Ptr<unsigned short*>();
 				FoxUShort pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2658,7 +2682,7 @@ try
 
 		case CTYPE_INT:
 			{
-				int *CArray = reinterpret_cast<int*>(vp1.ev_long);
+				int *CArray = parm(1)->Ptr<int*>();
 				FoxInt pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2670,7 +2694,7 @@ try
 
 		case CTYPE_UINT:
 			{
-				unsigned int *CArray = reinterpret_cast<unsigned int*>(vp1.ev_long);
+				unsigned int *CArray = parm(1)->Ptr<unsigned int*>();
 				FoxUInt pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2682,7 +2706,7 @@ try
 
 		case CTYPE_FLOAT:
 			{
-				float *CArray = reinterpret_cast<float*>(vp1.ev_long);
+				float *CArray = parm(1)->Ptr<float*>();
 				FoxFloat pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2694,7 +2718,7 @@ try
 
 		case CTYPE_DOUBLE:
 			{
-				double *CArray = reinterpret_cast<double*>(vp1.ev_long);
+				double *CArray = parm(1)->Ptr<double*>();
 				FoxDouble pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2706,7 +2730,7 @@ try
 
 		case CTYPE_BOOL:
 			{
-				BOOL *CArray = reinterpret_cast<BOOL*>(vp1.ev_long);
+				BOOL *CArray = parm(1)->Ptr<BOOL*>();
 				FoxLogical pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2718,7 +2742,7 @@ try
 
 		case CTYPE_CSTRING:
 			{
-				char **CArray = reinterpret_cast<char**>(vp1.ev_long);
+				char **CArray = parm(1)->Ptr<char**>();
 				char *pString;
 				unsigned int nStringLen;
 				FoxString pValue(256);
@@ -2733,7 +2757,7 @@ try
 							if (nStringLen > pValue.Size())
 								pValue.Size(nStringLen);
 							if (nStringLen)
-								memcpy(pValue, pString, nStringLen);
+								memcpy(pValue.Ptr<void*>(), pString, nStringLen);
 							pCursor(nFieldNo) = pValue.Len(nStringLen);
 						}
 						else
@@ -2745,10 +2769,10 @@ try
 
 		case CTYPE_WSTRING:
 			{
-				wchar_t **CArray = reinterpret_cast<wchar_t**>(vp1.ev_long);
+				wchar_t **CArray = parm(1)->Ptr<wchar_t**>();
 				wchar_t *pString;
 				unsigned int nByteCount, nWCharCount, nCharsWritten;
-				UINT nCodePage = PCount() == 4 ? tls.ConvCP : vp5.ev_long;;
+				UINT nCodePage = parm.PCount() == 4 ? tls.ConvCP : parm(5)->ev_long;;
 				FoxString pValue(512);
 				FoxValue pNull;
 
@@ -2785,12 +2809,12 @@ try
 
 		case CTYPE_CHARARRAY:
 			{
-				if (PCount() != 5)
+				if (parm.PCount() != 5)
 					throw E_INVALIDPARAMS;
 				
-				char *CArray = reinterpret_cast<char*>(vp1.ev_long);
+				char *CArray = parm(1)->Ptr<char*>();
 				char *pString;
-				unsigned int nLen = vp5.ev_long;
+				unsigned int nLen = parm(5)->ev_long;
 				unsigned int nDimensionSize = nLen * nRowCount;
 				FoxString pValue(nLen);
 				BEGIN_CURSORLOOP()
@@ -2805,16 +2829,16 @@ try
 
 		case CTYPE_WCHARARRAY:
 			{
-				if (PCount() < 5)
+				if (parm.PCount() < 5)
 					throw E_INVALIDPARAMS;
 
-				wchar_t *CArray = reinterpret_cast<wchar_t*>(vp1.ev_long);
+				wchar_t *CArray = parm(1)->Ptr<wchar_t*>();
 				wchar_t *pString;
 				int nCharCount, nByteLen;
-				unsigned int nLen = vp5.ev_long;
+				unsigned int nLen = parm(5)->ev_long;
 				nByteLen = nLen * sizeof(wchar_t);
 				unsigned int nDimensionSize = nByteLen * nRowCount;
-				UINT nCodePage = PCount() == 5 ? tls.ConvCP : vp6.ev_long;
+				UINT nCodePage = parm.PCount() == 5 ? tls.ConvCP : parm(6)->ev_long;
 				FoxString pValue(nByteLen);
 				
 				BEGIN_CURSORLOOP()
@@ -2837,7 +2861,7 @@ try
 
 		case CTYPE_INT64:
 			{
-				__int64 *CArray = reinterpret_cast<__int64*>(vp1.ev_long);
+				__int64 *CArray = parm(1)->Ptr<__int64*>();
 				FoxCurrency pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
@@ -2849,7 +2873,7 @@ try
 
 		case CTYPE_UINT64:
 			{
-				unsigned __int64 *CArray = reinterpret_cast<unsigned __int64*>(vp1.ev_long);
+				unsigned __int64 *CArray = parm(1)->Ptr<unsigned __int64*>();
 				FoxCurrency pValue;
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()

@@ -1,0 +1,246 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="vfp2c32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2carray.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cassembly.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2casync.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2casynccom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ccallback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ccom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cconv.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ccppapi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cenum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cfont.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2chelpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ciphelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cmarshal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cnetapi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2codbc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cprint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cras.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cregistry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cservices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2csntp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ctime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ctls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2curlmon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cutil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cwindows.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cwininet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cwinsock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2ctypes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vfp2cstring.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2c32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2carray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2casmfuncs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cassembly.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2casync.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2casynccom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ccallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ccom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cconv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ccppapi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cenum.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cfile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cfont.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2chelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ciphelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2clockfree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cmarshal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cnetapi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2codbc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cprint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cras.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cregistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cservices.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2csntp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ctime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ctls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2curlmon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cwindows.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cwininet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cwinsock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cdatastructure.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ctemplates.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pro_ext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2ctypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pro_ext64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2cstring.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="vfp2c32.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="vfp2casmfuncs.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="vfp2casmtest.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vfp2c32.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

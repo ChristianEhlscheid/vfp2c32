@@ -1,12 +1,16 @@
 #include <windows.h> /* no comment .. */
 #include <stdio.h>
 
-#include "pro_ext.h" /* general FoxPro library header */
-
+#if !defined(_WIN64)
+#include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 /* VFP2C specific includes */
 #include "vfp2c32.h"  /* VFP2C32 specific types & defines */
 #include "vfp2carray.h" /* array functions */
 #include "vfp2casync.h" /* asynchronous functions */
+#include "vfp2cassembly.h" /* runtime assembler */
 #include "vfp2cconv.h" /* misc data conversion functions */
 #include "vfp2cenum.h" /* window, process, thread, module enumeration functions */
 #include "vfp2cfile.h" /* filesystem related functions */
@@ -29,9 +33,9 @@
 #include "vfp2ciphelper.h" /* IP Helper (iphlpapi.dll) wrappers */
 #include "vfp2cfont.h" /* Font functions  */
 #include "vfp2cutil.h" /* common utility functions */
+#include "vfp2cstring.h" /* common string functions */
 #include "vfp2ccppapi.h" /* C++ class library over LCK */
 #include "vfp2ctls.h" /* VFP2C32 thread local storage */
-#include "vfpmacros.h"
 
 /* Global variables: module handle for this DLL */
 HMODULE ghModule = 0;
@@ -85,7 +89,7 @@ void _stdcall Win32ErrorHandler(char *pFunction, DWORD nErrorNo, bool bAddError,
 	LPVFP2CERROR pError = &tls.ErrorInfo[tls.ErrorCount];
 	pError->nErrorType = VFP2C_ERRORTYPE_WIN32;
 	pError->nErrorNo = nErrorNo;
-	strncpy(pError->aErrorFunction,pFunction,VFP2C_ERROR_FUNCTION_LEN);
+	strncpyex(pError->aErrorFunction,pFunction,VFP2C_ERROR_FUNCTION_LEN);
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, nErrorNo, 0, pError->aErrorMessage,VFP2C_ERROR_MESSAGE_LEN,0);
 	if (bRaise)
 		_UserError(pError->aErrorMessage);
@@ -106,8 +110,8 @@ void _stdcall CustomErrorHandler(char *pFunction, char* pErrorMessage, bool bAdd
 	LPVFP2CERROR pError = &tls.ErrorInfo[tls.ErrorCount];
 	pError->nErrorType = VFP2C_ERRORTYPE_WIN32;
 	pError->nErrorNo = E_CUSTOMERROR;
-	strncpy(pError->aErrorFunction,pFunction,VFP2C_ERROR_FUNCTION_LEN);
-	printfex(pError->aErrorMessage, pErrorMessage, lpArgs);
+	strncpyex(pError->aErrorFunction, pFunction, VFP2C_ERROR_FUNCTION_LEN);
+	nprintfex(pError->aErrorMessage, pErrorMessage, sizeof(pError->aErrorMessage), lpArgs);
 	if (bRaise)
 		_UserError(pError->aErrorMessage);
 }
@@ -127,8 +131,8 @@ void _stdcall CustomErrorHandlerEx(char *pFunction, char *pErrorMessage, int nEr
 	LPVFP2CERROR pError = &tls.ErrorInfo[tls.ErrorCount];
 	pError->nErrorType = VFP2C_ERRORTYPE_WIN32;
 	pError->nErrorNo = nErrorNo;
-	strncpy(pError->aErrorFunction, pFunction,VFP2C_ERROR_FUNCTION_LEN);
-	printfex(pError->aErrorMessage, pErrorMessage, lpArgs);
+	strncpyex(pError->aErrorFunction, pFunction,VFP2C_ERROR_FUNCTION_LEN);
+	nprintfex(pError->aErrorMessage, pErrorMessage, sizeof(pError->aErrorFunction), lpArgs);
 	if (bRaise)
 		_UserError(pError->aErrorMessage);
 }
@@ -181,59 +185,78 @@ void _cdecl RaiseCustomErrorEx(char *pFunction, char *pMessage, int nErrorNo, ..
 	va_end(lpArgs);
 }
 
-void _fastcall VFP2CSys(ParamBlk *parm)
+void _fastcall VFP2CSys(ParamBlkEx& parm)
 {
 try
 {
-	switch (vp1.ev_long)
+	switch (parm(1)->ev_long)
 	{
 		case 1: /* library's HINSTANCE/HMODULE */
-			if (PCount() == 2)
+			if (parm.PCount() == 2)
+			{
+				SaveCustomError("VFP2CSys", "Too many parameters.");
 				throw E_INVALIDPARAMS;
+			}
 			Return(ghModule);
 			break;
 		case 2: /* library heap HANDLE */
-			if (PCount() == 2)
+			if (parm.PCount() == 2)
+			{
+				SaveCustomError("VFP2CSys", "Too many parameters.");
 				throw E_INVALIDPARAMS;
+			}
 			Return(VFP2CTls::Heap);
 			break;
 		case 3: /* set or return Unicode conversion codepage */
-			if (PCount() == 2)
+			if (parm.PCount() == 2)
 			{
-				if (Vartype(vp2) == 'I' || Vartype(vp2) == 'N')
+				if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
 				{
-					if (IsValidCodePage((UINT)vp2.ev_long))
+					UINT nCodePage = parm(2)->Vartype() == 'I' ? parm(2)->ev_long : static_cast<UINT>(parm(2)->ev_real);
+					if (IsValidCodePage((UINT)parm(2)->ev_long))
 					{
-						VFP2CTls::Tls().ConvCP = (UINT)vp2.ev_long;
+						VFP2CTls::Tls().ConvCP = (UINT)parm(2)->ev_long;
 						Return(true);
 					}
 					else
+					{
+						SaveCustomError("VFP2CSys", "Parameter 2 was an invalid codepage");
 						Return(false);
+					}
 				}
 				else
+				{
+					SaveCustomError("VFP2CSys", "Parameter 2 should be of type I or N.");
 					throw E_INVALIDPARAMS;
+				}
 			}
 			else
 				Return(VFP2CTls::Tls().ConvCP);
 			break;
 
 		case 4:
-			if (PCount() == 2)
+			if (parm.PCount() == 2)
 			{
-				if (Vartype(vp2) == 'L')
+				if (parm(2)->Vartype() == 'L')
 				{
-					VFP2CTls::Tls().SqlUnicodeConversion = vp2.ev_length;
+					VFP2CTls::Tls().SqlUnicodeConversion = parm(2)->ev_length;
 					Return(true);
 				}
 				else
+				{
+					SaveCustomError("VFP2CSys", "Parameter 2 should be of type L.");
 					throw E_INVALIDPARAMS;
+				}
 			}
 			else
 				Return(VFP2CTls::Tls().SqlUnicodeConversion > 0);
 			break;
 
 		default: /* else wrong parameter */
+		{
+			SaveCustomError("VFP2CSys", "Parameter 1 unknown.");
 			throw E_INVALIDPARAMS;
+		}
 	}
 }
 catch(int nErrorNo)
@@ -242,7 +265,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall FormatMessageEx(ParamBlk *parm)
+void _fastcall FormatMessageEx(ParamBlkEx& parm)
 {
 try
 {
@@ -251,16 +274,16 @@ try
 	LPCVOID lpModule = 0;
 	FoxString pMessage(VFP2C_ERROR_MESSAGE_LEN);
 	
-	if (PCount() == 2)
-		nLanguage = vp2.ev_long;
-	else if (PCount() == 3)
+	if (parm.PCount() == 2)
+		nLanguage = parm(2)->ev_long;
+	else if (parm.PCount() == 3)
 	{
-		nLanguage = vp2.ev_long;
-		lpModule = reinterpret_cast<LPCVOID>(vp3.ev_long);
+		nLanguage = parm(2)->ev_long;
+		lpModule = parm(3)->Ptr<LPCVOID>();
 		nFlags |= FORMAT_MESSAGE_FROM_HMODULE;
 	}
 
-	pMessage.Len(FormatMessage(nFlags, lpModule, vp1.ev_long, nLanguage, pMessage, pMessage.Size(), 0));
+	pMessage.Len(FormatMessage(nFlags, lpModule, parm(1)->ev_long, nLanguage, pMessage, pMessage.Size(), 0));
 
 	if (pMessage.Len())
 		pMessage.Return();
@@ -276,7 +299,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AErrorEx(ParamBlk *parm)
+void _fastcall AErrorEx(ParamBlkEx& parm)
 {
 try
 {
@@ -287,7 +310,7 @@ try
 		return;
 	}
 
-	FoxArray pArray(vp1, tls.ErrorCount+1, 4);
+	FoxArray pArray(parm(1), tls.ErrorCount+1, 4);
 	FoxString pErrorInfo(VFP2C_ERROR_MESSAGE_LEN);
 	FoxValue vNullValue;
 
@@ -361,8 +384,8 @@ FoxInfo VFP2CFuncs[] =
 	{"WritePInt64", (FPFI) WritePInt64, 2, "I?"},
 	{"WriteUInt64", (FPFI) WriteUInt64, 2, "I?"},
 	{"WritePUInt64", (FPFI) WritePUInt64, 2, "I?"},
-	{"WritePointer", (FPFI) WritePointer, 2, "IN"},
-	{"WritePPointer", (FPFI) WritePPointer, 2, "IN"},
+	{"WritePointer", (FPFI) WritePointer, 2, "II"},
+	{"WritePPointer", (FPFI) WritePPointer, 2, "II"},
 	{"WriteFloat", (FPFI) WriteFloat, 2, "IN"},
 	{"WritePFloat", (FPFI) WritePFloat, 2, "IN"},
 	{"WriteDouble", (FPFI) WriteDouble, 2, "IN"},
@@ -424,20 +447,20 @@ FoxInfo VFP2CFuncs[] =
 
 	/* numeric to binary & vice versa conversion routines */
 	{"Str2Short", (FPFI) Str2Short, 1, "C"},
-	{"Short2Str", (FPFI) Short2Str, 1, "I"},
 	{"Str2UShort", (FPFI) Str2UShort, 1, "C"},
+	{"Str2Long", (FPFI) Str2Long, 1, "C" },
+	{"Str2ULong", (FPFI) Str2ULong, 1, "C" },
+	{"Str2Double", (FPFI) Str2Double, 1, "C" },
+	{"Str2Float", (FPFI) Str2Float, 1, "C" },
+	{"Str2Int64", (FPFI) Str2Int64, 2, "C.I" },
+	{"Str2UInt64", (FPFI) Str2UInt64, 2, "C.I" },
+	{"Short2Str", (FPFI) Short2Str, 1, "I" },
 	{"UShort2Str", (FPFI) UShort2Str, 1, "I"},
-	{"Str2Long", (FPFI) Str2Long, 1, "C"},
 	{"Long2Str", (FPFI) Long2Str, 1, "I"},
-	{"Str2ULong", (FPFI) Str2ULong, 1, "C"},
-	{"ULong2Str", (FPFI) ULong2Str, 1, "?"},
-	{"Str2Double", (FPFI) Str2Double, 1, "C"},
+	{"ULong2Str", (FPFI) ULong2Str, 1, "N"},
 	{"Double2Str", (FPFI) Double2Str, 1, "N"},
-	{"Str2Float", (FPFI) Str2Float, 1, "C"},
 	{"Float2Str", (FPFI) Float2Str, 1, "N"},
-	{"Str2Int64", (FPFI) Str2Int64, 2, "C.I"},
 	{"Int642Str", (FPFI) Int642Str, 2, "?.I"},
-	{"Str2UInt64", (FPFI) Str2UInt64, 2, "C.I"},
 	{"UInt642Str", (FPFI) UInt642Str, 2, "?.I"},
 
 	/* toolhelp32 api wrappers */
@@ -494,7 +517,7 @@ FoxInfo VFP2CFuncs[] =
 	{"RegistryHiveToObject", (FPFI) RegistryHiveToObject, 3, "ICO"},
 
 	/* file system functions */
-	{"ADirEx",(FPFI) ADirEx, 4, "CC.I.I"},
+	{"ADirEx",(FPFI) ADirEx, 6, "CC.I.I.I.C"},
 	{"AFileAttributes", (FPFI) AFileAttributes, 3, "CC.L"},
 	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 3, "CC.L"},
 	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "CC"},
@@ -666,7 +689,7 @@ FoxInfo VFP2CFuncs[] =
 	{"Value2Variant", (FPFI) Value2Variant, 1, "?"},
 	{"Variant2Value", (FPFI) Variant2Value, 1, "?"},
 	{"Decimals", (FPFI) Decimals, 1, "N"},
-	{"Num2Binary", (FPFI) Num2Binary, 1, "I"},
+	{"Num2Binary", (FPFI) Num2Binary, 1, "N"},
 	{"CreatePublicShadowObjReference", (FPFI) CreatePublicShadowObjReference, 2, "CO"},
 	{"ReleasePublicShadowObjReference", (FPFI) ReleasePublicShadowObjReference, 1, "C"},
 	{"GetLocaleInfoEx", (FPFI) GetLocaleInfoExLib, 2, "I.I"},

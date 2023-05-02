@@ -33,7 +33,7 @@ public:
 	STDMETHOD(OnDataAvailable)(DWORD, DWORD, FORMATETC *, STGMEDIUM *);
 	STDMETHOD(OnObjectAvailable)(REFIID, IUnknown *);
 
-	void SetCallBack(char *pCallTo);
+	void SetCallBack(CStringView pCallback);
 	void SetAsync(bool bAsync);
 	void Abort(int nAbortFlag);
 	HRESULT Download();
@@ -47,7 +47,7 @@ private:
 	bool m_bCallback;
 	bool m_bAsync;
 	UINT m_ulObjRefCount;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
+	CFoxCallback m_Callback;
 };
 
 class UrlDownloadThread : public CThread
@@ -59,7 +59,7 @@ public:
 	virtual void SignalThreadAbort();
 	virtual DWORD Run();
 	virtual void Release();
-	void SetParams(char *pUrl, char *pFile, char *pCallback);
+	void SetParams(char *pUrl, char *pFile, CStringView pCallback);
 
 protected:
 	UrlDownload m_Download;
@@ -73,8 +73,8 @@ int _stdcall VFP2C_Init_Urlmon();
 void _stdcall VFP2C_Destroy_Urlmon(VFP2CTls& tls);
 
 /* UrlDownloadToFile related functions */
-void _fastcall UrlDownloadToFileEx(ParamBlk *parm);
-void _fastcall AbortUrlDownloadToFileEx(ParamBlk *parm);
+void _fastcall UrlDownloadToFileEx(ParamBlkEx& parm);
+void _fastcall AbortUrlDownloadToFileEx(ParamBlkEx& parm);
 DWORD _stdcall UrlDownloadToFileThreadProc(LPVOID lpParam);
 
 #ifdef __cplusplus

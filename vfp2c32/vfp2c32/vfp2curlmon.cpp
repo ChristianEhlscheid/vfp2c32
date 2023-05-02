@@ -5,13 +5,16 @@
 #include <windows.h>
 #include <stdio.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2curlmon.h"
 #include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 #include "vfp2casync.h"
-#include "vfpmacros.h"
 
 static CThreadManager goUrlThreads;
 
@@ -35,7 +38,7 @@ void UrlDownloadThread::Release()
 	delete this;
 }
 
-void UrlDownloadThread::SetParams(char *pUrl, char *pFile, char *pCallback)
+void UrlDownloadThread::SetParams(char *pUrl, char *pFile, CStringView pCallback)
 {
 	m_Download.pUrl = pUrl;
 	m_Download.pFile = pFile;
@@ -96,19 +99,19 @@ STDMETHODIMP UrlDownload::OnProgress(ULONG ulProgress,
 {
 	if (m_bCallback)
 	{
-		m_Callback.AppendFormatBase("(%U,%U,%U)", ulProgress, ulProgressMax, ulStatusCode);
-
 		if (!m_bAsync)
 		{
-			FoxValue vRetVal;
-			if (_Evaluate(vRetVal, m_Callback) == 0)
+			ValueEx vRetVal;
+			if (m_Callback.Evaluate(vRetVal, ulProgress, ulProgressMax, ulStatusCode) == 0)
 			{
 				if (vRetVal.Vartype() == 'L')
-					return vRetVal->ev_length ? S_OK : E_ABORT;
+					return vRetVal.ev_length ? S_OK : E_ABORT;
 				else if (vRetVal.Vartype() == 'I')
-					return vRetVal->ev_long ? S_OK : E_ABORT;
+					return vRetVal.ev_long ? S_OK : E_ABORT;
 				else if (vRetVal.Vartype() == 'N')
-					return vRetVal->ev_real != 0.0 ? S_OK : E_ABORT;
+					return vRetVal.ev_real != 0.0 ? S_OK : E_ABORT;
+				else
+					vRetVal.Release();
 			}
 			return E_ABORT;
 		}
@@ -120,9 +123,7 @@ STDMETHODIMP UrlDownload::OnProgress(ULONG ulProgress,
 				if (nCount - m_nTickCount > 500 || nCount < m_nTickCount)
 				{
 					m_nTickCount = nCount;
-					char *pCommand = m_Callback.Strdup();
-					if (pCommand)
-						PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
+					m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, ulProgress, ulProgressMax, ulStatusCode);
 				}
 				return S_OK;
 			}
@@ -140,19 +141,14 @@ STDMETHODIMP UrlDownload::OnStopBinding(HRESULT hr, LPCWSTR lpStatus)
 	{
 		if (!m_bAsync)
 		{
-			m_Callback.AppendFormatBase("(%U,%U,%U)", 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
-			_Execute(m_Callback);
+			m_Callback.Execute(0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
 		}
 		else
 		{
 			if (!m_nAborted)
-				m_Callback.AppendFormatBase("(%U,%U,%U)", 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
+				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
 			else
-				m_Callback.AppendFormatBase("(%U,%U,%U)", 0, 0, BINDSTATUS_DOWNLOAD_ABORTED);
-
-			char *pCommand = m_Callback.Strdup();
-			if (pCommand)
-				PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
+				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0, 0, BINDSTATUS_DOWNLOAD_ABORTED);
 		}
 	}
 	return S_OK;
@@ -173,12 +169,11 @@ STDMETHODIMP UrlDownload::OnObjectAvailable(REFIID, IUnknown *)
 	return E_NOTIMPL;
 }
 
-void UrlDownload::SetCallBack(char *pCallTo)
+void UrlDownload::SetCallBack(CStringView pCallback)
 {
-	if (pCallTo && strlen(pCallTo))
+	if (pCallback)
 	{
-		m_Callback = pCallTo;
-		m_Callback.SetFormatBase();
+		m_Callback.SetCallback(pCallback);
 		m_bCallback = true;
 	}
 	else
@@ -219,7 +214,7 @@ void _stdcall VFP2C_Destroy_Urlmon(VFP2CTls& tls)
 }
 
 /* UrlDownloadToFile wrapper */
-void _fastcall UrlDownloadToFileEx(ParamBlk *parm)
+void _fastcall UrlDownloadToFileEx(ParamBlkEx& parm)
 {
 	UrlDownloadThread *pDownload = 0;
 try
@@ -228,16 +223,19 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pUrl(vp1);
-	FoxString pFile(vp2);
+	FoxString pUrl(parm(1));
+	FoxString pFile(parm(2));
 	FoxString pCallback(parm,3);
-	bool bAsync = PCount() == 4 && vp4.ev_length > 0;
+	bool bAsync = parm.PCount() == 4 && parm(4)->ev_length > 0;
 
 	if (bAsync && !pCallback.Len())
 		throw E_INVALIDPARAMS;
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
+	{
+		SaveCustomError("UrlDownloadToFileEx", "Callback function length is greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	if (!bAsync)
 	{
@@ -271,11 +269,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AbortUrlDownloadToFileEx(ParamBlk *parm)
+void _fastcall AbortUrlDownloadToFileEx(ParamBlkEx& parm)
 {
 try
 {
-	CThread *pThread = reinterpret_cast<CThread*>(vp1.ev_long);
+	CThread* pThread = parm(1)->Ptr<CThread*>();
 	Return(goUrlThreads.AbortThread(pThread));
 }
 catch(int nErrorNo)

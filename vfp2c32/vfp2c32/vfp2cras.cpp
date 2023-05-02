@@ -1,11 +1,14 @@
 #include <windows.h>
 
-#include "pro_ext.h" // general FoxPro library header
+#if !defined(_WIN64)
+#include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2cutil.h"
 #include "vfp2cras.h"
 #include "vfp2ccppapi.h"
-#include "vfpmacros.h"
 
 static PRASGETERRORSTRING fpRasGetErrorString = 0;
 static PRASENUMCONNECTIONS fpRasEnumConnections = 0;
@@ -38,7 +41,7 @@ void _stdcall SaveRas32Error(char *pFunction, DWORD nErrorNo)
 	LPVFP2CERROR pError = &tls.ErrorInfo[tls.ErrorCount];
 	pError->nErrorType = VFP2C_ERRORTYPE_WIN32;
 	pError->nErrorNo = nErrorNo;
-	strncpy(pError->aErrorFunction, pFunction, VFP2C_ERROR_FUNCTION_LEN);
+	strncpyex(pError->aErrorFunction, pFunction, VFP2C_ERROR_FUNCTION_LEN);
 	fpRasGetErrorString(nErrorNo, pError->aErrorMessage, VFP2C_ERROR_MESSAGE_LEN);
 }
 
@@ -91,7 +94,7 @@ int _stdcall VFP2C_Init_Ras()
 }
 
 // enumerate active dialup connections into an array
-void _fastcall ARasConnections(ParamBlk *parm)
+void _fastcall ARasConnections(ParamBlkEx& parm)
 {
 try
 {
@@ -102,7 +105,7 @@ try
 	if (!fpRasEnumConnections || !fpRasGetProjectionInfo)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(vp1);
+	FoxArray pArray(parm(1));
 	FoxString pEntry(RAS_MaxEntryName);
 	RASCONN *lpRas;
 	RASPPPIP sRasIp;
@@ -147,7 +150,7 @@ try
 				throw E_APIERROR;
 			}
 			pArray(xj,4) = pEntry = sRasIp.szIpAddress;
-			pArray(xj,5) = reinterpret_cast<int>(lpRas->hrasconn);
+			pArray(xj,5) = reinterpret_cast<UINT_PTR>(lpRas->hrasconn);
 			lpRas++;
 		}
 	}
@@ -169,7 +172,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ARasDevices(ParamBlk *parm)
+void _fastcall ARasDevices(ParamBlkEx& parm)
 {
 try
 {
@@ -180,7 +183,7 @@ try
 	if (!fpRasEnumDevices)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(vp1);
+	FoxArray pArray(parm(1));
 	FoxString pEntry(RAS_MaxDeviceName+1);
 
 	DWORD dwSize = 1024, dwEntries, nApiRet;
@@ -230,7 +233,7 @@ catch(int nErrorNo)
 }
 
 
-void _fastcall ARasPhonebookEntries(ParamBlk *parm)
+void _fastcall ARasPhonebookEntries(ParamBlkEx& parm)
 {
 try
 {
@@ -241,7 +244,7 @@ try
 	if (!fpRasEnumEntries)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(vp1);
+	FoxArray pArray(parm(1));
 	FoxString pPhonebookFile(parm,2);
 	FoxString pEntryName(RAS_MaxEntryName+1);
 
@@ -293,10 +296,9 @@ catch(int nErrorNo)
 
 // implementation of RasDlgCallback - for callbacks from the RasDlgPhonebook function
 // SetCallback to setup the callback function
-void RasPhonebookDlgCallback::SetCallback(FoxString &pCallback)
+void RasPhonebookDlgCallback::SetCallback(CStringView pCallback)
 {
-	m_Callback = pCallback;
-	m_Callback.SetFormatBase();
+	m_Callback.SetCallback(pCallback);
 }
 
 // the actual callback function
@@ -321,18 +323,17 @@ void _stdcall RasPhonebookDlgCallback::RasPhonebookDlgCallbackFunc(ULONG_PTR dwC
 
 void RasPhonebookDlgCallback::CallbackTxt(DWORD dwEvent, LPTSTR pszText)
 {
-	m_Callback.AppendFormatBase("(%I,ReadCString(%I),0)", dwEvent, pszText);	
-	_Execute(m_Callback);
+	int nParm3 = 0;
+	m_Callback.Execute(dwEvent, pszText);
 }
 
 void RasPhonebookDlgCallback::Callback(DWORD dwEvent, LPVOID pData)
 {
-	// format the command and execute it
-	m_Callback.AppendFormatBase("(%I,'',%I)", dwEvent, pData);
-	_Execute(m_Callback);
+	CStringView pParm2 = "";
+	m_Callback.Execute(dwEvent, pParm2, pData);
 }
 
-void _fastcall RasPhonebookDlgEx(ParamBlk *parm)
+void _fastcall RasPhonebookDlgEx(ParamBlkEx& parm)
 {
 try
 {
@@ -348,12 +349,15 @@ try
 	FoxString pCallback(parm,3);
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
+	{
+		SaveCustomError("RasPhonebookDlgEx", "Callback function length is greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	RASPBDLG sDialog = {0};
 	sDialog.dwSize = sizeof(RASPBDLG);
 	sDialog.hwndOwner = WTopHwnd();
-	sDialog.dwFlags = PCount() >= 4 ? vp4.ev_long : 0;
+	sDialog.dwFlags = parm.PCount() >= 4 ? parm(4)->ev_long : 0;
 
 	RasPhonebookDlgCallback sCallback;
 
@@ -362,7 +366,7 @@ try
 	{
 		sCallback.SetCallback(pCallback);
 		sDialog.pCallback = RasPhonebookDlgCallback::RasPhonebookDlgCallbackFunc;
-		sDialog.dwCallbackId = reinterpret_cast<DWORD>(&sCallback);
+		sDialog.dwCallbackId = reinterpret_cast<ULONG_PTR>(&sCallback);
 	}
 
 	BOOL bRetVal = fpRasPhonebookDlg(pPhonebookFile,pEntry,&sDialog);
@@ -386,32 +390,31 @@ catch(int nErrorNo)
 }
 }
 
-void RasDialCallback::SetCallback(FoxString &pCallback)
+void RasDialCallback::SetCallback(CStringView pCallback)
 {
-	m_Callback = pCallback;
-	m_Callback.SetFormatBase();	
+	m_Callback.SetCallback(pCallback);
 }
 
 DWORD RasDialCallback::Callback(DWORD dwSubEntry, HRASCONN hrasconn,
 								UINT unMsg,	RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError)
 {
-	Value vRetVal = {'0'};
-	m_Callback.AppendFormatBase("(%U,%U,%U,%I,%U,%U)", dwSubEntry, hrasconn, unMsg, rascs, dwError, dwExtendedError);
-	if (_Evaluate(&vRetVal,m_Callback) == 0)
+	ValueEx vRetVal;
+	vRetVal = 0;
+	if (m_Callback.Evaluate(vRetVal, dwSubEntry, hrasconn, unMsg, rascs, dwError, dwExtendedError) == 0)
 	{
-		if (Vartype(vRetVal) == 'I')
+		if (vRetVal.Vartype() == 'I')
 			return vRetVal.ev_long;
-		else if (Vartype(vRetVal) == 'N')
+		else if (vRetVal.Vartype() == 'N')
 			return static_cast<DWORD>(vRetVal.ev_real);
-		else if (Vartype(vRetVal) == 'L')
+		else if (vRetVal.Vartype() == 'L')
 			return vRetVal.ev_length;
 		else
-			ReleaseValue(vRetVal);
+			vRetVal.Release();
 	}
 	return 1;
 }
 
-DWORD _stdcall RasDialCallback::RasDialCallbackFunc(DWORD dwCallbackId, DWORD dwSubEntry, HRASCONN hrasconn,
+DWORD _stdcall RasDialCallback::RasDialCallbackFunc(ULONG_PTR dwCallbackId, DWORD dwSubEntry, HRASCONN hrasconn,
 										UINT unMsg,	RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError)
 {
 
@@ -427,7 +430,7 @@ DWORD _stdcall RasDialCallback::RasDialCallbackFunc(DWORD dwCallbackId, DWORD dw
 	return dwRet;
 }
 
-void _fastcall RasDialEx(ParamBlk *parm)
+void _fastcall RasDialEx(ParamBlkEx& parm)
 {
 	RASEAPUSERIDENTITY *pUserIdentity = 0;
 try
@@ -440,20 +443,23 @@ try
 		throw E_NOENTRYPOINT;
 
 	// parameter validation
-	if (Vartype(vp1) != 'C' && Vartype(vp1) != 'N')
+	if (parm(1)->Vartype() != 'C' && parm(1)->Vartype() != 'N' && parm(1)->Vartype() != 'I')
 		throw E_INVALIDPARAMS;
-	if (Vartype(vp2) != 'C' && Vartype(vp2) != '0')
+	if (parm(2)->Vartype() != 'C' && parm(2)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
-	if (Vartype(vp3) != 'C' && Vartype(vp3) != '0')
+	if (parm(3)->Vartype() != 'C' && parm(3)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
 	FoxString pEntry(parm,1);
 	FoxString pPhonebookFile(parm,2);
 	FoxString pCallback(parm,3);
-	HRASCONN hConn = PCount() >= 5 ? reinterpret_cast<HRASCONN>(vp5.ev_long) : 0;
+	HRASCONN hConn = parm.PCount() >= 5 ? parm(5)->Ptr<HRASCONN>() : 0;
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
+	{
+		SaveCustomError("RasPhonebookDlgEx", "Callback function length is greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	// local variables
 	DWORD nApiRet;
@@ -467,7 +473,7 @@ try
 
 	RASDIALEXTENSIONS sDialExtensions = {0};
 	sDialExtensions.dwSize = sizeof(RASDIALEXTENSIONS);
-	sDialExtensions.dwfOptions = PCount() >= 4 ? vp4.ev_long : 0;
+	sDialExtensions.dwfOptions = parm.PCount() >= 4 ? parm(4)->ev_long : 0;
 
 	if (pEntry.Len())
 	{
@@ -499,7 +505,7 @@ try
 		}
 	}
 	else
-		pDialParamsPtr = (LPRASDIALPARAMS)vp1.ev_long;
+		pDialParamsPtr = parm(1)->DynamicPtr<LPRASDIALPARAMS>();
 
 	// setup callback parameters
 	DWORD dwNotifier = 0; LPVOID lpNotifier = 0;
@@ -515,7 +521,7 @@ try
 		try
 		{
 			pRasCallback->SetCallback(pCallback);
-			pDialParamsPtr->dwCallbackId = reinterpret_cast<DWORD>(pRasCallback);
+			pDialParamsPtr->dwCallbackId = reinterpret_cast<ULONG_PTR>(pRasCallback);
 		}
 		catch(int nErrorNo)
 		{
@@ -568,7 +574,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall RasDialDlgEx(ParamBlk *parm)
+void _fastcall RasDialDlgEx(ParamBlkEx& parm)
 {
 try
 {
@@ -585,10 +591,10 @@ try
 
 	RASDIALDLG sDialog = {0};
 	sDialog.dwSize = sizeof(RASDIALDLG);
-	if (PCount() >= 4)
-		sDialog.dwSubEntry = vp4.ev_long;
-	if (PCount() >= 5)
-		sDialog.hwndOwner = reinterpret_cast<HWND>(vp5.ev_long);
+	if (parm.PCount() >= 4)
+		sDialog.dwSubEntry = parm(4)->ev_long;
+	if (parm.PCount() >= 5)
+		sDialog.hwndOwner = parm(5)->Ptr<HWND>();
 
 	BOOL bRetVal = fpRasDialDlg(pPhonebook,pEntry,pPhonenumber,&sDialog);
 	if (!bRetVal)
@@ -609,7 +615,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall RasHangUpEx(ParamBlk *parm)
+void _fastcall RasHangUpEx(ParamBlkEx& parm)
 {
 try
 {
@@ -620,7 +626,7 @@ try
 	if (!fpRasHangUp || !fpRasGetConnectStatus)
 		throw E_NOENTRYPOINT;
 
-	HRASCONN hConn = reinterpret_cast<HRASCONN>(vp1.ev_long);
+	HRASCONN hConn = parm(1)->Ptr<HRASCONN>();
 	
 	DWORD nApiRet = fpRasHangUp(hConn);
 	if (nApiRet != ERROR_SUCCESS)
@@ -654,7 +660,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall RasGetConnectStatusEx(ParamBlk *parm)
+void _fastcall RasGetConnectStatusEx(ParamBlkEx& parm)
 {
 try
 {
@@ -665,8 +671,8 @@ try
 	if (!fpRasGetConnectStatus)
 		throw E_NOENTRYPOINT;
 
-	HRASCONN hConn = reinterpret_cast<HRASCONN>(vp1.ev_long);
-	FoxArray pArray(vp2,5,1);
+	HRASCONN hConn = parm(1)->Ptr<HRASCONN>();
+	FoxArray pArray(parm(2),5,1);
 
 	FoxString pValue(RAS_MaxPhoneNumber+1);
 	RASCONNSTATUS sStatus = {0};
@@ -710,8 +716,7 @@ bool RasNotifyThread::Setup(HRASCONN hConn, DWORD dwFlags, FoxString &pCallback)
 {
 	m_Conn = hConn;
 	m_Flags = dwFlags;
-	m_Callback = pCallback;
-	m_Callback.SetFormatBase();
+	m_Callback.SetCallback(pCallback);
 
 	if (!m_RasEvent.Create(false))
 		return false;
@@ -725,8 +730,6 @@ bool RasNotifyThread::Setup(HRASCONN hConn, DWORD dwFlags, FoxString &pCallback)
 DWORD RasNotifyThread::Run()
 {
 	DWORD nApiRet;
-	char *pCommand;
-
 	HANDLE hEvents[2];
 	hEvents[0] = m_RasEvent;
 	hEvents[1] = m_AbortEvent;
@@ -736,10 +739,7 @@ DWORD RasNotifyThread::Run()
 		nApiRet = fpRasConnectionNotification(m_Conn, m_RasEvent, m_Flags);
 		if (nApiRet)
 		{
-			m_Callback.AppendFormatBase("(%I,%I)", m_Conn, nApiRet);
-			pCommand = m_Callback.Strdup();
-			if (pCommand)
-				PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
+			m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, m_Conn, nApiRet);
 			return 0;
 		}
 
@@ -747,10 +747,7 @@ DWORD RasNotifyThread::Run()
 		switch(nApiRet)
 		{
 			case WAIT_OBJECT_0:
-				m_Callback.AppendFormatBase("(%I,%I)", m_Conn, 0);
-				pCommand = m_Callback.Strdup();
-				if (pCommand)
-					PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
+				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, m_Conn, 0);
 				if (m_Conn != INVALID_HANDLE_VALUE)
 					return 0;
 				else
@@ -760,16 +757,13 @@ DWORD RasNotifyThread::Run()
 				return 0;
 			
 			default:
-				m_Callback.AppendFormatBase("(%I,%I)", m_Conn, nApiRet);
-				pCommand = m_Callback.Strdup();
-				if (pCommand)
-					PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCommand), 0);
+				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, m_Conn, nApiRet);
 				return 0;
 		}
 	}
 }
 
-void _fastcall RasConnectionNotificationEx(ParamBlk *parm)
+void _fastcall RasConnectionNotificationEx(ParamBlkEx& parm)
 {
 	RasNotifyThread *pNotifyThread = 0;
 try
@@ -781,9 +775,9 @@ try
 	if (!fpRasConnectionNotification)
 		throw E_NOENTRYPOINT;
 
-	HRASCONN hConn = reinterpret_cast<HRASCONN>(vp1.ev_long);
-	DWORD dwFlags = vp2.ev_long;
-	FoxString pCallback(vp3);
+	HRASCONN hConn = parm(1)->Ptr<HRASCONN>();
+	DWORD dwFlags = parm(2)->ev_long;
+	FoxString pCallback(parm(3));
 
 	if (!goThreadManager.Initialized())
 	{
@@ -791,8 +785,11 @@ try
 		throw E_APIERROR;
 	}
 
-	if (pCallback.Len() > VFP2C_MAX_CALLBACKBUFFER || pCallback.Len() == 0)
+	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
+	{
+		SaveCustomError("RasConnectionNotificationEx", "Callback function length is zero or greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	RasNotifyThread *pNotifyThread = new RasNotifyThread(goThreadManager);
 	if (!pNotifyThread)
@@ -814,7 +811,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AbortRasConnectionNotificationEx(ParamBlk *parm)
+void _fastcall AbortRasConnectionNotificationEx(ParamBlkEx& parm)
 {
 try
 {
@@ -822,7 +819,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	CThread *pThread = reinterpret_cast<CThread*>(vp1.ev_long);
+	CThread *pThread = parm(1)->Ptr<CThread*>();
 	Return(goThreadManager.AbortThread(pThread));
 }
 catch(int nErrorNo)
@@ -832,7 +829,7 @@ catch(int nErrorNo)
 }
 #endif
 
-void _fastcall RasClearConnectionStatisticsEx(ParamBlk *parm)
+void _fastcall RasClearConnectionStatisticsEx(ParamBlkEx& parm)
 {
 try
 {
@@ -843,7 +840,7 @@ try
 	if (!fpRasClearConnectionStatistics)
 		throw E_NOENTRYPOINT;
 
-	HRASCONN hConn = reinterpret_cast<HRASCONN>(vp1.ev_long);
+	HRASCONN hConn = parm(1)->Ptr<HRASCONN>();
 	DWORD nApiRet = fpRasClearConnectionStatistics(hConn);
 	if (nApiRet != ERROR_SUCCESS)
 	{

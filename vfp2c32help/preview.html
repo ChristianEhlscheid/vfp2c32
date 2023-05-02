@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
-<title>CopyFileEx</title><style type="text/css">
+<title>CreateCallbackFunc</title><style type="text/css">
 <!--
 *
 {
@@ -392,7 +392,7 @@ if ( window.addEventListener ) {
 function setvfp2c32version()
 {
 	var version = document.getElementById('vfp2c32version');
-	version.innerText = 'VFP2C32 2.0.0.14';
+	version.innerText = 'VFP2C32 2.0.0.19';
 }			
 			
 function CopyCode(cElement)
@@ -411,70 +411,134 @@ function ChangeClass(oElement, cClass)
 </head>		<body>
 <div id="header">
 <p id="vfp2c32version"></p>
-<h1 class="function">CopyFileEx</h1>
-<div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
+<h1 class="function">CreateCallbackFunc</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
 </div>
 <div id="content">
-<p class="description">Copies a file, an optional callback function can be passed which receives status while the copy operation is in progress.</p>
+<p class="description">Creates an assembly thunk which emulates a C callback function.</p>
 
-<div class="block"><pre>CopyFileEx(<a href="#p1">cSourceFile</a>, <a href="#p2">cDestinationFile</a> [, <a href="#p3">cCallback</a> [, <a href="#p4">nShareMode</a>]])</pre></div>
+<div class="block"><pre>CreateCallbackFunc(<a href="#p1">cCallback</a>, <a href="#p2">cReturnType</a>, <a href="#p3">cParamTypes</a> [, <a href="#p4">oObject</a> [, <a href="#p5">nFlags</a>]])</pre></div>
 <h3>Parameters</h3>
-<dl class="parm"><dt><a id="p1">cSourceFile</a></dt>
-<dd><p>Fully qualified path of the file to copy.</p>
+<dl class="parm"><dt><a id="p1">cCallback</a></dt>
+<dd><p>The name of the function to call back.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p2">cDestinationFile</a></dt>
-<dd><p>Fully qualified path of the destination for the copy operation.</p>
+<dl class="parm"><dt><a id="p2">cReturnType</a></dt>
+<dd><p>The datatype of the returnvalue of the C callback function.<br />
+<br />
+One of:</p>
+<table>
+<tr><th style="width: 18%;">Datatype</th><th>Description</th></tr>
+<tr><td>VOID or empty string</td><td>no returnvalue</td></tr>
+<tr><td>INTEGER or LONG</td><td>a signed 32bit integer</td></tr>
+<tr><td>UINTEGER or ULONG</td><td>an unsigned 32bit integer</td></tr>
+<tr><td>SHORT</td><td>a signed 16bit integer</td></tr>
+<tr><td>USHORT</td><td>an unsigned 16bit integer</td></tr>
+<tr><td>BOOL</td><td>a boolean 32bit value - 0 is mapped to .F. everything else to .T.</td></tr>
+<tr><td>SINGLE</td><td>a 32bit floating point value</td></tr>
+<tr><td>DOUBLE</td><td>a 64bit floating point value</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p3">cParamTypes</a></dt>
+<dd><p>A comma seperated list of parameter types the C function expects.<br />
+<br />
+Valid types:</p>
+<table>
+<tr><th style="width: 18%;">Datatype</th><th>Description</th></tr>
+<tr><td>INTEGER or LONG</td><td>a signed 32bit integer</td></tr>
+<tr><td>UINTEGER or ULONG</td><td>an unsigned 32bit integer</td></tr>
+<tr><td>SHORT</td><td>a signed 16bit integer</td></tr>
+<tr><td>USHORT</td><td>an unsigned 16bit integer</td></tr>
+<tr><td>BOOL</td><td>a boolean 32bit value - 0 is mapped to .F. everything else to .T.</td></tr>
+<tr><td>SINGLE (0-6)</td><td>a 32bit floating point value *</td></tr>
+<tr><td>DOUBLE (0-16)</td><td>a 64bit floating point value *</td></tr>
+<tr><td>STRING (ANSI | UNICODE)</td><td>a C style string **</td></tr>
+<tr><td>INT64 (BINARY | LITERAL | CURRENCY)</td><td>a signed 64 bit interger value ***</td></tr>
+<tr><td>UINT64 (BINARY | LITERAL | CURRENCY)</td><td>an unsigned 64 bit integer value ***</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>* For the SINGLE and DOUBLE datatypes an optional precision value can be specified e.g.<br />
+lnCallback = CreateCallbackFunc('Foo','DOUBLE 15','INTEGER, INTEGER')<br />
+If you omit the precision value the default value 6 is used.
+</p></div>
+<p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>** By default C style strings are marshaled as numeric pointer values.<br />
+You can get the actual string by passing the value to the <a href="/pages/readcstring.html">ReadCString</a> (Ansi) or <a href="/pages/readwstring.html">ReadWString</a> (Unicode) function.<br />
+If you additionally pass ANSI or UNICODE the string is marshaled by these functions automatically.
+</p></div>
+<p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>*** By default signed and unsigned 64-bit integers are marshaled as numeric values. The callback will truncate the values <br />
+if the parameter exceeds the VFP numeric limit. If you're not 100% sure that such big numbers are never passed specify the BINARY, LITERAL <br />
+or CURRENCY modifier. BINARY marshals the parameter as a 8 byte varbinary value, LITERAL marshals the parameter as a string of digits<br />
+and CURRENCY as a currency literal.
+</p></div>
+<p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>The number of parameters is limited to 27, the limit of parameters a VFP function can except.
+</p></div>
 </dd></dl>
-<dl class="parm"><dt><a id="p3">cCallback (optional)</a></dt>
-<dd><p>The function to callback with progress information during the copy operation.<br />
-The function should have the following prototype:</p>
+<dl class="parm"><dt><a id="p4">oObjectRef (optional)</a></dt>
+<dd><p>If the FoxPro method should be called back on an object reference, you can pass the object reference in this parameter.<br />
+If you want to pass the nFlags parameter but don't want to pass an object pass NULL instead.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nFlags (optional, additive)</a></dt>
+<dd><p>default = CALLBACK_SYNCRONOUS<br />
+<br />
+valid values:</p>
+<table>
+<tr><th style="width: 20%;">Flag</th><th>Description</th></tr>
+<tr><td>CALLBACK_SYNCRONOUS</td><td>The C callback function is called on the main Visual FoxPro thread. <br />
+For all Winapi functions e.g. <a href="http://msdn.microsoft.com/en-us/library/ms633497(VS.85).aspx">EnumWindows</a>.</td></tr>
+<tr><td>CALLBACK_ASYNCRONOUS_POST</td><td>The C callback function is called on a seperate thread, for 3rd party C DLL's that raise <br />
+events (call the C function). The callback itself is send asyncronously to the <br />
+main Visual FoxPro thread, it does not block the 3rd party thread, the event is processed when FoxPro is in a READ EVENTS state.</td></tr>
+<tr><td>CALLBACK_ASYNCRONOUS_SEND</td><td>The C callback function is called on a seperate thread, for 3rd party C DLL's that raise <br />
+events (call the C function). The callback is send syncronously to the main Visual FoxPro thread, <br />
+the thread resumes after the FoxPro function returns.</td></tr>
+<tr><td>CALLBACK_CDECL</td><td>The C function uses the <i>cdecl</i> calling convention, by default the callback function is created with the <i>stdcall</i> calling convention.</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>If you specify CALLBACK_ASYNCRONOUS_POST several callbacks can interlap each other, <br />
+to circumvent this set _VFP.AutoYield to .F. - either for the<br />
+whole application or inside the FoxPro function that is used as the callback function e.g.
+</p></div>
 <div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
-<div class="block"><pre id="code_1">FUNCTION CopyCallback(nBytesCopied, nFileSize, nPercentCopied)
+<div class="block"><pre id="code_1">FUNCTION YourCallbackFunction(lnParameter1, lnParameter2)
+_VFP.AutoYield = .F.
+&amp;&amp; do your stuff ...
+_VFP.AutoYield = .T.
 ENDFUNC
 </pre></div>
 </dd></dl>
-<dl class="parm"><dt><a id="p4">nShareMode (optional)</a></dt>
-<dd><p>The share mode with which the copied files are opened in the <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> API call.<br />
-<br />
-Defaults to 0 (no sharing).<br />
-<br />
-Other possible values are FILE_SHARE_READ, FILE_SHARE_WRITE and FILE_SHARE_DELETE or any combination of these values.</p>
-</dd></dl>
 <h2>Return Value</h2>
-<p>.T. if the file was copied, .F. if the copy operation was aborted by the callback routine.</p>
+<p>A pointer (numeric) to the created callback function.</p>
+
+<h2>Remarks</h2>
+<p>To emulate callbacks on an object the library has to make a copy of the object into a public variable.<br />
+The name of the variable is auto generated by the following scheme:</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">lcVarName = "__VFP2C_CBO_" + <a href="its:dv_foxhelp.chm::/html/767f9fa5-5271-4fe2-baf8-332cf8d15fb5.htm">ALLTRIM</a>(<a href="its:dv_foxhelp.chm::/html/970442f9-ac4f-401f-a027-03aa9f978054.htm">STR</a>(returnvalue))
+</pre></div>
+<p>This workaround is necessary cause the FoxPro LCK doesn't provide an API function to call methods of an object.<br />
+The public variable is automatically released when you unbind the message.<br />
+Although a copy of the object is made the internal object reference count is not incremented, the public copy doesn't affect your object's lifetime (scope).<br />
+The only thing you have to consider is that your own variables doesn't conflict with the above naming scheme which is very unlikely.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
-<p><a href="/pages/ADirectoryInfo.html">ADirectoryInfo</a><br />
-<a href="/pages/ADirEx.html">ADirEx</a><br />
-<a href="/pages/ADriveInfo.html">ADriveInfo</a><br />
-<a href="/pages/AFileAttributes.html">AFileAttributes</a><br />
-<a href="/pages/AFileAttributesEx.html">AFileAttributesEx</a><br />
-<a href="/pages/CancelFileChange.html">CancelFileChange</a><br />
-<a href="/pages/CompareFileTimes.html">CompareFileTimes</a><br />
-<a href="/pages/DeleteDirectory.html">DeleteDirectory</a><br />
-<a href="/pages/DeleteFileEx.html">DeleteFileEx</a><br />
-<a href="/pages/FindFileChange.html">FindFileChange</a><br />
-<a href="/pages/GetFileAttributes.html">GetFileAttributes</a><br />
-<a href="/pages/GetFileOwner.html">GetFileOwner</a><br />
-<a href="/pages/GetFileSize.html">GetFileSize</a><br />
-<a href="/pages/GetFileTimes.html">GetFileTimes</a><br />
-<a href="/pages/GetLongPathName.html">GetLongPathName</a><br />
-<a href="/pages/GetShortPathName.html">GetShortPathName</a><br />
-<a href="/pages/MoveFileEx.html">MoveFileEx</a><br />
-<a href="/pages/SetFileAttributes.html">SetFileAttributes</a><br />
-<a href="/pages/SetFileTimes.html">SetFileTimes</a><br />
+<p><a href="/pages/asyncwaitforobject.html">AsyncWaitForObject</a><br />
+<a href="/pages/bindeventsex.html">BindEventsEx</a><br />
+<a href="/pages/cancelwaitforobject.html">CancelWaitForObject</a><br />
+<a href="/pages/createpublicshadowobjreference.html">CreatePublicShadowObjReference</a><br />
+<a href="/pages/destroycallbackfunc.html">DestroyCallbackFunc</a><br />
+<a href="/pages/releasepublicshadowobjreference.html">ReleasePublicShadowObjReference</a><br />
+<a href="/pages/unbindeventsex.html">UnbindEventsEx</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa364952(VS.85).aspx">GetFileInformationByHandle</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa365467(VS.85).aspx">ReadFile</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa365747(VS.85).aspx">WriteFile</a></p>
 
 
 </div>
 <div id="footer">
-<p>&copy; <a href="http://vfpx.codeplex.com/wikipage?title=VFP2C32">VFP2C32</a> - Shared Source License for <a href="http://vfpx.codeplex.com">VFPX</a></p>
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
 </div>
 </body>
 </html>

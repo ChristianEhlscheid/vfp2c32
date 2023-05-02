@@ -18,11 +18,11 @@ const int PAPERSIZE_UNIT_POINT	= 3;
 const double POINTS_PER_MM	= 0.2834645669;
 const double INCH_PER_MM	= 0.039370079;
 
-void _fastcall APrintersEx(ParamBlk *parm);
-void _fastcall APrintJobs(ParamBlk *parm);
-void _fastcall APrinterForms(ParamBlk *parm);
-void _fastcall APaperSizes(ParamBlk *parm);
-void _fastcall APrinterTrays(ParamBlk *parm);
+void _fastcall APrintersEx(ParamBlkEx& parm);
+void _fastcall APrintJobs(ParamBlkEx& parm);
+void _fastcall APrinterForms(ParamBlkEx& parm);
+void _fastcall APaperSizes(ParamBlkEx& parm);
+void _fastcall APrinterTrays(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

@@ -1,10 +1,6 @@
 #ifndef _VFP2CCPPAPI_H__
 #define _VFP2CCPPAPI_H__
 
-#include <assert.h>
-#include "pro_ext.h"
-#include "vfp2cutil.h"
-
 const int VFP_MAX_ARRAY_ROWS	= 65000;
 const int VFP_MAX_PROPERTY_NAME	= 253;
 const int VFP_MAX_VARIABLE_NAME	= 128;
@@ -17,32 +13,7 @@ const int VFP_MAX_COLUMNS		= 255;
 const int VFP_MAX_FIELDNAME		= VFP_MAX_CURSOR_NAME + 1 + VFP_MAX_COLUMN_NAME;
 const int VFP_MAX_DATE_LITERAL	= 32;
 
-// some VFP internal error numbers
-const int E_ALIASNOTFOUND		= 137;
-const int E_NUMERICOVERFLOW		= 159;
-const int E_VARIABLENOTFOUND	= 170;
-const int E_NOTANARRAY			= 176;
-const int E_INSUFMEMORY			= 182;
-const int E_INVALIDSUBSCRIPT	= 224;
-const int E_DIVIDEBYZERO		= 307;
-const int E_LOCKFAILED			= 503;
-const int E_TYPECONFLICT		= 532;
-const int E_NOENTRYPOINT		= 754;
-const int E_FIELDNOTFOUND		= 806;
-const int E_INVALIDPARAMS		= 901;
-const int E_CURRENCYOVERFLOW	= 988;
-const int E_CUSTOMERROR			= 7777;
-
-#pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
-
 /* thin wrappers around LCK functions which throw an exception on error */
-NTI _stdcall NewVar(char *pVarname, Locator &sVar, bool bPublic) throw(int);
-NTI _stdcall FindVar(char *pVarname) throw(int);
-void _stdcall FindVar(NTI nVarNti, Locator &sVar) throw(int);
-void _stdcall FindVar(char *pVarname, Locator &sVar) throw(int);
-void _stdcall StoreObjectRef(char *pName, NTI &nVarNti, Value &sObject);
-void _stdcall ReleaseObjectRef(char *pName, NTI nVarNti);
-
 inline void Evaluate(Value &pVal, char *pExpression)
 {
 	int nErrorNo;
@@ -57,282 +28,138 @@ inline void Execute(char *pExpression)
 		throw nErrorNo;
 }
 
-inline void Store(Locator &sVar, Value &sValue)
-{
-	register int nErrorNo;
-	if (nErrorNo = _Store(&sVar, &sValue))
-		throw nErrorNo;
-}
-
-inline void Load(Locator &sVar, Value &sValue)
-{
-	register int nErrorNo;
-	if (nErrorNo = _Load(&sVar, &sValue))
-		throw nErrorNo;
-}
-
-inline void ReleaseVar(NTI nVarNti)
-{
-	register int nErrorNo;
-	if (nErrorNo = _Release(nVarNti))
-		throw nErrorNo;
-}
-
-inline void ReleaseVar(char *pVarname)
-{
-	NTI nVarNti = FindVar(pVarname);
-	ReleaseVar(nVarNti);
-}
-
-inline void ObjectRelease(const Value &sValue)
-{
-	register int nErrorNo;
-	if (nErrorNo = _ObjectRelease(const_cast<Value*>(&sValue)))
-		throw nErrorNo;
-}
-
-inline long ALen(Locator &pLoc, int mode)
-{
-	int nSubscript;
-	if (nSubscript = _ALen(pLoc.l_NTI, mode) == -1)
-		throw E_NOTANARRAY;
-	return nSubscript;
-}
-
-inline long AElements(Locator &pLoc)
-{
-	long nSubscript;
-	nSubscript = _ALen(pLoc.l_NTI, AL_ELEMENTS);
-	if (nSubscript == -1)
-		throw E_NOTANARRAY;
-	return nSubscript;
-}
-
-inline long ARows(Locator &pLoc)
-{
-	long nSubscript;
-	nSubscript = _ALen(pLoc.l_NTI, AL_SUBSCRIPT1);
-	if (nSubscript == -1)
-		throw E_NOTANARRAY;
-	return nSubscript;
-}
-
-inline long ADims(Locator &pLoc)
-{
-	int nSubscript;
-	nSubscript = _ALen(pLoc.l_NTI, AL_SUBSCRIPT2);
-	if (nSubscript == -1)
-		throw E_NOTANARRAY;
-	return nSubscript;
-}
-
-inline unsigned int Len(Value &pVal)
-{
-	return pVal.ev_length;
-}
-
-inline bool CheckOptionalParameterLen(ParamBlk *parm, int nParmNo)
-{
-	return parm->pCount >= nParmNo && parm->p[nParmNo-1].val.ev_length;
-}
-
-inline void ResetArrayLocator(Locator &pLoc, int nColumns = 1)
-{
-	pLoc.l_subs = nColumns > 1 ? 2 : 1;
-	pLoc.l_sub1 = 0;
-	pLoc.l_sub2 = 0;
-}
-
 /* overloaded Return function to return values to FoxPro without thinking about type issues */
 inline void Return(char *pString) { _RetChar(pString); }
-#if !defined(_WIN64)
-inline void Return(void *pPointer){ _RetFloat(static_cast<double>(reinterpret_cast<unsigned __int64>(pPointer)), 20, 0); }
+inline void _stdcall Return(__int8 nValue) { _RetInt(nValue, 4); }
+inline void _stdcall Return(unsigned __int8 nValue) { _RetInt(nValue, 3); }
+inline void _stdcall Return(short nValue) { _RetInt(nValue, 6); }
+inline void _stdcall Return(unsigned short nValue) { _RetInt(nValue, 5); }
+inline void _stdcall Return(int nValue) { _RetInt(nValue, 11); }
+inline void _stdcall Return(long nValue) { _RetInt(nValue, 11); }
+inline void _stdcall Return(bool bValue) { _RetLogical(bValue); }
+inline void _stdcall Return(CCY nValue) { _RetCurrency(nValue, 21); }
+inline void _stdcall Return(CCY nValue, int nWidth) { _RetCurrency(nValue, nWidth); }
+inline void _stdcall Return(Value& pVal) { _RetVal(&pVal); }
+inline void _stdcall ReturnARows(Locator& pLoc) { _RetInt(pLoc.l_sub1, 5); }
+inline void _stdcall ReturnNull() { ValueEx vRetval; vRetval.SetNull(); _RetVal(vRetval); }
+
+#if defined(_WIN64)
+inline void Return(void* pPointer) { ValueEx vRetVal; vRetVal.SetPointer(pPointer); _RetVal(vRetVal); }
+inline void _stdcall Return(unsigned int nValue) { ValueEx vRetVal; vRetVal.SetUInt(nValue); _RetVal(vRetVal); }
+inline void _stdcall Return(unsigned long nValue) { ValueEx vRetVal; vRetVal.SetUInt(nValue); _RetVal(vRetVal); }
+inline void _stdcall Return(__int64 nValue) { ValueEx vRetVal; vRetVal.SetInt64(nValue); _RetVal(vRetVal); }
+inline void _stdcall Return(unsigned __int64 nValue) { ValueEx vRetVal; vRetVal.SetUInt64(nValue); _RetVal(vRetVal); }
+inline void _stdcall Return(double nValue) { ValueEx vRetVal; vRetVal.SetDouble(nValue); _RetVal(vRetVal); }
+inline void _stdcall Return(double nValue, int nDecimals) { ValueEx vRetVal; vRetVal.SetDouble(nValue, nDecimals); _RetVal(vRetVal); }
+inline void _stdcall Return(float nValue) { ValueEx vRetVal; vRetVal.SetFloat(nValue); _RetVal(vRetVal); }
+inline void _stdcall Return(float nValue, int nDecimals) { ValueEx vRetVal; vRetVal.SetFloat(nValue, nDecimals); _RetVal(vRetVal); }
 #else
-inline void Return(void *pPointer){ _RetInt(reinterpret_cast<int>(pPointer), 11); }
+inline void _stdcall Return(void *pPointer){ _RetInt(reinterpret_cast<int>(pPointer), 11); }
+inline void _stdcall Return(unsigned int nValue) { _RetFloat(nValue, 10, 0); }
+inline void _stdcall Return(unsigned long nValue) { _RetFloat(nValue, 10, 0); }
+inline void _stdcall Return(__int64 nValue) { _RetFloat(static_cast<double>(nValue), 20, 0); }
+inline void _stdcall Return(unsigned __int64 nValue) { _RetFloat(static_cast<double>(nValue), 20, 0); }
+inline void _stdcall Return(double nValue) { _RetFloat(nValue, 20, 16); }
+inline void _stdcall Return(double nValue, int nDecimals) { _RetFloat(nValue, 20, nDecimals); }
+inline void _stdcall Return(float nValue) { _RetFloat(nValue, 20, 7); }
+inline void _stdcall Return(float nValue, int nDecimals) { _RetFloat(nValue, 20, nDecimals); }
 #endif
-inline void Return(__int8 nValue) { _RetInt(nValue, 4); }
-inline void Return(unsigned __int8 nValue) { _RetInt(nValue, 3); }
-inline void Return(short nValue) { _RetInt(nValue, 6); }
-inline void Return(unsigned short nValue) { _RetInt(nValue, 5); }
-inline void Return(int nValue) { _RetInt(nValue, 11); }
-inline void Return(unsigned int nValue) { _RetFloat(nValue, 10, 0); }
-inline void Return(long nValue) { _RetInt(nValue, 11); }
-inline void Return(unsigned long nValue) { _RetFloat(nValue, 10, 0); }
-inline void Return(__int64 nValue) { _RetFloat(static_cast<double>(nValue), 20, 0); }
-inline void Return(unsigned __int64 nValue) { _RetFloat(static_cast<double>(nValue), 20, 0); }
-inline void Return(double nValue) { _RetFloat(nValue, 20, 16); }
-inline void Return(double nValue, int nDecimals) { _RetFloat(nValue, 20, nDecimals); }
-inline void Return(float nValue) { _RetFloat(nValue, 20, 7); }
-inline void Return(float nValue, int nDecimals) { _RetFloat(nValue, 20, nDecimals); }
-inline void Return(bool bValue) { _RetLogical(bValue); }
-inline void Return(CCY nValue) { _RetCurrency(nValue, 21); }
-inline void Return(CCY nValue, int nWidth) { _RetCurrency(nValue, nWidth); }
-inline void Return(Value &pVal) { _RetVal(&pVal); }
-inline void ReturnARows(Locator &pLoc) { _RetInt(pLoc.l_sub1, 5); }
-inline void ReturnNull() { Value vRetval; vRetval.ev_type = '\0'; _RetVal(&vRetval); }
-inline void ReturnIDispatch(void* pObject)
-{
-	char aCommand[32];
-	Value vObject = {'0'};
-	sprintfex(aCommand,"SYS(3096,%I)", pObject);
-	Evaluate(vObject, aCommand);
-	Return(vObject);
-}
 
-/* Foxpro like Vartype function */
-inline char Vartype(const Value &pVal) { return pVal.ev_type; }
-inline char Vartype(Value *pVal) { return pVal->ev_type; }
-inline char Vartype(Locator &pLoc) { return pLoc.l_type; }
-inline char Vartype(Locator *pLoc) { return pLoc->l_type; }
-inline char Vartype(Parameter &pParm) { return pParm.val.ev_type; }
-inline char Vartype(Parameter *pParm) { return pParm->val.ev_type; }
-
-/* Reference identification functions */
-inline bool IsVariableRef(Locator &pLoc) { return pLoc.l_type == 'R' && pLoc.l_where == -1; }
-inline bool IsMemoRef(Locator &pLoc) { return pLoc.l_type == 'R' && pLoc.l_where != -1; }
-
-/* Memory Handle management */
-inline char* HandleToPtr(MHandle pHandle) { return reinterpret_cast<char*>(_HandToPtr(pHandle)); }
-inline char* HandleToPtr(const Value &pVal) { return reinterpret_cast<char*>(_HandToPtr(pVal.ev_handle)); }
-inline char* HandleToPtr(Value *pVal) { return reinterpret_cast<char*>(_HandToPtr(pVal->ev_handle)); }
-
-inline bool AllocHandleEx(Value &pVal, int nBytes) { pVal.ev_handle = _AllocHand(nBytes); return pVal.ev_handle != 0; }
-
-inline void FreeHandle(MHandle pHandle) { if (pHandle) _FreeHand(pHandle); }
-inline void FreeHandle(const Value &pVal) { if (pVal.ev_handle) _FreeHand(pVal.ev_handle); }
-inline void FreeHandle(Value *pVal) { if (pVal->ev_handle) _FreeHand(pVal->ev_handle); }
-
-inline void UnlockFreeHandle(MHandle pHandle) { if (pHandle) { _HUnLock(pHandle); _FreeHand(pHandle); } }
-inline void UnlockFreeHandle(Value &pVal) { if (pVal.ev_handle) { _HUnLock(pVal.ev_handle); _FreeHand(pVal.ev_handle); } }
-
-inline bool ValidHandle(Value &pVal) { return pVal.ev_handle > 0; }
-
-inline void LockHandle(MHandle pHandle) { _HLock(pHandle); }
-inline void LockHandle(const Value &pVal) { _HLock(pVal.ev_handle); }
-inline void LockHandle(Value *pVal) { _HLock(pVal->ev_handle); }
-
-inline void UnlockHandle(MHandle pHandle) { _HUnLock(pHandle); }
-inline void UnlockHandle(const Value &pVal) { _HUnLock(pVal.ev_handle); }
-inline void UnlockHandle(Value *pVal) { _HUnLock(pVal->ev_handle); }
-
-inline unsigned long GetHandleSize(MHandle pHandle) { return _GetHandSize(pHandle); }
-inline unsigned long GetHandleSize(const Value &pVal) { return _GetHandSize(pVal.ev_handle); }
-inline unsigned long GetHandleSize(Value *pVal) { return _GetHandSize(pVal->ev_handle); }
-
-inline bool SetHandleSize(MHandle pHandle, unsigned long nSize) { return _SetHandSize(pHandle, nSize) > 0; }
-inline bool SetHandleSize(Value &pVal, unsigned long nSize) { return _SetHandSize(pVal.ev_handle, nSize) > 0; }
-inline bool SetHandleSize(Value *pVal, unsigned long nSize) { return _SetHandSize(pVal->ev_handle, nSize) > 0; }
-
-inline bool ExpandValue(Value &pVal, int nBytes) { return _SetHandSize(pVal.ev_handle, pVal.ev_length + nBytes) > 0; }
-inline bool ExpandValue(Value *pVal, int nBytes) { return _SetHandSize(pVal->ev_handle, pVal->ev_length + nBytes) > 0; }
-
-inline bool NullTerminateValue(Value &pVal) { return _SetHandSize(pVal.ev_handle, pVal.ev_length + 1) > 0; }
-inline bool NullTerminateValue(Value *pVal) { return _SetHandSize(pVal->ev_handle, pVal->ev_length + 1) > 0; }
-
-/* release resources of a Value if necessary */
-inline void ReleaseValue(Value &pVal)
-{ 
-	if (pVal.ev_type == 'C' && pVal.ev_handle)
-		_FreeHand(pVal.ev_handle);
-	else if (pVal.ev_type == 'O' && pVal.ev_object)
-		_FreeObject(&pVal);
-}
+void _stdcall ReturnIDispatch(void* pObject);
 
 /* unsigned & signed __int64 helper functions */
-inline __int64 Value2Int64(Value &pVal)
+inline __int64 _stdcall Value2Int64(ValueEx &pVal)
 {
-	if (Vartype(pVal) == 'Y')
+	if (pVal.Vartype() == 'Y')
 		return pVal.ev_currency.QuadPart;
-	else if (Vartype(pVal) == 'C')
+	else if (pVal.Vartype() == 'C')
 	{
-		if (pVal.ev_width == 1 && Len(pVal) == 8)
-			return *reinterpret_cast<__int64*>(HandleToPtr(pVal));
+		if (pVal.ev_width == 1 && pVal.Len() == 8)
+			return *reinterpret_cast<__int64*>(pVal.HandleToPtr());
 		else
-			return StringToInt64(HandleToPtr(pVal), Len(pVal));
+			return StringToInt64(pVal.HandleToPtr(), pVal.Len());
 	}
-	else if (Vartype(pVal) == 'N')
+	else if (pVal.Vartype() == 'N')
 		return static_cast<__int64>(pVal.ev_real);
-	else if (Vartype(pVal) == 'I')
+	else if (pVal.Vartype() == 'I')
 		return static_cast<__int64>(pVal.ev_long);
 	else
 		throw E_INVALIDPARAMS;
 }
 
-inline unsigned __int64 Value2UInt64(Value &pVal)
+inline unsigned __int64 _stdcall Value2UInt64(ValueEx &pVal)
 {
-	if (Vartype(pVal) == 'Y')
+	if (pVal.Vartype() == 'Y')
 		return static_cast<unsigned __int64>(pVal.ev_currency.QuadPart);
-	else if (Vartype(pVal) == 'C')
+	else if (pVal.Vartype() == 'C')
 	{
-		if (pVal.ev_width == 1 && Len(pVal) == 8)
-			return *reinterpret_cast<unsigned __int64*>(HandleToPtr(pVal));
+		if (pVal.ev_width == 1 && pVal.Len() == 8)
+			return *reinterpret_cast<unsigned __int64*>(pVal.HandleToPtr());
 		else
-			return StringToUInt64(HandleToPtr(pVal), Len(pVal));
+			return StringToUInt64(pVal.HandleToPtr(), pVal.Len());
 	}
-	else if (Vartype(pVal) == 'N')
+	else if (pVal.Vartype() == 'N')
 		return static_cast<unsigned __int64>(pVal.ev_real);
-	else if (Vartype(pVal) == 'I')
+	else if (pVal.Vartype() == 'I')
 		return static_cast<unsigned __int64>(pVal.ev_long);
 	else
 		throw E_INVALIDPARAMS;
 }
 
-inline void ReturnInt64AsCurrency(__int64 nValue)
+inline void _stdcall ReturnInt64AsCurrency(__int64 nValue)
 {
 	CCY nRetval;
 	nRetval.QuadPart = nValue;
 	Return(nRetval);
 }
 
-inline void ReturnInt64AsCurrency(unsigned __int64 nValue)
+inline void _stdcall ReturnInt64AsCurrency(unsigned __int64 nValue)
 {
 	CCY nRetval;
 	nRetval.QuadPart = static_cast<__int64>(nValue);
 	Return(nRetval);
 }
 
-inline void ReturnInt64AsBinary(__int64 nValue)
+inline void _stdcall ReturnInt64AsBinary(__int64 nValue)
 {
-	Value vRetval;
-	vRetval.ev_type = 'C';
-	vRetval.ev_length = sizeof(__int64);
-	if (!AllocHandleEx(vRetval, sizeof(__int64)))
+	ValueEx vRetval;
+	vRetval.SetString(sizeof(__int64));
+	if (!vRetval.AllocHandle(sizeof(__int64)))
 		throw E_INSUFMEMORY;
-	*reinterpret_cast<__int64*>(HandleToPtr(vRetval)) = nValue;
+	*reinterpret_cast<__int64*>(vRetval.HandleToPtr()) = nValue;
 	Return(vRetval);
 }
 
-inline void ReturnInt64AsBinary(unsigned __int64 nValue)
+inline void _stdcall ReturnInt64AsBinary(unsigned __int64 nValue)
 {
-	Value vRetval;
-	vRetval.ev_type = 'C';
-	vRetval.ev_length = sizeof(unsigned __int64);
-	if (!AllocHandleEx(vRetval, sizeof(unsigned __int64)))
+	ValueEx vRetval;
+	vRetval.SetString(sizeof(unsigned __int64));
+	if (!vRetval.AllocHandle(sizeof(unsigned __int64)))
 		throw E_INSUFMEMORY;
-	*reinterpret_cast<unsigned __int64*>(HandleToPtr(vRetval)) = nValue;
+	*reinterpret_cast<unsigned __int64*>(vRetval.HandleToPtr()) = nValue;
 	Return(vRetval);
 }
 
-inline void ReturnInt64AsString(__int64 nValue)
+inline void _stdcall ReturnInt64AsString(__int64 nValue)
 {
 	char aRetval[VFP2C_MAX_BIGINT_LITERAL+1];
-	Int64ToString(aRetval, nValue);
+	Int64ToStrBuffer(aRetval, nValue);
 	Return(aRetval);
 }
 
-inline void ReturnInt64AsString(unsigned __int64 nValue)
+inline void _stdcall ReturnInt64AsString(unsigned __int64 nValue)
 {
 	char aRetval[VFP2C_MAX_BIGINT_LITERAL+1];
-	UInt64ToString(aRetval, nValue);
+	UInt64ToStrBuffer(aRetval, nValue);
 	Return(aRetval);
 }
 
-inline void ReturnInt64AsDouble(__int64 nValue)
+inline void _stdcall ReturnInt64AsDouble(__int64 nValue)
 {
 	_RetFloat(static_cast<double>(nValue), 20, 0);
 }
 
-inline void ReturnInt64AsDouble(unsigned __int64 nValue)
+inline void _stdcall ReturnInt64AsDouble(unsigned __int64 nValue)
 {
 	_RetFloat(static_cast<double>(nValue), 20, 0);
 }
@@ -447,144 +274,31 @@ private:
 	Value m_Value;
 };
 
-// thin wrappers around Value structure to quickly initialize to a specific type
-struct ValueEx : public Value
-{
-	ValueEx() { ev_type = '0'; ev_handle = 0; ev_object = 0; }
-	void SetShort() { ev_type = 'I'; ev_width = 6; }
-	void SetInt() { ev_type = 'I'; ev_width = 11; }
-	void SetUInt() { ev_type = 'N'; ev_width = 10; }
-	void SetFloat(unsigned int nPrecision = 7) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; }
-	void SetDouble(unsigned int nPrecision = 16) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; }
-	void SetCurrency() { ev_type = 'Y'; }
-	void SetNumeric(int nWidth, unsigned int nPrecision) { ev_type = 'N'; ev_width = nWidth; ev_length = nPrecision; }
-	void SetString(unsigned int nLen = 0) { ev_type = 'C'; ev_length = nLen; }
-	void SetLogical() { ev_type = 'L'; }
-	void SetDate() { ev_type = 'D'; }
-	void SetDateTime() { ev_type = 'T'; }
-	void SetNull() { ev_type = '0'; }
-
-};
-
-struct UCharValue : public Value
-{
-	UCharValue() { ev_type = 'I'; ev_width = 3; ev_long = 0; }
-	UCharValue(unsigned char nValue) { ev_type = 'I'; ev_width = 3; ev_long = static_cast<long>(nValue); }
-};
-
-struct ShortValue : public Value
-{
-	ShortValue() { ev_type = 'I'; ev_width = 6; ev_long = 0; }
-	ShortValue(short nValue) { ev_type = 'I'; ev_width = 11; ev_long = nValue; }
-};
-
-struct UShortValue : public Value
-{
-	UShortValue() { ev_type = 'I'; ev_width = 5; ev_long = 0; }
-	UShortValue(unsigned short nValue) { ev_type = 'I'; ev_width = 5; ev_long = nValue; }
-};
-
-struct IntValue : public Value
-{
-	IntValue() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
-	IntValue(int nValue) { ev_type = 'I'; ev_width = 11; ev_long = nValue; }
-};
-
-struct UIntValue : public Value
-{
-	UIntValue() { ev_type = 'N'; ev_width = 10; ev_length = 0; ev_real = 0; }
-	UIntValue(unsigned int nValue) { ev_type = 'N'; ev_width = 10; ev_length = 0; ev_real = static_cast<double>(nValue); }
-};
-
-struct FloatValue : public Value
-{
-	FloatValue() { ev_type = 'N'; ev_width = 20; ev_length = 7; ev_real = 0.0; }
-	FloatValue(float nValue) { ev_type = 'N'; ev_width = 20; ev_length = 7; ev_real = nValue; }
-	FloatValue(unsigned int nPrecision) {  ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = 0.0;}
-	FloatValue(float nValue, unsigned int nPrecision) {  ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = nValue; }
-};
-
-struct DoubleValue : public Value
-{
-	DoubleValue() { ev_type = 'N'; ev_width = 20; ev_length = 16; ev_real = 0.0; }
-	DoubleValue(double nValue) { ev_type = 'N'; ev_width = 20; ev_length = 16; ev_real = nValue; }
-	DoubleValue(unsigned int nPrecision) {  ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = 0.0;}
-	DoubleValue(double nValue, unsigned int nPrecision) {  ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = nValue; }
-};
-
-struct CurrencyValue : public Value
-{
-	CurrencyValue() { ev_type = 'Y'; ev_currency.QuadPart = 0; }
-	CurrencyValue(CCY nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue.QuadPart; }
-	CurrencyValue(__int64 nValue) {  ev_type = 'Y'; ev_currency.QuadPart = nValue; }
-};
-
-struct StringValue : public Value
-{
-	StringValue() { ev_type = 'C'; ev_length = 0; ev_handle = 0; }
-	StringValue(unsigned int nLen) { ev_type = 'C'; ev_length = nLen; ev_handle = 0; }
-};
-
-struct LogicalValue : public Value
-{
-	LogicalValue() { ev_type = 'L'; ev_length = 0; }
-	LogicalValue(bool bValue) { ev_type = 'L'; ev_length = bValue; }
-	LogicalValue(unsigned int bValue) { ev_type = 'L'; ev_length = bValue; }
-};
-
-struct DateValue : public Value
-{
-	DateValue() { ev_type = 'D'; ev_real = 0; }
-	DateValue(double nDate) { ev_type = 'D'; ev_real = nDate; }
-};
-
-struct DateTimeValue : public Value
-{
-	DateTimeValue() { ev_type = 'T'; ev_real = 0; }
-	DateTimeValue(double nDatetime) { ev_type = 'T'; ev_real = nDatetime; }
-};
-
-struct Int64Value : public Value
-{
-	Int64Value() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
-	Int64Value(__int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
-};
-
-struct UInt64Value : public Value
-{
-	UInt64Value() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
-	UInt64Value(unsigned __int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
-};
-
-struct PointerValue : public Value
-{
-	PointerValue() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
-	PointerValue(void* pValue) { ev_type = 'I'; ev_width = 11; ev_long = reinterpret_cast<long>(pValue); }
-};
-
 /* base class for variable types*/
 class FoxValue
 {
 public:
 	FoxValue();
-	FoxValue(char cType);
-	FoxValue(char cType, int nWidth);
-	FoxValue(char cType, int nWidth, unsigned long nPrec);
-	FoxValue(Locator &pLoc);
+	explicit FoxValue(char cType);
+	explicit FoxValue(char cType, int nWidth);
+	explicit FoxValue(char cType, int nWidth, unsigned long nPrec);
+	explicit FoxValue(LocatorEx &pLoc);
 	~FoxValue();
 	
 	FoxValue& Evaluate(char *pExpression);
 	char Vartype() const;
 	void Release();
 	void Return();
+	unsigned int Len() const;
 
 	// handle manipulation
 	FoxValue& AllocHandle(int nBytes);
 	FoxValue& FreeHandle();
-	char* HandleToPtr();
+	char* HandleToPtr() const;
 	FoxValue& LockHandle();
 	FoxValue& UnlockHandle();
-	unsigned int GetHandleSize();
+	unsigned int GetHandleSize() const;
+	MHandle GetHandle() const;
 	FoxValue& SetHandleSize(unsigned long nSize);
 	FoxValue& ExpandHandle(int nBytes);
 	FoxValue& NullTerminate();
@@ -596,7 +310,7 @@ public:
 	IDispatch* GetIDispatch();
 
 	// operators
-	FoxValue& operator=(Locator &pLoc);
+	FoxValue& operator=(LocatorEx &pLoc);
 	FoxValue& operator<<(FoxObject &pObject);
 	operator Value&() { return m_Value; }
 	operator Value*() { return &m_Value; }
@@ -673,7 +387,7 @@ class FoxDouble : public FoxValue
 {
 public: 
 	FoxDouble() : FoxValue('N', 20, 16) {}
-	FoxDouble(int nPrec) : FoxValue('N', 20, nPrec) { }
+	explicit FoxDouble(int nPrec) : FoxValue('N', 20, nPrec) { }
 	~FoxDouble() {}
 
 	FoxDouble& operator=(double nValue) { m_Value.ev_real = nValue; return *this; }
@@ -718,41 +432,54 @@ class FoxString : public FoxValue
 public:
 	/* Constructors/Destructor */
 	FoxString();
-	FoxString(FoxString &pString);
-	FoxString(Value &pVal);
-	FoxString(Value &pVal, unsigned int nExpand);
-	FoxString(ParamBlk *pParms, int nParmNo);
-	FoxString(ParamBlk *pParms, int nParmNo, unsigned int nExpand);
-	FoxString(ParamBlk *pParms, int nParmNo, FoxStringInitialization eInit);
-	FoxString(const char *pString);
-	FoxString(unsigned int nSize);
-	FoxString(BSTR pString, UINT nCodePage = CP_ACP);
-	FoxString(SAFEARRAY *pArray);
+	explicit FoxString(FoxString &pString);
+	explicit FoxString(FoxParameterEx& pVal);
+	explicit FoxString(FoxParameterEx& pVal, unsigned int nExpand);
+	explicit FoxString(ParamBlkEx& pParms, int nParmNo);
+	explicit FoxString(ParamBlkEx& pParms, int nParmNo, unsigned int nExpand);
+	explicit FoxString(ParamBlkEx& pParms, int nParmNo, FoxStringInitialization eInit);
+	explicit FoxString(const CStringView pString);
+	explicit FoxString(unsigned int nSize);
+	explicit FoxString(BSTR pString, UINT nCodePage = CP_ACP);
+	explicit FoxString(SAFEARRAY *pArray);
 	~FoxString();
+
+	FoxString& Attach(ValueEx& pValue, unsigned int nExpand = 0);
+	FoxString& Attach(FoxParameterEx& pVal);
+	FoxString& Attach(FoxParameterEx& pVal, unsigned int nExpand);
+	bool Attach(ParamBlkEx& pParms, int nParmNo);
+	bool Attach(ParamBlkEx& pParms, int nParmNo, unsigned int nExpand);
+	bool Attach(ParamBlkEx& pParms, int nParmNo, FoxStringInitialization eInit);
 
 	unsigned int Size() const { return m_BufferSize; }
 	FoxString& Size(unsigned int nSize);
 	unsigned int Len() const { return m_Value.ev_length; }
 	FoxString& Len(unsigned int nLen) { m_Value.ev_length = nLen; return *this; }
 	bool Binary() const { return m_Value.ev_width == 1; }
-	FoxString& FoxString::Binary(bool bBinary) { m_Value.ev_width = bBinary ? 1 : 0; return *this; }
+	FoxString& Binary(bool bBinary) { m_Value.ev_width = bBinary ? 1 : 0; return *this; }
+	unsigned int CodePage() const { return m_CodePage; }
+	FoxString& CodePage(unsigned int nCodePage) { m_CodePage = nCodePage; return *this; }
 	bool Empty() const;
-	bool ICompare(char *pString) const;
+	bool ICompare(CStringView pString) const;
 	FoxString& Evaluate(char *pExpression);
 	FoxString& AddBs();
+	FoxString& AddBsWildcard();
 	FoxString& Fullpath();
 	FoxString& Alltrim(char cParseChar = ' ');
 	FoxString& LTrim(char cParseChar = ' ');
 	FoxString& RTrim(char cParseChar = ' ');
 	FoxString& Lower();
 	FoxString& Upper();
-	FoxString& Prepend(const char *pString);
+	FoxString& Prepend(const CStringView pString);
+	FoxString& PrependIfNotPresent(const CStringView pString);
 	FoxString& SubStr(unsigned int nStartPos, unsigned int nLen = -1);
-	FoxString& Strtran(FoxString &sSearchFor, FoxString &sReplacement);
-	FoxString& Replicate(char *pString, unsigned int nCount);
+	FoxString& Strtran(const CStringView sSearchFor, const CStringView sReplacement);
+	FoxString& Replicate(const CStringView pString, unsigned int nCount);
 	unsigned int At(char cSearchFor, unsigned int nOccurence = 1, unsigned int nMax = 0) const;
 	unsigned int Rat(char cSearchFor, unsigned int nOccurence = 1, unsigned int nMax = 0) const;
+	CStringView GetWordNum(unsigned int nWordnum, const char pSeperator) const;
 	unsigned int GetWordCount(const char pSeperator) const;
+	FoxString& Format(const char* format, ...);
 	FoxString& StringLen();
 	FoxString& StrnCpy(const char *pString, unsigned int nMaxLen);
 	FoxString& CopyBytes(const unsigned char *pBytes, unsigned int nLen);
@@ -764,70 +491,305 @@ public:
 	FoxString& ExtendBuffer(unsigned int nNewMinBufferSize);
 	BSTR ToBSTR() const ;
 	SAFEARRAY* ToU1SafeArray() const;
-	FoxString& Attach(Value &pValue, unsigned int nExpand = 0);
+
 	void Detach();
-	void Detach(Value &pValue);
+	void Detach(ValueEx &pValue);
+	void DetachParameter();
 	void Return();
 	void Release();
 
+	template<typename T>
+	T Ptr() { return reinterpret_cast<T>(m_String); }
+
+	void* Ptr() { return reinterpret_cast<void*>(m_String); }
+
 	/* operator overloads */
-	FoxString& operator=(Locator &pLoc);
+	FoxString& operator<<(FoxObject& pObject);
+	FoxString& operator=(LocatorEx &pLoc);
 	FoxString& operator=(FoxValue &pValue);
-	FoxString& operator<<(FoxObject &pObject);
-	FoxString& operator=(FoxString &pString);
-	FoxString& operator=(char *pString);
-	FoxString& operator=(wchar_t *pWString);
-	FoxString& operator+=(const char *pString);
-	FoxString& operator+=(FoxString &pString);
+	FoxString& operator=(const CStringView pString);
+	FoxString& operator=(const CWideStringView pWString);
+	FoxString& operator+=(const CStringView pString);
 	FoxString& operator+=(const char pChar);
 
-	bool operator==(const char *pString) const;
-	bool operator==(FoxString &pString) const;
+	bool operator==(const CStringView pString) const;
 	char& operator[](int nIndex) { return m_String[nIndex]; }
 	char& operator[](unsigned long nIndex) { return m_String[nIndex]; }
-	
+
 	/* cast operators */
 	operator char*() const { return m_String; }
 	operator const char*() const { return m_String; }
 	operator unsigned char*() const { return reinterpret_cast<unsigned char*>(m_String); }
 	operator const unsigned char*() const { return reinterpret_cast<const unsigned char*>(m_String); }
-	operator void*() const { return reinterpret_cast<void*>(m_String); }
-	operator const void*() const { return reinterpret_cast<const void*>(m_String); }
-	operator wchar_t*() const { return reinterpret_cast<wchar_t*>(m_String); }
-	operator const wchar_t*() const { return reinterpret_cast<const wchar_t*>(m_String); }
 	operator const Value&() { return m_Value; }
+	operator CStringView();
 
 private:
 	char *m_String;
 	unsigned int m_BufferSize;
 	bool m_ParameterRef;
+	unsigned int m_CodePage;
 };
 
 /* FoxWString - wraps a unicode string */
-class FoxWString : public FoxValue
+template<int nBufferSize>
+class FoxWString
 {
 public:
 	/* Constructors/Destructor */
-	FoxWString() : FoxValue('C'), m_String(0) {}
-	FoxWString(Value &pVal);
-	FoxWString(ParamBlk *pParms, int nParmNo);
-	FoxWString(ParamBlk *pParms, int nParmNo, char cTypeCheck);
-	FoxWString(FoxString& pString);
-	~FoxWString();
+	FoxWString() : m_String(0), m_Length(0), m_Size(0) { m_Buffer[0] = L'\0'; }
 
-	wchar_t* Duplicate();
-	wchar_t* Detach();
+	explicit FoxWString(FoxWString& pString)
+	{
+		m_String = 0;
+		m_Size = 0;
+		if (pString.m_String || pString.m_Length)
+		{
+			wchar_t* pBuffer = pString.m_String ? pString.m_String : pString.m_Buffer;
+			unsigned int nLen = pString.m_Length + 1;
+			if (nLen >= nBufferSize)
+			{
+				m_String = new wchar_t[nLen];
+				if (m_String == 0)
+					throw E_INSUFMEMORY;
+				m_Size = nLen;
+				memcpy(m_String, pBuffer, nLen * 2);
+			}
+			else
+			{
+				memcpy(m_Buffer, pBuffer, nLen * 2);
+			}
+			m_Length = pString.m_Length;
+			return;
+		}
+		m_Length = 0;
+	}
+
+	explicit FoxWString(ValueEx& pVal)
+	{
+		m_String = 0;
+		m_Size = 0;
+		if (pVal.ev_length > 0)
+		{
+			CStringView pString(pVal.HandleToPtr(), pVal.Len());
+			Assign(pString);
+		}
+		else
+		{
+			m_Length = 0;
+		}
+	}
+
+	explicit FoxWString(ParamBlkEx& parms, int nParmNo)
+	{
+		m_String = 0;
+		m_Size = 0;
+		// if parameter count is equal or greater than the parameter we want
+		if (parms.pCount >= nParmNo)
+		{
+			ValueEx& pVal = parms(nParmNo);
+			if (pVal.Vartype() == 'C' && pVal.Len() > 0)
+			{
+				CStringView pString(pVal.HandleToPtr(), pVal.Len());
+				Assign(pString);
+				return;
+			}
+		}
+		// else
+		m_Buffer[0] = L'\0';
+		m_Length = 0;
+	}
+
+	explicit FoxWString(ParamBlkEx& parms, int nParmNo, char cTypeCheck)
+	{
+		// if parameter count is equal or greater than the parameter we want
+		if (parms.pCount >= nParmNo)
+		{
+			ValueEx& pVal = parms(nParmNo);
+			if (pVal.ev_type == 'C')
+			{
+				if (pVal.ev_length > 0)
+				{
+					CStringView pString(pVal.HandleToPtr(), pVal.Len());
+					Assign(pString);
+					return;
+				}
+			}
+			else if (pVal.ev_type != cTypeCheck)
+			{
+				SaveCustomError("FoxWString:constructor", "Parameter type '%s' invalid.", pVal.ev_type);
+				throw E_INVALIDPARAMS;
+			}
+		}
+		// else
+		m_String = 0;
+		m_Length = 0;
+		m_Size = 0;
+	}
+
+	explicit FoxWString(const CStringView pString)
+	{
+		Assign(pString);
+	}
+
+	~FoxWString()
+	{
+		if (m_String)
+			delete m_String;
+	}
+
+	void Size(unsigned int nSize)
+	{
+		if (nSize > nBufferSize || m_String != 0)
+		{
+			if (m_String == 0)
+			{
+				m_String = new wchar_t[nSize];
+				if (m_String == 0)
+					throw E_INSUFMEMORY;
+				m_Size = nSize;
+			}
+			else if (m_Size < nSize)
+			{
+				wchar_t* pOldString = m_String;
+				m_String = new wchar_t[nSize];
+				if (m_String == 0)
+				{
+					delete pOldString;
+					throw E_INSUFMEMORY;
+				}
+				memcpy(m_String, pOldString, m_Size * sizeof(wchar_t*));
+				m_Size = nSize;
+			}
+		}
+	}
+
+	unsigned int Size()
+	{
+		return m_Size;
+	}
+
+	unsigned int Len()
+	{
+		return m_Length;
+	}
+
+	void Len(unsigned int nLen)
+	{
+		m_Length = nLen;
+	}
 
 	/* operator overloads */
-	FoxWString& operator=(char *pString);
-	FoxWString& operator=(FoxString& pString);
-	operator wchar_t*() { return m_String; }
-	operator const wchar_t*() { return m_String; }
-	bool operator!() { return m_String == 0; }
-	operator bool() { return m_String != 0; }
+	FoxWString& operator=(const CStringView pString)
+	{
+		Assign(pString);
+		return *this;
+	}
+
+	operator wchar_t*()
+	{
+		if (m_String)
+			return m_String;
+		else if (m_Length)
+			return m_Buffer;
+		else
+			return 0;
+	}
+
+	operator const wchar_t* () const
+	{
+		if (m_String)
+			return m_String;
+		else if (m_Length)
+			return reinterpret_cast<const wchar_t*>(m_Buffer);
+		else
+			return 0;
+	}
+
+	operator CWideStringView()
+	{
+		if (m_String)
+			return CWideStringView(m_String, m_Length);
+		else if (m_Length)
+			return CWideStringView(m_Buffer, m_Length);
+		else
+			return 0;
+	}
+	
+	bool operator!() { return m_String == 0 && m_Length == 0; }
+	operator bool() { return m_String != 0 || m_Length > 0; }
 
 private:
+	
+	void Assign(const CStringView pString)
+	{
+		if (pString)
+		{
+			if (pString.Len >= nBufferSize || nBufferSize == 0)
+			{
+				if (m_String)
+				{
+					if (m_Size < pString.Len + 1)
+					{
+						delete m_String;
+						m_Size = pString.Len + 1;
+						m_String = new wchar_t[m_Size];
+						if (m_String == 0)
+							throw E_INSUFMEMORY;
+					}
+				}
+				else
+				{
+					m_Size = pString.Len + 1;
+					m_String = new wchar_t[m_Size];
+					if (m_String == 0)
+						throw E_INSUFMEMORY;
+				}
+
+				Convert(pString.Data, pString.Len, m_String, m_Size);
+			}
+			else if (m_String)
+			{
+				Convert(pString.Data, pString.Len, m_String, m_Size);
+			}
+			else
+			{
+				Convert(pString.Data, pString.Len, reinterpret_cast<wchar_t*>(m_Buffer), nBufferSize * sizeof(wchar_t*));
+			}
+		}
+		else
+		{
+			m_Length = 0;
+		}
+	}
+
+	void Convert(char* pString, int nLen, wchar_t* pBuffer, int nBufferLen)
+	{
+		int nChars;
+		if (nLen)
+		{
+			nChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pString, nLen, pBuffer, nBufferLen);
+			if (!nChars)
+			{
+				SaveWin32Error("MultiByteToWideChar", GetLastError());
+				throw E_APIERROR;
+			}
+			pBuffer[nChars] = L'\0'; // nullterminate
+		}
+		else
+		{
+			nChars = 0;
+			pBuffer[nChars] = L'\0'; // nullterminate
+		}
+		m_Length = nChars;
+	}
+
 	wchar_t *m_String;
+	unsigned int m_Length;
+	unsigned int m_Size;
+#pragma warning(disable: 4200)
+	wchar_t m_Buffer[nBufferSize];
+#pragma warning(default: 4200)
 };
 
 /* FoxDate - wraps a FoxPro date */
@@ -835,9 +797,9 @@ class FoxDate : public FoxValue
 {
 public:
 	FoxDate() : FoxValue ('D') { m_Value.ev_real = 0; }
-	FoxDate(Value &pVal);
-	FoxDate(SYSTEMTIME &sTime);
-	FoxDate(FILETIME &sTime);
+	explicit FoxDate(ValueEx &pVal);
+	explicit FoxDate(SYSTEMTIME &sTime);
+	explicit FoxDate(FILETIME &sTime);
 	~FoxDate() {};
 
 	FoxDate& operator=(double nDate) { m_Value.ev_real = nDate; return *this; }
@@ -849,8 +811,8 @@ public:
 private:
 	void SystemTimeToDate(const SYSTEMTIME &sTime);
 	void FileTimeToDate(const FILETIME &sTime);
-	void DateToSystemTime(SYSTEMTIME &sTime);
-	void DateToFileTime(FILETIME &sTime);
+	void DateToSystemTime(SYSTEMTIME &sTime) const;
+	void DateToFileTime(FILETIME &sTime) const;
 };
 
 /* FoxDateTime - wraps a FoxPro datetime */
@@ -858,15 +820,16 @@ class FoxDateTime : public FoxValue
 {
 public:
 	FoxDateTime() : FoxValue('T') { m_Value.ev_real = 0; }
-	FoxDateTime(Value &pVal);
-	FoxDateTime(SYSTEMTIME &sTime);
-	FoxDateTime(FILETIME &sTime);
-	FoxDateTime(double dTime);
+	explicit FoxDateTime(ValueEx &pVal);
+	explicit FoxDateTime(SYSTEMTIME &sTime);
+	explicit FoxDateTime(FILETIME &sTime);
+	explicit FoxDateTime(double dTime);
 	~FoxDateTime() {}
 
 	FoxDateTime& operator=(double nDateTime) { m_Value.ev_real = nDateTime; return *this; }
 	FoxDateTime& operator=(const SYSTEMTIME &sTime);
 	FoxDateTime& operator=(const FILETIME &sTime);
+	FoxDateTime& operator=(ValueEx& pValue);
 	operator SYSTEMTIME();
 	operator FILETIME();
 	FoxDateTime& ToUTC();
@@ -875,18 +838,36 @@ public:
 private:
 	void SystemTimeToDateTime(const SYSTEMTIME &sTime);
 	void FileTimeToDateTime(const FILETIME &sTime);
-	void DateTimeToSystemTime(SYSTEMTIME &sTime);
-	void DateTimeToFileTime(FILETIME &sTime);
+	void DateTimeToSystemTime(SYSTEMTIME &sTime) const;
+	void DateTimeToFileTime(FILETIME &sTime) const;
 };
+
+typedef class FoxDateTimeLiteral
+{
+public:
+	FoxDateTimeLiteral() { m_Literal[0] = '\0'; m_Length = 0; m_ToLocal = false; }
+	~FoxDateTimeLiteral() {}
+
+	void ToLocal(bool bToLocal) { m_ToLocal = bToLocal; }
+	operator CStringView ();
+
+	FoxDateTimeLiteral& operator=(SYSTEMTIME& sTime);
+	FoxDateTimeLiteral& operator=(FILETIME& sTime);
+
+private:
+	bool m_ToLocal;
+	unsigned int m_Length;
+	char m_Literal[VFP_MAX_DATE_LITERAL];
+}FoxDateTimeLiteral;
 
 /* FoxObject */
 class FoxObject : public FoxValue
 {
 public:
 	FoxObject() : m_Property(0), m_ParameterRef(false), FoxValue('O') { }
-	FoxObject(Value &pVal);
-	FoxObject(ParamBlk *parm, int nParmNo);
-	FoxObject(char* pExpression);
+	explicit FoxObject(ValueEx &pVal);
+	explicit FoxObject(ParamBlkEx& parm, int nParmNo);
+	explicit FoxObject(char* pExpression);
 	~FoxObject();
 
 	FoxObject& NewObject(char *pClass);
@@ -895,7 +876,7 @@ public:
 	void Release(); 
 
 	FoxObject& operator<<(FoxValue &pValue);
-	FoxObject& operator<<(Locator &pLoc);
+	FoxObject& operator<<(LocatorEx &pLoc);
 	FoxObject& operator<<(short nValue);
 	FoxObject& operator<<(unsigned short nValue);
 	FoxObject& operator<<(int nValue);
@@ -906,57 +887,21 @@ public:
 
 	FoxObject& operator()(char* pProperty);
 	char * Property();
-	bool operator!();
-	operator bool();
+	bool operator!() const;
+	operator bool() const;
 
 private:
 	bool m_ParameterRef;
 	char *m_Property;
 };
 
-class FoxDateTimeLiteral
-{
-public:
-	FoxDateTimeLiteral() { m_Literal[0] = '\0'; }
-	~FoxDateTimeLiteral() {}
-
-    void Convert(SYSTEMTIME &sTime, bool bToLocal = false);
-	void Convert(FILETIME &sTime, bool bToLocal = false);
-	operator char*() { return m_Literal; }
-
-private:
-	char m_Literal[VFP_MAX_DATE_LITERAL];
-};
-
-/* FoxReference */
-class FoxReference
-{
-public:
-	FoxReference() { m_Loc.l_NTI = 0; }
-	FoxReference(Locator &pLoc) { m_Loc = pLoc; }
-	~FoxReference() {}
-
-	FoxReference& operator=(FoxValue &pValue);
-	FoxReference& operator=(Locator &pLoc);
-	FoxReference& operator<<(FoxObject &pObject);
-	FoxReference& operator=(int nValue);
-	FoxReference& operator=(unsigned long nValue);
-	FoxReference& operator=(double nValue);
-	FoxReference& operator=(bool bValue);
-	
-	operator Locator&() { return m_Loc; }
-
-private:
-	Locator m_Loc;
-};
-
 /* FoxVariable */
 class FoxVariable
 {
 public:
-	FoxVariable() : m_Nti(0) { m_Loc.l_NTI = 0; }
-	FoxVariable(char *pName) : m_Nti(0) { Attach(pName); }
-	FoxVariable(char *pName, bool bPublic) : m_Nti(0) { New(pName, bPublic); }
+	FoxVariable() { m_Loc.l_subs = 0;  m_Loc.l_NTI = 0; }
+	explicit FoxVariable(char* pName) { m_Loc.l_subs = 0;  m_Loc.l_NTI = 0; Attach(pName); }
+	explicit FoxVariable(char* pName, bool bPublic) { m_Loc.l_subs; m_Loc.l_NTI = 0; New(pName, bPublic); }
 	~FoxVariable() { Release(); }
 
 	FoxVariable& New(char *pName, bool bPublic);
@@ -964,19 +909,11 @@ public:
 	FoxVariable& Attach(char *pName);
 	FoxVariable& Detach();
 
-	FoxVariable& operator=(Value &pValue);
-	FoxVariable& operator=(FoxValue &pValue);
-	FoxVariable& operator=(Locator &pLoc);
-	FoxVariable& operator<<(FoxObject &pObject);
-	FoxVariable& operator=(int nValue);
-	FoxVariable& operator=(unsigned long nValue);
-	FoxVariable& operator=(double nValue);
-	FoxVariable& operator=(bool bValue);
-	operator Locator&();
+	VarLocatorEx& operator()() { return m_Loc; };
+	operator VarLocatorEx&();
 
 private:
-	NTI m_Nti;
-	Locator m_Loc;
+	VarLocatorEx m_Loc;
 };
 
 /* FoxMemo */
@@ -984,8 +921,8 @@ class FoxMemo
 {
 public:
 	FoxMemo();
-	FoxMemo(ParamBlk *parm, int nParmNo);
-	FoxMemo(Locator &pLoc);
+	explicit FoxMemo(ParamBlkEx& parm, int nParmNo);
+	explicit FoxMemo(LocatorEx &pLoc);
 	~FoxMemo();
 
 	void Alloc(unsigned int nSize);
@@ -996,7 +933,7 @@ public:
 	long Size() const { return m_Size; }
 
 private:
-	Locator m_Loc;
+	LocatorEx m_Loc;
 	FCHAN m_File;
 	long m_Location;
 	long m_Size;
@@ -1008,73 +945,68 @@ class FoxArray
 {
 public:
 	FoxArray();
-	FoxArray(Value &pVal, unsigned int nRows = 0, unsigned int nDims = 0);
-	FoxArray(Locator &pLoc);
-	FoxArray(ParamBlk *parm, int nParmNo);
-	FoxArray(ParamBlk *parm, int nParmNo, char cTypeCheck);
-	~FoxArray() {};
+	explicit FoxArray(ValueEx &pVal, unsigned int nRows = 0, unsigned int nDims = 0);
+	explicit FoxArray(FoxParameterEx& pVal, unsigned int nRows = 0, unsigned int nDims = 0);
+	explicit FoxArray(LocatorEx &pLoc);
+	explicit FoxArray(ParamBlkEx& parm, int nParmNo);
+	explicit FoxArray(ParamBlkEx& parm, int nParmNo, char cTypeCheck);
 
 	FoxArray& Dimension(unsigned int nRows, unsigned int nDims = 0);
-	FoxArray& Dimension(Value &pVal, unsigned int nRows, unsigned int nDims = 0);
-	FoxArray& Dimension(char *pName, unsigned int nRows, unsigned int nDims = 0);
+	FoxArray& Dimension(ValueEx &pVal, unsigned int nRows, unsigned int nDims = 0);
+	FoxArray& Dimension(CStringView pName, unsigned int nRows, unsigned int nDims = 0);
 	FoxArray& AutoGrow(unsigned int nRows);
+	unsigned int AutoGrow();
+	FoxArray& AutoOverflow(bool bOverflow);
+	bool AutoOverflow() const;
+	unsigned int CompactOverflow();
 	FoxArray& ValidateDimension(unsigned int nDim);
-	unsigned int Grow(unsigned int nRows = 1);
+	unsigned int Grow();
 	unsigned int ALen(unsigned int &nDims);
-	unsigned int ARows() { return m_Rows; }
-	unsigned int ADims() { return m_Dims; }
+	unsigned int ARows() const { return m_Rows; }
+	unsigned int ADims() const { return m_Dims; }
 	unsigned short& CurrentRow();
 	unsigned short& CurrentDim();
 	void ReturnRows();
+	void Release();
 
-	FoxArray& operator()(unsigned int nRow);
-	FoxArray& operator()(unsigned int nRow, unsigned int nDim);
-
-	FoxArray& operator=(FoxValue &pValue);
-	FoxArray& operator=(Locator &pLoc);
-	FoxArray& operator<<(FoxObject &pObject);
-	FoxArray& operator=(unsigned char nValue);
-	FoxArray& operator=(void *pPointer);
-	FoxArray& operator=(int nValue);
-	FoxArray& operator=(unsigned int nValue);
-	FoxArray& operator=(unsigned long nValue);
-	FoxArray& operator=(bool bBool);
-	FoxArray& operator=(double nValue);
-	FoxArray& operator=(__int64 nValue);
-	FoxArray& operator=(unsigned __int64 nValue);
+	VarLocatorEx& operator()();
+	VarLocatorEx& operator()(unsigned int nRow);
+	VarLocatorEx& operator()(unsigned int nRow, unsigned int nDim);
 
 	bool operator!();
 	operator bool();
-	operator Locator&();
 
 private:
 	void Init();
-	void Init(Locator &pLoc);
-	void Init(Value &pVal, unsigned int nRows = 0, unsigned int nDims = 0);
+	void Init(LocatorEx &pLoc);
+	void Init(ValueEx &pVal, unsigned int nRows = 0, unsigned int nDims = 0);
 	void InitArray();
 	void ReDimension(unsigned int nRows, unsigned int nDims = 0);
+	void OverflowArray();
 	bool FindArray();
 
-	Locator m_Loc;
-	char m_Name[VFP_MAX_VARIABLE_NAME+1];
+	VarLocatorEx m_Loc;
 	unsigned int m_Rows;
 	unsigned int m_Dims;
 	unsigned int m_AutoGrow;
+	unsigned int m_AutoOverflow;
+	CStrBuilder<VFP_MAX_VARIABLE_NAME + 1> m_Name;
 };
 
 /* FoxCursor */
 class FoxCursor
 {
 public:
-	FoxCursor() : m_FieldCnt(0), m_WorkArea(0), m_pFieldLocs(0), m_pCurrentLoc(0) {}
+	FoxCursor() : m_FieldCnt(0), m_WorkArea(0), m_AutoFLocked(false), m_pFieldLocs(0) {}
 	~FoxCursor();
 
-	FoxCursor& Create(char *pCursorName, char *pFields);
-	FoxCursor& Attach(char *pCursorName, char *pFields);
-	FoxCursor& Attach(int nWorkArea, char *pFields);
+	bool Create(CStringView pCursorName, CStringView pFields, bool bAttach = true);
+	FoxCursor& Attach(CStringView pCursorName, CStringView pFields);
+	FoxCursor& Attach(int nWorkArea, CStringView pFields);
 	FoxCursor& AppendBlank();
 	FoxCursor& AppendCarry();
 	FoxCursor& Append();
+	int GetFieldNumber(char* pField);
 	int GoTop();
 	int GoBottom();
 	int Skip(int nRecords = 1);
@@ -1084,6 +1016,7 @@ public:
 	unsigned int FCount() { return m_FieldCnt; }
 	FoxCursor& Go(long nRecord);
 	bool RLock();
+	bool AutoFLock();
 	bool FLock();
 	FoxCursor& Unlock();
 	bool Bof();
@@ -1094,20 +1027,13 @@ public:
 	bool Readonly();
 	int DBStatus();
 
-	FoxCursor& operator()(unsigned int nFieldNo);
-	FoxCursor& operator=(FoxValue &pValue);
-	FoxCursor& operator=(Locator &pLoc);
-	FoxCursor& operator<<(FoxObject &pObject);
-	FoxCursor& operator=(int nValue);
-	FoxCursor& operator=(unsigned long nValue);
-	
-	operator Locator&() { return *m_pCurrentLoc; }
+	FieldLocatorEx& operator()(unsigned int nFieldNo);
 
 private:
 	unsigned int m_FieldCnt;
 	int m_WorkArea;
-	Locator *m_pFieldLocs;
-	Locator *m_pCurrentLoc;
+	bool m_AutoFLocked;
+	FieldLocatorEx *m_pFieldLocs;
 };
 
 class FoxCStringArray
@@ -1118,8 +1044,8 @@ public:
 
 	unsigned int ARows() { return m_Rows; }
 	FoxCStringArray& FoxCStringArray::operator=(FoxArray &pArray);
-	operator char**() { return m_pStrings; }
-	operator LPCSTR*() { return (LPCSTR*)m_pStrings; }
+	operator char**() const { return m_pStrings; }
+	operator LPCSTR*() const  { return (LPCSTR*)m_pStrings; }
 
 
 private:
@@ -1129,36 +1055,28 @@ private:
 	FoxValue *m_pValues;
 };
 
-struct CStrView;
-
 template<int nArgCount>
-class FoxComCallback
+class CFoxComCallback
 {
 public:
-	FoxComCallback() : m_Object(0), m_DispId(0) 
+	CFoxComCallback() : m_Object(0), m_DispId(0)
 	{
 		InitParameters();
 	}
 
-	FoxComCallback(Value &pObject, FoxString &pMethod) : m_Object(0), m_DispId(0)
+	CFoxComCallback(Value &pObject, FoxString &pMethod) : m_Object(0), m_DispId(0)
 	{
 		InitParameters();
 		Initialize(pObject, pMethod);
 	}
 
-	~FoxComCallback()
+	~CFoxComCallback()
 	{
-		if (m_Object)
-			m_Object->Release();
 	}
 
 	void Release()
 	{
-		if (m_Object)
-		{
-			m_Object->Release();
-			m_Object = 0;
-		}
+		m_Object.Release();
 	}
 
 	void Initialize(IDispatch *pObject, FoxString &pMethod)
@@ -1171,7 +1089,7 @@ public:
 
 	void Initialize(FoxObject &pObject, FoxString &pMethod)
 	{
-		m_Object = pObject.GetIDispatch();;
+		m_Object = pObject.GetIDispatch();
 		if (m_Object == 0)
 			throw E_INVALIDPARAMS;
 		InitDispId(pMethod);
@@ -1191,7 +1109,7 @@ public:
 		vararg->bstrVal = SysAllocString(pValue);
 	}
 
-	inline void SetParameter(int nArg, CStrView pValue)
+	inline void SetParameter(int nArg, CStringView pValue)
 	{
 		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
 		vararg->vt = VT_ARRAY | VT_UI1; 
@@ -1205,7 +1123,7 @@ public:
 		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
 		vararg->vt = VT_ARRAY | VT_UI1;
 		vararg->parray = &m_SafeArray[m_Disp.cArgs - nArg];
-		vararg->parray->pvData = (PVOID)pValue;
+		vararg->parray->pvData = reinterpret_cast<PVOID>(const_cast<char*>(pValue));
 		vararg->parray->rgsabound[0].cElements = strlen(pValue);
 	}
 
@@ -1228,8 +1146,13 @@ public:
 	inline void SetParameter(int nArg, void* pValue)
 	{
 		VARIANT *vararg = &m_Disp.rgvarg[m_Disp.cArgs - nArg];
+#if !defined(_WIN64)
 		vararg->vt = VT_UI4;
 		vararg->ulVal = reinterpret_cast<unsigned int>(pValue);
+#else
+		vararg->vt = VT_R8;
+		vararg->dblVal = static_cast<double>(reinterpret_cast<UINT_PTR>(pValue));
+#endif
 	}
 
 	inline void SetParameter(int nArg, short pValue)
@@ -1284,7 +1207,7 @@ public:
 		}
 	}
 
-	inline void FreeParameter(int nArg, CStrView pValue) { }
+	inline void FreeParameter(int nArg, CStringView pValue) { }
 	inline void FreeParameter(int nArg, char* pValue) { }
 	inline void FreeParameter(int nArg, const char* pValue) { }
 	inline void FreeParameter(int nArg, bool pValue) { }
@@ -1360,7 +1283,7 @@ public:
 		return hr;
 	}
 
-	operator bool() {
+	operator bool() const {
 		return m_Object != 0;
 	}
 
@@ -1397,11 +1320,680 @@ private:
 		}
 	}
 
-	IDispatch *m_Object;
+	CComPtr<IDispatch> m_Object;
 	DISPID m_DispId;
 	DISPPARAMS m_Disp;
 	VARIANTARG m_Args[nArgCount];
 	SAFEARRAY m_SafeArray[nArgCount];
+};
+
+class CFoxCallback
+{
+public:
+	void SetCallback(CStringView pCallback)
+	{
+		m_Callback = pCallback;
+		m_Callback.SetFormatBase();
+	}
+
+	int Evaluate(Value* pVal)
+	{
+		m_Callback.ResetToFormatBase().Append("()");
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	int Execute()
+	{
+		m_Callback.ResetToFormatBase().Append("()");
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1>
+	int Evaluate(Value* pVal, T1 parm1)
+	{
+		BuildCallbackNaturalOrder(parm1);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6, parm7);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1>
+	int Execute(T1 parm1)
+	{
+		BuildCallbackNaturalOrder(parm1);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2>
+	int Execute(T1 parm1, T2 parm2)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3>
+	int Execute(T1 parm1, T2 parm2, T3 parm3)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	int Execute(T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	int Execute(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	int Execute(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	int Execute(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6, parm7);
+		return _Execute(m_Callback);
+	}
+
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg)
+	{
+		m_Callback.ResetToFormatBase().Append("()");
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1)
+	{
+		BuildCallbackNaturalOrder(parm1);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1, typename T2>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1, T2 parm2)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1, typename T2, typename T3>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1, T2 parm2, T3 parm3)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	bool AsyncExecute(HWND hCallbackWindow, const UINT nCallbackMsg, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6, parm7);
+		char* pCommand = m_Callback.Strdup();
+		if (pCommand)
+			return PostMessage(hCallbackWindow, nCallbackMsg, reinterpret_cast<WPARAM>(pCommand), 0) > 0;
+		return false;
+	}
+
+protected:
+	template<typename T1>
+	inline void BuildCallbackNaturalOrder(T1 parm1)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(')');
+	}
+
+	template<typename T1, typename T2>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2, T3 parm3)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(',').Marshal(parm3).Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(',')
+			.Marshal(parm3).Append(',').Marshal(parm4).Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(',')
+			.Marshal(parm3).Append(',').Marshal(parm4).Append(',').Marshal(parm5).Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(',')
+			.Marshal(parm3).Append(',').Marshal(parm4).Append(',').Marshal(parm5).Append(',').Marshal(parm6).Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(',')
+			.Marshal(parm3).Append(',').Marshal(parm4).Append(',').Marshal(parm5).Append(',').Marshal(parm6).Append(',').Marshal(parm7).Append(')');
+	}
+
+	CStrBuilder<2048>	m_Callback;
+};
+
+class CDynamicFoxCallback : public CFoxCallback
+{
+public:
+	CDynamicFoxCallback()
+	{
+		m_NaturalParameterOrder = true;
+		for (int nParm = 0; nParm < sizeof(m_ParameterPosition) / sizeof(int); nParm++)
+			m_ParameterPosition[nParm] = nParm;
+	}
+
+	// nParmNo - zero based, nParmPosition - one based
+	void SetParameterPosition(int nParmNo, int nParmPosition)
+	{
+		m_ParameterPosition[nParmNo] = nParmPosition;
+	}
+
+	void OptimizeParameterPosition()
+	{
+		m_NaturalParameterOrder = true;
+		for (int nParm = 0; nParm < sizeof(m_ParameterPosition) / sizeof(int); nParm++)
+		{
+			if (m_ParameterPosition[nParm] != nParm)
+			{
+				m_NaturalParameterOrder = false;
+				break;
+			}
+		}
+	}
+
+	void SetCallback(CStringView pCallback)
+	{
+		m_Callback = pCallback;
+		m_Callback.SetFormatBase();
+	}
+
+	int Evaluate(Value* pVal)
+	{
+		m_Callback.ResetToFormatBase().Append("()");
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	int Execute()
+	{
+		m_Callback.ResetToFormatBase().Append("()");
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1>
+	int Evaluate(Value* pVal, T1 parm1)
+	{
+		BuildCallback(parm1);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2)
+	{
+		BuildCallback(parm1, parm2);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3)
+	{
+		BuildCallback(parm1, parm2, parm3);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5, parm6);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5, parm6, parm7);
+		return _Evaluate(pVal, m_Callback);
+	}
+
+	template<typename T1>
+	int Execute(Value* pVal, T1 parm1)
+	{
+		BuildCallback(parm1);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2>
+	int Execute(Value* pVal, T1 parm1, T2 parm2)
+	{
+		BuildCallback(parm1, parm2);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3>
+	int Execute(Value* pVal, T1 parm1, T2 parm2, T3 parm3)
+	{
+		BuildCallback(parm1, parm2, parm3);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	int Execute(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	int Execute(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	int Execute(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5, parm6);
+		return _Execute(m_Callback);
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	int Execute(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5, parm6, parm7);
+		return _Execute(m_Callback);
+	}
+
+protected:
+
+	template<typename T1>
+	inline void BuildCallback(T1 parm1)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(')');
+	}
+
+	template<typename T1, typename T2>
+	inline void BuildCallback(T1 parm1, T2 parm2)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < 2; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+			case 0:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm1);
+				bSeperator = true;
+				break;
+			case 1:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm2);
+				bSeperator = true;
+				break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3>
+	inline void BuildCallback(T1 parm1, T2 parm2, T3 parm3)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2, parm3);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < 3; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+			case 0:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm1);
+				bSeperator = true;
+				break;
+			case 1:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm2);
+				bSeperator = true;
+				break;
+			case 2:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm3);
+				bSeperator = true;
+				break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4>
+	inline void BuildCallback(T1 parm1, T2 parm2, T3 parm3, T4 parm4)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < 4; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+			case 0:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm1);
+				bSeperator = true;
+				break;
+			case 1:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm2);
+				bSeperator = true;
+				break;
+			case 2:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm3);
+				bSeperator = true;
+				break;
+			case 3:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm4);
+				bSeperator = true;
+				break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5>
+	inline void BuildCallback(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < 5; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+			case 0:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm1);
+				bSeperator = true;
+				break;
+			case 1:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm2);
+				bSeperator = true;
+				break;
+			case 2:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm3);
+				bSeperator = true;
+				break;
+			case 3:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm4);
+				bSeperator = true;
+				break;
+			case 4:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm5);
+				bSeperator = true;
+				break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	inline void BuildCallback(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < 6; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+			case 0:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm1);
+				bSeperator = true;
+				break;
+			case 1:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm2);
+				bSeperator = true;
+				break;
+			case 2:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm3);
+				bSeperator = true;
+				break;
+			case 3:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm4);
+				bSeperator = true;
+				break;
+			case 4:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm5);
+				bSeperator = true;
+				break;
+			case 5:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm6);
+				bSeperator = true;
+				break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+	inline void BuildCallback(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6, parm7);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < 7; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+			case 0:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm1);
+				bSeperator = true;
+				break;
+			case 1:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm2);
+				bSeperator = true;
+				break;
+			case 2:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm3);
+				bSeperator = true;
+				break;
+			case 3:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm4);
+				bSeperator = true;
+				break;
+			case 4:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm5);
+				bSeperator = true;
+				break;
+			case 5:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm6);
+				bSeperator = true;
+				break;
+			case 6:
+				if (bSeperator)
+					m_Callback.Append(',');
+				m_Callback.Marshal(parm7);
+				bSeperator = true;
+				break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
+	bool				m_NaturalParameterOrder;
+	int					m_ParameterPosition[7];
 };
 
 // helper class which holds the current timezone information (singleton - use GetTsi to get instance)
@@ -1443,7 +2035,7 @@ inline int CFoxVersion::Version()
 
 inline int CFoxVersion::MajorVersion()
 {
-	if (m_Version == 0)
+ 	if (m_Version == 0)
 		Init();
 	return m_MajorVersion;
 }
@@ -1464,12 +2056,12 @@ inline FoxValue::FoxValue() : m_Locked(false)
 }
 
 inline FoxValue::FoxValue(char cType) : m_Locked(false)
- {
- 	m_Value.ev_type = cType;
+{
+	m_Value.ev_type = cType;
 	m_Value.ev_width = 0;
 	m_Value.ev_length = 0;
- 	m_Value.ev_object = 0;
- 	m_Value.ev_handle = 0;
+	m_Value.ev_object = 0;
+	m_Value.ev_handle = 0;
 }
 
 inline FoxValue::FoxValue(char cType, int nWidth) : m_Locked(false)
@@ -1482,34 +2074,34 @@ inline FoxValue::FoxValue(char cType, int nWidth) : m_Locked(false)
 inline FoxValue::FoxValue(char cType, int nWidth, unsigned long nPrec) : m_Locked(false)
 {
 	m_Value.ev_type = cType;
-	m_Value.ev_width = nWidth; 
+	m_Value.ev_width = nWidth;
 	m_Value.ev_length = nPrec;
 	m_Value.ev_real = 0.0;
 }
 
-inline FoxValue::FoxValue(Locator &pLoc) : m_Locked(false)
+inline FoxValue::FoxValue(LocatorEx& pLoc) : m_Locked(false)
 {
 	int nErrorNo;
 	m_Value.ev_type = '0';
-	if (nErrorNo = _Load(&pLoc, &m_Value))
+	if (nErrorNo = _Load(pLoc, &m_Value))
 		throw nErrorNo;
 }
 
 inline FoxValue::~FoxValue()
 {
-	if (Vartype() == 'C')
+	if (m_Value.ev_type == 'C')
 	{
 		UnlockHandle();
 		FreeHandle();
 	}
-	else if (Vartype() == 'O')
+	else if (m_Value.ev_type == 'O')
 	{
 		UnlockObject();
 		FreeObject();
 	}
 }
 
-inline FoxValue& FoxValue::Evaluate(char *pExpression)
+inline FoxValue& FoxValue::Evaluate(char* pExpression)
 {
 	Release();
 	int nErrorNo;
@@ -1525,12 +2117,12 @@ inline char FoxValue::Vartype() const
 
 inline void FoxValue::Release()
 {
-	if (Vartype() == 'C')
+	if (m_Value.ev_type == 'C')
 	{
 		UnlockHandle();
 		FreeHandle();
 	}
-	else if (Vartype() == 'O')
+	else if (m_Value.ev_type == 'O')
 	{
 		UnlockObject();
 		FreeObject();
@@ -1542,7 +2134,12 @@ inline void FoxValue::Return()
 {
 	assert(m_Locked == false);
 	_RetVal(&m_Value);
-	 m_Value.ev_type = '0';
+	m_Value.ev_type = '0';
+}
+
+inline unsigned int FoxValue::Len() const
+{
+	return m_Value.ev_length;
 }
 
 inline FoxValue& FoxValue::AllocHandle(int nBytes)
@@ -1564,9 +2161,9 @@ inline FoxValue& FoxValue::FreeHandle()
 	return *this;
 }
 
-inline char* FoxValue::HandleToPtr()
+inline char* FoxValue::HandleToPtr() const
 {
-	assert(Vartype() == 'C' && m_Value.ev_handle);
+	assert(m_Value.ev_type == 'C' && m_Value.ev_handle);
 	return reinterpret_cast<char*>(_HandToPtr(m_Value.ev_handle));
 }
 
@@ -1574,7 +2171,7 @@ inline FoxValue& FoxValue::LockHandle()
 {
 	if (m_Locked == false)
 	{
-		assert(Vartype() == 'C' && m_Value.ev_handle);
+		assert(m_Value.ev_type == 'C' && m_Value.ev_handle);
 		_HLock(m_Value.ev_handle);
 		m_Locked = true;
 	}
@@ -1585,22 +2182,28 @@ inline FoxValue& FoxValue::UnlockHandle()
 {
 	if (m_Locked)
 	{
-		assert(Vartype() == 'C' && m_Value.ev_handle);
+		assert(m_Value.ev_type == 'C' && m_Value.ev_handle);
 		_HUnLock(m_Value.ev_handle);
 		m_Locked = false;
 	}
 	return *this;
 }
 
-inline unsigned int FoxValue::GetHandleSize()
+inline unsigned int FoxValue::GetHandleSize() const
 {
-	assert(Vartype() == 'C' && m_Value.ev_handle);
+	assert(m_Value.ev_type == 'C' && m_Value.ev_handle);
 	return _GetHandSize(m_Value.ev_handle);
+}
+
+inline MHandle FoxValue::GetHandle() const
+{
+	assert(m_Value.ev_type == 'C' && m_Value.ev_handle);
+	return m_Value.ev_handle;
 }
 
 inline FoxValue& FoxValue::SetHandleSize(unsigned long nSize)
 {
-	assert(Vartype() == 'C' && m_Value.ev_handle && m_Locked == false);
+	assert(m_Value.ev_type == 'C' && m_Value.ev_handle && m_Locked == false);
 	if (_SetHandSize(m_Value.ev_handle, nSize) == 0)
 		throw E_INSUFMEMORY;
 	return *this;
@@ -1608,7 +2211,7 @@ inline FoxValue& FoxValue::SetHandleSize(unsigned long nSize)
 
 inline FoxValue& FoxValue::ExpandHandle(int nBytes)
 {
-	assert(Vartype() == 'C' && m_Value.ev_handle && m_Locked == false);
+	assert(m_Value.ev_type == 'C' && m_Value.ev_handle && m_Locked == false);
 	if (_SetHandSize(m_Value.ev_handle, m_Value.ev_length + nBytes) == 0)
 		throw E_INSUFMEMORY;
 	return *this;
@@ -1616,7 +2219,7 @@ inline FoxValue& FoxValue::ExpandHandle(int nBytes)
 
 inline FoxValue& FoxValue::NullTerminate()
 {
-	assert(Vartype() == 'C' && m_Value.ev_handle && m_Locked == false);
+	assert(m_Value.ev_type == 'C' && m_Value.ev_handle && m_Locked == false);
 	if (_SetHandSize(m_Value.ev_handle, m_Value.ev_length + 1) == 0)
 		throw E_INSUFMEMORY;
 	return *this;
@@ -1624,7 +2227,7 @@ inline FoxValue& FoxValue::NullTerminate()
 
 inline FoxValue& FoxValue::LockObject()
 {
-	assert(Vartype() == 'O' && m_Value.ev_object);
+	assert(m_Value.ev_type == 'O' && m_Value.ev_object);
 	if (m_Locked == false)
 	{
 		int nErrorNo = _ObjectReference(&m_Value);
@@ -1639,7 +2242,7 @@ inline FoxValue& FoxValue::UnlockObject()
 {
 	if (m_Locked)
 	{
-		assert(Vartype() == 'O' && m_Value.ev_object);
+		assert(m_Value.ev_type == 'O' && m_Value.ev_object);
 		int nErrorNo = _ObjectRelease(&m_Value);
 		if (nErrorNo)
 			throw nErrorNo;
@@ -1652,51 +2255,32 @@ inline FoxValue& FoxValue::FreeObject()
 {
 	if (m_Value.ev_object)
 	{
-		assert(Vartype() == 'O');
+		assert(m_Value.ev_type == 'O');
 		_FreeObject(&m_Value);
 		m_Value.ev_object = 0;
 	}
 	return *this;
 }
 
-inline IDispatch* FoxValue::GetIDispatch()
-{
-	IDispatch* pObject;
-	char* VarName = "__VFP2C32_TEMP_OBJECT";
-	char* VarName2 = "__VFP2C32_TEMP_COMOBJECT";
-	char* pCommand = "m.__VFP2C32_TEMP_COMOBJECT = _VFP.Eval('m.__VFP2C32_TEMP_OBJECT')";
-	char* pCommand2 = "GetIDispatch(m.__VFP2C32_TEMP_COMOBJECT)";
-	Value pDisp = {'0'};
-	FoxVariable pFoxObject(VarName, false);
-	FoxVariable pComObject(VarName2, false);
-	pFoxObject = m_Value;
-	Execute(pCommand);
-	::Evaluate(pDisp, pCommand2);
-	pObject = reinterpret_cast<IDispatch*>(pDisp.ev_long);
-	if (pObject)
-		pObject->AddRef();
-	return pObject;
-}
-
-inline FoxValue& FoxValue::operator=(Locator &pLoc)
+inline FoxValue& FoxValue::operator=(LocatorEx& pLoc)
 {
 	Release();
 	int nErrorNo;
-	if (nErrorNo = _Load(&pLoc, &m_Value))
+	if (nErrorNo = _Load(pLoc, &m_Value))
 		throw nErrorNo;
 	return *this;
 }
 
-inline FoxValue& FoxValue::operator<<(FoxObject &pObject)
+inline FoxValue& FoxValue::operator<<(FoxObject& pObject)
 {
 	Release();
 	int nErrorNo;
 	if (nErrorNo = _GetObjectProperty(&m_Value, pObject, pObject.Property()))
 		throw nErrorNo;
+	return *this;
 }
 
-/* FoxString */
-inline FoxString& FoxString::Evaluate(char *pExpression)
+inline FoxString& FoxString::Evaluate(char* pExpression)
 {
 	Release();
 	int nErrorNo;
@@ -1705,8 +2289,7 @@ inline FoxString& FoxString::Evaluate(char *pExpression)
 	return *this;
 }
 
-/* FoxObject */
-inline FoxObject& FoxObject::Evaluate(char *pExpression)
+inline FoxObject& FoxObject::Evaluate(char* pExpression)
 {
 	Release();
 	int nErrorNo;
@@ -1715,7 +2298,7 @@ inline FoxObject& FoxObject::Evaluate(char *pExpression)
 	return *this;
 }
 
-inline FoxObject& FoxObject::operator<<(FoxValue &pValue)
+inline FoxObject& FoxObject::operator<<(FoxValue& pValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
@@ -1724,22 +2307,23 @@ inline FoxObject& FoxObject::operator<<(FoxValue &pValue)
 	return *this;
 }
 
-inline FoxObject& FoxObject::operator<<(Locator &pLoc)
+inline FoxObject& FoxObject::operator<<(LocatorEx& pLoc)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
 	FoxValue pValue(pLoc);
 	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, pValue, TRUE))
 		throw nErrorNo;
-	return *this;	
+	return *this;
 }
 
 inline FoxObject& FoxObject::operator<<(short nValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	ShortValue vTmp(nValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value,m_Property,&vTmp,TRUE))
+	ValueEx vTmp;
+	vTmp.SetShort(nValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
@@ -1748,18 +2332,20 @@ inline FoxObject& FoxObject::operator<<(unsigned short nValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	UShortValue vTmp(nValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value,m_Property,&vTmp,TRUE))
+	ValueEx vTmp;
+	vTmp.SetUShort(nValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
-	
+
 inline FoxObject& FoxObject::operator<<(int nValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	IntValue vTmp(nValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value,m_Property,&vTmp,TRUE))
+	ValueEx vTmp;
+	vTmp.SetInt(nValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
@@ -1768,8 +2354,9 @@ inline FoxObject& FoxObject::operator<<(unsigned long nValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	UIntValue vTmp(nValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value,m_Property,&vTmp,TRUE))
+	ValueEx vTmp;
+	vTmp.SetUInt(nValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
@@ -1778,8 +2365,9 @@ inline FoxObject& FoxObject::operator<<(bool bValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	LogicalValue vTmp(bValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, &vTmp, TRUE))
+	ValueEx vTmp;
+	vTmp.SetLogical(bValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
@@ -1788,8 +2376,9 @@ inline FoxObject& FoxObject::operator<<(double nValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	DoubleValue vTmp(nValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value,m_Property,&vTmp,TRUE))
+	ValueEx vTmp;
+	vTmp.SetDouble(nValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
@@ -1798,14 +2387,15 @@ inline FoxObject& FoxObject::operator<<(__int64 nValue)
 {
 	assert(m_Property && m_Value.ev_object);
 	int nErrorNo;
-	Int64Value vTmp(nValue);
-	if (nErrorNo = _SetObjectProperty(&m_Value,m_Property, &vTmp, TRUE))
+	ValueEx vTmp;
+	vTmp.SetInt64(nValue);
+	if (nErrorNo = _SetObjectProperty(&m_Value, m_Property, vTmp, TRUE))
 		throw nErrorNo;
 	return *this;
 }
 
 inline FoxObject& FoxObject::operator()(char* pProperty)
-{ 
+{
 	m_Property = pProperty;
 	return *this;
 }
@@ -1815,325 +2405,143 @@ inline char* FoxObject::Property()
 	return m_Property;
 }
 
-inline bool FoxObject::operator!()
+inline bool FoxObject::operator!() const
 {
 	return !(m_Value.ev_type == 'O' && m_Value.ev_object);
 }
 
-inline FoxObject::operator bool()
+inline FoxObject::operator bool() const
 {
 	return m_Value.ev_type == 'O' && m_Value.ev_object;
 }
 
-/* FoxVariable */
-inline FoxVariable& FoxVariable::New(char *pName, bool bPublic)
+inline FoxVariable& FoxVariable::New(char* pName, bool bPublic)
 {
 	Release();
 	m_Loc.l_subs = 0;
-    m_Nti = _NewVar(pName, &m_Loc, bPublic ? NV_PUBLIC : NV_PRIVATE);
-	if (m_Nti < 0)
-		throw -m_Nti;
+	NTI nNti = _NewVar(pName, m_Loc, bPublic ? NV_PUBLIC : NV_PRIVATE);
+	if (nNti < 0)
+		throw (int)-nNti;
 	return *this;
 }
 
-inline FoxVariable& FoxVariable::Attach(char *pName)
+inline FoxVariable& FoxVariable::Attach(char* pName)
 {
 	Release();
-	m_Nti = _NameTableIndex(pName);
-	if (m_Nti == -1)
+	NTI nNti = _NameTableIndex(pName);
+	if (nNti < 0)
 		throw E_VARIABLENOTFOUND;
-	if (!_FindVar(m_Nti,-1, &m_Loc))
+	if (!_FindVar(nNti, -1, m_Loc))
 		throw E_VARIABLENOTFOUND;
 	return *this;
 }
 
 inline FoxVariable& FoxVariable::Detach()
 {
-	m_Nti = 0;
 	m_Loc.l_NTI = 0;
 	return *this;
 }
 
 inline FoxVariable& FoxVariable::Release()
 {
-	if (m_Nti)
+	if (m_Loc.l_NTI > 0)
 	{
-		_Release(m_Nti);
-		m_Nti = 0;
+		_Release(m_Loc.l_NTI);
 		m_Loc.l_NTI = 0;
 	}
 	return *this;
 }
 
-inline FoxVariable& FoxVariable::operator=(Value &pValue)
+inline FoxVariable::operator VarLocatorEx& ()
 {
-	int nErrorNo;
-	if (nErrorNo = _Store(&m_Loc, &pValue))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable& FoxVariable::operator=(FoxValue &pValue)
-{
-	int nErrorNo;
-	if (nErrorNo = _Store(&m_Loc, pValue))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable& FoxVariable::operator=(Locator &pLoc)
-{
-	int nErrorNo;
-	FoxValue pValue(pLoc);
-	if (nErrorNo = _Store(&m_Loc, pValue))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable& FoxVariable::operator<<(FoxObject &pObject)
-{
-	int nErrorNo;
-	FoxValue pValue;
-	pValue << pObject;
-	if (nErrorNo = _Store(&m_Loc, pValue))
-		throw nErrorNo;
-}
-
-inline FoxVariable& FoxVariable::operator=(int nValue)
-{
-	int nErrorNo;
-	IntValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable& FoxVariable::operator=(unsigned long nValue)
-{
-	int nErrorNo;
-	UIntValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable& FoxVariable::operator=(double nValue)
-{
-	int nErrorNo;
-	DoubleValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable& FoxVariable::operator=(bool bValue)
-{
-	int nErrorNo;
-	LogicalValue vTmp(bValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxVariable::operator Locator&()
-{ 
 	return m_Loc;
 }
 
-/* FoxArray */
 inline FoxArray& FoxArray::AutoGrow(unsigned int nRows)
-{ 
+{
 	m_AutoGrow = nRows;
 	return *this;
 }
 
+inline unsigned int FoxArray::AutoGrow()
+{
+	return m_AutoGrow;
+	return *this;
+}
+
+inline FoxArray& FoxArray::AutoOverflow(bool bOverflow)
+{
+	if (bOverflow)
+		m_AutoOverflow = m_AutoOverflow > 1 ? m_AutoOverflow : 1;
+	else
+		m_AutoOverflow = 0;
+	return *this;
+}
+
+inline bool FoxArray::AutoOverflow() const
+{
+	return m_AutoOverflow > 0;
+}
+
 inline FoxArray& FoxArray::ValidateDimension(unsigned int nDim)
-{ 
-	if (nDim > m_Dims) 
+{
+	if (nDim > m_Dims)
 		throw E_INVALIDSUBSCRIPT;
 	return *this;
 }
 
-inline unsigned int FoxArray::Grow(unsigned int nRows)
-{
-	assert(nRows + m_Loc.l_sub1 <= VFP_MAX_ARRAY_ROWS); // LCK only supports array's up to 65000 rows
-	m_Loc.l_sub1 += nRows;
-	if (m_Loc.l_sub1 > m_Rows)
-		ReDimension(min(m_Loc.l_sub1 + m_AutoGrow, VFP_MAX_ARRAY_ROWS), m_Dims);
-	return m_Loc.l_sub1;
-}
-
 inline void FoxArray::ReturnRows()
 {
-	if (m_AutoGrow && m_Loc.l_sub1 && m_Loc.l_sub1 < m_Rows)
+	if (m_AutoOverflow > 1)
+		_RetInt(CompactOverflow(), 11);
+	else if (m_AutoGrow && m_Loc.l_sub1 && m_Loc.l_sub1 < m_Rows)
 		ReDimension(m_Loc.l_sub1, m_Dims);
-	_RetInt(m_Loc.l_sub1,5);
+	_RetInt(m_Loc.l_sub1, 5);
 }
 
-inline FoxArray& FoxArray::operator()(unsigned int nRow)
+inline VarLocatorEx& FoxArray::operator()()
+{
+	return m_Loc;
+}
+
+inline VarLocatorEx& FoxArray::operator()(unsigned int nRow)
 {
 	m_Loc.l_sub1 = nRow;
-	return *this;
+	return m_Loc;
 }
 
-inline FoxArray& FoxArray::operator()(unsigned int nRow, unsigned int nDim)
+inline VarLocatorEx& FoxArray::operator()(unsigned int nRow, unsigned int nDim)
 {
 	m_Loc.l_sub1 = nRow;
 	m_Loc.l_sub2 = nDim;
-	return *this;
+	return m_Loc;
 }
 
 inline unsigned short& FoxArray::CurrentRow()
-{ 
+{
 	return m_Loc.l_sub1;
 }
 
 inline unsigned short& FoxArray::CurrentDim()
-{ 
+{
 	return m_Loc.l_sub2;
 }
 
-inline FoxArray& FoxArray::operator=(FoxValue &pValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	nErrorNo = _Store(&m_Loc, pValue);
-	if (nErrorNo)
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(Locator &pLoc)
-{
-	assert(m_Loc.l_NTI);
-	FoxValue pValue(pLoc);
-	int nErrorNo;
-	nErrorNo = _Store(&m_Loc, pValue);
-	if (nErrorNo)
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator<<(FoxObject &pObject)
-{
-	int nErrorNo;
-	FoxValue pValue;
-	pValue << pObject;
-	if (nErrorNo = _Store(&m_Loc, pValue))
-		throw nErrorNo;
-}
-
-inline FoxArray& FoxArray::operator=(void *pPointer)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	PointerValue vTmp(pPointer);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(unsigned char nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	UCharValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(int nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	IntValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(unsigned int nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	UIntValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(unsigned long nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	UIntValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(bool bValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	LogicalValue vTmp(bValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(double nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	DoubleValue vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(__int64 nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	Int64Value vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxArray& FoxArray::operator=(unsigned __int64 nValue)
-{
-	assert(m_Loc.l_NTI);
-	int nErrorNo;
-	UInt64Value vTmp(nValue);
-	if (nErrorNo = _Store(&m_Loc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
 inline bool FoxArray::operator!()
-{ 
-	return m_Name[0] == '\0';
+{
+	return m_Name.Len() > 0;
 }
 
 inline FoxArray::operator bool()
-{ 
-	return m_Name[0] != '\0';
+{
+	return m_Name.Len() > 0;
 }
 
-inline FoxArray::operator Locator&()
-{ 
-	return m_Loc;
-}
-
-/* FoxCursor */
 inline FoxCursor& FoxCursor::AppendBlank()
 {
 	int nErrorNo;
 	if (nErrorNo = _DBAppend(m_WorkArea, 0) != 0)
-		throw -nErrorNo;
+		throw - nErrorNo;
 	return *this;
 }
 
@@ -2141,7 +2549,7 @@ inline FoxCursor& FoxCursor::AppendCarry()
 {
 	int nErrorNo;
 	if (nErrorNo = _DBAppend(m_WorkArea, 1) != 0)
-		throw -nErrorNo;
+		throw - nErrorNo;
 	return *this;
 }
 
@@ -2149,16 +2557,16 @@ inline FoxCursor& FoxCursor::Append()
 {
 	int nErrorNo;
 	if (nErrorNo = _DBAppend(m_WorkArea, -1) != 0)
-		throw -nErrorNo;
+		throw - nErrorNo;
 	return *this;
 }
 
 inline int FoxCursor::GoTop()
-{ 
+{
 	int recno;
 	recno = _DBRewind(m_WorkArea);
 	if (recno < 0)
-		throw -recno;
+		throw - recno;
 	return recno;
 }
 
@@ -2167,7 +2575,7 @@ inline int FoxCursor::GoBottom()
 	int recno;
 	recno = _DBUnwind(m_WorkArea);
 	if (recno < 0)
-		throw -recno;
+		throw - recno;
 	return recno;
 }
 
@@ -2176,19 +2584,20 @@ inline int FoxCursor::Skip(int nRecords)
 	int recno;
 	recno = _DBSkip(m_WorkArea, nRecords);
 	if (recno < 0)
-		throw -recno;
+		throw - recno;
 	return recno;
 }
 
 inline bool FoxCursor::Deleted()
 {
-	Value value = {'0'};
-	Locator loc;
+	ValueEx value;
+	LocatorEx loc;
+	value = 0;
 	loc.l_where = m_WorkArea;
 	loc.l_offset = -1;
-	int nErrorNo = _Load(&loc, &value);
+	int nErrorNo = _Load(loc, value);
 	if (nErrorNo)
-		throw -nErrorNo;
+		throw - nErrorNo;
 	return value.ev_length > 0;
 }
 
@@ -2197,7 +2606,7 @@ inline int FoxCursor::RecNo()
 	int recno;
 	recno = _DBRecNo(m_WorkArea);
 	if (recno < 0)
-		throw -recno;
+		throw - recno;
 	return recno;
 }
 
@@ -2206,32 +2615,40 @@ inline int FoxCursor::RecCount()
 	int reccount;
 	reccount = _DBRecCount(m_WorkArea);
 	if (reccount < 0)
-		throw -reccount;
+		throw - reccount;
 	return reccount;
 }
 
 inline FoxCursor& FoxCursor::Go(long nRecord)
-{ 
+{
 	int nErrorNo;
 	if (nErrorNo = _DBRead(m_WorkArea, nRecord) < 0)
-		throw -nErrorNo;
+		throw - nErrorNo;
 	return *this;
 }
 
 inline bool FoxCursor::RLock()
-{ 
+{
 	return _DBLock(m_WorkArea, DBL_RECORD) > 0;
 }
 
 inline bool FoxCursor::FLock()
-{ 
-	return _DBLock(m_WorkArea,DBL_FILE) > 0;
+{
+	return _DBLock(m_WorkArea, DBL_FILE) > 0;
 }
 
 inline FoxCursor& FoxCursor::Unlock()
-{ 
+{
+	m_AutoFLocked = false;
 	_DBUnLock(m_WorkArea);
 	return *this;
+}
+
+inline bool FoxCursor::AutoFLock()
+{
+	if (m_AutoFLocked == false)
+		m_AutoFLocked = FLock();
+	return m_AutoFLocked;
 }
 
 inline bool FoxCursor::Bof()
@@ -2239,7 +2656,7 @@ inline bool FoxCursor::Bof()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return (status & DB_BOF) > 0;
 }
 
@@ -2248,7 +2665,7 @@ inline bool FoxCursor::Eof()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return (status & DB_EOF) > 0;
 }
 
@@ -2257,7 +2674,7 @@ inline bool FoxCursor::RLocked()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return (status & DB_RLOCKED) > 0;
 }
 
@@ -2266,7 +2683,7 @@ inline bool FoxCursor::FLocked()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return (status & DB_FLOCKED) > 0;
 }
 
@@ -2275,7 +2692,7 @@ inline bool FoxCursor::Exclusiv()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return (status & DB_EXCLUSIVE) > 0;
 }
 
@@ -2284,7 +2701,7 @@ inline bool FoxCursor::Readonly()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return (status & DB_READONLY) > 0;
 }
 
@@ -2293,59 +2710,15 @@ inline int FoxCursor::DBStatus()
 	int status;
 	status = _DBStatus(m_WorkArea);
 	if (status < 0)
-		throw -status;
+		throw - status;
 	return status;
 }
 
-inline FoxCursor& FoxCursor::operator()(unsigned int nFieldNo)
-{ 
+inline FieldLocatorEx& FoxCursor::operator()(unsigned int nFieldNo)
+{
 	assert(nFieldNo < m_FieldCnt);
-	m_pCurrentLoc = m_pFieldLocs + nFieldNo; 
-	return *this;
+	return *(m_pFieldLocs + nFieldNo);
 }
 
-inline FoxCursor& FoxCursor::operator=(FoxValue &pValue)
-{
-	int nErrorNo;
-	if (nErrorNo = _DBReplace(m_pCurrentLoc,pValue))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxCursor& FoxCursor::operator=(Locator &pLoc)
-{
-	int nErrorNo;
-	FoxValue pValue(pLoc);
-	if (nErrorNo = _DBReplace(m_pCurrentLoc, pValue))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxCursor& FoxCursor::operator<<(FoxObject &pObject)
-{
-	int nErrorNo;
-	FoxValue pValue;
-	pValue << pObject;
-	if (nErrorNo = _DBReplace(m_pCurrentLoc, pValue))
-		throw nErrorNo;
-}
-
-inline FoxCursor& FoxCursor::operator=(int nValue)
-{
-	int nErrorNo;
-	IntValue vTmp(nValue);
-	if (nErrorNo = _DBReplace(m_pCurrentLoc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
-
-inline FoxCursor& FoxCursor::operator=(unsigned long nValue)
-{
-	int nErrorNo;
-	UIntValue vTmp(nValue);
-	if (nErrorNo = _DBReplace(m_pCurrentLoc,&vTmp))
-		throw nErrorNo;
-	return *this;
-}
 
 #endif // _VFP2CCPPAPI_H__

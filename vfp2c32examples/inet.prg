@@ -3,7 +3,11 @@
 && UrlDownloadToFile 
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
-SET LIBRARY TO vfp2c32.fll ADDITIVE
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
 
 LOCAL laUrl1, lcUrl2, lcUrl3, lcUrl4, lcFile, lcFile2, lcFile3, lcFile4
 lcUrl = "http:\\www.vfp2c.com\bilder\testfile.zip"

@@ -1,12 +1,15 @@
 #include <winsock2.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2ciphelper.h"
 #include "vfp2cwinsock.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
-#include "vfpmacros.h"
 
 static PSENDARP fpSendARP = 0;
 static PICMPCREATEFILE fpIcmpCreateFile = 0;
@@ -120,11 +123,15 @@ int _stdcall VFP2C_Init_IpHelper()
 	return 0;
 }
 
-void _fastcall Ip2MacAddress(ParamBlk *parm)
+void _fastcall Ip2MacAddress(ParamBlkEx& parm)
 {
 try
 {
 	int nErrorNo = VFP2C_Init_IpHelper();
+	if (nErrorNo)
+		throw nErrorNo;
+
+	nErrorNo = VFP2C_Init_Winsock();
 	if (nErrorNo)
 		throw nErrorNo;
 
@@ -133,7 +140,7 @@ try
 	ULONG aMacAddr[2], nLen = 6, nIpAddr;
 	HRESULT hr;
 	
-	if (!fpSendARP)
+	if (!fpSendARP || !fpInetPton)
 		throw E_NOENTRYPOINT;
 
 	nIpAddr = fpInetPton(AF_INET,vIp,&nIpAddr);
@@ -192,7 +199,7 @@ void _stdcall Binary2Mac(char *pBuffer, unsigned char *pBinMac)
 	*pBuffer++ = pHexDigit;
 }
 
-void _fastcall IcmpPing(ParamBlk *parm)
+void _fastcall IcmpPing(ParamBlkEx& parm)
 {
 try
 {
@@ -203,17 +210,17 @@ try
 	if (!fpIcmpCreateFile)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(vp1);
-	FoxString pHost(vp2);
+	FoxArray pArray(parm(1));
+	FoxString pHost(parm(2));
 	FoxString pIpBuffer(VFP2C_MAX_IP_LEN);
 	IcmpFile pIcmp;
 
-	BYTE nTTL = PCount() >= 3 && vp3.ev_long ? static_cast<BYTE>(vp3.ev_long) : 30;
-	BYTE nTos = PCount() >= 4 && vp4.ev_long ? static_cast<BYTE>(vp4.ev_long) : 0;
-	DWORD dwTimeout = PCount() >= 5 && vp5.ev_long ? vp5.ev_long : 3000;
-	WORD nDataSize = PCount() >= 6 && vp6.ev_long ? static_cast<WORD>(vp6.ev_long) : 32;
-	bool bDontFragment = PCount() >= 7 && vp7.ev_length;
-	int nPingCount = PCount() >= 8 && vp8.ev_long ? vp8.ev_long : 1;
+	BYTE nTTL = parm.PCount() >= 3 && parm(3)->ev_long ? static_cast<BYTE>(parm(3)->ev_long) : 30;
+	BYTE nTos = parm.PCount() >= 4 && parm(4)->ev_long ? static_cast<BYTE>(parm(4)->ev_long) : 0;
+	DWORD dwTimeout = parm.PCount() >= 5 && parm(5)->ev_long ? parm(5)->ev_long : 3000;
+	WORD nDataSize = parm.PCount() >= 6 && parm(6)->ev_long ? static_cast<WORD>(parm(6)->ev_long) : 32;
+	bool bDontFragment = parm.PCount() >= 7 && parm(7)->ev_length;
+	int nPingCount = parm.PCount() >= 8 && parm(8)->ev_long ? parm(8)->ev_long : 1;
 
 	unsigned long Ip;
 	LPHOSTENT lpHostEnt;

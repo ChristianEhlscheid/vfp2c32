@@ -19,15 +19,15 @@ bool _stdcall VFP2C_Init_WinInet();
 void _stdcall VFP2C_Destroy_WinInet();
 
 /* WinInet FTP/HTTP wrappers & related functions */
-void _fastcall InitWinInet(ParamBlk *parm);
-void _fastcall SetWinInetOptions(ParamBlk *parm);
-void _fastcall FTPConnect(ParamBlk *parm);
-void _fastcall FTPDisconnect(ParamBlk *parm);
-void _fastcall FTPGetFileLib(ParamBlk *parm);
-void _fastcall FTPPutFileLib(ParamBlk *parm);
-void _fastcall FTPGetDirectory(ParamBlk *parm);
-void _fastcall FTPSetDirectory(ParamBlk *parm);
-void _fastcall AFTPFiles(ParamBlk *parm);
-void _fastcall HTTPGetFile(ParamBlk *parm);
+void _fastcall InitWinInet(ParamBlkEx& parm);
+void _fastcall SetWinInetOptions(ParamBlkEx& parm);
+void _fastcall FTPConnect(ParamBlkEx& parm);
+void _fastcall FTPDisconnect(ParamBlkEx& parm);
+void _fastcall FTPGetFileLib(ParamBlkEx& parm);
+void _fastcall FTPPutFileLib(ParamBlkEx& parm);
+void _fastcall FTPGetDirectory(ParamBlkEx& parm);
+void _fastcall FTPSetDirectory(ParamBlkEx& parm);
+void _fastcall AFTPFiles(ParamBlkEx& parm);
+void _fastcall HTTPGetFile(ParamBlkEx& parm);
 
 #endif // _VFP2CWININET_H__

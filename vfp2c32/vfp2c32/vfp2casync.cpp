@@ -4,18 +4,22 @@
 #include <stdio.h>
 #include <malloc.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2casync.h"
 #include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
-#include "vfpmacros.h"
 
 HWND ghAsyncHwnd = 0;
 static ATOM gnAsyncAtom = 0;
 CThreadManager goThreadManager;
 FindFileChangeExThread *goFindFileChangeExThread = 0;
+#define FILE_UNICODE_EXTENSION	"\\\\?\\"
 
 int _stdcall VFP2C_Init_Async()
 {
@@ -76,7 +80,7 @@ void _stdcall VFP2C_Destroy_Async(VFP2CTls& tls)
 		UnregisterClass((LPCSTR)gnAsyncAtom,ghModule);
 }
 
-void _fastcall FindFileChange(ParamBlk *parm)
+void _fastcall FindFileChange(ParamBlkEx& parm)
 {
 	FindFileChangeThread *pThread = 0;
 try
@@ -85,16 +89,16 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pPath(vp1);
-	bool bWatchSubtree = vp2.ev_length > 0;
-	DWORD nFilter = vp3.ev_long;
-	FoxString pCallback(vp4);
-
-    if (pPath.Len() > MAX_PATH-1)
-		throw E_INVALIDPARAMS;
+	FoxString pPath(parm(1));
+	bool bWatchSubtree = parm(2)->ev_length > 0;
+	DWORD nFilter = parm(3)->ev_long;
+	FoxString pCallback(parm(4));
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
+	{
+		SaveCustomError("FindFileChange", "Callback function length is zero or greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	// find free slot
 	pThread = new FindFileChangeThread(goThreadManager);
@@ -117,7 +121,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CancelFileChange(ParamBlk *parm)
+void _fastcall CancelFileChange(ParamBlkEx& parm)
 {
 try
 {
@@ -125,7 +129,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	CThread *pThread = reinterpret_cast<CThread*>(vp1.ev_long);
+	CThread *pThread = parm(1)->Ptr<CThread*>();
 	Return(goThreadManager.AbortThread(pThread));
 }
 catch(int nErrorNo)
@@ -134,7 +138,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall FindFileChangeEx(ParamBlk *parm)
+void _fastcall FindFileChangeEx(ParamBlkEx& parm)
 {
 	FindFileChangeExThread *pThread = 0;
 	FindFileChangeExEntry *pFFC = 0;
@@ -145,19 +149,25 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pPath(vp1);
-	bool bWatchSubtree = vp2.ev_length > 0;
-	DWORD nFilter = vp3.ev_long;
-	FoxString pCallback(vp4);
+	FoxString pPath(parm(1));
+	bool bWatchSubtree = parm(2)->ev_length > 0;
+	DWORD nFilter = parm(3)->ev_long;
+	FoxString pCallback(parm(4));
 	FoxObject pObject(parm, 5);
 
-    if (pPath.Len() > MAX_PATH-1)
+	if (pPath.Len() >= MAX_PATH)
+	{
+		SaveCustomError("FindFileChangeEx", "Path is greater than MAX_PATH.");
 		throw E_INVALIDPARAMS;
+	}
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
+	{
+		SaveCustomError("FindFileChangeEx", "Callback function length is zero or greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
-	if (PCount() > 4)
+	if (parm.PCount() > 4)
 	{
 		pCallbackObject = pObject.GetIDispatch();
 	}
@@ -196,7 +206,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CancelFileChangeEx(ParamBlk *parm)
+void _fastcall CancelFileChangeEx(ParamBlkEx& parm)
 {
 try
 {
@@ -207,11 +217,9 @@ try
 
 	if (goFindFileChangeExThread)
 	{
-		if (Vartype(vp1) == 'N' || Vartype(vp1) == 'I')
+		if (parm(1)->Vartype() == 'N' || parm(1)->Vartype() == 'I')
 		{
-			if (Vartype(vp1) == 'N')
-				vp1.ev_long = static_cast<long>(vp1.ev_real);
-			FindFileChangeExEntry *pFFC = reinterpret_cast<FindFileChangeExEntry*>(vp1.ev_long);
+			FindFileChangeExEntry* pFFC = parm(1)->DynamicPtr<FindFileChangeExEntry*>();
 			if (pFFC)
 			{
 				ret = goFindFileChangeExThread->RemoveDirectory(pFFC);
@@ -222,13 +230,17 @@ try
 				ret = true;
 			}
 		}
-		else if (Vartype(vp1) == 'C')
+		else if (parm(1)->Vartype() == 'C')
 		{
-			FoxString pDir(vp1);
+			FoxString pDir(parm(1));
 			ret = goFindFileChangeExThread->RemoveDirectory(pDir);
 		}
 		else
+		{
+			SaveCustomError("CancelFileChangeEx", "Invalid first parameter type, should be either a numeric handle returned FindFileChangeEx or a valid directoryname.");
 			throw E_INVALIDPARAMS;
+		}
+			
 
 		if (!goFindFileChangeExThread->IsWatching())
 		{
@@ -245,7 +257,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall FindRegistryChange(ParamBlk *parm)
+void _fastcall FindRegistryChange(ParamBlkEx& parm)
 {
 	FindRegistryChangeThread *pThread = 0;
 try
@@ -254,14 +266,17 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	HKEY hRoot = reinterpret_cast<HKEY>(vp1.ev_long);
-	FoxString pKey(vp2);
-	bool bWatchSubtree = vp3.ev_length > 0;
-	DWORD dwFilter = vp4.ev_long;
-	FoxString pCallback(vp5);
+	HKEY hRoot = parm(1)->Ptr<HKEY>();
+	FoxString pKey(parm(2));
+	bool bWatchSubtree = parm(3)->ev_length > 0;
+	DWORD dwFilter = parm(4)->ev_long;
+	FoxString pCallback(parm(5));
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
+	{
+		SaveCustomError("FindRegistryChange", "Callback function length is zero or greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	pThread = new FindRegistryChangeThread(goThreadManager);
 	if (!pThread)
@@ -283,7 +298,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CancelRegistryChange(ParamBlk *parm)
+void _fastcall CancelRegistryChange(ParamBlkEx& parm)
 {
 try
 {
@@ -291,7 +306,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	CThread *pThread = reinterpret_cast<CThread*>(vp1.ev_long);
+	CThread *pThread = parm(1)->Ptr<CThread*>();
 	Return(goThreadManager.AbortThread(pThread));
 }
 catch(int nErrorNo)
@@ -300,7 +315,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AsyncWaitForObject(ParamBlk *parm)
+void _fastcall AsyncWaitForObject(ParamBlkEx& parm)
 {
 	WaitForObjectThread *pThread = 0;
 try
@@ -309,11 +324,14 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	HANDLE hObject = reinterpret_cast<HANDLE>(vp1.ev_long);
-	FoxString pCallback(vp2);
+	HANDLE hObject = parm(1)->Ptr<HANDLE>();
+	FoxString pCallback(parm(2));
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
+	{
+		SaveCustomError("AsyncWaitForObject", "Callback function length is zero or greater than maximum length of 1024.");
 		throw E_INVALIDPARAMS;
+	}
 
 	pThread = new WaitForObjectThread(goThreadManager);
 	if (!pThread)
@@ -335,7 +353,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CancelWaitForObject(ParamBlk *parm)
+void _fastcall CancelWaitForObject(ParamBlkEx& parm)
 {
 try
 {
@@ -343,7 +361,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	CThread *pThread = reinterpret_cast<CThread*>(vp1.ev_long);
+	CThread *pThread = parm(1)->Ptr<CThread*>();
 	Return(goThreadManager.AbortThread(pThread));
 }
 catch(int nErrorNo)
@@ -370,24 +388,24 @@ LRESULT _stdcall FindChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPAR
 			return 0;
 
 		case WM_CALLBACKRESULT:
-			Value vRetVal;
-			vRetVal.ev_type = '0';
+			ValueEx vRetVal;
+			vRetVal = 0;
 			retval = 0;
 			pCommand = reinterpret_cast<char*>(wParam);
 			if (pCommand)
 			{
-				nErrorNo = _Evaluate(&vRetVal, pCommand);
+				nErrorNo = _Evaluate(vRetVal, pCommand);
 				delete[] pCommand;
 				if (nErrorNo == 0)
 				{
-					if (Vartype(vRetVal) == 'I')
+					if (vRetVal.Vartype() == 'I')
 						retval = vRetVal.ev_long;
-					else if (Vartype(vRetVal) == 'N')
+					else if (vRetVal.Vartype() == 'N')
 						retval = static_cast<LRESULT>(vRetVal.ev_real);
-					else if (Vartype(vRetVal) == 'L')
+					else if (vRetVal.Vartype() == 'L')
 						retval = vRetVal.ev_width;
-					else 
-						ReleaseValue(vRetVal);
+					else
+						vRetVal.Release();
 				}
 			}
 			return retval;
@@ -463,7 +481,7 @@ FindFileChangeThread::~FindFileChangeThread()
 		FindCloseChangeNotification(m_FileEvent);
 }
 
-bool FindFileChangeThread::Setup(char *pPath, bool bWatchSubtree, DWORD nFilter, char *pCallback)
+bool FindFileChangeThread::Setup(FoxString& pPath, bool bWatchSubtree, DWORD nFilter, CStringView pCallback)
 {
 	m_Path = pPath;
 	m_Callback = pCallback;
@@ -472,7 +490,15 @@ bool FindFileChangeThread::Setup(char *pPath, bool bWatchSubtree, DWORD nFilter,
 	if (!m_AbortEvent.Create())
 		return false;
 
-	m_FileEvent = FindFirstChangeNotification(pPath, bWatchSubtree ? TRUE : FALSE, nFilter);
+	if (pPath.Len() < MAX_PATH)
+		m_FileEvent = FindFirstChangeNotification(pPath, bWatchSubtree ? TRUE : FALSE, nFilter);
+	else
+	{
+		FoxWString<MAX_PATH * 2> pWidePath;
+		pWidePath = pPath.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+		m_FileEvent = FindFirstChangeNotificationW(pWidePath, bWatchSubtree ? TRUE : FALSE, nFilter);
+	}
+		
 	if (m_FileEvent == INVALID_HANDLE_VALUE)
 	{
 		SaveWin32Error("FindFirstChangeNotification", GetLastError());
@@ -507,7 +533,7 @@ DWORD FindFileChangeThread::Run()
 		switch (nRetVal)
 		{
 			case WAIT_OBJECT_0:
-				m_Callback.AppendFormatBase("(%U,'%S',%U)", this, (char*)m_Path, 0);
+				m_Callback.AppendFormatBase("(%U,\"%V\",%U)", this, &(CStringView)m_Path, 0);
 				pCallback = m_Callback.Strdup();
 				if (pCallback)
 					PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCallback), 0);
@@ -568,12 +594,11 @@ void FindFileChangeExEntry::Setup(FoxString &pPath, bool bWatchSubtree, DWORD nF
 	m_Path2.SetFormatBase();
 	if (pCallbackObject)
 	{
-		m_Callback.Initialize(pCallbackObject, pMethod);
+		m_ComCallback.Initialize(pCallbackObject, pMethod);
 	}
 	else
 	{
-		m_CallbackBuffer = pMethod;
-		m_CallbackBuffer.SetFormatBase();
+		m_FoxCallback.SetCallback(pMethod);
 	}
 	m_ReadDirBuffer.Attach(new FindFileChangeExBuffer());
 	if (m_ReadDirBuffer == 0)
@@ -659,24 +684,27 @@ bool FindFileChangeExEntry::OnFileChangeEvent(DWORD dwBytes, FindFileChangeExThr
 
 void FindFileChangeExEntry::Callback(PFILE_NOTIFY_INFORMATION pInfo)
 {
+	CWideStringView pFilename;
+	CWideStringView pOldFilename;
 	switch(pInfo->Action)
 	{
 		case FILE_ACTION_ADDED:
 		case FILE_ACTION_REMOVED:
 		case FILE_ACTION_MODIFIED:
-			m_Path.AppendFormatBase("%W", &pInfo->FileName, pInfo->FileNameLength / 2);
+			pFilename.Data = pInfo->FileName;
+			pFilename.Len = pInfo->FileNameLength / 2;
+			m_Path.AppendFormatBase("%W", &pFilename);
 			if (pInfo->Action != FILE_ACTION_REMOVED)
 			{
 				GetLongPathName(m_Path, m_Path, m_Path.Size());
 			}
-			if (m_Callback)
+			if (m_ComCallback)
 			{
-				m_Callback.Call((void*)this, pInfo->Action, (CStrView)m_Path);
+				m_ComCallback.Call((void*)this, pInfo->Action, (CStringView)m_Path);
 			} 
 			else
 			{
-				m_CallbackBuffer.AppendFormatBase("(%U,%U,ReadCString(%U))", this, pInfo->Action, (char*)m_Path);
-				_Execute(m_CallbackBuffer);
+				m_FoxCallback.Execute(this, pInfo->Action, m_Path);
 			}
 			break;
 
@@ -686,33 +714,35 @@ void FindFileChangeExEntry::Callback(PFILE_NOTIFY_INFORMATION pInfo)
 			break;
 
 		case FILE_ACTION_RENAMED_NEW_NAME:
-			m_Path.AppendFormatBase("%W", &m_OldFilename, m_OldFilenameLength / 2);
-			m_Path2.AppendFormatBase("%W", &pInfo->FileName, pInfo->FileNameLength / 2);
-			if (m_Callback)
+			pOldFilename.Data = m_OldFilename;
+			pOldFilename.Len = m_OldFilenameLength / 2;
+			pFilename.Data = pInfo->FileName;
+			pFilename.Len = pInfo->FileNameLength / 2;
+			m_Path.AppendFormatBase("%W", &pOldFilename);
+			m_Path2.AppendFormatBase("%W", &pFilename);
+			if (m_ComCallback)
 			{
-				m_Callback.Call((void*)this, FILE_ACTION_RENAMED_OLD_NAME, (CStrView)m_Path, (CStrView)m_Path2);
+				m_ComCallback.Call((void*)this, FILE_ACTION_RENAMED_OLD_NAME, (CStringView)m_Path, (CStringView)m_Path2);
 			} 
 			else
 			{
 				// GetLongPathName(m_Path2, m_Path2, m_Path2.Size());
-				m_CallbackBuffer.AppendFormatBase("(%U,%U,ReadCString(%U),ReadCString(%U))", this, FILE_ACTION_RENAMED_OLD_NAME, (char*)m_Path, (char*)m_Path2);
-				_Execute(m_CallbackBuffer);
+				m_FoxCallback.Execute(this, FILE_ACTION_RENAMED_OLD_NAME, m_Path, m_Path2);
 			}
 			m_OldFilenameLength = 0;
 			break;
 	}
 }
 
-void FindFileChangeExEntry::ErrorCallback(char *pFunc, DWORD nError)
+void FindFileChangeExEntry::ErrorCallback(CStringView pFunc, DWORD nError)
 {
-	if (m_Callback)
+	if (m_ComCallback)
 	{
-		m_Callback.Call((void*)this, 0, pFunc, nError);
+		m_ComCallback.Call((void*)this, 0, pFunc, nError);
 	}
 	else
 	{
-		m_CallbackBuffer.AppendFormatBase("(%U,%U,ReadCString(%U),%U)", this, 0, pFunc, nError);
-		_Execute(m_CallbackBuffer);
+		m_FoxCallback.Execute(this, 0, pFunc, nError);
 	}
 }
 
@@ -736,7 +766,7 @@ USHORT FindFileChangeExEntry::GetIdentity()
 	return m_Identity;
 }
 
-bool FindFileChangeExEntry::CompareDirectory(CStrBuilder<MAX_PATH+1> &pDirectory)
+bool FindFileChangeExEntry::CompareDirectory(CStrBuilder<MAX_PATH> &pDirectory)
 {
 	return m_Path.CompareToBase(pDirectory);
 }
@@ -746,7 +776,7 @@ void FindFileChangeExEntry::Cancel(bool bSetAbort)
 	if (bSetAbort)
 	{
 		m_Aborted = true;
-		m_Callback.Release();
+		m_ComCallback.Release();
 	}
 	if (m_Handle)
 	{
@@ -808,9 +838,9 @@ bool FindFileChangeExThread::RemoveDirectory(USHORT nFileChangeIdentity)
 	return ret;
 }
 
-bool FindFileChangeExThread::RemoveDirectory(char *pDirectory)
+bool FindFileChangeExThread::RemoveDirectory(CStringView pDirectory)
 {
-	CStrBuilder<MAX_PATH+1> path;
+	CStrBuilder<MAX_PATH> path;
 	path = pDirectory;
 	path.LongPathName().AddBs();
 	FindFileChangeExEntry *pFFC;
@@ -983,9 +1013,9 @@ DWORD FindFileChangeExThread::Run()
 
 
 
-FindRegistryChangeThread::FindRegistryChangeThread(CThreadManager &pManager) : CThread(pManager)
+FindRegistryChangeThread::FindRegistryChangeThread(CThreadManager &pManager) : CThread(pManager), m_WatchSubtree(false), m_RegKey(NULL)
 {
-	m_RegKey = NULL;
+
 }
 
 FindRegistryChangeThread::~FindRegistryChangeThread()
@@ -994,12 +1024,11 @@ FindRegistryChangeThread::~FindRegistryChangeThread()
 		RegCloseKey(m_RegKey);
 }
 
-bool FindRegistryChangeThread::Setup(HKEY hRoot, char *pKey, bool bWatchSubtree, DWORD dwFilter, FoxString &pCallback)
+bool FindRegistryChangeThread::Setup(HKEY hRoot, char *pKey, bool bWatchSubtree, DWORD dwFilter, CStringView pCallback)
 {
 	m_WatchSubtree = bWatchSubtree;
 	m_Filter = dwFilter;
-	m_Callback = pCallback;
-	m_Callback.SetFormatBase();
+	m_Callback.SetCallback(pCallback);
 
 	DWORD nRetVal;
 	nRetVal = RegOpenKeyEx(hRoot, pKey, 0, KEY_NOTIFY, &m_RegKey);
@@ -1040,8 +1069,8 @@ void FindRegistryChangeThread::Release()
 DWORD FindRegistryChangeThread::Run()
 {
 	bool bLoop = true;
-	DWORD nRetVal;
-	char *pCallback;
+	DWORD nRetVal, nLastError;
+	int nParm2 = 0;
 
 	HANDLE hEvents[2];
 	hEvents[0] = m_RegistryEvent;
@@ -1053,19 +1082,12 @@ DWORD FindRegistryChangeThread::Run()
 		switch (nRetVal)
 		{
 			case WAIT_OBJECT_0:
-				m_Callback.AppendFormatBase("(%U,%I)", this, 0);
-				pCallback = m_Callback.Strdup();
-				if (pCallback)
-					PostMessage(ghAsyncHwnd, WM_CALLBACK, (WPARAM)pCallback, 0); // we need to use PostMessage cause it's asynchronous .. SendMessage can bring us into a deadlock situation
-
+				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<void*>(this), 0);
 				nRetVal = RegNotifyChangeKeyValue(m_RegKey, m_WatchSubtree, m_Filter, m_RegistryEvent, TRUE); // continue watching
 				if (nRetVal != ERROR_SUCCESS)
 				{
 					bLoop = false;
-					m_Callback.AppendFormatBase("(%U,%I)", this, nRetVal);
-					pCallback = m_Callback.Strdup();
-					if (pCallback)
-				        PostMessage(ghAsyncHwnd, WM_CALLBACK, (WPARAM)pCallback, 0);
+					m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<void*>(this), 0);
 				}
 				break;
 
@@ -1075,11 +1097,8 @@ DWORD FindRegistryChangeThread::Run()
 
 			case WAIT_FAILED:
 				bLoop = false;
-				m_Callback.AppendFormatBase("(%U,%I)", this, GetLastError());
-				pCallback = m_Callback.Strdup();
-				if (pCallback)
-					PostMessage(ghAsyncHwnd, WM_CALLBACK, (WPARAM)pCallback, 0);
-
+				nLastError = GetLastError();
+				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<void*>(this), nLastError);
 		}
 	}
 
@@ -1096,11 +1115,10 @@ void WaitForObjectThread::Release()
 	delete this;
 }
 
-bool WaitForObjectThread::Setup(HANDLE hObject, FoxString &pCallback)
+bool WaitForObjectThread::Setup(HANDLE hObject, CStringView pCallback)
 {
 	m_Object = hObject;
-	m_Callback = pCallback;
-	m_Callback.SetFormatBase();
+	m_Callback.SetCallback(pCallback);
 
 	// create manual reset event to abort the thread ..
 	if (!m_AbortEvent.Create())
@@ -1112,8 +1130,6 @@ bool WaitForObjectThread::Setup(HANDLE hObject, FoxString &pCallback)
 DWORD WaitForObjectThread::Run()
 {
 	DWORD nRetVal;
-	char *pCallback;
-
 	HANDLE hEvents[2];
 	hEvents[0] = m_Object;
 	hEvents[1] = m_AbortEvent;
@@ -1122,22 +1138,15 @@ DWORD WaitForObjectThread::Run()
 	switch (nRetVal)
 	{
 		case WAIT_OBJECT_0:
-			m_Callback.AppendFormatBase("(%U)", 0);
-			pCallback = m_Callback.Strdup();
-			if (pCallback)
-				PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCallback), 0); // we need to use PostMessage cause it's asynchronous .. SendMessage can bring us into a deadlock situation
+			m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0);
 			break;
 
 		case WAIT_OBJECT_0 + 1: // notification canceled
 			break;
 
 		case WAIT_FAILED:
-			m_Callback.AppendFormatBase("(%U)", GetLastError());
-			pCallback = m_Callback.Strdup();
-			if (pCallback)
-				PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCallback), 0);
+			m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, GetLastError());
 	}
-
 	return 0;
 }
 

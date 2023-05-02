@@ -29,16 +29,16 @@ inline bool REG_KEY_STRING(DWORD hKeyType) { return hKeyType == REG_SZ || hKeyTy
 inline bool REG_KEY_CHARACTER(DWORD hKeyType) { return hKeyType == REG_SZ || hKeyType == REG_MULTI_SZ || hKeyType == REG_EXPAND_SZ || hKeyType == REG_BINARY; }
 inline bool REG_KEY_NUMERIC(DWORD hKeyType) { return hKeyType == REG_DWORD || hKeyType == REG_QWORD || hKeyType == REG_INTEGER || hKeyType == REG_DOUBLE; }
 
-void _fastcall CreateRegistryKey(ParamBlk *parm);
-void _fastcall DeleteRegistryKey(ParamBlk *parm);
-void _fastcall OpenRegistryKey(ParamBlk *parm);
-void _fastcall CloseRegistryKey(ParamBlk *parm);
-void _fastcall ReadRegistryKey(ParamBlk *parm);
-void _fastcall WriteRegistryKey(ParamBlk *parm);
-void _fastcall ARegistryKeys(ParamBlk *parm);
-void _fastcall ARegistryValues(ParamBlk *parm);
-void _fastcall RegistryValuesToObject(ParamBlk *parm);
-void _fastcall RegistryHiveToObject(ParamBlk *parm);
+void _fastcall CreateRegistryKey(ParamBlkEx& parm);
+void _fastcall DeleteRegistryKey(ParamBlkEx& parm);
+void _fastcall OpenRegistryKey(ParamBlkEx& parm);
+void _fastcall CloseRegistryKey(ParamBlkEx& parm);
+void _fastcall ReadRegistryKey(ParamBlkEx& parm);
+void _fastcall WriteRegistryKey(ParamBlkEx& parm);
+void _fastcall ARegistryKeys(ParamBlkEx& parm);
+void _fastcall ARegistryValues(ParamBlkEx& parm);
+void _fastcall RegistryValuesToObject(ParamBlkEx& parm);
+void _fastcall RegistryHiveToObject(ParamBlkEx& parm);
 #pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
 void _stdcall RegistryHiveSubroutine(HKEY hKey, char *pKey, FoxObject& pObject) throw(int);
 

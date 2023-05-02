@@ -1,22 +1,25 @@
 #include <winsock2.h>
 #include <math.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2ccppapi.h"
 #include "vfp2cwinsock.h"
 #include "vfp2csntp.h"
 #include "vfp2cutil.h"
-#include "vfpmacros.h"
 
-void _fastcall SyncToSNTPServer(ParamBlk *parm)
+void _fastcall SyncToSNTPServer(ParamBlkEx& parm)
 {
 	SOCKET sSock = INVALID_SOCKET;
 try
 {
-	FoxString pServer(vp1);
-	unsigned short nPort = (PCount() >= 2 && vp2.ev_long) ? static_cast<unsigned short>(vp2.ev_long) : SNTP_PORT;
-	DWORD dwTimeout = (PCount() >= 3 && vp3.ev_long) ? vp3.ev_long : VFP2CTls::Tls().DefaultWinsockTimeout;
+	FoxString pServer(parm(1));
+	unsigned short nPort = (parm.PCount() >= 2 && parm(2)->ev_long) ? static_cast<unsigned short>(parm(2)->ev_long) : SNTP_PORT;
+	DWORD dwTimeout = (parm.PCount() >= 3 && parm(3)->ev_long) ? parm(3)->ev_long : VFP2CTls::Tls().DefaultWinsockTimeout;
 
 	SOCKADDR_IN sockAddr;
 	SNTPPACKET sPacket;

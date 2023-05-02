@@ -42,7 +42,7 @@ public:
 	void QueryStatus(LPSERVICE_STATUS pStatus);
 	void QueryConfig(CBuffer &pBuffer);
 	void StopDependantServices(SC_HANDLE hSCM);
-	Service& Attach(Value &pVal);
+	Service& Attach(ValueEx& pVal);
 	SC_HANDLE Detach() { m_Owner = false; return m_Handle; }
 
 	operator SC_HANDLE() { return m_Handle; }
@@ -61,20 +61,20 @@ private:
 extern "C" {
 #endif
 
-void _fastcall OpenServiceLib(ParamBlk *parm);
-void _fastcall CloseServiceHandleLib(ParamBlk *parm);
-void _fastcall StartServiceLib(ParamBlk *parm);
-void _fastcall StopServiceLib(ParamBlk *parm);
-void _fastcall PauseService(ParamBlk *parm);
-void _fastcall ContinueService(ParamBlk *parm);
-void _fastcall ControlServiceLib(ParamBlk *parm);
-void _fastcall AServices(ParamBlk *parm);
-void _fastcall AServiceStatus(ParamBlk *parm);
-void _fastcall AServiceConfig(ParamBlk *parm);
-void _fastcall ADependentServices(ParamBlk *parm);
-void _fastcall WaitForServiceStatus(ParamBlk *parm);
-void _fastcall CreateServiceLib(ParamBlk *parm);
-void _fastcall DeleteServiceLib(ParamBlk *parm);
+void _fastcall OpenServiceLib(ParamBlkEx& parm);
+void _fastcall CloseServiceHandleLib(ParamBlkEx& parm);
+void _fastcall StartServiceLib(ParamBlkEx& parm);
+void _fastcall StopServiceLib(ParamBlkEx& parm);
+void _fastcall PauseService(ParamBlkEx& parm);
+void _fastcall ContinueService(ParamBlkEx& parm);
+void _fastcall ControlServiceLib(ParamBlkEx& parm);
+void _fastcall AServices(ParamBlkEx& parm);
+void _fastcall AServiceStatus(ParamBlkEx& parm);
+void _fastcall AServiceConfig(ParamBlkEx& parm);
+void _fastcall ADependentServices(ParamBlkEx& parm);
+void _fastcall WaitForServiceStatus(ParamBlkEx& parm);
+void _fastcall CreateServiceLib(ParamBlkEx& parm);
+void _fastcall DeleteServiceLib(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

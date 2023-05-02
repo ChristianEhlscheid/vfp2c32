@@ -44,10 +44,10 @@ extern "C" {
 // function forward definitions
 int _stdcall VFP2C_Init_Netapi();
 
-void _fastcall ANetUsers(ParamBlk *parm);
-void _fastcall ANetFiles(ParamBlk *parm);
-void _fastcall ANetServers(ParamBlk *parm);
-void _fastcall GetServerTime(ParamBlk *parm);
+void _fastcall ANetUsers(ParamBlkEx& parm);
+void _fastcall ANetFiles(ParamBlkEx& parm);
+void _fastcall ANetServers(ParamBlkEx& parm);
+void _fastcall GetServerTime(ParamBlkEx& parm);
 
 double _stdcall TimeOfDayInfoToDateTime(LPTIME_OF_DAY_INFO pTimeOfDay, TimeZone eTargetTimeZone);
 

@@ -2,6 +2,26 @@
 
 #include "vfp2c32.h"
 #include "vfp2ctls.h"
+#include "vfp2ccallback.h"
+
+const SIZE_T JITHEAP_MAXIMUM_SIZE = 1024 * 1024 * 8; // 8MB should suffice for dynamic code
+
+#if defined(_WIN64)
+PRUNTIME_FUNCTION VFP2C64FunctionTableCallback(DWORD64 ControlPc, PVOID Context)
+{
+	VFP2CTls& tls = VFP2CTls::Tls();
+	DWORD VirtualAddress = (ControlPc - tls.JitBaseAddress);
+	int nCount = tls.RuntimeFunctions.GetCount();
+	PRUNTIME_FUNCTION rf;
+	for (int xj = 0; xj < nCount; xj++)
+	{
+		rf = &tls.RuntimeFunctions[xj];
+		if (VirtualAddress >= rf->BeginAddress && VirtualAddress <= rf->EndAddress)
+			return rf;
+	}
+	return 0;
+}
+#endif
 
 #ifdef _THREADSAFE
 DWORD VFP2CTls::TlsIndex = TLS_OUT_OF_INDEXES;
@@ -28,6 +48,24 @@ VFP2CTls::VFP2CTls()
 #endif
 	WinsockInited = FALSE;
 	DefaultWinsockTimeout = 5000;
+	JitHeap = 0;
+#if defined(_WIN64)
+	JitBaseAddress = 0;
+#endif
+}
+
+VFP2CTls::~VFP2CTls()
+{
+#if defined(_WIN64)
+	if (JitBaseAddress != 0)
+	{
+		PRUNTIME_FUNCTION nTableIdentifier = (PRUNTIME_FUNCTION)(JitBaseAddress | 0x3);
+		RtlDeleteFunctionTable(nTableIdentifier);
+	}
+#endif
+
+	if (JitHeap != 0)
+		HeapDestroy(JitHeap);
 }
 
 void VFP2CTls::OnLoad()
@@ -111,3 +149,45 @@ VFP2CTls& _stdcall VFP2CTls::Tls()
 	return tls;
 #endif
 }
+
+HANDLE VFP2CTls::GetJitHeap()
+{
+	if (JitHeap == 0)
+	{
+#ifndef HEAP_CREATE_ENABLE_EXECUTE
+#define HEAP_CREATE_ENABLE_EXECUTE      0x00040000  
+#endif
+
+#if !defined(_WIN64)
+		DWORD nHeapOptions = HEAP_CREATE_ENABLE_EXECUTE | HEAP_NO_SERIALIZE;
+		DWORD nHeapSize = 0;
+#else
+		DWORD nHeapOptions = HEAP_CREATE_ENABLE_EXECUTE | HEAP_NO_SERIALIZE;
+		DWORD nHeapSize = JITHEAP_MAXIMUM_SIZE;
+#endif
+		if ((JitHeap = HeapCreate(nHeapOptions, 1024 * 16, nHeapSize)) == 0)
+		{
+			SaveWin32Error("HeapCreate", GetLastError());
+			throw E_APIERROR;
+		}
+
+#if defined(_WIN64)
+		JitBaseAddress = (DWORD64)HeapAlloc(JitHeap, 0, 8);
+		if (JitBaseAddress == 0)
+		{
+			SaveWin32Error("HeapAlloc", GetLastError());
+			throw E_APIERROR;
+		}
+		DWORD64 nTableIdentifier = JitBaseAddress | 0x3;
+		HeapFree(JitHeap, 0, (LPVOID)JitBaseAddress);
+		if (RtlInstallFunctionTableCallback(nTableIdentifier, JitBaseAddress, nHeapSize,
+			&VFP2C64FunctionTableCallback, 0, 0) == 0)
+		{
+			SaveWin32Error("RtlInstallFunctionTableCallback", GetLastError());
+			throw E_APIERROR;
+		}
+#endif
+	}
+	return JitHeap;
+}
+

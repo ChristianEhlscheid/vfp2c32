@@ -1,50 +1,59 @@
 #INCLUDE vfp2c.h
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
-SET LIBRARY TO vfp2c32.fll ADDITIVE
 
-MESSAGEBOXEX('Hello VFP', 0, 'The Caption', _VFP.hWnd, 102, VFP2CSYS(1))
-
-LOCAL lcFolder
-IF SHBROWSEFOLDER('Choose a Folder',0,@lcFolder)
-	? "Folder", lcFolder
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
 ELSE
-	? "Dialog aborted"
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
 ENDIF
 
-?SHBROWSEFOLDER('Choose a Folder',0,@lcFolder,'C:\Windows')
+*!*	MESSAGEBOXEX('Hello VFP', 0, 'The Caption', _VFP.hWnd, 102, VFP2CSYS(1))
 
-?SHBROWSEFOLDER('Choose yet another Folder :)',0,@lcFolder,'','BrowseFolderCallback')
+*!*	LOCAL lcFolder
+*!*	IF SHBROWSEFOLDER('Choose a Folder',0,@lcFolder)
+*!*		? "Folder", lcFolder
+*!*	ELSE
+*!*		? "Dialog aborted"
+*!*	ENDIF
 
-&& like standard GETFILE, but without places bar
-LOCAL lcFile
-lcFile = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Custom Title",OFN_EX_NOPLACESBAR)
-DO CASE
-	CASE VARTYPE(lcFile) = 'C'
-		? "File" + lcFile + " selected"
-	CASE lcFile = 0
-		? "Dialog box aborted"
-	CASE lcFile = -1
-		? "Error in dialog box."
-ENDCASE
+*!*	?SHBROWSEFOLDER('Choose a Folder',0,@lcFolder,'C:\Windows')
 
-&& multiselect GETFILE, by passing an arrayname in the 7th parameter
-&& always returns a numeric value !!
-lnFiles = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Multiselect Example",0,"laFiles")
-DO CASE
-	CASE lnFiles = -1
-		AERROREX('laError')
-		DISPLAY MEMORY LIKE laError
-	CASE lnFiles = 0
-		? "Dialog box aborted"
-	OTHERWISE
-		&& Path is in laFiles[1], all other elements contain a filename (without the path)
-		DISPLAY MEMORY LIKE laFiles	
-ENDCASE
+*!*	?SHBROWSEFOLDER('Choose yet another Folder :)',0,@lcFolder,'','BrowseFolderCallback')
+
+*!*	&& like standard GETFILE, but without places bar
+*!*	LOCAL lcFile
+*!*	lcFile = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Custom Title",OFN_EX_NOPLACESBAR)
+*!*	DO CASE
+*!*		CASE VARTYPE(lcFile) = 'C'
+*!*			? "File" + lcFile + " selected"
+*!*		CASE lcFile = 0
+*!*			? "Dialog box aborted"
+*!*		CASE lcFile = -1
+*!*			? "Error in dialog box."
+*!*	ENDCASE
+
+*!*	&& multiselect GETFILE, by passing an arrayname in the 7th parameter
+*!*	&& always returns a numeric value !!
+*!*	lnFiles = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Multiselect Example",0,"laFiles")
+*!*	DO CASE
+*!*		CASE lnFiles = -1
+*!*			AERROREX('laError')
+*!*			DISPLAY MEMORY LIKE laError
+*!*		CASE lnFiles = 0
+*!*			? "Dialog box aborted"
+*!*		OTHERWISE
+*!*			&& Path is in laFiles[1], all other elements contain a filename (without the path)
+*!*			DISPLAY MEMORY LIKE laFiles	
+*!*	ENDCASE
 
 && use of a callback function to respond to events inside the dialog 
-lnFiles = GETOPENFILENAME(0,"Special Files" + CHR(0) + "au*.bat","","C:","",0,"","OpenFileCallback")
+lnFiles = GETOPENFILENAME(OFN_FILEMUSTEXIST + OFN_NONETWORKBUTTON,"All Files" + CHR(0) + "*.*","","C:","",0,"laFiles","OpenFileCallback")
 DO CASE
+
+	CASE VARTYPE(lnFiles) = 'N'
+		?lnFiles
+		DISPLAY MEMORY LIKE laFiles
 	CASE VARTYPE(lnFiles) = 'C'
 		? "File" + lnFiles + " selected"
 	CASE lnFiles = 0

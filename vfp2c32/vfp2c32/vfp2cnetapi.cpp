@@ -1,11 +1,14 @@
 #include <windows.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2cnetapi.h"
 #include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
-#include "vfpmacros.h"
 
 static PNETAPIBUFFERALLOCATE fpNetApiBufferAllocate = 0;
 static PNETAPIBUFFERFREE fpNetApiBufferFree = 0;
@@ -44,7 +47,7 @@ int _stdcall VFP2C_Init_Netapi()
 	return 0;
 }
 
-void _fastcall ANetFiles(ParamBlk *parm)
+void _fastcall ANetFiles(ParamBlkEx& parm)
 {
 try
 {
@@ -56,10 +59,10 @@ try
 	if (fpNetFileEnum == 0)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(vp1,1,5);
-	FoxWString pServerName(parm,2, '0');
-	FoxWString pBasePath(parm,3, '0');
-	FoxWString pUserName(parm,4, '0');
+	FoxArray pArray(parm(1),1,5);
+	FoxWString<128> pServerName(parm,2, '0');
+	FoxWString<128> pBasePath(parm,3, '0');
+	FoxWString<128> pUserName(parm,4, '0');
 	FoxString pNetInfo(NETAPI_INFO_SIZE);
 	NetApiBuffer pBuffer;
 
@@ -70,7 +73,7 @@ try
 
 	do 
 	{
-		nApiRet = fpNetFileEnum(pServerName,pBasePath,pUserName,3,
+		nApiRet = fpNetFileEnum(pServerName, pBasePath, pUserName,3,
 			pBuffer, NETAPI_BUFFER_SIZE, &dwEntries, &dwTotal, &hResume);
 		
 		if (nApiRet == NERR_Success || nApiRet == ERROR_MORE_DATA)
@@ -87,8 +90,8 @@ try
 
 			while (dwEntries--)
 			{
-				pArray(nRow,1) = pNetInfo = (LPWSTR)pFileInfo3->fi3_pathname;
-				pArray(nRow,2) = pNetInfo = (LPWSTR)pFileInfo3->fi3_username;
+				pArray(nRow,1) = pNetInfo = pFileInfo3->fi3_pathname;
+				pArray(nRow,2) = pNetInfo = pFileInfo3->fi3_username;
 				pArray(nRow,3) = (int)pFileInfo3->fi3_id;		
 				pArray(nRow,4) = (int)pFileInfo3->fi3_permissions;
 				pArray(nRow,5) = (int)pFileInfo3->fi3_num_locks;
@@ -111,7 +114,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ANetServers(ParamBlk *parm)
+void _fastcall ANetServers(ParamBlkEx& parm)
 {
 try
 {
@@ -122,10 +125,10 @@ try
 	if (fpNetServerEnum == 0)
 		throw E_NOENTRYPOINT;
 
-	FoxArray pArray(vp1);
-	DWORD dwServerType = PCount() >= 2 && vp2.ev_long ? vp2.ev_long : SV_TYPE_SERVER;
-	DWORD dwLevel = PCount() >= 3 && vp3.ev_long ? (vp3.ev_long == 1 ? 101 : 100) : 101;
-	FoxWString pDomain(parm, 4, '0');
+	FoxArray pArray(parm(1));
+	DWORD dwServerType = parm.PCount() >= 2 && parm(2)->ev_long ? parm(2)->ev_long : SV_TYPE_SERVER;
+	DWORD dwLevel = parm.PCount() >= 3 && parm(3)->ev_long ? (parm(3)->ev_long == 1 ? 101 : 100) : 101;
+	FoxWString<MAX_PATH> pDomain(parm, 4, '0');
 
 	NetApiBuffer pBuffer;
 	FoxString pData(NETAPI_INFO_SIZE);
@@ -157,11 +160,11 @@ try
 				while(dwEntries--)
 				{
 					pArray(nRow,1) = pInfo101->sv101_platform_id;
-					pArray(nRow,2) = pData = (LPWSTR)pInfo101->sv101_name;
+					pArray(nRow,2) = pData = pInfo101->sv101_name;
 					pArray(nRow,3) = pInfo101->sv101_version_major;
 					pArray(nRow,4) = pInfo101->sv101_version_minor;
 					pArray(nRow,5) = pInfo101->sv101_type;
-					pArray(nRow,6) = pData = (LPWSTR)pInfo101->sv101_comment;
+					pArray(nRow,6) = pData = pInfo101->sv101_comment;
 					nRow++;
 				}
 			}
@@ -172,7 +175,7 @@ try
 				while(dwEntries--)
 				{
 					pArray(nRow,1) = pInfo100->sv100_platform_id;
-					pArray(nRow,2) = pData = (LPWSTR)pInfo100->sv100_name;
+					pArray(nRow,2) = pData = pInfo100->sv100_name;
 					nRow++;
 				}
 			}
@@ -193,7 +196,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetServerTime(ParamBlk *parm)
+void _fastcall GetServerTime(ParamBlkEx& parm)
 {
 try
 {
@@ -204,14 +207,14 @@ try
 	if (fpNetRemoteTOD == 0)
 		throw E_NOENTRYPOINT;
 
-	FoxWString pServerName(vp1);
+	FoxWString<MAX_PATH> pServerName(parm(1));
 	FoxDateTime pTime;
 	TimeZone eTimeZone;
-	if (PCount() == 2)
+	if (parm.PCount() == 2)
 	{
-		if (vp2.ev_long < 1 || vp2.ev_long > 3)
+		if (parm(2)->ev_long < 1 || parm(2)->ev_long > 3)
 			throw E_INVALIDPARAMS;
-		eTimeZone = static_cast<TimeZone>(vp2.ev_long);
+		eTimeZone = static_cast<TimeZone>(parm(2)->ev_long);
 	}
 	else
 		eTimeZone = UTC;

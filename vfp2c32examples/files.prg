@@ -4,7 +4,13 @@ LOCAL lcPath
 m.lcPath = FULLPATH(JUSTPATH(SYS(16)))
 CD (m.lcPath)
 
-SET LIBRARY TO vfp2c32.fll ADDITIVE
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
+ 
+SET STEP ON
 
 LOCAL lnCount, lnCount2, laFiles[1], xj, xi
 
@@ -54,16 +60,8 @@ lnCount = ADIREX('laFiles',ADDBS(FULLPATH(CURDIR()))+"*.*",FILE_ATTRIBUTE_READON
 lnCount = ADIREX('curFiles',ADDBS(FULLPATH(CURDIR()))+"*.*",0,ADIREX_DEST_CURSOR)
 USE IN curfiles
 
-&& emumerate all files into cursor "yourCursor" with you own names
-&& fieldtypes & order must match the ones below!!
-CREATE CURSOR yourCursor (thefilename C(254), thealternate C(13), ctime T, atime T, wtime T, fisize N(20,0), fattribs I)
-lnCount = ADIREX('yourCursor',ADDBS(FULLPATH(CURDIR()))+"*.*",0,ADIREX_DEST_CURSOR)
-BROWSE
-USE IN yourCursor
-
 && enumerate all files by calling back into AdirCallback function
 ?ADIREX('AdirCallback',ADDBS(FULLPATH(CURDIR()))+"*.*",0,ADIREX_DEST_CALLBACK)
-
 
 && enumerate all system and hidden files into array laFiles
 && underlying filter algorithm: BITAND(nFileAttributes,nYourFilter) == nYourFilter

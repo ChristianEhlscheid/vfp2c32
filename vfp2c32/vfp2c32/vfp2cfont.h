@@ -131,7 +131,7 @@ extern "C" {
 #endif
 
 // function prototypes of vfp2cfont.cpp
-void _fastcall AFontInfo(ParamBlk *parm);
+void _fastcall AFontInfo(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

@@ -1,39 +1,42 @@
 #include <windows.h>
 #include <math.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
-#include "vfpmacros.h"
 #include "vfp2cutil.h"
 #include "vfp2ctime.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
 
 // Datetime to FILETIME
-void _fastcall DT2FT(ParamBlk *parm)
+void _fastcall DT2FT(ParamBlkEx& parm)
 {
-	LPFILETIME pFileTime = reinterpret_cast<LPFILETIME>(vp2.ev_long);
+	LPFILETIME pFileTime = parm(2)->Ptr<LPFILETIME>();
 	FILETIME sFileTime;
 
-	if (PCount() == 2 || !vp3.ev_length)
+	if (parm.PCount() == 2 || !parm(3)->ev_length)
 	{
-		DateTimeToFileTime(&vp1,&sFileTime);
+		DateTimeToFileTime(parm(1),&sFileTime);
 		if (!LocalFileTimeToFileTime(&sFileTime,pFileTime))
 			RaiseWin32Error("LocalFileTimeToFileTime", GetLastError());
 	}
 	else
-		DateTimeToFileTime(&vp1,pFileTime);
+		DateTimeToFileTime(parm(1),pFileTime);
 }
 
 // FILETIME to Datetime
-void _fastcall FT2DT(ParamBlk *parm)
+void _fastcall FT2DT(ParamBlkEx& parm)
 {
 try
 {
-	LPFILETIME pFileTime = reinterpret_cast<LPFILETIME>(vp1.ev_long);
+	LPFILETIME pFileTime = parm(1)->Ptr<LPFILETIME>();
 	FoxDateTime pTime(*pFileTime);
 
-	if (PCount() == 1 || !vp2.ev_length)
+	if (parm.PCount() == 1 || !parm(2)->ev_length)
 		pTime.ToLocal();
 
 	pTime.Return();
@@ -45,14 +48,14 @@ catch(int nErrorNo)
 }
 
 // DATETIME to SystemTime
-void _fastcall DT2ST(ParamBlk *parm)
+void _fastcall DT2ST(ParamBlkEx& parm)
 {
 	FILETIME sFileTime, sUTCTime;
-	LPSYSTEMTIME pSysTime = reinterpret_cast<LPSYSTEMTIME>(vp2.ev_long);
+	LPSYSTEMTIME pSysTime = parm(2)->Ptr<LPSYSTEMTIME>();
 
-	DateTimeToFileTime(&vp1,&sFileTime);
+	DateTimeToFileTime(parm(1),&sFileTime);
 
-	if (PCount() == 2 || !vp3.ev_length)
+	if (parm.PCount() == 2 || !parm(3)->ev_length)
 	{
 		if (!LocalFileTimeToFileTime(&sFileTime,&sUTCTime))
 			RaiseWin32Error("LocalFileTimeToFileTime", GetLastError());
@@ -68,14 +71,14 @@ void _fastcall DT2ST(ParamBlk *parm)
 }
 
 // SystemTime to DATETIME
-void _fastcall ST2DT(ParamBlk *parm)
+void _fastcall ST2DT(ParamBlkEx& parm)
 {
 try
 {
-	LPSYSTEMTIME pTime = reinterpret_cast<LPSYSTEMTIME>(vp1.ev_long);
+	LPSYSTEMTIME pTime = parm(1)->Ptr<LPSYSTEMTIME>();
 	FoxDateTime pDateTime(*pTime);
 
-	if (PCount() == 1 || !vp2.ev_length)
+	if (parm.PCount() == 1 || !parm(2)->ev_length)
 		pDateTime.ToLocal();
 
 	pDateTime.Return();
@@ -86,19 +89,19 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall DT2UTC(ParamBlk *parm)
+void _fastcall DT2UTC(ParamBlkEx& parm)
 {
-	FoxDateTime pTime(vp1);
+	FoxDateTime pTime(parm(1));
 	pTime.ToUTC().Return();
 }
 
-void _fastcall UTC2DT(ParamBlk *parm)
+void _fastcall UTC2DT(ParamBlkEx& parm)
 {
-	FoxDateTime pTime(vp1);
+	FoxDateTime pTime(parm(1));
 	pTime.ToLocal().Return();
 }
 
-void _fastcall DT2Timet(ParamBlk *parm)
+void _fastcall DT2Timet(ParamBlkEx& parm)
 {
 	// time_t bounds: - don't ask we why they don't have choosen unsigned long to widen the range
 	// 0 = 1970/01/01 00:00:00 - Fox = 2440588.0
@@ -106,7 +109,7 @@ void _fastcall DT2Timet(ParamBlk *parm)
 	long nTime_t; // time_t is typedef for long .. so we can use long and don't have to include <time.h>
 	double dTime, dDays, dSecs;
 
-	if (PCount() == 0)
+	if (parm.PCount() == 0)
 	{
 		SYSTEMTIME currentTime, january1st1970;
 		ULARGE_INTEGER currentTimeX, january1st1970X;
@@ -130,14 +133,14 @@ void _fastcall DT2Timet(ParamBlk *parm)
 		return;
 	}
 
-	if (PCount() == 2 && vp2.ev_length)
+	if (parm.PCount() == 2 && parm(2)->ev_length)
 	{
-		FoxDateTime tmp(vp1);
+		FoxDateTime tmp(parm(1));
 		tmp.ToUTC();
 		dTime = tmp->ev_real;
 	}
 	else 
-		dTime = vp1.ev_real;
+		dTime = parm(1)->ev_real;
 
 	if (dTime < 2440588.0 || dTime > 2465443.1348032407) // bound check
 		RaiseError(E_INVALIDPARAMS);
@@ -150,18 +153,19 @@ void _fastcall DT2Timet(ParamBlk *parm)
 	Return(nTime_t);
 }
 
-void _fastcall Timet2DT(ParamBlk *parm)
+void _fastcall Timet2DT(ParamBlkEx& parm)
 {
-	DateTimeValue vTime;
+	ValueEx vTime;
+	vTime.SetDateTime();
 	LARGE_INTEGER nFileTime;
 	FILETIME ftUTCTime;
 
-	if (vp1.ev_long < 0)
+	if (parm(1)->ev_long < 0)
 		RaiseError(E_INVALIDPARAMS);
 
-	if (PCount() == 1 || !vp2.ev_length) // convert from UCT/GMT to local time?
+	if (parm.PCount() == 1 || !parm(2)->ev_length) // convert from UCT/GMT to local time?
 	{
-		nFileTime.QuadPart = Int32x32To64(vp1.ev_long,10000000) + 116444736000000000;
+		nFileTime.QuadPart = Int32x32To64(parm(1)->ev_long,10000000) + 116444736000000000;
 		ftUTCTime.dwLowDateTime = nFileTime.LowPart;
 		ftUTCTime.dwHighDateTime = nFileTime.HighPart;
 		if (!FileTimeToLocalFileTime(&ftUTCTime,(LPFILETIME)&nFileTime))
@@ -173,34 +177,34 @@ void _fastcall Timet2DT(ParamBlk *parm)
 	}
 	else
 	{
-		vTime.ev_real = ((double)(2440588 + vp1.ev_long / 86400));
-		vTime.ev_real += ((double)(vp1.ev_long % 86400)) / 86400.0;
+		vTime.ev_real = ((double)(2440588 + parm(1)->ev_long / 86400));
+		vTime.ev_real += ((double)(parm(1)->ev_long % 86400)) / 86400.0;
 	}
 
 	Return(vTime);
 }
 
-void _fastcall DT2Double(ParamBlk *parm)
+void _fastcall DT2Double(ParamBlkEx& parm)
 {
-	Return(vp1.ev_real);
+	Return(parm(1)->ev_real);
 }
 
-void _fastcall Double2DT(ParamBlk *parm)
+void _fastcall Double2DT(ParamBlkEx& parm)
 {
-	FoxDateTime pTime(vp1.ev_real);
+	FoxDateTime pTime(parm(1)->ev_real);
 	pTime.Return();
 }
 
-void _fastcall SetSystemTimeLib(ParamBlk *parm)
+void _fastcall SetSystemTimeLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxDateTime pTime(vp1);
+	FoxDateTime pTime(parm(1));
 	SYSTEMTIME sSysTime;
 
 	sSysTime = pTime;
 
-	if (PCount() == 1 || !vp2.ev_length)
+	if (parm.PCount() == 1 || !parm(2)->ev_length)
 	{
 		if (!SetLocalTime(&sSysTime))
 		{
@@ -223,12 +227,12 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetSystemTimeLib(ParamBlk *parm)
+void _fastcall GetSystemTimeLib(ParamBlkEx& parm)
 {
 	SYSTEMTIME sSysTime;
 	FoxDateTime pTime;
 
-	if (PCount() == 0 || !vp1.ev_length)
+	if (parm.PCount() == 0 || !parm(1)->ev_length)
 		GetLocalTime(&sSysTime);
 	else
 		GetSystemTime(&sSysTime);
@@ -237,11 +241,11 @@ void _fastcall GetSystemTimeLib(ParamBlk *parm)
 	pTime.Return();
 }
 
-void _fastcall ATimeZones(ParamBlk *parm)
+void _fastcall ATimeZones(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1);
+	FoxArray pArray(parm(1));
 	FoxString pTimeZone(VFP2C_MAX_TIMEZONE_NAME);
 	const char* TIMEZONE_REG_KEY = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones";
 

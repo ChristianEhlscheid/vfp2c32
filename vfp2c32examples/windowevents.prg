@@ -2,10 +2,13 @@
 
 && BindEventsEx/UnBindEventsEx
 CD (FULLPATH(JUSTPATH(SYS(16))))
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
 
 SET PROCEDURE TO windowevents ADDITIVE
-SET LIBRARY TO vfp2c32.fll ADDITIVE
-
 
 && BINDEVENTSEX - extended BINDEVENTS to bind some VFP function to a window message
 && BindEventsEx almost behaves exactly as BINDEVENTS does, the differences are:
@@ -60,12 +63,12 @@ DEFINE CLASS oApp AS Custom
 	bMenuOpen = .F.
 
 	FUNCTION Init
-		DECLARE INTEGER CallWindowProc IN user32.dll INTEGER, INTEGER, INTEGER, INTEGER, INTEGER
-		BINDEVENTSEX(_VFP.hWnd,WM_ACTIVATE,THIS,'AppFocusChanged','BOOL(wParam)')
+		DECLARE LONG CallWindowProc IN user32.dll LONG, LONG, INTEGER, LONG, LONG
+		BINDEVENTSEX(_VFP.hWnd,WM_ACTIVATE,THIS,'AppFocusChanged','BOOL(wParam)', BINDEVENTSEX_NO_RECURSION)
 		BINDEVENTSEX(_VFP.hWnd,WM_DEVICECHANGE,THIS,'DeviceChanged','wParam,lParam')
 		THIS.nWndProc = BINDEVENTSEX(_VFP.hWnd,WM_APPCOMMAND,THIS,'AppCommand',NULL,BINDEVENTSEX_RETURN_VALUE)
-		BINDEVENTSEX(_VFP.hWnd,WM_ENTERMENULOOP,THIS,'OnEnterMenu','BOOL(wParam)')
-		BINDEVENTSEX(_VFP.hWnd,WM_EXITMENULOOP,THIS,'OnExitMenu','BOOL(wParam)')
+		BINDEVENTSEX(_VFP.hWnd,WM_ENTERMENULOOP,THIS,'OnEnterMenu','BOOL(wParam)',BINDEVENTSEX_NO_RECURSION)
+		BINDEVENTSEX(_VFP.hWnd,WM_EXITMENULOOP,THIS,'OnExitMenu','BOOL(wParam)', BINDEVENTSEX_NO_RECURSION)
 	ENDFUNC
 	
 	FUNCTION Destroy
@@ -86,18 +89,21 @@ DEFINE CLASS oApp AS Custom
 	ENDFUNC
 
 	FUNCTION DeviceChanged(wParam,lParam)
-	
+		"Device changed", wParam, lParam
 	ENDFUNC
 	
 	FUNCTION AppCommand(hHwnd, uMsg, wParam, lParam)
+		? "Appcommand", uMsg, wParam, lParam
 		RETURN CallWindowProc(THIS.nWndProc,hHwnd,uMsg,wParam,lParam)
 	ENDFUNC
 	
 	FUNCTION OnEnterMenu(bPopup)
+		? "Menu opened", bPopup
 		THIS.bMenuOpen = .T.
 	ENDFUNC
 
 	FUNCTION OnExitMenu(bPopup)
+		? "Menu closed", bPopup
 		THIS.bMenuOpen = .F.
 	ENDFUNC
 	

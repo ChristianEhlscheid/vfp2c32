@@ -1,17 +1,11 @@
 #define _WINSOCKAPI_ // we're using winsock2 .. so this is neccessary to exclude winsock.h 
 #define _WIN32_DCOM
 
-#include <windows.h>
 #include <stdio.h>
 
-#include "pro_ext.h"
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
 #include "vfp2ccom.h"
-#include "vfp2ccppapi.h"
-#include "vfp2chelpers.h"
 #include "vfp2ccomcall.h"
-#include "vfpmacros.h"
 
 // static list<RegisteredComDll*> glRegisteredComDlls;
 // static PLOADTYPELIBEX fpLoadTypeLibEx = 0;
@@ -30,9 +24,9 @@ try
 		return;
 	}
 
-	pTempVar = pFllFileName;
+	pTempVar() = pFllFileName;
 	// declare additional functions not nativly exported by the FLL
-	Execute("DECLARE INTEGER _GetIDispatch@4 IN (m.__VFP2C_FLL_FILENAME) AS GetIDispatch OBJECT");
+	Execute("DECLARE LONG GetIDispatch IN (m.__VFP2C_FLL_FILENAME) AS GetIDispatch OBJECT");
 }
 catch(int nErrorNo)
 {
@@ -45,15 +39,15 @@ IDispatch* _stdcall GetIDispatch(IDispatch *pObject)
 	return pObject;
 }
 
-void _fastcall CLSIDFromProgIDLib(ParamBlk *parm)
+void _fastcall CLSIDFromProgIDLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxWString pProgId(vp1);
+	FoxWString<128> pProgId(parm(1));
 	FoxString pClsId(sizeof(GUID));
 	HRESULT hr;
 
-	hr = CLSIDFromProgID(pProgId,(LPCLSID)(void*)pClsId);
+	hr = CLSIDFromProgID(pProgId,pClsId.Ptr<LPCLSID>());
 	if (FAILED(hr))
 	{
 		SaveWin32Error("CLSIDFromProgID", hr);
@@ -70,12 +64,12 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ProgIDFromCLSIDLib(ParamBlk *parm)
+void _fastcall ProgIDFromCLSIDLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pClsId(parm,1);
-	FoxWString pWideClsId;
+	FoxString pClsId(parm, 1);
+	FoxWString<128> pWideClsId;
 	FoxString pProgId;
 
 	CoTaskPtr pWideProgId;
@@ -83,14 +77,14 @@ try
 	LPGUID pGuid;
 	GUID sGuid;
 
-	if (Vartype(vp1) == 'C')
+	if (parm(1)->Vartype() == 'C')
 	{
 		if (pClsId.Len() == sizeof(GUID))
-			pGuid = (LPGUID)(void*)pClsId;
+			pGuid = pClsId.Ptr<LPGUID>();
 		else
 		{
 			pWideClsId = pClsId;
-			hr = CLSIDFromString(pWideClsId,&sGuid);
+			hr = CLSIDFromString(pWideClsId, &sGuid);
 			if (FAILED(hr))
 			{
 				SaveWin32Error("CLSIDFromString", hr);
@@ -99,12 +93,13 @@ try
 			pGuid = &sGuid;
 		}
 	}
-	else if (Vartype(vp1) == 'I')
-		pGuid = (LPGUID)vp1.ev_long;
-	else if (Vartype(vp1) == 'N')
-		pGuid = (LPGUID)(ULONG)vp1.ev_real;
+	else if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+		pGuid = parm(1)->DynamicPtr<LPGUID>();
 	else
+	{
+		SaveCustomError("ProgIDFromCLSID", "Invalid type '%s' for parameter 2", parm(2)->Vartype());
 		throw E_INVALIDPARAMS;
+	}
 
 	hr = ProgIDFromCLSID((REFCLSID)*pGuid,pWideProgId);
 	if (FAILED(hr))
@@ -113,8 +108,7 @@ try
 		throw E_APIERROR;
 	}
 
-	pProgId = (LPWSTR)pWideProgId;
-	CoTaskMemFree(pWideProgId);
+	pProgId = pWideProgId;
 	pProgId.Return();
 }
 catch(int nErrorNo)
@@ -123,15 +117,15 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CLSIDFromStringLib(ParamBlk *parm)
+void _fastcall CLSIDFromStringLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxWString pString(vp1);
+	FoxWString<128> pString(parm(1));
 	FoxString pClsId(sizeof(GUID));
 	HRESULT hr;
 
-	hr = CLSIDFromString(pString,(LPCLSID)(void*)pClsId);
+	hr = CLSIDFromString(pString, pClsId.Ptr<LPCLSID>());
 	if (FAILED(hr))
 	{
 		SaveWin32Error("CLSIDFromString", hr);
@@ -148,7 +142,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall StringFromCLSIDLib(ParamBlk *parm)
+void _fastcall StringFromCLSIDLib(ParamBlkEx& parm)
 {
 try
 {
@@ -159,14 +153,15 @@ try
 	LPGUID pGuid;
 	wchar_t aGuidString[GUID_STRING_LEN];
 
-	if (Vartype(vp1) == 'C' && Len(vp1) == sizeof(GUID))
-		pGuid = (LPGUID)(void*)pClsId;
-	else if (Vartype(vp1) == 'I')
-		pGuid = (LPGUID)vp1.ev_long;
-	else if (Vartype(vp1) == 'N')
-		pGuid = (LPGUID)(ULONG)vp1.ev_real;
+	if (parm(1)->Vartype() == 'C' && parm(1)->Len() == sizeof(GUID))
+		pGuid = pClsId.Ptr<LPGUID>();
+	else if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+		pGuid = parm(1)->DynamicPtr<LPGUID>();
 	else
+	{
+		SaveCustomError("StringFromCLSID","Invalid type '%s' for parameter 1", parm(1)->Vartype());
 		throw E_INVALIDPARAMS;
+	}
 
 	nRetVal = StringFromGUID2((REFGUID)*pGuid,aGuidString,GUID_STRING_LEN);
 
@@ -179,22 +174,22 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall IsEqualGUIDLib(ParamBlk *parm)
+void _fastcall IsEqualGUIDLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pGuidParm1(parm,1,0);
-	FoxString pGuidParm2(parm,2,0);
-	FoxWString pWideGuid;
+	FoxWString<64> pWideGuid;
 	HRESULT hr;
 	bool bRetVal;
 	LPGUID pGuid1, pGuid2;
 	GUID sGuid1, sGuid2;
 
 	// convert GUID1
-	if (Vartype(vp1) == 'C')
-	{	if (Len(vp1) == sizeof(GUID))
-			pGuid1 = (LPGUID)(void*)pGuidParm1;
+	if (parm(1)->Vartype() == 'C')
+	{	
+		FoxString pGuidParm1(parm(1), 0);
+		if (pGuidParm1.Len() == sizeof(GUID))
+			pGuid1 = pGuidParm1.Ptr<LPGUID>();
 		else
 		{
 			pGuidParm1.NullTerminate();
@@ -208,18 +203,20 @@ try
 			pGuid1 = &sGuid1;
 		}
 	}
-	else if (Vartype(vp1) == 'I')
-		pGuid1 = (LPGUID)vp1.ev_long;
-    else if (Vartype(vp1) == 'N')
-		pGuid1 = (LPGUID)(ULONG)vp1.ev_real;
+	else if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+		pGuid1 = parm(1)->DynamicPtr<LPGUID>();
 	else
+	{
+		SaveCustomError("IsEqualGUID", "Invalid type '%s' for parameter 1", parm(1)->Vartype());	
 		throw E_INVALIDPARAMS;
+	}
 
 	// convert GUID2
-	if (Vartype(vp2) == 'C')
+	if (parm(2)->Vartype() == 'C')
 	{
-		if (Len(vp2) == sizeof(GUID))
-			pGuid2 = (LPGUID)(void*)pGuidParm2;
+		FoxString pGuidParm2(parm(2), 0);
+		if (pGuidParm2.Len() == sizeof(GUID))
+			pGuid2 = pGuidParm2.Ptr<LPGUID>();
 		else
 		{
 			pGuidParm2.Expand();
@@ -233,12 +230,13 @@ try
 			pGuid2 = &sGuid2;
 		}
 	}
-	else if (Vartype(vp2) == 'I')
-		pGuid2 = (LPGUID)vp2.ev_long;
-    else if (Vartype(vp2) == 'N')
-		pGuid2 = (LPGUID)(ULONG)vp2.ev_real;
+	else if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
+		pGuid2 = parm(2)->DynamicPtr<LPGUID>();
 	else
+	{
+		SaveCustomError("IsEqualGUID", "Invalid type '%s' for parameter 2", parm(2)->Vartype());
 		throw E_INVALIDPARAMS;
+	}
 
 	bRetVal = !memcmp(pGuid1,pGuid2,sizeof(GUID));
  	Return(bRetVal);
@@ -249,7 +247,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CreateGuid(ParamBlk *parm)
+void _fastcall CreateGuid(ParamBlkEx& parm)
 {
 try
 {
@@ -267,22 +265,22 @@ try
 		throw E_APIERROR;
 	}
 
-	if (PCount() == 0 || vp1.ev_long == CREATE_GUID_ANSI)
+	if (parm.PCount() == 0 || parm(1)->ev_long == CREATE_GUID_ANSI)
 	{
 		pGuidString.Size(GUID_STRING_LEN);
 		nRetVal = StringFromGUID2((REFGUID)*pGuid,aGuidString,GUID_STRING_LEN);
 		pGuidString = aGuidString;
 	}
-	else if (vp1.ev_long == CREATE_GUID_UNICODE)
+	else if (parm(1)->ev_long == CREATE_GUID_UNICODE)
 	{
 		pGuidString.Size(GUID_STRING_LEN*sizeof(wchar_t));
 		nRetVal = StringFromGUID2((REFGUID)*pGuid,(LPOLESTR)(char*)pGuidString,GUID_STRING_LEN);
 		pGuidString.Len((nRetVal - 1) * sizeof(wchar_t));
 	}
-	else if (vp1.ev_long == CREATE_GUID_BINARY)
+	else if (parm(1)->ev_long == CREATE_GUID_BINARY)
 	{
 		pGuidString.Size(sizeof(GUID));
-		memcpy(pGuidString,pGuid,sizeof(GUID));
+		memcpy(pGuidString.Ptr(),pGuid,sizeof(GUID));
 		pGuidString.Len(sizeof(GUID));
 		pGuidString.Binary(true);
 	}
@@ -295,20 +293,20 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall RegisterActiveObjectLib(ParamBlk *parm)
+void _fastcall RegisterActiveObjectLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxObject pObject(vp1);
-	FoxWString pProgId(vp2);
+	FoxObject pObject(parm(1));
+	FoxWString<128> pProgId(parm(2));
 
 	HRESULT hr;
 	DWORD nRotKey = 0;
-	IUnknown *pUnk;
+	CComPtr<IUnknown> pUnk;
 	FoxValue vUnk;
 	CLSID sClsId;
 
-	pUnk = reinterpret_cast<IUnknown*>(pObject.GetIDispatch());
+	pUnk = pObject.GetIDispatch();
 
 	hr = CLSIDFromProgID(pProgId,&sClsId);
 	if (FAILED(hr))
@@ -324,6 +322,7 @@ try
 		throw E_APIERROR;
 	}
 
+	pUnk.Release();
 	Return(nRotKey);
 }
 catch(int nErrorNo)
@@ -332,10 +331,10 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall RevokeActiveObjectLib(ParamBlk *parm)
+void _fastcall RevokeActiveObjectLib(ParamBlkEx& parm)
 {
 	HRESULT hr;
-	hr = RevokeActiveObject(vp1.ev_long, 0);
+	hr = RevokeActiveObject(parm(1)->ev_long, 0);
 	if (FAILED(hr))
 	{
 		SaveWin32Error("RevokeActiveObject", hr);
@@ -343,13 +342,13 @@ void _fastcall RevokeActiveObjectLib(ParamBlk *parm)
 	}
 }
 
-void _fastcall RegisterObjectAsFileMoniker(ParamBlk *parm)
+void _fastcall RegisterObjectAsFileMoniker(ParamBlkEx& parm)
 {
 try
 {
-	FoxObject pObject(vp1);
-	FoxWString pProgId(vp2);
-	FoxWString pFileName(vp3);
+	FoxObject pObject(parm(1));
+	FoxWString<128> pProgId(parm(2));
+	FoxWString<MAX_PATH> pFileName(parm(3));
 
 	ComPtr<LPRUNNINGOBJECTTABLE> pIRot;
 	ComPtr<LPSTORAGE> pIStorage;
@@ -445,11 +444,11 @@ catch(int nErrorNo)
 }
 
 /*
-void _fastcall IsObjectActive(ParamBlk *parm)
+void _fastcall IsObjectActive(ParamBlkEx& parm)
 {
 try
 {
-	FoxWString pMoniker(vp1);
+	FoxWString pMoniker(parm(1));
 	FoxString pClassName(parm,2);
 	ComPtr<IRunningObjectTable*> pIRot;
 	ComPtr<IMoniker*> pIMoniker;
@@ -520,7 +519,7 @@ catch(int nErrorNo)
 */
 
 /*
-void _fastcall CoCreateInstanceExLib(ParamBlk *parm)
+void _fastcall CoCreateInstanceExLib(ParamBlkEx& parm)
 {
 	HMODULE hDll = 0;
 	IDispatch *pDisp = 0;
@@ -529,9 +528,9 @@ try
 	if (!fpLoadTypeLibEx)
 		throw E_NOENTRYPOINT;
 
-	FoxString pDllName(vp1);
-	FoxWString pWDllName(vp1);
-	FoxWString pCoClass(vp2);
+	FoxString pDllName(parm(1));
+	FoxWString pWDllName(parm(1));
+	FoxWString pCoClass(parm(2));
 
 	ComPtr<ITypeLib*> pLib;
 	ComPtr<IClassFactory*> pFactory;
@@ -634,13 +633,13 @@ catch(int nErrorNo)
 */
 
 /*
-void _fastcall CoRegisterComDll(ParamBlk *parm)
+void _fastcall CoRegisterComDll(ParamBlkEx& parm)
 {
 	RegisteredComDll *pDll = new RegisteredComDll();
 try
 {
-	FoxString pDllName(vp1);
-	FoxWString pWDllName(vp1);
+	FoxString pDllName(parm(1));
+	FoxWString pWDllName(parm(1));
 
 	pDll->RegisterDll(pDllName,pWDllName);
 	glRegisteredComDlls.push_back(pDll);
@@ -652,9 +651,9 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CoUnregisterComDll(ParamBlk *parm)
+void _fastcall CoUnregisterComDll(ParamBlkEx& parm)
 {
-	FoxString pDllName(vp1);
+	FoxString pDllName(parm(1));
 	HMODULE hDll = GetModuleHandle(pDllName);
 
 	RegisteredComDll *pDll = 0;
@@ -785,21 +784,21 @@ void RegisteredComDll::RegisterDll(const char *pDllName, wchar_t *pWDllName)
 */
 
 /*
-void _fastcall IDispatch_Invoke(ParamBlk *parm)
+void _fastcall IDispatch_Invoke(ParamBlkEx& parm)
 {
 try
 {
-	FoxWString pMethod(vp2);
+	FoxWString pMethod(parm(2));
 	FoxArray pParmTypes(parm, 3, '0');
-	LCID nLocale = PCount() >= 4 && Vartype(vp4) == 'N' && vp4.ev_long ? (LCID)vp4.ev_long : LOCALE_USER_DEFAULT;
+	LCID nLocale = PCount() >= 4 && parm(4)->Vartype() == 'N' && parm(4)->ev_long ? (LCID)parm(4)->ev_long : LOCALE_USER_DEFAULT;
 
 	IDispatch *pDisp;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
-		pDisp = (IDispatch*)vp1.ev_long;
-	else if (Vartype(vp1) == 'C')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+		pDisp = (IDispatch*)parm(1)->ev_long;
+	else if (parm(1)->Vartype() == 'C')
 	{
-		FoxString pObject(vp1);
+		FoxString pObject(parm(1));
 		if (pObject.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 			throw E_INVALIDPARAMS;
 		
@@ -876,18 +875,18 @@ catch(int nErrorNo)
 */
 
 /*
-void _fastcall IDispatch_AsyncInvoke(ParamBlk *parm)
+void _fastcall IDispatch_AsyncInvoke(ParamBlkEx& parm)
 {
 	ComCall *pCall = 0;
 try
 {
-	FoxWString pComClass(vp1);
-	FoxWString pMethod(vp2);
+	FoxWString pComClass(parm(1));
+	FoxWString pMethod(parm(2));
 	FoxArray pParameters(parm,3,'0');
-	FoxString pResultObject(vp4);
-	FoxWString pResultMethod(vp5);
-	LCID nLocale = PCount() >= 6 && vp6.ev_long ? (LCID)vp6.ev_long : LOCALE_USER_DEFAULT;
-	DWORD dwContext = PCount() == 7 ? vp7.ev_long : CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER;
+	FoxString pResultObject(parm(4));
+	FoxWString pResultMethod(parm(5));
+	LCID nLocale = PCount() >= 6 && parm(6)->ev_long ? (LCID)parm(6)->ev_long : LOCALE_USER_DEFAULT;
+	DWORD dwContext = PCount() == 7 ? parm(7)->ev_long : CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER;
 
 	FoxValue vUnk;	
 	IUnknown *pUnk;

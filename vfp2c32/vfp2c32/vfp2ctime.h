@@ -16,19 +16,19 @@ typedef struct _REG_TIMEZONE_INFORMATION
 extern "C" {
 #endif
 
-void _fastcall DT2FT(ParamBlk *parm);
-void _fastcall FT2DT(ParamBlk *parm);
-void _fastcall DT2ST(ParamBlk *parm);
-void _fastcall ST2DT(ParamBlk *parm);
-void _fastcall DT2UTC(ParamBlk *parm);
-void _fastcall UTC2DT(ParamBlk *parm);
-void _fastcall DT2Timet(ParamBlk *parm);
-void _fastcall Timet2DT(ParamBlk *parm);
-void _fastcall DT2Double(ParamBlk *parm);
-void _fastcall Double2DT(ParamBlk *parm);
-void _fastcall SetSystemTimeLib(ParamBlk *parm);
-void _fastcall GetSystemTimeLib(ParamBlk *parm);
-void _fastcall ATimeZones(ParamBlk *parm);
+void _fastcall DT2FT(ParamBlkEx& parm);
+void _fastcall FT2DT(ParamBlkEx& parm);
+void _fastcall DT2ST(ParamBlkEx& parm);
+void _fastcall ST2DT(ParamBlkEx& parm);
+void _fastcall DT2UTC(ParamBlkEx& parm);
+void _fastcall UTC2DT(ParamBlkEx& parm);
+void _fastcall DT2Timet(ParamBlkEx& parm);
+void _fastcall Timet2DT(ParamBlkEx& parm);
+void _fastcall DT2Double(ParamBlkEx& parm);
+void _fastcall Double2DT(ParamBlkEx& parm);
+void _fastcall SetSystemTimeLib(ParamBlkEx& parm);
+void _fastcall GetSystemTimeLib(ParamBlkEx& parm);
+void _fastcall ATimeZones(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

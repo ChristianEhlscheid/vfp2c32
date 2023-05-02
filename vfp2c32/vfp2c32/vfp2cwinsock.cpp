@@ -1,13 +1,16 @@
 #include <winsock2.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
-#include "vfpmacros.h"
 #include "vfp2cwinsock.h"
 #include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 
-PINET_PTON fpInetPton = (PINET_PTON)-1;
+PINET_PTON fpInetPton = (PINET_PTON)0;
 
 void _stdcall SaveWinsockError(char *pFunction)
 {
@@ -57,7 +60,7 @@ int _stdcall VFP2C_Init_Winsock()
 		}
 		tls.WinsockInited = TRUE;
 	}
-	if (fpInetPton == (PINET_PTON)-1)
+	if (!fpInetPton)
 	{
 		HMODULE hWSock = GetModuleHandle("ws2_32.dll");
 		if (hWSock == NULL)
@@ -65,7 +68,7 @@ int _stdcall VFP2C_Init_Winsock()
 			SaveWin32Error("GetModuleHandle", GetLastError());
 			return E_APIERROR;
 		}
-		fpInetPton = (PINET_PTON)GetProcAddress(hWSock, "InetPton");
+		fpInetPton = (PINET_PTON)GetProcAddress(hWSock, "inet_pton");
 	}
 	return 0;
 }
@@ -76,7 +79,7 @@ void _stdcall VFP2C_Destroy_Winsock(VFP2CTls& tls)
 		WSACleanup();
 }
 
-void _fastcall AIPAddresses(ParamBlk *parm)
+void _fastcall AIPAddresses(ParamBlkEx& parm)
 {
 try
 {
@@ -84,7 +87,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxArray pArray(vp1);
+	FoxArray pArray(parm(1));
 	FoxString pIp(VFP2C_MAX_IP_LEN);
 
 	LPHOSTENT lpHost;
@@ -131,7 +134,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ResolveHostToIp(ParamBlk *parm)
+void _fastcall ResolveHostToIp(ParamBlkEx& parm)
 {
 try
 {
@@ -139,7 +142,7 @@ try
 	if (nErrorNo)
 		throw nErrorNo;
 
-	FoxString pIp(vp1);
+	FoxString pIp(parm(1));
 	FoxArray pArray;
 	FoxString pBuffer(VFP2C_MAX_IP_LEN);
 	LPHOSTENT lpHost = 0;
@@ -150,14 +153,14 @@ try
 	if (!lpHost)
 	{
 		SaveWinsockError("gethostbyname");
-		if (PCount() == 1)
+		if (parm.PCount() == 1)
 			Return("");
 		else
 			Return(0);
 		return;
 	}
 
-	if (PCount() == 1)
+	if (parm.PCount() == 1)
 	{
 		memcpy(&sInetAdr,lpHost->h_addr_list[0],4); 
 		pBuffer = inet_ntoa(sInetAdr);
@@ -168,7 +171,7 @@ try
 		unsigned int nCount;
 		for (nCount = 0; (lpHost->h_addr_list[nCount]); nCount++);
 
-		pArray.Dimension(vp2,nCount);
+		pArray.Dimension(parm(2),nCount);
 
 		unsigned int nRow = 1;
 		for (unsigned int xj = 0; xj < nCount; xj++)

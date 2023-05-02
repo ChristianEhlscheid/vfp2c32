@@ -31,13 +31,13 @@ class RasPhonebookDlgCallback
 public:
 	RasPhonebookDlgCallback() {};
 	~RasPhonebookDlgCallback() {};
-	void SetCallback(FoxString &pCallback);
+	void SetCallback(CStringView pCallback);
 	void CallbackTxt(DWORD dwEvent, LPTSTR pszText);
 	void Callback(DWORD dwEvent, LPVOID pData);
 	static void _stdcall RasPhonebookDlgCallbackFunc(ULONG_PTR dwCallbackId, DWORD dwEvent, LPTSTR pszText, LPVOID pData);
 
 private:
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
+	CFoxCallback m_Callback;
 };
 
 class RasDialCallback
@@ -45,19 +45,19 @@ class RasDialCallback
 public:
 	RasDialCallback() {};
 	~RasDialCallback() {};
-	void SetCallback(FoxString &pCallback);
+	void SetCallback(CStringView pCallback);
 	DWORD Callback(DWORD dwSubEntry, HRASCONN hrasconn, UINT unMsg,
 					RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError);
-	static DWORD _stdcall RasDialCallbackFunc(DWORD dwCallbackId, DWORD dwSubEntry, HRASCONN hrasconn, UINT unMsg,
+	static DWORD _stdcall RasDialCallbackFunc(ULONG_PTR dwCallbackId, DWORD dwSubEntry, HRASCONN hrasconn, UINT unMsg,
 											RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError);
 private:
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
+	CFoxCallback m_Callback;
 };
 
 class RasNotifyThread : public CThread
 {
 public:
-	RasNotifyThread(CThreadManager &pPool) : CThread(pPool) { }
+	RasNotifyThread(CThreadManager &pPool) : CThread(pPool), m_Conn(0), m_Flags(0) { }
 	~RasNotifyThread() { }
 
 	virtual void SignalThreadAbort();
@@ -71,7 +71,7 @@ private:
 	CEvent m_AbortEvent;
     HRASCONN m_Conn;
 	DWORD m_Flags;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
+	CFoxCallback m_Callback;
 };
 
 #ifdef __cplusplus
@@ -82,19 +82,19 @@ void _stdcall SaveRas32Error(char *pFunction, DWORD nErrorNo);
 
 bool _stdcall VFP2C_Init_Ras(VFP2CTls& tls);
 
-void _fastcall ARasConnections(ParamBlk *parm);
-void _fastcall ARasDevices(ParamBlk *parm);
-void _fastcall ARasPhonebookEntries(ParamBlk *parm);
-void _fastcall RasPhonebookDlgEx(ParamBlk *parm);
-void _fastcall RasDialEx(ParamBlk *parm);
-void _fastcall RasHangUpEx(ParamBlk *parm);
-void _fastcall RasGetConnectStatusEx(ParamBlk *parm);
-void _fastcall RasDialDlgEx(ParamBlk *parm);
+void _fastcall ARasConnections(ParamBlkEx& parm);
+void _fastcall ARasDevices(ParamBlkEx& parm);
+void _fastcall ARasPhonebookEntries(ParamBlkEx& parm);
+void _fastcall RasPhonebookDlgEx(ParamBlkEx& parm);
+void _fastcall RasDialEx(ParamBlkEx& parm);
+void _fastcall RasHangUpEx(ParamBlkEx& parm);
+void _fastcall RasGetConnectStatusEx(ParamBlkEx& parm);
+void _fastcall RasDialDlgEx(ParamBlkEx& parm);
 
-void _fastcall RasConnectionNotificationEx(ParamBlk *parm);
-void _fastcall AbortRasConnectionNotificationEx(ParamBlk *parm);
+void _fastcall RasConnectionNotificationEx(ParamBlkEx& parm);
+void _fastcall AbortRasConnectionNotificationEx(ParamBlkEx& parm);
 
-void _fastcall RasClearConnectionStatisticsEx(ParamBlk *parm);
+void _fastcall RasClearConnectionStatisticsEx(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

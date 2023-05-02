@@ -21,12 +21,12 @@ public:
 	virtual DWORD Run();
 	virtual void Release();
 
-	bool Setup(char *pPath, bool bWatchSubtree, DWORD nFilter, char *pCallback);
+	bool Setup(FoxString& pPath, bool bWatchSubtree, DWORD nFilter, CStringView pCallback);
 
 private:
 	CEvent m_AbortEvent;
 	HANDLE m_FileEvent;
-	CStrBuilder<MAX_PATH+1> m_Path;
+	CStrBuilder<MAX_PATH> m_Path;
 	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
 };
 
@@ -41,12 +41,12 @@ public:
 
 	void Setup(FoxString &pPath, bool bWatchSubtree, DWORD nFilter, FoxString &pMethod, IDispatch *pCallbackObject, FindFileChangeExThread *pThread);
 	void Callback(PFILE_NOTIFY_INFORMATION pInfo);
-	void ErrorCallback(char *pFunc, DWORD nError);
+	void ErrorCallback(CStringView pFunc, DWORD nError);
 	bool OnFileChangeEvent(DWORD dwBytes, FindFileChangeExThread *pThread);
 	void Cancel(bool bAbort);
 	bool IsValid();
 	bool IsAborted();
-	bool CompareDirectory(CStrBuilder<MAX_PATH+1> &pDirectory);
+	bool CompareDirectory(CStrBuilder<MAX_PATH> &pDirectory);
 	bool CheckIdentity(DWORD nIdentity);
 	USHORT GetIdentity();
 
@@ -73,10 +73,10 @@ private:
 	CACHELINE_ALIGN bool m_Aborted;
 	DWORD m_OldFilenameLength;
 	WCHAR m_OldFilename[MAX_PATH];
-	CStrBuilder<MAX_PATH+1> m_Path;
-	CStrBuilder<MAX_PATH+1> m_Path2;
-	FoxComCallback<4> m_Callback;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_CallbackBuffer;
+	CStrBuilder<MAX_PATH> m_Path;
+	CStrBuilder<MAX_PATH> m_Path2;
+	CFoxComCallback<4> m_ComCallback;
+	CFoxCallback m_FoxCallback;
 
 	CACHELINE_ALIGN Atomic<LONG> m_Stopped;
 };
@@ -160,7 +160,7 @@ public:
 	virtual void Release();
 
 	void AddDirectory(FindFileChangeExEntry *pFFC);
-	bool RemoveDirectory(char *pDirectory);
+	bool RemoveDirectory(CStringView pDirectory);
 	bool RemoveDirectory(FindFileChangeExEntry *pFFC);
 	bool RemoveDirectory(USHORT nFileChangeIdentity);
 	void RemoveAllDirectories();
@@ -209,7 +209,7 @@ public:
 	virtual DWORD Run();
 	virtual void Release();
 
-	bool Setup(HKEY hRoot, char *pKey, bool bWatchSubtree, DWORD dwFilter, FoxString &pCallback);
+	bool Setup(HKEY hRoot, char *pKey, bool bWatchSubtree, DWORD dwFilter, CStringView pCallback);
 
 private:
 	CEvent m_RegistryEvent;
@@ -217,25 +217,25 @@ private:
 	HKEY m_RegKey;
 	bool m_WatchSubtree;
 	DWORD m_Filter;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
+	CFoxCallback m_Callback;
 };
 
 class WaitForObjectThread : public CThread
 {
 public:
-	WaitForObjectThread(CThreadManager &pManager) : CThread(pManager) { }
+	WaitForObjectThread(CThreadManager &pManager) : CThread(pManager), m_Object(0) { }
 	~WaitForObjectThread() { };
 
 	virtual void SignalThreadAbort();
 	virtual DWORD Run();
 	virtual void Release();
 
-	bool Setup(HANDLE hObject, FoxString &pCallback);
+	bool Setup(HANDLE hObject, CStringView pCallback);
 
 private:
 	CEvent m_AbortEvent;
 	HANDLE m_Object;
-	CStrBuilder<VFP2C_MAX_CALLBACKBUFFER> m_Callback;
+	CFoxCallback m_Callback;
 };
 
 #ifdef __cplusplus
@@ -246,17 +246,17 @@ extern "C" {
 int _stdcall VFP2C_Init_Async();
 void _stdcall VFP2C_Destroy_Async(VFP2CTls& tls);
 
-void _fastcall FindFileChange(ParamBlk *parm);
-void _fastcall CancelFileChange(ParamBlk *parm);
+void _fastcall FindFileChange(ParamBlkEx& parm);
+void _fastcall CancelFileChange(ParamBlkEx& parm);
 
-void _fastcall FindFileChangeEx(ParamBlk *parm);
-void _fastcall CancelFileChangeEx(ParamBlk *parm);
+void _fastcall FindFileChangeEx(ParamBlkEx& parm);
+void _fastcall CancelFileChangeEx(ParamBlkEx& parm);
 
-void _fastcall FindRegistryChange(ParamBlk *parm);
-void _fastcall CancelRegistryChange(ParamBlk *parm);
+void _fastcall FindRegistryChange(ParamBlkEx& parm);
+void _fastcall CancelRegistryChange(ParamBlkEx& parm);
 
-void _fastcall AsyncWaitForObject(ParamBlk *parm);
-void _fastcall CancelWaitForObject(ParamBlk *parm);
+void _fastcall AsyncWaitForObject(ParamBlkEx& parm);
+void _fastcall CancelWaitForObject(ParamBlkEx& parm);
 
 LRESULT _stdcall FindChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

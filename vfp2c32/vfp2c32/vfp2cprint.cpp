@@ -1,20 +1,22 @@
 #include <windows.h>
 #include <math.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
-#include "vfpmacros.h"
 #include "vfp2cutil.h"
 #include "vfp2cprint.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
-#include "vfpmacros.h"
 
-void _fastcall APrintersEx(ParamBlk *parm)
+void _fastcall APrintersEx(ParamBlkEx& parm)
 {
 try
 {
- 	FoxArray pArray(vp1);
+ 	FoxArray pArray(parm(1));
    	FoxString pName(parm,2);
 	FoxString pData(1024);
 	FoxObject pObject;
@@ -26,12 +28,12 @@ try
 	LPPRINTER_INFO_4 pInfo4;
 	LPPRINTER_INFO_5 pInfo5;
 
-	DWORD dwFlags = PCount() >= 3 && vp3.ev_long ? vp3.ev_long : PRINTER_ENUM_LOCAL;
-	DWORD dwLevel = PCount() >= 4 && vp4.ev_long ? vp4.ev_long : 2;
-	DWORD dwDest = PCount() >= 5 && vp5.ev_long ? vp5.ev_long : APRINT_DEST_ARRAY;
+	DWORD dwFlags = parm.PCount() >= 3 && parm(3)->ev_long ? parm(3)->ev_long : PRINTER_ENUM_LOCAL;
+	DWORD dwLevel = parm.PCount() >= 4 && parm(4)->ev_long ? parm(4)->ev_long : 2;
+	DWORD dwDest = parm.PCount() >= 5 && parm(5)->ev_long ? parm(5)->ev_long : APRINT_DEST_ARRAY;
 	DWORD dwBytes, dwCount;
 
-	if (Vartype(vp2) != '0' && Vartype(vp2) != 'C')
+	if (parm(2)->Vartype() != '0' && parm(2)->Vartype() != 'C')
 		throw E_INVALIDPARAMS;
 
 	if (dwLevel != 1 && dwLevel != 2 && dwLevel != 4 && dwLevel != 5)
@@ -229,12 +231,12 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall APrintJobs(ParamBlk *parm)
+void _fastcall APrintJobs(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1);
-	FoxString pPrinter(vp2);
+	FoxArray pArray(parm(1));
+	FoxString pPrinter(parm(2));
 	FoxString pJob(PRINT_ENUM_BUFFER);
 	FoxDateTime pDateTime;
 	FoxObject pObject;
@@ -244,8 +246,8 @@ try
 	LPJOB_INFO_1 pJobInfo;
 	LPJOB_INFO_2 pJobInfo2;
 
-	dwLevel = PCount() >= 3 ? vp3.ev_long : 1;
-	dwDest = PCount() >= 4 ? vp4.ev_long : APRINT_DEST_ARRAY;
+	dwLevel = parm.PCount() >= 3 ? parm(3)->ev_long : 1;
+	dwDest = parm.PCount() >= 4 ? parm(4)->ev_long : APRINT_DEST_ARRAY;
 
 	if (dwLevel != 1 && dwLevel != 2)
 		throw E_INVALIDPARAMS;
@@ -404,11 +406,11 @@ catch (int nErrorNo)
 }
 }
 
-void _fastcall APrinterForms(ParamBlk *parm)
+void _fastcall APrinterForms(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1);
+	FoxArray pArray(parm(1));
 	FoxString pPrinter(parm,2);
 	FoxString pForm(PRINT_ENUM_BUFFER);
 	PrinterHandle hPrinter;
@@ -474,15 +476,15 @@ catch (int nErrorNo)
 }
 }
 
-void _fastcall APaperSizes(ParamBlk *parm)
+void _fastcall APaperSizes(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1);
-	FoxString pPrinter(vp2);
-	FoxString pPort(vp3);
+	FoxArray pArray(parm(1));
+	FoxString pPrinter(parm(2));
+	FoxString pPort(parm(3));
 	FoxDouble pDouble(4);
-	int nUnit = PCount() == 4 ? vp4.ev_long : PAPERSIZE_UNIT_MM;
+	int nUnit = parm.PCount() == 4 ? parm(4)->ev_long : PAPERSIZE_UNIT_MM;
 
 	if (nUnit < PAPERSIZE_UNIT_MM || nUnit > PAPERSIZE_UNIT_POINT)
 		throw E_INVALIDPARAMS;
@@ -545,13 +547,13 @@ catch (int nErrorNo)
 }
 }
 
-void _fastcall APrinterTrays(ParamBlk *parm)
+void _fastcall APrinterTrays(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1);
-	FoxString pPrinter(vp2);
-	FoxString pPort(vp3);
+	FoxArray pArray(parm(1));
+	FoxString pPrinter(parm(2));
+	FoxString pPort(parm(3));
 	FoxString pBinName(PRINT_TRAY_BUFFER);
 	DWORD nBins;
 	LPWORD pBinPtr;

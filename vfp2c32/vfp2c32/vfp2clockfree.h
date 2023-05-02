@@ -13,19 +13,23 @@ class Atomic
 {
 public:
 	Atomic() {
+#if !defined(_WIN64)
 		assert(sizeof(T) == 4);
+#else
+		assert(sizeof(T) <= 8);
+#endif
 	};
 	Atomic(T val) { Store(val); };
-	
+
 	inline T Load()
-	{ 
+	{
 		T val = m_Val;
 		_ReadWriteBarrier();
 		return val;
 	};
 
 	inline void Store(T val)
-	{ 
+	{
 		_ReadWriteBarrier();
 		m_Val = val;
 	};
@@ -43,7 +47,7 @@ protected:
 template<class T>
 struct CBoundSPSCQueueDestructor
 {
-	static void release(T &item) { }
+	static void release(T& item) { }
 };
 
 template<class T, int nCount>
@@ -51,13 +55,13 @@ class CBoundSPSCQueue
 {
 public:
 	CBoundSPSCQueue() : m_Head(0), m_Tail(0), m_HeadCache(0), m_TailCache(0)
-	{ 
+	{
 
 	}
 	~CBoundSPSCQueue()
 	{
 		T cb;
-		while(Pop(cb))
+		while (Pop(cb))
 		{
 			CBoundSPSCQueueDestructor<T>::release(cb);
 		}
@@ -144,19 +148,19 @@ private:
 
 public:
 	CUnboundSPSCQueue()
-	{ 
+	{
 		Node* node = new Node()
-		pNode->next.Store(0);
+			pNode->next.Store(0);
 		m_Head.Store(node);
 		m_Tail.Store(node);
 	}
 
 	~CUnboundSPSCQueue() {
-		while(Node* node = m_Head.Load())
+		while (Node* node = m_Head.Load())
 		{
 			m_Head.Store(node->next.Load());
 			delete node;
-		}	
+		}
 	}
 
 	void Push(const T& pItem)
@@ -180,7 +184,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	bool Peek()
 	{
 		return m_Head.next.Load() > 0;
@@ -209,7 +213,7 @@ class CUnboundBlockSPSCQueue
 private:
 	struct Node {
 		CBoundSPSCQueue<T, (nBlockSize - sizeof(struct Node*) -
-			(sizeof(CBoundSPSCQueue<T,1>) - sizeof(T))) / sizeof(T)> queue;
+			(sizeof(CBoundSPSCQueue<T, 1>) - sizeof(T))) / sizeof(T)> queue;
 		Atomic<struct Node*> next;
 
 		void* operator new(size_t sz)
@@ -225,7 +229,7 @@ private:
 
 public:
 	CUnboundBlockSPSCQueue()
-	{ 
+	{
 		Node* node = new Node();
 		node->next.Store(0);
 		m_Head.Store(node);
@@ -234,7 +238,7 @@ public:
 
 	~CUnboundBlockSPSCQueue()
 	{
-		while(Node* node = m_Head.Load())
+		while (Node* node = m_Head.Load())
 		{
 			m_Head.Store(node->next.Load());
 			delete node;
@@ -269,7 +273,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	bool Peek()
 	{
 		Node* head = m_Head.Load();

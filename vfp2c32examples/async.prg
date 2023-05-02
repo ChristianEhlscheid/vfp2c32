@@ -3,7 +3,11 @@
 #INCLUDE "vfp2c.h"
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
+IF TYPE('_WIN64') = 'L' AND _WIN64
+SET LIBRARY TO vfp2c64d.fll ADDITIVE
+ELSE
 SET LIBRARY TO vfp2c32d.fll ADDITIVE
+ENDIF
 
 && monitor a directory for changes
 LOCAL lcDir
@@ -174,7 +178,7 @@ DEFINE CLASS FileSystemWatcherEx AS Custom
 				? 'Error watching path: ' + m.cPath + " - ErrorNo: " + m.cPath2
 				&& error is either GetLastError from ReadDirectoryChangesW or E_INSUFEMORY in an out of memory situation
 		ENDCASE
-		THIS.Stop(m.hHandle)
+		&& THIS.Stop(m.hHandle)
 	ENDFUNC
 	
 ENDDEFINE

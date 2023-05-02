@@ -1,28 +1,31 @@
 #include <windows.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
 #include "vfp2cfont.h"
+#include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
-#include "vfpmacros.h"
 
-void _fastcall AFontInfo(ParamBlk *parm)
+void _fastcall AFontInfo(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(vp1);
+	FoxString pFileName(parm(1));
 	FoxObject pFontInfo;
 	pFontInfo.EmptyObject();
 
 	LANGID dwLanguage;
 	USHORT dwPlatform;
 
-	if (PCount() < 2 || Vartype(vp2) == '0')
+	if (parm.PCount() < 2 || parm(2)->Vartype() == '0')
 		dwLanguage = GetSystemDefaultLangID();
 
-	if (PCount() < 3 || Vartype(vp3) == '0')
+	if (parm.PCount() < 3 || parm(3)->Vartype() == '0')
 		dwPlatform = PLATFORMID_WINDOWS; // default to Windows platform
 
 	BOOL bApiRet;
@@ -194,7 +197,7 @@ try
 					throw E_APIERROR;
 				}
 
-				bApiRet = ReadFile(hFile, pNameRecordBuffer, pNameRecordBuffer.Size(), &dwRead, 0);
+				bApiRet = ReadFile(hFile, pNameRecordBuffer.Ptr(), pNameRecordBuffer.Size(), &dwRead, 0);
 				if (!bApiRet)
 				{
 					SaveWin32Error("ReadFile", GetLastError());
@@ -204,7 +207,7 @@ try
 				pNameRecordBufferAnsi.Size(pName->uStringLength / 2);
 				pNameRecordBufferAnsi.Len(pName->uStringLength / 2);
 
-				BigEndianWideCharToMultiByte(pNameRecordBuffer, pNameRecordBuffer.Size() / 2, pNameRecordBufferAnsi, pNameRecordBufferAnsi.Size());
+				BigEndianWideCharToMultiByte(pNameRecordBuffer.Ptr<wchar_t*>(), pNameRecordBuffer.Size() / 2, pNameRecordBufferAnsi, pNameRecordBufferAnsi.Size());
 
 				pFontInfo(nameProps[xj]) << pNameRecordBufferAnsi;
 			}

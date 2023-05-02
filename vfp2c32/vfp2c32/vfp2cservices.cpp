@@ -1,13 +1,16 @@
 #include <windows.h>
 #include <atlbase.h>
 
+#if !defined(_WIN64)
 #include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
 #include "vfp2c32.h"
 #include "vfp2cutil.h"
 #include "vfp2cservices.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
-#include "vfpmacros.h"
 
 ServiceManager::ServiceManager(const char *pMachine, const char *pDatabase, DWORD dwAccess)
 {
@@ -277,7 +280,7 @@ void Service::StopDependantServices(SC_HANDLE hSCM)
 	}
 }
 
-Service& Service::Attach(Value &pVal)
+Service& Service::Attach(ValueEx &pVal)
 {
 	if (m_Handle && m_Owner)
 	{
@@ -285,20 +288,18 @@ Service& Service::Attach(Value &pVal)
 		m_Handle = NULL;
 	}
 
-	if (Vartype(pVal) == 'I')
-		m_Handle = reinterpret_cast<SC_HANDLE>(pVal.ev_long);
-	else if (Vartype(pVal) == 'N')
-		m_Handle = reinterpret_cast<SC_HANDLE>(static_cast<long>(pVal.ev_real));
+	if (pVal.Vartype() == 'I' || pVal.Vartype() == 'N')
+		m_Handle = pVal.DynamicPtr<SC_HANDLE>();
 
 	m_Owner = false;
 	return *this;
 }
 
-void _fastcall OpenServiceLib(ParamBlk *parm)
+void _fastcall OpenServiceLib(ParamBlkEx& parm)
 {
 try
 {
-	DWORD dwAccess = PCount() >= 2 && vp2.ev_long ? vp2.ev_long : SERVICE_ALL_ACCESS;
+	DWORD dwAccess = parm.PCount() >= 2 && parm(2)->ev_long ? parm(2)->ev_long : SERVICE_ALL_ACCESS;
 	FoxString pServiceName(parm, 1);
 	FoxString pMachine(parm, 3, NullIfEmpty);
 	FoxString pDatabase(parm, 4, NullIfEmpty);
@@ -317,11 +318,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CloseServiceHandleLib(ParamBlk *parm)
+void _fastcall CloseServiceHandleLib(ParamBlkEx& parm)
 {
 try
 {
-	if (!CloseServiceHandle(reinterpret_cast<SC_HANDLE>(vp1.ev_long)))
+	if (!CloseServiceHandle(parm(1)->Ptr<SC_HANDLE>()))
 	{
 		SaveWin32Error("CloseServiceHandle", GetLastError());
 		throw E_APIERROR;
@@ -333,14 +334,14 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall StartServiceLib(ParamBlk *parm)
+void _fastcall StartServiceLib(ParamBlkEx& parm)
 {
 try
 {
-	if (PCount() >= 2 && Vartype(vp2) != 'R' && Vartype(vp2) != '0')
+	if (parm.PCount() >= 2 && parm(2)->Vartype() != 'R' && parm(2)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() >= 3 && Vartype(vp3) != 'I' && Vartype(vp3) != 'N' && Vartype(vp3) != '0')
+	if (parm.PCount() >= 3 && parm(3)->Vartype() != 'I' && parm(3)->Vartype() != 'N' && parm(3)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
 	FoxString pService(parm, 1);
@@ -351,13 +352,13 @@ try
 	ServiceManager hSCM;
 	Service hService;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		if (PCount() >= 4)
+		if (parm.PCount() >= 4)
 			throw E_INVALIDPARAMS;
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine,pDatabase);
 		hService.Open(hSCM,pService, SERVICE_START|SERVICE_QUERY_STATUS);
@@ -367,10 +368,10 @@ try
 
 	pArguments = pArgs;
 
-	if (PCount() < 3 || Vartype(vp3) == '0')
-		vp3.ev_long = SERVICE_DEFAULT_TIMEOUT;
+	if (parm.PCount() < 3 || parm(3)->Vartype() == '0')
+		parm(3)->ev_long = SERVICE_DEFAULT_TIMEOUT;
 
-	Return (hService.Start(pArguments.ARows(), pArguments, vp3.ev_long));
+	Return (hService.Start(pArguments.ARows(), pArguments, parm(3)->ev_long));
 }
 catch(int nErrorNo)
 {
@@ -378,17 +379,17 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall StopServiceLib(ParamBlk *parm)
+void _fastcall StopServiceLib(ParamBlkEx& parm)
 {
 try
 {
-	if (PCount() >= 2 && Vartype(vp2) != 'I' && Vartype(vp2) != 'N' && Vartype(vp2) != '0')
+	if (parm.PCount() >= 2 && parm(2)->Vartype() != 'I' && parm(2)->Vartype() != 'N' && parm(2)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() < 2 || Vartype(vp2) == '0')
-		vp2.ev_long = SERVICE_DEFAULT_TIMEOUT;
+	if (parm.PCount() < 2 || parm(2)->Vartype() == '0')
+		parm(2)->ev_long = SERVICE_DEFAULT_TIMEOUT;
 
-	bool bStopDependencies = PCount() >= 3 && vp3.ev_length;
+	bool bStopDependencies = parm.PCount() >= 3 && parm(3)->ev_length;
 
 	FoxString pServiceName(parm, 1);
 	FoxString pMachine(parm, 4, NullIfEmpty);
@@ -397,21 +398,21 @@ try
 	ServiceManager hSCM;
 	Service hService;
 
-	if (Vartype(vp1) == 'C' || bStopDependencies)
+	if (parm(1)->Vartype() == 'C' || bStopDependencies)
         hSCM.Open(pMachine,pDatabase);
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hService.Open(hSCM,pServiceName,bStopDependencies ? (SERVICE_STOP|SERVICE_QUERY_STATUS|SERVICE_ENUMERATE_DEPENDENTS) : (SERVICE_STOP|SERVICE_QUERY_STATUS));
 	}
 	else
 		throw E_INVALIDPARAMS;
 
-	Return(hService.Stop(bStopDependencies,vp2.ev_long,hSCM));
+	Return(hService.Stop(bStopDependencies,parm(2)->ev_long,hSCM));
 }
 catch(int nErrorNo)
 {
@@ -419,15 +420,15 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall PauseService(ParamBlk *parm)
+void _fastcall PauseService(ParamBlkEx& parm)
 {
 try
 {
-	if (PCount() >= 2 && Vartype(vp2) != 'I' && Vartype(vp2) != 'N' && Vartype(vp2) != '0')
+	if (parm.PCount() >= 2 && parm(2)->Vartype() != 'I' && parm(2)->Vartype() != 'N' && parm(2)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() < 2 || Vartype(vp2) == '0')
-		vp2.ev_long = SERVICE_DEFAULT_TIMEOUT;
+	if (parm.PCount() < 2 || parm(2)->Vartype() == '0')
+		parm(2)->ev_long = SERVICE_DEFAULT_TIMEOUT;
 
 	FoxString pServiceName(parm, 1);
 	FoxString pMachine(parm, 3, NullIfEmpty);
@@ -435,11 +436,11 @@ try
 	ServiceManager hSCM;
 	Service hService;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine,pDatabase);
 		hService.Open(hSCM,pServiceName,SERVICE_PAUSE_CONTINUE|SERVICE_QUERY_STATUS);
@@ -447,7 +448,7 @@ try
 	else
 		throw E_INVALIDPARAMS;
 
-	Return(hService.Pause(vp2.ev_long));
+	Return(hService.Pause(parm(2)->ev_long));
 }
 catch(int nErrorNo)
 {
@@ -455,15 +456,15 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ContinueService(ParamBlk *parm)
+void _fastcall ContinueService(ParamBlkEx& parm)
 {
 try
 {
-	if (PCount() >= 2 && Vartype(vp2) != 'I' && Vartype(vp2) != 'N' && Vartype(vp2) != '0')
+	if (parm.PCount() >= 2 && parm(2)->Vartype() != 'I' && parm(2)->Vartype() != 'N' && parm(2)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
-	if (PCount() < 2 || Vartype(vp2) == '0')
-		vp2.ev_long = SERVICE_DEFAULT_TIMEOUT;
+	if (parm.PCount() < 2 || parm(2)->Vartype() == '0')
+		parm(2)->ev_long = SERVICE_DEFAULT_TIMEOUT;
 
 	FoxString pServiceName(parm, 1);
 	FoxString pMachine(parm, 3, NullIfEmpty);
@@ -471,11 +472,11 @@ try
 	ServiceManager hSCM;
 	Service hService;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine,pDatabase);
 		hService.Open(hSCM,pServiceName,SERVICE_PAUSE_CONTINUE|SERVICE_QUERY_STATUS);
@@ -483,7 +484,7 @@ try
 	else
 		throw E_INVALIDPARAMS;
 
-	Return (hService.Continue(vp2.ev_long));
+	Return (hService.Continue(parm(2)->ev_long));
 }
 catch(int nErrorNo)
 {
@@ -491,7 +492,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ControlServiceLib(ParamBlk *parm)
+void _fastcall ControlServiceLib(ParamBlkEx& parm)
 {
 try
 {
@@ -501,11 +502,11 @@ try
 	ServiceManager hSCM;
 	Service hService;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine,pDatabase);
 		hService.Open(hSCM,pServiceName,SERVICE_USER_DEFINED_CONTROL);
@@ -513,7 +514,7 @@ try
 	else
 		throw E_INVALIDPARAMS;
 
-	hService.Control(vp2.ev_long);
+	hService.Control(parm(2)->ev_long);
 }
 catch(int nErrorNo)
 {
@@ -521,11 +522,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AServices(ParamBlk *parm)
+void _fastcall AServices(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1,1,10);
+	FoxArray pArray(parm(1),1,10);
 	FoxString pMachine(parm, 2, NullIfEmpty);
 	FoxString pDatabase(parm, 3, NullIfEmpty);
 	FoxString pStringBuffer(MAX_PATH+1);
@@ -537,8 +538,8 @@ try
 	unsigned int nRow;
 	LPENUM_SERVICE_STATUS_PROCESS pServiceStatusEx;
 	
-	dwState = PCount() >= 4 && vp4.ev_long ? vp4.ev_long : SERVICE_STATE_ALL;
-	dwType = PCount() >= 5 && vp5.ev_long ? vp5.ev_long : SERVICE_WIN32;
+	dwState = parm.PCount() >= 4 && parm(4)->ev_long ? parm(4)->ev_long : SERVICE_STATE_ALL;
+	dwType = parm.PCount() >= 5 && parm(5)->ev_long ? parm(5)->ev_long : SERVICE_WIN32;
 
 	hSCM.Open(pMachine,pDatabase,SC_MANAGER_ENUMERATE_SERVICE);
 
@@ -595,11 +596,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AServiceStatus(ParamBlk *parm)
+void _fastcall AServiceStatus(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1,7);
+	FoxArray pArray(parm(1),7);
 	FoxString pServiceName(parm, 2);
 	FoxString pMachine(parm, 3, NullIfEmpty);
 	FoxString pDatabase(parm, 4, NullIfEmpty);
@@ -607,13 +608,13 @@ try
 	Service hService;
 	SERVICE_STATUS sStatus;
 
-	if (Vartype(vp2) == 'I' || Vartype(vp2) == 'N')
+	if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
 	{
-		if (PCount() > 2)
+		if (parm.PCount() > 2)
 			throw E_INVALIDPARAMS;
-		hService.Attach(vp2);
+		hService.Attach(parm(2));
 	}
-	else if (Vartype(vp2) == 'C')
+	else if (parm(2)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine, pDatabase);
 		hService.Open(hSCM, pServiceName, SERVICE_START|SERVICE_QUERY_STATUS);
@@ -637,11 +638,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall AServiceConfig(ParamBlk *parm)
+void _fastcall AServiceConfig(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1,9);
+	FoxArray pArray(parm(1),9);
 	FoxString pServiceName(parm, 2);
 	FoxString pMachine(parm, 3, NullIfEmpty);
 	FoxString pDatabase(parm, 4, NullIfEmpty);
@@ -651,13 +652,13 @@ try
 	CBuffer pBuffer;
 	LPQUERY_SERVICE_CONFIG pServiceConfig;
 
-	if (Vartype(vp2) == 'I' || Vartype(vp2) == 'N')
+	if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
 	{
-		if (PCount() > 2)
+		if (parm.PCount() > 2)
 			throw E_INVALIDPARAMS;
-		hService.Attach(vp2);
+		hService.Attach(parm(2));
 	}
-	else if (Vartype(vp2) == 'C')
+	else if (parm(2)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine,pDatabase);
 		hService.Open(hSCM,pServiceName,SERVICE_START|SERVICE_QUERY_STATUS);
@@ -686,11 +687,11 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ADependentServices(ParamBlk *parm)
+void _fastcall ADependentServices(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(vp1,1,8);
+	FoxArray pArray(parm(1),1,8);
 	FoxString pServiceName(parm, 2);
 	FoxString pMachine(parm, 3, NullIfEmpty);
 	FoxString pDatabase(parm, 4, NullIfEmpty);
@@ -704,13 +705,13 @@ try
 	DWORD dwBytesNeeded = 0, dwServiceCount = 0, nLastError;
 	unsigned int nRow;
 
-	if (Vartype(vp2) == 'I' || Vartype(vp2) == 'N')
+	if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
 	{
-		if (PCount() > 2)
+		if (parm.PCount() > 2)
 			throw E_INVALIDPARAMS;
-		hService.Attach(vp2);
+		hService.Attach(parm(2));
 	}
-	else if (Vartype(vp2) == 'C')
+	else if (parm(2)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine,pDatabase);
 		hService.Open(hSCM,pServiceName,SERVICE_START|SERVICE_QUERY_STATUS);
@@ -765,7 +766,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall WaitForServiceStatus(ParamBlk *parm)
+void _fastcall WaitForServiceStatus(ParamBlkEx& parm)
 {
 try
 {
@@ -777,11 +778,11 @@ try
 	Service hService;
 	int nTimeout;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine, pDatabase);
 		hService.Open(hSCM, pServiceName, SERVICE_QUERY_STATUS);
@@ -789,9 +790,9 @@ try
 	else
 		throw E_INVALIDPARAMS;
 
-	nTimeout = PCount() < 3 ? SERVICE_INFINITE_TIMEOUT : vp3.ev_long;
+	nTimeout = parm.PCount() < 3 ? SERVICE_INFINITE_TIMEOUT : parm(3)->ev_long;
 	
-	Return(hService.WaitForServiceStatus(vp2.ev_long, nTimeout));
+	Return(hService.WaitForServiceStatus(parm(2)->ev_long, nTimeout));
 }
 catch(int nErrorNo)
 {
@@ -799,16 +800,16 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall CreateServiceLib(ParamBlk *parm)
+void _fastcall CreateServiceLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pServiceName(vp1);
-	FoxString pDisplayName(vp2);
-	FoxString pExecutable(vp3);
-	DWORD dwServiceType = PCount() >= 4 && Vartype(vp4) == 'N' ? (DWORD)vp4.ev_real : SERVICE_WIN32_OWN_PROCESS;
-	DWORD dwStartType = PCount() >= 5 && Vartype(vp5) == 'N' ? (DWORD)vp5.ev_real : SERVICE_AUTO_START;
-	DWORD dwErrorControl = PCount() >= 6 && Vartype(vp6) == 'N' ? (DWORD)vp6.ev_real : SERVICE_ERROR_NORMAL;
+	FoxString pServiceName(parm(1));
+	FoxString pDisplayName(parm(2));
+	FoxString pExecutable(parm(3));
+	DWORD dwServiceType = parm.PCount() >= 4 && parm(4)->Vartype() == 'N' ? (DWORD)parm(4)->ev_real : SERVICE_WIN32_OWN_PROCESS;
+	DWORD dwStartType = parm.PCount() >= 5 && parm(5)->Vartype() == 'N' ? (DWORD)parm(5)->ev_real : SERVICE_AUTO_START;
+	DWORD dwErrorControl = parm.PCount() >= 6 && parm(6)->Vartype() == 'N' ? (DWORD)parm(6)->ev_real : SERVICE_ERROR_NORMAL;
 	FoxString pLoadOrderGroup(parm, 7);
 	FoxString pDependencies(parm, 8);
 	FoxString pServiceAccount(parm, 9);
@@ -842,7 +843,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall DeleteServiceLib(ParamBlk *parm)
+void _fastcall DeleteServiceLib(ParamBlkEx& parm)
 {
 try
 {
@@ -853,11 +854,11 @@ try
 	ServiceManager hSCM;
 	Service hService;
 
-	if (Vartype(vp1) == 'I' || Vartype(vp1) == 'N')
+	if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
 	{
-		hService.Attach(vp1);
+		hService.Attach(parm(1));
 	}
-	else if (Vartype(vp1) == 'C')
+	else if (parm(1)->Vartype() == 'C')
 	{
 		hSCM.Open(pMachine, pDatabase);
 		hService.Open(hSCM, pServiceName, DELETE);

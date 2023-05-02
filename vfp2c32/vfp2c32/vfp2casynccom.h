@@ -9,7 +9,7 @@
 class CComCallInfo : public IDispatch
 {
 public:
-	CComCallInfo();
+	CComCallInfo(LONG nCallId, DISPID dispid, WORD wFlags, LCID lcid, HANDLE hAbortEvent);
 	~CComCallInfo();
 	friend class CThreadedComObject;
 
@@ -57,7 +57,7 @@ public:
 class CThreadedComObject : public IDispatch
 {
 public:
-	CThreadedComObject(wchar_t *pComClass, bool bSynchronousAccess);
+	CThreadedComObject(wchar_t* pComClass, bool bSynchronousAccess);
 	~CThreadedComObject();
 	
 	// IUnknown methods
@@ -129,7 +129,7 @@ private:
 extern "C" {
 #endif
 
-void _fastcall CreateThreadObject(ParamBlk *parm);
+void _fastcall CreateThreadObject(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

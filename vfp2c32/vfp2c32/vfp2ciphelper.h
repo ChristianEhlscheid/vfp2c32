@@ -63,8 +63,8 @@ const int MAC_ADDRESS_LEN	= 17; // FF:00:FF:00:FF:00
 
 int _stdcall VFP2C_Init_IpHelper();
 
-void _fastcall Ip2MacAddress(ParamBlk *parm);
-void _fastcall IcmpPing(ParamBlk *parm);
+void _fastcall Ip2MacAddress(ParamBlkEx& parm);
+void _fastcall IcmpPing(ParamBlkEx& parm);
 
 void _stdcall Binary2Mac(char *pBuffer, unsigned char *pBinMac);
 
