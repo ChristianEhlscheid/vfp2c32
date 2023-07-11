@@ -1727,6 +1727,17 @@ void _fastcall ReadBytes(ParamBlkEx& parm)
 		RaiseError(E_INVALIDPARAMS);
 }
 
+void _fastcall ReadFoxValue(ParamBlkEx& parm)
+{
+	FoxValue* pValue = parm(1)->Ptr<FoxValue*>();
+	if (pValue)
+	{
+		pValue->ReturnCopy();
+	}
+	else
+		RaiseError(E_INVALIDPARAMS);
+}
+
 #define BEGIN_ARRAYLOOP() \
 	while(++vfpArray.CurrentDim() <= vfpArray.ADims()) \
 	{ \

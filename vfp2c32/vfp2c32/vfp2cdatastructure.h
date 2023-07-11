@@ -544,4 +544,41 @@ private:
 	T* m_Array;
 };
 
+// very simple fixed array class, use only with blittable (struct's with custom constructor/destructor) types
+template<typename T, int nSize>
+class CFixedArray
+{
+public:
+	CFixedArray() {}
+
+	T& operator[](int nIndex)
+	{
+		assert(nIndex >= 0 && nIndex < nSize);
+		return m_Array[nIndex];
+	}
+
+	int Find(const T& element)
+	{
+		for (int xj = 0; xj < nSize; xj++)
+		{
+			if (m_Array[xj] == element)
+				return xj;
+		}
+		return -1;
+	}
+
+	void Copy(const T* pArray, int nCount)
+	{
+		memcpy(&m_Array[0], pArray, nCount * sizeof(T));
+	}
+
+	int GetCount()
+	{
+		return nSize;
+	}
+
+private:
+	T m_Array[nSize];
+};
+
 #endif // _VFP2CDATASTRUCTURE_H__

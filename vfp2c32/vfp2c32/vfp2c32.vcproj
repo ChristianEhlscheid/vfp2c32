@@ -1549,9 +1549,6 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			<File
 				RelativePath=".\vfp2cwinsock.h">
 			</File>
-			<File
-				RelativePath=".\vfpmacros.h">
-			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

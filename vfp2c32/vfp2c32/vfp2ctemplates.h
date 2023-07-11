@@ -1084,6 +1084,11 @@ public:
 		return *this;
 	}
 
+	CStrBuilder& Marshal(FoxValue* pValue)
+	{
+		return Append("ReadFoxValue(").Marshal(reinterpret_cast<void*>(pValue)).Append(')');
+	}
+
 	CStrBuilder& Marshal(void* pData)
 	{
 		return Marshal(reinterpret_cast<ULONG_PTR>(pData));

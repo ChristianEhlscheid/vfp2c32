@@ -14,6 +14,7 @@ const int ADIREX_UTC_TIMES				= 0x40;
 const int ADIREX_RECURSIVE				= 0x80;
 const int ADIREX_DISABLE_FSREDIRECTION	= 0x100;
 const int ADIREX_FULLPATH				= 0x200;
+const int ADIREX_STRING_FILEATTRIBUTES	= 0x400;
 
 // not defined in the old VS 6
 #if !defined(FIND_FIRST_EX_LARGE_FETCH)
@@ -60,8 +61,8 @@ class FileSearchStorage
 public:
 	FileSearchStorage(int nOffset = 0) : m_ToLocalTime(false), m_Index_Filename(0 + nOffset),
 		m_Index_Dosfilename(1 + nOffset), m_Index_Creationtime(2 + nOffset), m_Index_Accesstime(3 + nOffset),
-		m_Index_Writetime(4 + nOffset), m_Index_Filesize(5 + nOffset), m_Index_Fileattribs(6 + nOffset) { }
-	virtual void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+		m_Index_Writetime(4 + nOffset), m_Index_Filesize(5 + nOffset), m_Index_Fileattribs(6 + nOffset), m_Index_StringFileattribs(7 + nOffset) { }
+	virtual void Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields);
 	virtual void Finalize() { };
 	virtual bool Store(FileSearch* pFileSearch) { return true; };
 	// we need a virtual destructor - otherwise the destructor of objects in the descending classes don't run and then causing potential memory leaks
@@ -79,13 +80,14 @@ protected:
 	int m_Index_Writetime;
 	int m_Index_Filesize;
 	int m_Index_Fileattribs;
+	int m_Index_StringFileattribs;
 };
 
 class FileSearchStorageArray : public FileSearchStorage
 {
 public:
 	FileSearchStorageArray() : FileSearchStorage(1) {}
-	void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	void Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields);
 	void Finalize();
 	bool Store(FileSearch* pFileSearch);
 private:
@@ -96,7 +98,7 @@ class FileSearchStorageCursor : public FileSearchStorage
 {
 public:
 	FileSearchStorageCursor() : FileSearchStorage(0) {}
-	void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	void Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields);
 	void Finalize() { };
 	bool Store(FileSearch* pFileSearch);
 private:
@@ -107,11 +109,11 @@ class FileSearchStorageCallback : public FileSearchStorage
 {
 public:
 	FileSearchStorageCallback() : FileSearchStorage(0) {}
-	void Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields);
+	void Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields);
 	void Finalize() {};
 	bool Store(FileSearch* pFileSearch);
 private:
-	FoxDateTimeLiteral m_CreationTime, m_AccessTime, m_WriteTime;
+	FoxDateTime m_CreationTime, m_AccessTime, m_WriteTime;
 	CDynamicFoxCallback m_Callback;
 };
 
@@ -145,7 +147,7 @@ typedef void(*FileSearchReverseFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWOR
 class FileSearch
 {
 public:
-	FileSearch(bool lRecurse, CStringView pSearchPath, DWORD nFileFilter, CStringView pDestination, int nDest, bool bToLocalTime, int nMaxRecursion, bool bDisableFsRedirection, CStringView pFields);
+	FileSearch(bool lRecurse, CStringView pSearchPath, DWORD nFileFilter, CStringView pDestination, int nDest, bool bToLocalTime, bool bStringFileAttributes, int nMaxRecursion, bool bDisableFsRedirection, CStringView pFields);
 	~FileSearch();
 
 	unsigned int ExecuteSearch();
@@ -158,6 +160,7 @@ public:
 	CStringView AlternateFileName();
 	unsigned __int64 FileSize() const;
 	int FileAttributes() const;
+	CStringView StringFileAttributes();
 	FILETIME CreationTime() const;
 	FILETIME LastAccessTime() const;
 	FILETIME LastWriteTime() const;
@@ -193,11 +196,12 @@ private:
 	bool				m_DisableFsRedirection;
 	bool				m_WSearch;
 	bool				m_StoreFullPath;
-	FileSearchStorage* m_Storage;
+	FileSearchStorage*	m_Storage;
 	HANDLE				m_Handle;
 	WIN32_FIND_DATA		m_Filedata;
 	WIN32_FIND_DATAW	m_WideFiledata;
 	WIN32_FIND_DATA*	m_CurrentFiledata;
+	CStrBuilder<10>		m_StringFileAttributes;
 	CStrBuilder<MAX_WIDE_PATH>	m_Directory;
 	CStrBuilder<MAX_WIDE_PATH>	m_SubDirectory;
 	CStrBuilder<MAX_WIDE_PATH>	m_CompleteFilename;
@@ -300,6 +304,38 @@ inline unsigned __int64 FileSearch::FileSize() const
 inline int FileSearch::FileAttributes() const
 {
 	return m_CurrentFiledata->dwFileAttributes;
+}
+
+inline CStringView FileSearch::StringFileAttributes()
+{
+	m_StringFileAttributes.Len(0);
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_READONLY) > 0)
+		m_StringFileAttributes.Append('R');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) > 0)
+		m_StringFileAttributes.Append('H');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) > 0)
+		m_StringFileAttributes.Append('S');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0)
+		m_StringFileAttributes.Append('D');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) > 0)
+		m_StringFileAttributes.Append('A');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY) > 0)
+		m_StringFileAttributes.Append('T');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) > 0)
+		m_StringFileAttributes.Append('F');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0)
+		m_StringFileAttributes.Append('P');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_COMPRESSED) > 0)
+		m_StringFileAttributes.Append('C');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_OFFLINE) > 0)
+		m_StringFileAttributes.Append('O');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) > 0)
+		m_StringFileAttributes.Append('I');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED) > 0)
+		m_StringFileAttributes.Append('E');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_FAKEDIRECTORY) > 0)
+		m_StringFileAttributes.Append('K');
+	return m_StringFileAttributes;
 }
 
 inline FILETIME FileSearch::CreationTime() const

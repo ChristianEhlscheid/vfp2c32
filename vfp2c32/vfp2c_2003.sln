@@ -1,0 +1,45 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vfp2c32", "vfp2c32\vfp2c32.vcproj", "{C50B92FD-886D-4016-946F-DD9E1313B6A2}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cparser", "cparser\cparser.vcproj", "{F48F8780-666A-4038-AF40-862B0DE912DE}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		DebugTS = DebugTS
+		Release = Release
+		ReleaseDebug = ReleaseDebug
+		ReleaseDebugTS = ReleaseDebugTS
+		ReleaseTS = ReleaseTS
+	EndGlobalSection
+	GlobalSection(ProjectDependencies) = postSolution
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.Debug.ActiveCfg = Debug|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.Debug.Build.0 = Debug|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.DebugTS.ActiveCfg = DebugTS|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.DebugTS.Build.0 = DebugTS|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.Release.ActiveCfg = Release|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.Release.Build.0 = Release|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.ReleaseDebug.ActiveCfg = ReleaseDebug|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.ReleaseDebug.Build.0 = ReleaseDebug|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.ReleaseDebugTS.ActiveCfg = ReleaseDebugTS|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.ReleaseDebugTS.Build.0 = ReleaseDebugTS|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.ReleaseTS.ActiveCfg = ReleaseTS|Win32
+		{C50B92FD-886D-4016-946F-DD9E1313B6A2}.ReleaseTS.Build.0 = ReleaseTS|Win32
+		{F48F8780-666A-4038-AF40-862B0DE912DE}.Debug.ActiveCfg = Debug|Win32
+		{F48F8780-666A-4038-AF40-862B0DE912DE}.DebugTS.ActiveCfg = DebugTS|Win32
+		{F48F8780-666A-4038-AF40-862B0DE912DE}.Release.ActiveCfg = Release|Win32
+		{F48F8780-666A-4038-AF40-862B0DE912DE}.ReleaseDebug.ActiveCfg = ReleaseDebug|Win32
+		{F48F8780-666A-4038-AF40-862B0DE912DE}.ReleaseDebugTS.ActiveCfg = ReleaseDebugTS|Win32
+		{F48F8780-666A-4038-AF40-862B0DE912DE}.ReleaseTS.ActiveCfg = ReleaseTS|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

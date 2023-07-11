@@ -14,12 +14,6 @@ DEFINE CLASS ExampleService2 AS ServiceBaseclass OLEPUBLIC
 	FUNCTION  OnStart(laArgs[] As String, loServiceController AS Object) As Void
 		TRY
 			SET LIBRARY TO vfp2c32t.fll ADDITIVE
-			IF INITVFP2C32(VFP2C_INIT_MARSHAL) = .F.
-				LOCAL laError[1]
-				AERROREX('laError')
-				THROW CREATEOBJECT('Win32Exception', m.laError[1], m.laError[2], m.laError[3])
-			ENDIF
-
 #IFDEF _DEBUG
 		DebugOutput('ExampleService2::OnStart')
 #ENDIF

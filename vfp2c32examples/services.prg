@@ -1,16 +1,15 @@
 && service functions
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_SERVICES flag
 
 #INCLUDE vfp2c.h
 
 LOCAL lnCount, lnRet, laStatus[1], lnStatus, lnServiceHandle
+
 CD (FULLPATH(JUSTPATH(SYS(16))))
 IF TYPE('_WIN64') = 'L' AND _WIN64
-SET LIBRARY TO vfp2c64d.fll ADDITIVE
+SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32d.fll ADDITIVE
+SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
-
 
 LOCAL laServiceStatus[7]
 laServiceStatus[1] = 'STOPPED'

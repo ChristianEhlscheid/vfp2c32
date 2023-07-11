@@ -2267,41 +2267,4 @@ private:
 	*/
 };
 
-#if defined(_WIN64)
-typedef double (*ASMTEST)(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-
-__int64 x64AsmTest1(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4, int parm5, unsigned int parm6);
-double x64AsmTest2(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-int x64AsmTest3(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-short x64AsmTest4(double parm1, short parm2, __int64 parm3, unsigned __int64 parm4);
-char x64AsmTest5(double parm1, char parm2, __int64 parm3, unsigned __int64 parm4);
-
-#else
-
-typedef double (_stdcall *STDCALLASMTEST)(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-typedef __int64 (_cdecl *CDECLASMTEST)(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-typedef __int64 (_fastcall *FASTCALLASMTEST)(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-
-__int64 _fastcall fastcallAsmTest1(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-double _fastcall fastcallAsmTest2(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-int _fastcall fastcallAsmTest3(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-short _fastcall fastcallAsmTest4(double parm1, short parm2, __int64 parm3, unsigned __int64 parm4);
-char _fastcall fastcallAsmTest5(double parm1, char parm2, __int64 parm3, unsigned __int64 parm4);
-
-__int64 _stdcall stdcallAsmTest1(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-double _stdcall stdcallAsmTest2(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-int _stdcall stdcallAsmTest3(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-short _stdcall stdcallAsmTest4(double parm1, short parm2, __int64 parm3, unsigned __int64 parm4);
-char _stdcall stdcallAsmTest5(double parm1, char parm2, __int64 parm3, unsigned __int64 parm4);
-
-__int64 _cdecl cdeclAsmTest1(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-double _cdecl cdeclAsmTest2(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-int _cdecl cdeclAsmTest3(double parm1, int parm2, __int64 parm3, unsigned __int64 parm4);
-short _cdecl cdeclAsmTest4(double parm1, short parm2, __int64 parm3, unsigned __int64 parm4);
-char _cdecl cdeclAsmTest5(double parm1, char parm2, __int64 parm3, unsigned __int64 parm4);
-
-#endif
-
-void _fastcall AsmTest(ParamBlkEx& parm);
-
 #endif	// _VFP2CASSEMBLY_H__

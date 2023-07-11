@@ -2,14 +2,15 @@
 
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
+
 IF TYPE('_WIN64') = 'L' AND _WIN64
-SET LIBRARY TO vfp2c64d.fll ADDITIVE
+SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32d.fll ADDITIVE
+SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
 LOCAL lnCon, lValue, lnRet, laInfo[1]
-lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.0 ANSI Driver};Server=localhost;User=root;Pwd=pwd4mysql',.F.)
+lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.0 ANSI Driver};Server=localhost;User=root;Pwd=********',.F.)
 IF lnCon = -1
 	AERROR(laError)
 	DISPLAY MEMORY LIKE laError

@@ -20,9 +20,7 @@ const int AsmTypes[10][3] =  // size, alignment & sign of C types
 	{ sizeof(unsigned __int64), __alignof(unsigned __int64), FALSE },
 	{ sizeof(float), __alignof(float), FALSE },
 	{ sizeof(double), __alignof(double), FALSE }
-
 };
-
 
 AsmByte* AsmInstruction::Write(AsmByte* pAddress, AsmByte* pDataSegmentAddress)
 {
@@ -78,8 +76,6 @@ _AsmVariable::_AsmVariable(AsmRegister nReg, int nOffset, bool fixed)
 	Offset = nOffset;
 	Fixed = fixed;
 }
-
-
 
 void* RuntimeAssembler::AllocateMemory(size_t nSize)
 {

@@ -289,6 +289,7 @@ public:
 	char Vartype() const;
 	void Release();
 	void Return();
+	void ReturnCopy();
 	unsigned int Len() const;
 
 	// handle manipulation
@@ -1572,6 +1573,13 @@ protected:
 			.Marshal(parm3).Append(',').Marshal(parm4).Append(',').Marshal(parm5).Append(',').Marshal(parm6).Append(',').Marshal(parm7).Append(')');
 	}
 
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
+	inline void BuildCallbackNaturalOrder(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7, T8 parm8)
+	{
+		m_Callback.ResetToFormatBase().Append('(').Marshal(parm1).Append(',').Marshal(parm2).Append(',')
+			.Marshal(parm3).Append(',').Marshal(parm4).Append(',').Marshal(parm5).Append(',').Marshal(parm6).Append(',').Marshal(parm7).Append(',').Marshal(parm8).Append(')');
+	}
+
 	CStrBuilder<2048>	m_Callback;
 };
 
@@ -1581,8 +1589,9 @@ public:
 	CDynamicFoxCallback()
 	{
 		m_NaturalParameterOrder = true;
-		for (int nParm = 0; nParm < sizeof(m_ParameterPosition) / sizeof(int); nParm++)
+		for (int nParm = 0; nParm < m_ParameterPosition.GetCount(); nParm++)
 			m_ParameterPosition[nParm] = nParm;
+		m_ParameterCount = m_ParameterPosition.GetCount();
 	}
 
 	// nParmNo - zero based, nParmPosition - one based
@@ -1594,13 +1603,30 @@ public:
 	void OptimizeParameterPosition()
 	{
 		m_NaturalParameterOrder = true;
-		for (int nParm = 0; nParm < sizeof(m_ParameterPosition) / sizeof(int); nParm++)
+		for (int nParm = 0; nParm < m_ParameterPosition.GetCount(); nParm++)
 		{
 			if (m_ParameterPosition[nParm] != nParm)
 			{
 				m_NaturalParameterOrder = false;
 				break;
 			}
+		}
+		if (m_NaturalParameterOrder == false)
+		{
+			int nSortedOrder[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+			int nPos = 0;
+			for (int nParm = 0; nParm < m_ParameterPosition.GetCount(); nParm++)
+			{
+				int nParmPos = m_ParameterPosition.Find(nParm);
+				if (nParmPos > -1)
+				{
+					nSortedOrder[nPos] = nParmPos;
+					nPos++;
+				}
+			}
+			m_ParameterPosition.Copy(nSortedOrder, m_ParameterPosition.GetCount());
+			int nParmCount = m_ParameterPosition.Find(-1);
+			m_ParameterCount = nParmCount == -1 ? m_ParameterPosition.GetCount() : nParmCount;
 		}
 	}
 
@@ -1671,6 +1697,13 @@ public:
 		return _Evaluate(pVal, m_Callback);
 	}
 
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
+	int Evaluate(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7, T8 parm8)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5, parm6, parm7, parm8);
+		return _Evaluate(pVal, m_Callback);
+	}
+
 	template<typename T1>
 	int Execute(Value* pVal, T1 parm1)
 	{
@@ -1720,6 +1753,13 @@ public:
 		return _Execute(m_Callback);
 	}
 
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
+	int Execute(Value* pVal, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7, T8 parm8)
+	{
+		BuildCallback(parm1, parm2, parm3, parm4, parm5, parm6, parm7, parm8);
+		return _Execute(m_Callback);
+	}
+
 protected:
 
 	template<typename T1>
@@ -1736,7 +1776,7 @@ protected:
 
 		bool bSeperator = false;
 		m_Callback.ResetToFormatBase().Append('(');
-		for (int xj = 0; xj < 2; xj++)
+		for (int xj = 0; xj < m_ParameterCount; xj++)
 		{
 			switch (m_ParameterPosition[xj])
 			{
@@ -1765,7 +1805,7 @@ protected:
 
 		bool bSeperator = false;
 		m_Callback.ResetToFormatBase().Append('(');
-		for (int xj = 0; xj < 3; xj++)
+		for (int xj = 0; xj < m_ParameterCount; xj++)
 		{
 			switch (m_ParameterPosition[xj])
 			{
@@ -1800,7 +1840,7 @@ protected:
 
 		bool bSeperator = false;
 		m_Callback.ResetToFormatBase().Append('(');
-		for (int xj = 0; xj < 4; xj++)
+		for (int xj = 0; xj < m_ParameterCount; xj++)
 		{
 			switch (m_ParameterPosition[xj])
 			{
@@ -1841,7 +1881,7 @@ protected:
 
 		bool bSeperator = false;
 		m_Callback.ResetToFormatBase().Append('(');
-		for (int xj = 0; xj < 5; xj++)
+		for (int xj = 0; xj < m_ParameterCount; xj++)
 		{
 			switch (m_ParameterPosition[xj])
 			{
@@ -1888,7 +1928,7 @@ protected:
 
 		bool bSeperator = false;
 		m_Callback.ResetToFormatBase().Append('(');
-		for (int xj = 0; xj < 6; xj++)
+		for (int xj = 0; xj < m_ParameterCount; xj++)
 		{
 			switch (m_ParameterPosition[xj])
 			{
@@ -1941,7 +1981,7 @@ protected:
 
 		bool bSeperator = false;
 		m_Callback.ResetToFormatBase().Append('(');
-		for (int xj = 0; xj < 7; xj++)
+		for (int xj = 0; xj < m_ParameterCount; xj++)
 		{
 			switch (m_ParameterPosition[xj])
 			{
@@ -1992,8 +2032,74 @@ protected:
 		m_Callback.Append(')');
 	}
 
+	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
+	inline void BuildCallback(T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7, T8 parm8)
+	{
+		if (m_NaturalParameterOrder)
+			return BuildCallbackNaturalOrder(parm1, parm2, parm3, parm4, parm5, parm6, parm7, parm8);
+
+		bool bSeperator = false;
+		m_Callback.ResetToFormatBase().Append('(');
+		for (int xj = 0; xj < m_ParameterCount; xj++)
+		{
+			switch (m_ParameterPosition[xj])
+			{
+				case 0:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm1);
+					bSeperator = true;
+					break;
+				case 1:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm2);
+					bSeperator = true;
+					break;
+				case 2:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm3);
+					bSeperator = true;
+					break;
+				case 3:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm4);
+					bSeperator = true;
+					break;
+				case 4:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm5);
+					bSeperator = true;
+					break;
+				case 5:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm6);
+					bSeperator = true;
+					break;
+				case 6:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm7);
+					bSeperator = true;
+					break;
+				case 7:
+					if (bSeperator)
+						m_Callback.Append(',');
+					m_Callback.Marshal(parm8);
+					bSeperator = true;
+					break;
+			}
+		}
+		m_Callback.Append(')');
+	}
+
 	bool				m_NaturalParameterOrder;
-	int					m_ParameterPosition[7];
+	int					m_ParameterCount;
+	CFixedArray<int,8>	m_ParameterPosition;
 };
 
 // helper class which holds the current timezone information (singleton - use GetTsi to get instance)
@@ -2135,6 +2241,23 @@ inline void FoxValue::Return()
 	assert(m_Locked == false);
 	_RetVal(&m_Value);
 	m_Value.ev_type = '0';
+}
+
+inline void FoxValue::ReturnCopy()
+{
+	if (Vartype() == 'C')
+	{
+		FoxValue pDup('C');
+		if (Len() > 0)
+		{
+			pDup.AllocHandle(Len());
+			memcpy(pDup.HandleToPtr(), HandleToPtr(), Len());
+		}
+		pDup->ev_length = Len();
+		pDup.Return();
+	}
+	else
+		_RetVal(&m_Value);
 }
 
 inline unsigned int FoxValue::Len() const

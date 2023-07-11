@@ -13,53 +13,57 @@ static PGETVOLUMEPATHNAMESFORVOLUMENAME fpGetVolumePathNamesForVolumeName = 0;
 static PWOW64FSREDIRECTION fpWow64DisableWow64FsRedirection = 0;
 static PWOW64FSREDIRECTION fpWow64RevertWow64FsRedirection = 0;
 
-void FileSearchStorage::Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields)
+void FileSearchStorage::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
 {
 	m_FileName.Size(MAX_PATH);
 	m_ToLocalTime = bToLocalTime;
 }
 
-void FileSearchStorageArray::Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields)
+void FileSearchStorageArray::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
 {
-	FileSearchStorage::Initialize(pDestination, bToLocalTime, pFields);
+	FileSearchStorage::Initialize(pDestination, bToLocalTime, bStringFileAttribs, pFields);
 	unsigned int nFieldCount = 7;
 	if (pFields)
 	{
 		m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
-			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = -1;
+			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = m_Index_StringFileattribs = -1;
 		pFields = pFields.Alltrim();
 		CStringView pFieldName = pFields.GetWordNum(1, ',');
 		unsigned int nFieldNo = 1;
 		do 
 		{
 			CStringView pField = pFieldName.Alltrim();
-			if (pField == "filename")
+			if (pField.ICompare("filename"))
 			{
 				m_Index_Filename = nFieldNo;
 			}
-			else if (pField == "dosfilename")
+			else if (pField.ICompare("dosfilename"))
 			{
 				m_Index_Dosfilename = nFieldNo;
 			}
-			else if (pField == "creationtime")
+			else if (pField.ICompare("creationtime"))
 			{
 				m_Index_Creationtime = nFieldNo;
 			}
-			else if (pField == "accesstime")
+			else if (pField.ICompare("accesstime"))
 			{
 				m_Index_Accesstime = nFieldNo;
 			}
-			else if (pField == "writetime")
+			else if (pField.ICompare("writetime"))
 			{
 				m_Index_Writetime = nFieldNo;
 			}
-			else if (pField == "filesize")
+			else if (pField.ICompare("filesize"))
 			{
 				m_Index_Filesize = nFieldNo;
 			}
-			else if (pField == "fileattribs")
+			else if (pField.ICompare("fileattribs"))
 			{
 				m_Index_Fileattribs = nFieldNo;
+			}
+			else if (pField.ICompare("cfileattribs"))
+			{
+				m_Index_StringFileattribs = nFieldNo;
 			}
 			else
 			{
@@ -72,6 +76,11 @@ void FileSearchStorageArray::Initialize(CStringView pDestination, bool bToLocalT
 			nFieldNo++;
 		} while (pFieldName);
 		nFieldCount = nFieldNo - 1;
+	}
+	else
+	{
+		m_Index_Fileattribs = bStringFileAttribs ? -1 : 7;
+		m_Index_StringFileattribs = bStringFileAttribs ? 7 : -1;
 	}
 
 	m_Array.AutoGrow(256);
@@ -122,74 +131,84 @@ bool FileSearchStorageArray::Store(FileSearch* pFileSearch)
 
 	if (m_Index_Fileattribs >= 1)
 		m_Array(nRow, m_Index_Fileattribs) = pFileSearch->FileAttributes();
+	
+	if (m_Index_StringFileattribs >= 1)
+		m_Array(nRow, m_Index_StringFileattribs) = m_FileName = pFileSearch->StringFileAttributes();
 
 	return true;
 }
 
-void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields)
+void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
 {
-	FileSearchStorage::Initialize(pDestination, bToLocalTime, pFields);
+	FileSearchStorage::Initialize(pDestination, bToLocalTime, bStringFileAttribs, pFields);
 	bool created;
-	
+	CStrBuilder<256> pCursorDefinition;
+
 	if (pFields)
 	{
 		m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
-			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = -1;
+			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = m_Index_StringFileattribs = -1;
 		pFields = pFields.Alltrim();
-		CStrBuilder<256> pCursorDefinition;
 		CStringView pFieldName = pFields.GetWordNum(1, ',');
 		unsigned int nFieldNo = 0;
 		while (pFieldName)
 		{
 			CStringView pField = pFieldName.Alltrim();
-			if (pField == "filename")
+			if (pField.ICompare("filename"))
 			{
 				m_Index_Filename = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" M");
+				pCursorDefinition.Append("filename M");
 			}
-			else if (pField == "dosfilename")
+			else if (pField.ICompare("dosfilename"))
 			{
 				m_Index_Dosfilename = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" C(13)");
+				pCursorDefinition.Append("dosfilename C(13)");
 			}
-			else if (pField == "creationtime")
+			else if (pField.ICompare("creationtime"))
 			{
 				m_Index_Creationtime = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" T");
+				pCursorDefinition.Append("creationtime T");
 			}
-			else if (pField == "accesstime")
+			else if (pField.ICompare("accesstime"))
 			{
 				m_Index_Accesstime = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" T");
+				pCursorDefinition.Append("accesstime T");
 			}
-			else if (pField == "writetime")
+			else if (pField.ICompare("writetime"))
 			{
 				m_Index_Writetime = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" T");
+				pCursorDefinition.Append("writetime T");
 			}
-			else if (pField == "filesize")
+			else if (pField.ICompare("filesize"))
 			{
 				m_Index_Filesize = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" N(20,0)");
+				pCursorDefinition.Append("filesize N(20,0)");
 			}
-			else if (pField == "fileattribs")
+			else if (pField.ICompare("fileattribs"))
 			{
 				m_Index_Fileattribs = nFieldNo;
 				if (pCursorDefinition.Len() > 0)
 					pCursorDefinition.Append(",");
-				pCursorDefinition.Append(pField).Append(" I");
+				pCursorDefinition.Append("fileattribs I");
+			}
+			else if (pField.ICompare("cfileattribs"))
+			{
+				m_Index_StringFileattribs = nFieldNo;
+				if (pCursorDefinition.Len() > 0)
+					pCursorDefinition.Append(",");
+				pCursorDefinition.Append("cfileattribs V(10)");
 			}
 			else
 			{
@@ -205,7 +224,12 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 	}
 	else
 	{
-		created = m_Cursor.Create(pDestination, "filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20,0), fileattribs I");
+		pCursorDefinition = "filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20, 0), ";
+		if (bStringFileAttribs)
+			pCursorDefinition.Append("cfileattribs V(10)");
+		else
+			pCursorDefinition.Append("fileattribs I");
+		created = m_Cursor.Create(pDestination, pCursorDefinition);
 		if (created == false)
 		{
 			m_Index_Filename = m_Cursor.GetFieldNumber("filename");
@@ -214,7 +238,21 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 			m_Index_Accesstime = m_Cursor.GetFieldNumber("accesstime");
 			m_Index_Writetime = m_Cursor.GetFieldNumber("writetime");
 			m_Index_Filesize = m_Cursor.GetFieldNumber("filesize");
-			m_Index_Fileattribs = m_Cursor.GetFieldNumber("fileattribs");
+			if (bStringFileAttribs)
+			{
+				m_Index_StringFileattribs = m_Cursor.GetFieldNumber("cfileattribs");
+				m_Index_Fileattribs = -1;
+			}
+			else
+			{
+				m_Index_Fileattribs = m_Cursor.GetFieldNumber("fileattribs");
+				m_Index_StringFileattribs = -1;
+			}
+		}
+		else
+		{
+			m_Index_Fileattribs = bStringFileAttribs ? -1 : 6;
+			m_Index_StringFileattribs = bStringFileAttribs ? 6 : -1;
 		}
 	}
 	m_Cursor.AutoFLock();
@@ -258,16 +296,16 @@ bool FileSearchStorageCursor::Store(FileSearch* pFileSearch)
 	
 	if (m_Index_Fileattribs >= 0)
 		m_Cursor(m_Index_Fileattribs) = pFileSearch->FileAttributes();
+	
+	if (m_Index_StringFileattribs >= 0)
+		m_Cursor(m_Index_StringFileattribs) = m_FileName = pFileSearch->StringFileAttributes();
 
 	return true;
 }
 
-void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLocalTime, CStringView pFields)
+void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
 {
-	FileSearchStorage::Initialize(pDestination, bToLocalTime, pFields);
-	m_AccessTime.ToLocal(bToLocalTime);
-	m_CreationTime.ToLocal(bToLocalTime);
-	m_WriteTime.ToLocal(bToLocalTime);
+	FileSearchStorage::Initialize(pDestination, bToLocalTime, bStringFileAttribs, pFields);
 	if (pDestination.Len > 1024 /* VFP2C_MAX_CALLBACKFUNCTION */ || pDestination.Len == 0)
 	{
 		SaveCustomError("AdirEx", "Callback function length is 0 or greater than maximum length of 1024.");
@@ -277,40 +315,44 @@ void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLoc
 	if (pFields)
 	{
 		m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
-			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = -1;
+			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = m_Index_StringFileattribs = -1;
 		pFields = pFields.Alltrim();
 		CStringView pFieldName = pFields.GetWordNum(1, ',');
 		unsigned int nParmPos = 0;
 		while (pFieldName)
 		{
 			CStringView pField = pFieldName.Alltrim();
-			if (pField == "filename")
+			if (pField.ICompare("filename"))
 			{
 				m_Index_Filename = nParmPos;
 			}
-			else if (pField == "dosfilename")
+			else if (pField.ICompare("dosfilename"))
 			{
 				m_Index_Dosfilename = nParmPos;
 			}
-			else if (pField == "creationtime")
+			else if (pField.ICompare("creationtime"))
 			{
 				m_Index_Creationtime = nParmPos;
 			}
-			else if (pField == "accesstime")
+			else if (pField.ICompare("accesstime"))
 			{
 				m_Index_Accesstime = nParmPos;
 			}
-			else if (pField == "writetime")
+			else if (pField.ICompare("writetime"))
 			{
 				m_Index_Writetime = nParmPos;
 			}
-			else if (pField == "filesize")
+			else if (pField.ICompare("filesize"))
 			{
 				m_Index_Filesize = nParmPos;
 			}
-			else if (pField == "fileattribs")
+			else if (pField.ICompare("fileattribs"))
 			{
 				m_Index_Fileattribs = nParmPos;
+			}
+			else if (pField.ICompare("cfileattribs"))
+			{
+				m_Index_StringFileattribs = nParmPos;
 			}
 			else
 			{
@@ -329,22 +371,39 @@ void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLoc
 		m_Callback.SetParameterPosition(4, m_Index_Writetime);
 		m_Callback.SetParameterPosition(5, m_Index_Filesize);
 		m_Callback.SetParameterPosition(6, m_Index_Fileattribs);
-		m_Callback.OptimizeParameterPosition();
+		m_Callback.SetParameterPosition(7, m_Index_StringFileattribs);
 	}
+	else
+	{
+		m_Index_Fileattribs = bStringFileAttribs ? -1 : 6;
+		m_Index_StringFileattribs = bStringFileAttribs ? 6 : -1;
+		m_Callback.SetParameterPosition(6, m_Index_Fileattribs);
+		m_Callback.SetParameterPosition(7, m_Index_StringFileattribs);
+		
+	}
+	m_Callback.OptimizeParameterPosition();
 }
 
 bool FileSearchStorageCallback::Store(FileSearch* pFileSearch)
 {
 	ValueEx vRetVal;
+	CStringView pStringFileAttributes;
 	CStringView pFileName = pFileSearch->FileName();
 	CStringView pAlternateFileName = pFileSearch->AlternateFileName();
 	m_CreationTime = pFileSearch->CreationTime();
 	m_AccessTime = pFileSearch->LastAccessTime();
 	m_WriteTime = pFileSearch->LastWriteTime();
-	double nFileSize = (double)pFileSearch->FileSize();
+	if (m_ToLocalTime)
+	{
+		m_CreationTime.ToLocal();
+		m_AccessTime.ToLocal();
+		m_WriteTime.ToLocal();
+	}
+	m_FileSize = pFileSearch->FileSize();
 	int nFileAttributes = pFileSearch->FileAttributes();
-
-	int nErrorNo = m_Callback.Evaluate(vRetVal, pFileName, pAlternateFileName, m_CreationTime, m_AccessTime, m_WriteTime, nFileSize, nFileAttributes);
+	if (m_Index_StringFileattribs >= 0)
+		pStringFileAttributes = pFileSearch->StringFileAttributes();
+	int nErrorNo = m_Callback.Evaluate(vRetVal, pFileName, pAlternateFileName, &m_CreationTime, &m_AccessTime, &m_WriteTime, &m_FileSize, nFileAttributes, pStringFileAttributes);
 	if (nErrorNo)
 		throw nErrorNo;
 	if (vRetVal.Vartype() == 'L')
@@ -358,12 +417,13 @@ bool FileSearchStorageCallback::Store(FileSearch* pFileSearch)
 DWORD FileSearch::FindFirstFlags = 0xFFFFFFFF;
 
 FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD nFileFilter = 0, CStringView pDestination = 0,
-	int nDest = 0, bool btoLocalTime = false, int nMaxRecursion = 0, bool bDisableFsRedirection = false, CStringView pFields = 0)
+	int nDest = 0, bool btoLocalTime = false, bool bStringFileAttributes = false, int nMaxRecursion = 0, bool bDisableFsRedirection = false, CStringView pFields = 0)
 {
 	m_Recurse = lRecurse;
 	m_FilterFilter = nFileFilter;
 	m_FilterFakeDirectory = (nFileFilter & FILE_ATTRIBUTE_FAKEDIRECTORY) == 0; 
 	m_FileCount = 0;
+	m_Storage = 0;
 	m_MaxRecursion = nMaxRecursion;
 	m_DisableFsRedirection = bDisableFsRedirection;
 	m_WSearch = false;
@@ -385,20 +445,18 @@ FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD
 	if (nDest & ADIREX_DEST_ARRAY)
 	{
 		m_Storage = new FileSearchStorageArray();
-		m_Storage->Initialize(pDestination, btoLocalTime, pFields);
+		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
 	}
 	else if (nDest & ADIREX_DEST_CURSOR)
 	{
 		m_Storage = new FileSearchStorageCursor();
-		m_Storage->Initialize(pDestination, btoLocalTime, pFields);
+		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
 	}
 	else if (nDest & ADIREX_DEST_CALLBACK)
 	{
 		m_Storage = new FileSearchStorageCallback();
-		m_Storage->Initialize(pDestination, btoLocalTime, pFields);
+		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
 	}
-	else
-		m_Storage = 0;
 	
 	if (nDest & ADIREX_FILTER_ALL)
 		m_FilterFunc = FileSearch::Filter_All;
@@ -517,6 +575,12 @@ bool FileSearch::FindFirst()
 {
 	if (m_Recurse)
 		return FindFirstRecurse();
+
+	if (m_StoreFullPath)
+	{
+		m_CompleteFilename = m_Directory;
+		m_CompleteFilename.SetFormatBase();
+	}
 
 	m_SearchPattern = m_Directory;
 	m_SearchPattern += m_Wildcard;
@@ -1057,6 +1121,70 @@ void _stdcall VFP2C_Destroy_File(VFP2CTls& tls)
 	tls.FileHandles.SetIndex(-1);
 }
 
+DWORD _fastcall AdirEx_FileFilter(FoxString& pFileFilter)
+{
+	DWORD nFileFilter = 0;
+	for (unsigned long xj = 0; xj < pFileFilter.Len(); xj++)
+	{
+		switch (pFileFilter[xj])
+		{
+		case 'R':
+		case 'r':
+			nFileFilter |= FILE_ATTRIBUTE_READONLY;
+			break;
+		case 'H':
+		case 'h':
+			nFileFilter |= FILE_ATTRIBUTE_HIDDEN;
+			break;
+		case 'S':
+		case 's':
+			nFileFilter |= FILE_ATTRIBUTE_SYSTEM;
+			break;
+		case 'D':
+		case 'd':
+			nFileFilter |= FILE_ATTRIBUTE_DIRECTORY;
+			break;
+		case 'A':
+		case 'a':
+			nFileFilter |= FILE_ATTRIBUTE_ARCHIVE;
+			break;
+		case 'T':
+		case 't':
+			nFileFilter |= FILE_ATTRIBUTE_TEMPORARY;
+			break;
+		case 'F':
+		case 'f':
+			nFileFilter |= FILE_ATTRIBUTE_SPARSE_FILE;
+			break;
+		case 'P':
+		case 'p':
+			nFileFilter |= FILE_ATTRIBUTE_REPARSE_POINT;
+			break;
+		case 'C':
+		case 'c':
+			nFileFilter |= FILE_ATTRIBUTE_COMPRESSED;
+			break;
+		case 'O':
+		case 'o':
+			nFileFilter |= FILE_ATTRIBUTE_OFFLINE;
+			break;
+		case 'I':
+		case 'i':
+			nFileFilter |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+			break;
+		case 'E':
+		case 'e':
+			nFileFilter |= FILE_ATTRIBUTE_ENCRYPTED;
+			break;
+		case 'K':
+		case 'k':
+			nFileFilter |= FILE_ATTRIBUTE_FAKEDIRECTORY;
+			break;
+		}
+	}
+	return nFileFilter;
+}
+
 void _fastcall ADirEx(ParamBlkEx& parm)
 {
 	FileSearch* pFileSearch = 0;
@@ -1065,7 +1193,26 @@ try
 	FoxString pDestination(parm(1));
 	FoxString pSearchString(parm(2));
 	FoxString pFields(parm, 6);
-	DWORD nFileFilter = parm.PCount() >= 3 && parm(3)->ev_long ? parm(3)->ev_long : ~FILE_ATTRIBUTE_FAKEDIRECTORY;
+	DWORD nFileFilter = ~FILE_ATTRIBUTE_FAKEDIRECTORY;
+	if (parm.PCount() >= 3)
+	{
+		if (parm(3)->Vartype() == 'I')
+		{
+			if (parm(3)->ev_long)
+				nFileFilter = parm(3)->ev_long;
+		}
+		else if (parm(3)->Vartype() == 'C')
+		{
+			if (parm(3)->Len() > 0)
+			{
+				FoxString pFileFilter(parm(3), 0);
+				nFileFilter = AdirEx_FileFilter(pFileFilter);
+			}
+		}
+		else
+			throw E_INVALIDPARAMS;
+	}
+
 	int nDest = parm.PCount() >= 4 && parm(4)->ev_long ? parm(4)->ev_long : ADIREX_DEST_ARRAY;
 	int nMaxRecursion = parm.PCount() >= 5 ? parm(5)->ev_long : 0;
 
@@ -1075,6 +1222,8 @@ try
 	nDest &= ~ADIREX_RECURSIVE;
 	bool bFsRedirection = (nDest & ADIREX_DISABLE_FSREDIRECTION) > 0;
 	nDest &= ~ADIREX_DISABLE_FSREDIRECTION;
+	bool bStringFileAttributes = (nDest & ADIREX_STRING_FILEATTRIBUTES) > 0;
+	nDest &= ~ADIREX_STRING_FILEATTRIBUTES;
 
 	if (!(nDest & (ADIREX_DEST_ARRAY | ADIREX_DEST_CURSOR | ADIREX_DEST_CALLBACK)))
 		nDest |= ADIREX_DEST_ARRAY;
@@ -1085,15 +1234,13 @@ try
 		throw E_INVALIDPARAMS;
 	}
 	
-	pFileSearch = new FileSearch(llRecurse, pSearchString, nFileFilter, pDestination, nDest, bToLocalTime, nMaxRecursion, bFsRedirection, pFields);
+	pFileSearch = new FileSearch(llRecurse, pSearchString, nFileFilter, pDestination, nDest, bToLocalTime, bStringFileAttributes, nMaxRecursion, bFsRedirection, pFields);
 
 	unsigned int nFileCount = pFileSearch->ExecuteSearch();
 	Return(nFileCount);
 }
 catch(int nErrorNo)
 {
-	if (pFileSearch)
-		delete pFileSearch;
 	RaiseError(nErrorNo);
 }
 if (pFileSearch)
@@ -1142,8 +1289,6 @@ try
 }
 catch (int nErrorNo)
 {
-	if (pFileSearch)
-		delete pFileSearch;
 	RaiseError(nErrorNo);
 }
 if (pFileSearch)
@@ -2063,8 +2208,6 @@ try
 }
 catch(int nErrorNo)
 {
-	if (pFileSearch)
-		delete pFileSearch;
 	RaiseError(nErrorNo);
 }
 if (pFileSearch)

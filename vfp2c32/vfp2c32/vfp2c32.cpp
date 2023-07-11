@@ -436,6 +436,7 @@ FoxInfo VFP2CFuncs[] =
 	{"ReadPWString", (FPFI) ReadPWString, 3, "I.I.?"},
 	{"ReadWCharArray", (FPFI) ReadWCharArray, 3, "II.I"},
 	{"ReadBytes", (FPFI) ReadBytes, 2, "II"},
+	{"ReadFoxValue", (FPFI)ReadFoxValue, 1, "I"},
 
 	/* convert FoxPro to C array and vice versa */
 	{"MarshalFoxArray2CArray", (FPFI) MarshalFoxArray2CArray, 5 ,"IRI.I.I"},
@@ -517,7 +518,7 @@ FoxInfo VFP2CFuncs[] =
 	{"RegistryHiveToObject", (FPFI) RegistryHiveToObject, 3, "ICO"},
 
 	/* file system functions */
-	{"ADirEx",(FPFI) ADirEx, 6, "CC.I.I.I.C"},
+	{"ADirEx",(FPFI) ADirEx, 6, "CC.?.I.I.C"},
 	{"AFileAttributes", (FPFI) AFileAttributes, 3, "CC.L"},
 	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 3, "CC.L"},
 	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "CC"},

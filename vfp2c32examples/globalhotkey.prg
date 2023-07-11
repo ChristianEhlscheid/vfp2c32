@@ -7,9 +7,9 @@
 CD (FULLPATH(JUSTPATH(SYS(16))))
 
 IF TYPE('_WIN64') = 'L' AND _WIN64
-SET LIBRARY TO vfp2c64d.fll ADDITIVE
+SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32d.fll ADDITIVE
+SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
 PUBLIC oHotKeyManager
@@ -21,8 +21,6 @@ lnAtom = m.oHotKeyManager.RegHotKey(MOD_CONTROL, VK_F2)
 ? "Ctrl + F2", lnAtom
 lnAtom = m.oHotKeyManager.RegHotKey(MOD_CONTROL, VK_F3)
 ? "Ctrl + F3", lnAtom
-
-
 
 DEFINE CLASS cGlobalHotKeyManager AS Custom
 

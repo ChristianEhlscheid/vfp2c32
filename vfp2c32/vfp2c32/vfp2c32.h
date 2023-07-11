@@ -91,7 +91,8 @@ inline void _stdcall RaiseError(int nErrorNo)
 		VFP2CTls& tls = VFP2CTls::Tls();
 		_UserError(tls.ErrorInfo[tls.ErrorCount].aErrorMessage);
 	}
-	_Error(nErrorNo);
+	else
+		_Error(nErrorNo);
 }
 
 inline void SaveWin32Error(char *pFunction, unsigned long nErrorNo) { Win32ErrorHandler(pFunction, nErrorNo, false, false); }

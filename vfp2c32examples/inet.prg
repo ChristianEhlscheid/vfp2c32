@@ -4,9 +4,9 @@
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
 IF TYPE('_WIN64') = 'L' AND _WIN64
-SET LIBRARY TO vfp2c64d.fll ADDITIVE
+SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32d.fll ADDITIVE
+SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
 LOCAL laUrl1, lcUrl2, lcUrl3, lcUrl4, lcFile, lcFile2, lcFile3, lcFile4
@@ -23,23 +23,23 @@ lcFile4 = "C:\myvideo4.vob"
 && downloading the file without progress
 &&? UrlDownloadToFileEx(lcUrl,lcFile)
 
-PUBLIC loForm, loForm2, loForm3, loForm4
-DO FORM frmdownloadprogress NAME loForm
-DO FORM frmdownloadprogress NAME loForm2
-DO FORM frmdownloadprogress NAME loForm3
-DO FORM frmdownloadprogress NAME loForm4
+*!*	PUBLIC loForm, loForm2, loForm3, loForm4
+*!*	DO FORM frmdownloadprogress NAME loForm
+*!*	DO FORM frmdownloadprogress NAME loForm2
+*!*	DO FORM frmdownloadprogress NAME loForm3
+*!*	DO FORM frmdownloadprogress NAME loForm4
 
-loForm.Top = 0
-loForm2.Top = loForm.Top + loForm.Height + 30
-loForm3.Top = loForm2.Top + loForm2.Height + 30
-loForm4.Top = loForm3.Top + loForm3.Height + 30
+*!*	loForm.Top = 0
+*!*	loForm2.Top = loForm.Top + loForm.Height + 30
+*!*	loForm3.Top = loForm2.Top + loForm2.Height + 30
+*!*	loForm4.Top = loForm3.Top + loForm3.Height + 30
 
-loForm.StartDownload(lcUrl,lcFile,"loForm.Progress",.T.)
-loForm2.StartDownload(lcUrl2,lcFile2,"loForm2.Progress",.T.)
-loForm3.StartDownload(lcUrl3,lcFile3,"loForm3.Progress",.T.)
-loForm4.StartDownload(lcUrl4,lcFile4,"loForm4.Progress",.T.)
+*!*	loForm.StartDownload(lcUrl,lcFile,"loForm.Progress",.T.)
+*!*	loForm2.StartDownload(lcUrl2,lcFile2,"loForm2.Progress",.T.)
+*!*	loForm3.StartDownload(lcUrl3,lcFile3,"loForm3.Progress",.T.)
+*!*	loForm4.StartDownload(lcUrl4,lcFile4,"loForm4.Progress",.T.)
 
-RETURN
+*!*	RETURN
 
 && return value is the HRESULT of the UrlDownloadToFile function
 && if it's not S_OK (0) you can call AErrorEx for error information
@@ -58,7 +58,6 @@ DISPLAY MEMORY LIKE laIPS
 
 
 && IcmpPing
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_IPHELPER & VFP2C_INIT_WINSOCK flags set
 
 && Ping a remote host
 LOCAL lnPings
@@ -74,7 +73,6 @@ ENDIF
 DISPLAY MEMORY LIKE laPings
 
 && Ip2MacAddress
-&& prerequisites: InitVFP2C32 must have been called with the VFP2C_INIT_IPHELPER flag set
 && uses SendArp API - http://search.msdn.microsoft.com/search/default.aspx?siteId=0&tab=0&query=SendArp
 && !!! Works only for IP addresses in your local network !!!!
 ? IP2MACADDRESS('192.168.0.1')

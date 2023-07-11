@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Extended <a href="its:dv_foxhelp.chm::/html/77958569-651d-46c5-86e3-935dc7ec6486.htm">ADIR</a> function. Stores information about files into an array, cursor or calls a callback function for each file.</p>
 
-<div class="block"><pre>ADirEx(<a href="#p1">cArrayName | cCursorName | cCallback</a>, <a href="#p2">cFileSkeleton</a> [, <a href="#p3">nFileFilter</a> [, <a href="#p4">nFlags</a>]])</pre></div>
+<div class="block"><pre>ADirEx(<a href="#p1">cArrayName | cCursorName | cCallback</a>, <a href="#p2">cFileSkeleton</a> [, <a href="#p3">ncFileFilter</a> [, <a href="#p4">nFlags</a> [, <a href="#p5">nMaxRecursion</a>, <a href="#p6">cFields</a> ]]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cArrayName | cCursorName | cCallback</a></dt>
 <dd><p>The name of the array, cursor or callback function.<br />
@@ -28,33 +28,50 @@
 <tr><td>4</td><td>Last access time</td><td>T</td></tr>
 <tr><td>5</td><td>Last write time</td><td>T</td></tr>
 <tr><td>6</td><td>Filesize</td><td>N</td></tr>
-<tr><td>7</td><td>Attributes</td><td>N</td></tr>
+<tr><td>7</td><td>Attributes</td><td>N or C</td></tr>
 </table><p><br />
 If you specify ADIREX_DEST_CURSOR in the nFlags parameter and the cursor does not exist a cursor with of default fieldnames is created.</p>
 <div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
-<div class="block"><pre id="code_1">CREATE CURSOR theCursorName (filename C(254), dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20,0), fileattribs I)
+<div class="block"><pre id="code_1">CREATE CURSOR theCursorName (filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20,0), fileattribs I)
+&amp;&amp; or if ADIREX_FILEATTRIBUTES_STRING is passed
+CREATE CURSOR theCursorName (filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20,0), fileattribs V(10))
 </pre></div>
-<p>A self created cursor with alternate names or additional fields is also possible, but the fieldtypes and order of the above field's have to match.<br />
+<p>A self created cursor with additional fields is also possible.<br />
+If the cursor already exists the new records will be appended for each file found.<br />
 <br />
 If you specify ADIREX_DEST_CALLBACK in the nFlags parameter the function definition of the callback procedure has to match this one:</p>
 <div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
-<div class="block"><pre id="code_2">FUNCTION AdirExCallbackExample(cFileName,cDosFileName,tCreationTime,tLastAccessTime,tLastWriteTime,nFileSize,nFileAttributes)
+<div class="block"><pre id="code_2">FUNCTION AdirExCallbackExample(cFileName,cDosFileName,tCreationTime,tLastAccessTime,tLastWriteTime,nFileSize,ncFileAttributes)
 ENDFUNC
 </pre></div>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cFileSkeleton</a></dt>
 <dd><p>Fully qualified (drive:\path\wildcard) search string e.g. "C:\Winnt\*.dll"</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p3">nFileFilter (additive)</a></dt>
+<dl class="parm"><dt><a id="p3">ncFileFilter (additive)</a></dt>
 <dd><p>Additionaly filter files by attributes, the type of filtering is controlled by the <em>nFlags</em> parameter.<br />
 <br />
-0 or ommited -&gt; filter is not used<br />
+0 or '' or ommited -&gt; filter is not used<br />
 <br />
-e.g.<br />
-FILE_ATTRIBUTE_DIRECTORY - only directories will be enumerated<br />
-<br />
-there's also a special flag<br />
-FILE_ATTRIBUTE_FAKEDIRECTORY - if you specify it the "fake" directories "." &amp; ".." will also be listed .. by default they are not listed</p>
+A combination of numeric file attributes or a string where each character represents an attribute.<br />
+</p>
+<table>
+<tr><th  style="width: 70px;">Attribute</th><th>Letter</th></tr>
+<tr><td>FILE_ATTRIBUTE_READONLY</td><td>R</td></tr>
+<tr><td>FILE_ATTRIBUTE_HIDDEN</td><td>H</td></tr>
+<tr><td>FILE_ATTRIBUTE_SYSTEM</td><td>S</td></tr>
+<tr><td>FILE_ATTRIBUTE_DIRECTORY</td><td>D</td></tr>
+<tr><td>FILE_ATTRIBUTE_ARCHIVE</td><td>A</td></tr>
+<tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>T</td></tr>
+<tr><td>FILE_ATTRIBUTE_SPARSE_FILE</td><td>F</td></tr>
+<tr><td>FILE_ATTRIBUTE_REPARSE_POINT</td><td>P</td></tr>
+<tr><td>FILE_ATTRIBUTE_COMPRESSED</td><td>C</td></tr>
+<tr><td>FILE_ATTRIBUTE_OFFLINE</td><td>O</td></tr>
+<tr><td>FILE_ATTRIBUTE_NOT_CONTENT_INDEXED</td><td>I</td></tr>
+<tr><td>FILE_ATTRIBUTE_ENCRYPTED</td><td>E</td></tr>
+<tr><td>FILE_ATTRIBUTE_FAKEDIRECTORY</td><td>K</td></tr>
+</table><p><br />
+If you specify the custom flag FILE_ATTRIBUTE_FAKEDIRECTORY, the "fake" directories "." &amp; ".." will also be listed.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">nFlags (additive)</a></dt>
 <dd><p>The <em>nFlags</em> parameter controls three behaviours of the function:<br />
@@ -72,7 +89,22 @@ ADIREX_FILTER_EXACT - the value returned by <a href="/pages/getfileattributes.ht
 <br />
 3. filetime conversion:<br />
 By default filetimes are converted to the local timezone,<br />
-but if you specify  ADIREX_UTC_TIMES filetimes are returned as UTC (GMT) times.</p>
+but if you specify  ADIREX_UTC_TIMES filetimes are returned as UTC (GMT) times.<br />
+<br />
+4. various functions:<br />
+ADIREX_RECURSE - recurse into subdirectories.<br />
+ADIREX_FULLPATH - return full path to files<br />
+ADIREX_DISABLE_FSREDIRECTION - disables fs redirection for 32/64 bit system directories<br />
+ADIREX_FILEATTRIBUTES_STRING - file attributes will be returned in stringified form instead of a numeric value</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nMaxRecursion: default 0 (unlimited)</a></dt>
+<dd><p>The maximal subdirectory depth to search when specifiying ADIREX_RECURSE.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p6">cFields: defaults to all fields in default order</a></dt>
+<dd><p>A comma seperated list of fields to return.<br />
+The order of fields is preserved for cursors and arrays as well as callback functions.<br />
+<br />
+Should be one of "filename, dosfilename, creationtime, accesstime, writetime, filesize, fileattribs, cfileattribs".</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>The number of files / directories.</p>

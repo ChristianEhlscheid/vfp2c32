@@ -20,12 +20,13 @@
 <tr><td>vfp2c32</td><td>Contains the FLL and all supporting files.</td></tr>
 <tr><td>vfp2c32examples</td><td>Contains an example project.</td></tr>
 <tr><td>vfp2c32front</td><td>VFP2C32 Front is a supporting program which translates C struct, union and enum types into VFP code.</td></tr>
+<tr><td>vfpsrvhost</td><td>VFPSrvHost is a standalone C project to host VFP COM objects in a windows service.</td></tr>
 </table>
 
 <h2>Integration into you project</h2>
-<p>Add vfp2c32.fll and vfp2c.h to your project - both excluded from the application/executable.<br />
+<p>Add vfp2c32.fll/vfp2c64.fll and vfp2c.h to your project - both excluded from the application/executable.<br />
 If you need to pass C style arrays to a C library you'll want to have a look at the classes defined in vfp2carray.prg and also include it.</p>
-<p>vfp2c32t.fll is the threadsafe version of the library, you can use it in multithreaded VFP COM dlls.</p>
+<p>vfp2c32t.fll/vfp2c64t.fll is the threadsafe version of the library, you can use it in multithreaded VFP COM dlls.</p>
 
 <h2>Initialization/cleanup of the library</h2>
 
@@ -33,10 +34,16 @@ If you need to pass C style arrays to a C library you'll want to have a look at 
 <div class="block"><pre id="code_33O0ZZMWB">&& somewhere at your programs startup code
 #INCLUDE vfp2c.h
 SET LIBRARY TO vfp2c32.fll ADDITIVE 
+&& or if using VFP Advanced 64 bit 
+SET LIBRARY TO vfp2c64.fll ADDITIVE
 </pre></div>
 
-<h2>Deployment</h2>
-<p>Just place a copy of vfp2c32.fll/vfp2c32t.fll and msvcr71.dll in your application directory structure, <strong>NOT</strong> in Windows\System32.</p>
+<h2>Deployment 32 bit</h2>
+<p>Just place a copy of vfp2c32t.fll/vfp2c32t.fll and msvcr71.dll in your application directory structure, <strong>NOT</strong> in Windows\System32.</p>
+
+<h2>Deployment 64 bit</h2>
+<p>Place a copy of vfp2c64.fll/vfp2c64t.fll and msvcr100.dll in your application directory structure, <strong>NOT</strong> in Windows\System32.</p>
+
 
 </div>
 <div id="footer">

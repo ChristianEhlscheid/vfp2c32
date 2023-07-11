@@ -147,6 +147,7 @@ void _fastcall ReadWString(ParamBlkEx& parm);
 void _fastcall ReadPWString(ParamBlkEx& parm);
 void _fastcall ReadWCharArray(ParamBlkEx& parm);
 void _fastcall ReadBytes(ParamBlkEx& parm);
+void _fastcall ReadFoxValue(ParamBlkEx& parm);
 
 void _fastcall MarshalFoxArray2CArray(ParamBlkEx& parm);
 void _fastcall MarshalCArray2FoxArray(ParamBlkEx& parm);
