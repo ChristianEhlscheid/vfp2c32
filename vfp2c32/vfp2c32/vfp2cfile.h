@@ -147,7 +147,7 @@ typedef void(*FileSearchReverseFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWOR
 class FileSearch
 {
 public:
-	FileSearch(bool lRecurse, CStringView pSearchPath, DWORD nFileFilter, CStringView pDestination, int nDest, bool bToLocalTime, bool bStringFileAttributes, int nMaxRecursion, bool bDisableFsRedirection, CStringView pFields);
+	FileSearch(bool lRecurse, CStringView pSearchPath, DWORD nFileFilter, DWORD nFilterMatch, CStringView pDestination, int nDest, bool bToLocalTime, bool bStringFileAttributes, int nMaxRecursion, bool bDisableFsRedirection, CStringView pFields);
 	~FileSearch();
 
 	unsigned int ExecuteSearch();
@@ -179,15 +179,14 @@ private:
 	bool IsFakeDirName() const;
 	bool IgnorableSearchError(DWORD nLastError, bool bIgnoreAccessDenied = false) const;
 
-	typedef bool(*FileFilterFunc)(DWORD nAttributes, DWORD nFilter);
-	static bool Filter_All(DWORD nAttributes, DWORD nFilter);
-	static bool Filter_One(DWORD nAttributes, DWORD nFilter);
-	static bool Filter_None(DWORD nAttributes, DWORD nFilter);
-	static bool Filter_Exact(DWORD nAttributes, DWORD nFilter);
-
+	typedef bool(*FileFilterFunc)(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch);
+	static bool Filter_Default(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch);
+	static bool Filter_Exact(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch);
+	static bool Filter_Any(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch);
 
 	FileFilterFunc		m_FilterFunc;
-	DWORD				m_FilterFilter;
+	DWORD				m_FilterAttributes;
+	DWORD				m_FilterMatch;
 	int					m_FileCount;
 	int					m_MaxRecursion;
 	int					m_RecursionLevel;

@@ -92,11 +92,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Christian Ehlscheid"
             VALUE "FileDescription", "VFP2C32"
-            VALUE "FileVersion", "2, 0, 0, 24"
+            VALUE "FileVersion", "2, 0, 0, 25"
             VALUE "LegalCopyright", "Shared Source License for VFPX"
             VALUE "OriginalFilename", "vfp2c32.fll"
             VALUE "ProductName", "VFP2C32"
-            VALUE "ProductVersion", "2, 0, 0, 24"
+            VALUE "ProductVersion", "2, 0, 0, 25"
         END
     END
     BLOCK "VarFileInfo"

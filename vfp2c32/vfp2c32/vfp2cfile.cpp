@@ -416,11 +416,12 @@ bool FileSearchStorageCallback::Store(FileSearch* pFileSearch)
 
 DWORD FileSearch::FindFirstFlags = 0xFFFFFFFF;
 
-FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD nFileFilter = 0, CStringView pDestination = 0,
+FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD nFileFilter = 0, DWORD nFilterMatch = 0, CStringView pDestination = 0,
 	int nDest = 0, bool btoLocalTime = false, bool bStringFileAttributes = false, int nMaxRecursion = 0, bool bDisableFsRedirection = false, CStringView pFields = 0)
 {
 	m_Recurse = lRecurse;
-	m_FilterFilter = nFileFilter;
+	m_FilterAttributes = nFileFilter;
+	m_FilterMatch = nFilterMatch;
 	m_FilterFakeDirectory = (nFileFilter & FILE_ATTRIBUTE_FAKEDIRECTORY) == 0; 
 	m_FileCount = 0;
 	m_Storage = 0;
@@ -458,15 +459,27 @@ FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD
 		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
 	}
 	
+	m_FilterFunc = FileSearch::Filter_Default;
 	if (nDest & ADIREX_FILTER_ALL)
-		m_FilterFunc = FileSearch::Filter_All;
+	{
+		m_FilterMatch = nFilterMatch;
+	}
 	else if (nDest & ADIREX_FILTER_NONE)
-		m_FilterFunc = FileSearch::Filter_None;
+	{
+		m_FilterMatch = 0;
+	}
 	else if (nDest & ADIREX_FILTER_EXACT)
+	{
 		m_FilterFunc = FileSearch::Filter_Exact;
+		m_FilterMatch = m_FilterAttributes;
+	}
 	else
-		m_FilterFunc = FileSearch::Filter_One;
-
+	{
+		if (nFileFilter == nFilterMatch)
+			m_FilterFunc = FileSearch::Filter_Any;
+		else
+			m_FilterFunc = FileSearch::Filter_Default;
+	}
 	m_StoreFullPath = (nDest & ADIREX_FULLPATH) > 0;
 }
 
@@ -492,7 +505,7 @@ unsigned int FileSearch::ExecuteSearch()
 		
 		do
 		{
-			if (m_FilterFunc(FileAttributes(), m_FilterFilter))
+			if (m_FilterFunc(FileAttributes(), m_FilterAttributes, m_FilterMatch))
 			{
 				if (m_Recurse && !MatchFile())
 					continue;
@@ -938,24 +951,19 @@ bool FileSearch::FindNextReverse()
 	}
 }
 
-bool FileSearch::Filter_All(DWORD nAttributes, DWORD nFilter)
+bool FileSearch::Filter_Default(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
 {
-	return (nAttributes & nFilter) == nFilter;
+	return (nAttributes & nFilter) == nFilterMatch;
 }
 
-bool FileSearch::Filter_One(DWORD nAttributes, DWORD nFilter)
-{
-	return (nAttributes & nFilter) > 0;
-}
-
-bool FileSearch::Filter_None(DWORD nAttributes, DWORD nFilter)
-{
-	return (nAttributes & nFilter) == 0;
-}
-
-bool FileSearch::Filter_Exact(DWORD nAttributes, DWORD nFilter)
+bool FileSearch::Filter_Exact(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
 {
 	return nAttributes == nFilter;
+}
+
+bool FileSearch::Filter_Any(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
+{
+	return (nAttributes & nFilter) > 0;
 }
 
 void FileSearch::DisableFsRedirection()
@@ -1121,66 +1129,99 @@ void _stdcall VFP2C_Destroy_File(VFP2CTls& tls)
 	tls.FileHandles.SetIndex(-1);
 }
 
-DWORD _fastcall AdirEx_FileFilter(FoxString& pFileFilter)
+DWORD _fastcall AdirEx_FileFilter(FoxString& pFileFilter, DWORD& nMatch)
 {
 	DWORD nFileFilter = 0;
+	nMatch = 0;
+	bool bNegate = false;
 	for (unsigned long xj = 0; xj < pFileFilter.Len(); xj++)
 	{
-		switch (pFileFilter[xj])
+		char filterchar = pFileFilter[xj];
+		if (filterchar == '-')
+		{
+			bNegate = true;
+			continue;
+		}
+		switch (filterchar)
 		{
 		case 'R':
 		case 'r':
 			nFileFilter |= FILE_ATTRIBUTE_READONLY;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_READONLY;
 			break;
 		case 'H':
 		case 'h':
 			nFileFilter |= FILE_ATTRIBUTE_HIDDEN;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_HIDDEN;
 			break;
 		case 'S':
 		case 's':
 			nFileFilter |= FILE_ATTRIBUTE_SYSTEM;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_SYSTEM;
 			break;
 		case 'D':
 		case 'd':
 			nFileFilter |= FILE_ATTRIBUTE_DIRECTORY;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_DIRECTORY;
 			break;
 		case 'A':
 		case 'a':
 			nFileFilter |= FILE_ATTRIBUTE_ARCHIVE;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_ARCHIVE;
 			break;
 		case 'T':
 		case 't':
 			nFileFilter |= FILE_ATTRIBUTE_TEMPORARY;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_TEMPORARY;
 			break;
 		case 'F':
 		case 'f':
 			nFileFilter |= FILE_ATTRIBUTE_SPARSE_FILE;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_SPARSE_FILE;
 			break;
 		case 'P':
 		case 'p':
 			nFileFilter |= FILE_ATTRIBUTE_REPARSE_POINT;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_REPARSE_POINT;
 			break;
 		case 'C':
 		case 'c':
 			nFileFilter |= FILE_ATTRIBUTE_COMPRESSED;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_COMPRESSED;
 			break;
 		case 'O':
 		case 'o':
 			nFileFilter |= FILE_ATTRIBUTE_OFFLINE;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_OFFLINE;
 			break;
 		case 'I':
 		case 'i':
 			nFileFilter |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
 			break;
 		case 'E':
 		case 'e':
 			nFileFilter |= FILE_ATTRIBUTE_ENCRYPTED;
+			if (bNegate == false)
+				nMatch |= FILE_ATTRIBUTE_ENCRYPTED;
 			break;
 		case 'K':
 		case 'k':
 			nFileFilter |= FILE_ATTRIBUTE_FAKEDIRECTORY;
 			break;
 		}
+		bNegate = false;
 	}
 	return nFileFilter;
 }
@@ -1194,6 +1235,7 @@ try
 	FoxString pSearchString(parm(2));
 	FoxString pFields(parm, 6);
 	DWORD nFileFilter = ~FILE_ATTRIBUTE_FAKEDIRECTORY;
+	DWORD nFileMatch = parm.PCount() >= 7 ? parm(7)->ev_long : 0;
 	if (parm.PCount() >= 3)
 	{
 		if (parm(3)->Vartype() == 'I')
@@ -1206,7 +1248,7 @@ try
 			if (parm(3)->Len() > 0)
 			{
 				FoxString pFileFilter(parm(3), 0);
-				nFileFilter = AdirEx_FileFilter(pFileFilter);
+				nFileFilter = AdirEx_FileFilter(pFileFilter, nFileMatch);
 			}
 		}
 		else
@@ -1234,7 +1276,7 @@ try
 		throw E_INVALIDPARAMS;
 	}
 	
-	pFileSearch = new FileSearch(llRecurse, pSearchString, nFileFilter, pDestination, nDest, bToLocalTime, bStringFileAttributes, nMaxRecursion, bFsRedirection, pFields);
+	pFileSearch = new FileSearch(llRecurse, pSearchString, nFileFilter, nFileMatch, pDestination, nDest, bToLocalTime, bStringFileAttributes, nMaxRecursion, bFsRedirection, pFields);
 
 	unsigned int nFileCount = pFileSearch->ExecuteSearch();
 	Return(nFileCount);

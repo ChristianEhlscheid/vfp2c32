@@ -518,7 +518,7 @@ FoxInfo VFP2CFuncs[] =
 	{"RegistryHiveToObject", (FPFI) RegistryHiveToObject, 3, "ICO"},
 
 	/* file system functions */
-	{"ADirEx",(FPFI) ADirEx, 6, "CC.?.I.I.C"},
+	{"ADirEx",(FPFI) ADirEx, 7, "CC.?.I.I.C.I"},
 	{"AFileAttributes", (FPFI) AFileAttributes, 3, "CC.L"},
 	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 3, "CC.L"},
 	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "CC"},

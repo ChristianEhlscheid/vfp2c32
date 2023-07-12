@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Extended <a href="its:dv_foxhelp.chm::/html/77958569-651d-46c5-86e3-935dc7ec6486.htm">ADIR</a> function. Stores information about files into an array, cursor or calls a callback function for each file.</p>
 
-<div class="block"><pre>ADirEx(<a href="#p1">cArrayName | cCursorName | cCallback</a>, <a href="#p2">cFileSkeleton</a> [, <a href="#p3">ncFileFilter</a> [, <a href="#p4">nFlags</a> [, <a href="#p5">nMaxRecursion</a>, <a href="#p6">cFields</a> ]]]]])</pre></div>
+<div class="block"><pre>ADirEx(<a href="#p1">cArrayName | cCursorName | cCallback</a>, <a href="#p2">cFileSkeleton</a> [, <a href="#p3">ncFileFilter</a> [, <a href="#p4">nFlags</a> [, <a href="#p5">nMaxRecursion</a>, <a href="#p6">cFields</a> [, <a href="#p7">nFilterMatch</a> ]]]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cArrayName | cCursorName | cCallback</a></dt>
 <dd><p>The name of the array, cursor or callback function.<br />
@@ -54,6 +54,9 @@ ENDFUNC
 0 or '' or ommited -&gt; filter is not used<br />
 <br />
 A combination of numeric file attributes or a string where each character represents an attribute.<br />
+When passing a string a '-' sign before the attributes excludes files with the specific attribute set,<br />
+the same can be achieved when passing a numeric value by combining this parameter with the<br />
+parameter "nFilterMatch".<br />
 </p>
 <table>
 <tr><th  style="width: 70px;">Attribute</th><th>Letter</th></tr>
@@ -105,6 +108,13 @@ ADIREX_FILEATTRIBUTES_STRING - file attributes will be returned in stringified f
 The order of fields is preserved for cursors and arrays as well as callback functions.<br />
 <br />
 Should be one of "filename, dosfilename, creationtime, accesstime, writetime, filesize, fileattribs, cfileattribs".</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p7">nFilterMatch (additive)</a></dt>
+<dd><p>When passed the files are filtered by the attributes passed in the "ncFileFilter" and this parameter by the following logic.<br />
+</p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1"><a href="its:dv_foxhelp.chm::/html/e03290b3-e96a-421c-8efa-f9b1691b09cb.htm">BITAND</a>(fileattributes, ncFileFilter) == nFilterMatch
+</pre></div>
 </dd></dl>
 <h2>Return Value</h2>
 <p>The number of files / directories.</p>
