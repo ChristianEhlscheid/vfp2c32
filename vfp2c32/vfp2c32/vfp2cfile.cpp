@@ -1234,14 +1234,17 @@ try
 	FoxString pDestination(parm(1));
 	FoxString pSearchString(parm(2));
 	FoxString pFields(parm, 6);
-	DWORD nFileFilter = ~FILE_ATTRIBUTE_FAKEDIRECTORY;
-	DWORD nFileMatch = parm.PCount() >= 7 ? parm(7)->ev_long : 0;
+	DWORD nFileFilter, nFileMatch;
+	nFileFilter = nFileMatch = ~FILE_ATTRIBUTE_FAKEDIRECTORY;
 	if (parm.PCount() >= 3)
 	{
 		if (parm(3)->Vartype() == 'I')
 		{
 			if (parm(3)->ev_long)
+			{
 				nFileFilter = parm(3)->ev_long;
+				nFileMatch = parm.PCount() >= 7 ? parm(7)->ev_long : nFileFilter;
+			}
 		}
 		else if (parm(3)->Vartype() == 'C')
 		{
