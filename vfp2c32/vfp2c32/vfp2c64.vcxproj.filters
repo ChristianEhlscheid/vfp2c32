@@ -129,6 +129,9 @@
     <ClInclude Include="vfp2cstring.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="vfp2cshell.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="vfp2c32.rc">
@@ -232,10 +235,16 @@
     <ClCompile Include="vfp2cstring.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vfp2cshell.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vfp2c32.def">
       <Filter>Source Files</Filter>
+    </None>
+    <None Include="vfp2c32.ico">
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -1,9 +1,6 @@
 #ifndef _VFP2CFILE_H__
 #define _VFP2CFILE_H__
 
-// #include <shlwapi.h>
-#include <shlobj.h>
-
 const int ADIREX_DEST_ARRAY				= 0x01;
 const int ADIREX_DEST_CURSOR			= 0x02;
 const int ADIREX_DEST_CALLBACK			= 0x04;
@@ -54,7 +51,7 @@ const int VFP2C_FILE_LINE_BUFFER	= 32;
 const unsigned int FILE_ATTRIBUTE_FAKEDIRECTORY	= 0x80000000;
 const int SECURITY_DESCRIPTOR_LEN		= 256;
 
-class FileSearch; // forward declartion
+class FileSearch; // forward declaration
 
 class FileSearchStorage
 {
@@ -442,14 +439,9 @@ public:
 	CFoxCallback pCallback;
 };
 
-// typedef's for runtime dynamic linking
-typedef BOOL (_stdcall *PGETSPECIALFOLDER)(HWND,LPSTR,int,BOOL); // SHGetSpecialFolderPathA (shell32.dll)
-typedef HRESULT (_stdcall *PSHILCREATEFROMPATH)(LPCWSTR,LPITEMIDLIST*,DWORD*); // SHILCreateFromPath (shell32.dll)
-typedef LPITEMIDLIST (_stdcall *PSHILCREATEFROMPATHEX)(LPCWSTR); // undocumented func #162 on shell32.dll
-#define SHILCREATEFROMPATHEXID	162
 
+// 
 typedef BOOL (_stdcall *PGETVOLUMEPATHNAMESFORVOLUMENAME)(LPCTSTR, LPTSTR, DWORD, PDWORD); // GetVolumePathNamesForVolumeName
-
 // Wow64DisableWow64FsRedirection & Wow64RevertWow64FsRedirection
 typedef BOOL (_stdcall * PWOW64FSREDIRECTION)(PVOID* OldValue);
 
@@ -516,15 +508,6 @@ void _fastcall AFHandlesEx(ParamBlkEx& parm);
 #pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
 void _stdcall MapFileAccessFlags(int nFileAttribs, int nAccess, int nShare, LPDWORD pAccess, LPDWORD pShare, LPDWORD pFlags) throw(int);
 #pragma warning(default : 4290) // enable warning 4290 - VC++ doesn't implement throw ...
-
-// shell api wrappers
-void _fastcall SHSpecialFolder(ParamBlkEx& parm);
-void _fastcall SHMoveFiles(ParamBlkEx& parm);
-void _fastcall SHCopyFiles(ParamBlkEx& parm);
-void _fastcall SHDeleteFiles(ParamBlkEx& parm);
-void _fastcall SHRenameFiles(ParamBlkEx& parm);
-void _fastcall SHBrowseFolder(ParamBlkEx& parm);
-int _stdcall SHBrowseCallback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData);
 
 #ifdef __cplusplus
 }

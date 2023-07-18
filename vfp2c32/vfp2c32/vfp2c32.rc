@@ -13,13 +13,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// German (Germany) resources
+// Deutsch (Deutschland) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)
-#ifdef _WIN32
 LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -29,18 +27,17 @@ LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON1               ICON                    "vfp2c32.ico"
-#endif    // German (Germany) resources
+
+#endif    // Deutsch (Deutschland) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// Englisch (USA) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -74,8 +71,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,24
- PRODUCTVERSION 2,0,0,24
+ FILEVERSION 2,0,0,26
+ PRODUCTVERSION 2,0,0,26
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -92,11 +89,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Christian Ehlscheid"
             VALUE "FileDescription", "VFP2C32"
-            VALUE "FileVersion", "2, 0, 0, 25"
+            VALUE "FileVersion", "2.0.0.26"
             VALUE "LegalCopyright", "Shared Source License for VFPX"
             VALUE "OriginalFilename", "vfp2c32.fll"
             VALUE "ProductName", "VFP2C32"
-            VALUE "ProductVersion", "2, 0, 0, 25"
+            VALUE "ProductVersion", "2.0.0.26"
         END
     END
     BLOCK "VarFileInfo"
@@ -105,7 +102,7 @@ BEGIN
     END
 END
 
-#endif    // English (U.S.) resources
+#endif    // Englisch (USA) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

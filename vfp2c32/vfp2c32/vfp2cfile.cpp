@@ -4,11 +4,11 @@
 
 // #include <winioctl.h>
 // #include <uxtheme.h>
+#include <propidl.h>
+#include <propkey.h>
+#include <propvarutil.h>
 
 // dynamic function pointers for runtime linking
-static PGETSPECIALFOLDER fpGetSpecialFolder = 0;
-static PSHILCREATEFROMPATH fpSHILCreateFromPath = 0;
-static PSHILCREATEFROMPATHEX fpSHILCreateFromPathEx = 0;
 static PGETVOLUMEPATHNAMESFORVOLUMENAME fpGetVolumePathNamesForVolumeName = 0;
 static PWOW64FSREDIRECTION fpWow64DisableWow64FsRedirection = 0;
 static PWOW64FSREDIRECTION fpWow64RevertWow64FsRedirection = 0;
@@ -154,60 +154,48 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 		while (pFieldName)
 		{
 			CStringView pField = pFieldName.Alltrim();
+
+			if (pCursorDefinition.Len() > 0)
+				pCursorDefinition.Append(",");
+
 			if (pField.ICompare("filename"))
 			{
 				m_Index_Filename = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("filename M");
 			}
 			else if (pField.ICompare("dosfilename"))
 			{
 				m_Index_Dosfilename = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("dosfilename C(13)");
 			}
 			else if (pField.ICompare("creationtime"))
 			{
 				m_Index_Creationtime = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("creationtime T");
 			}
 			else if (pField.ICompare("accesstime"))
 			{
 				m_Index_Accesstime = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("accesstime T");
 			}
 			else if (pField.ICompare("writetime"))
 			{
 				m_Index_Writetime = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("writetime T");
 			}
 			else if (pField.ICompare("filesize"))
 			{
 				m_Index_Filesize = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("filesize N(20,0)");
 			}
 			else if (pField.ICompare("fileattribs"))
 			{
 				m_Index_Fileattribs = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("fileattribs I");
 			}
 			else if (pField.ICompare("cfileattribs"))
 			{
 				m_Index_StringFileattribs = nFieldNo;
-				if (pCursorDefinition.Len() > 0)
-					pCursorDefinition.Append(",");
 				pCursorDefinition.Append("cfileattribs V(10)");
 			}
 			else
@@ -2257,302 +2245,6 @@ catch(int nErrorNo)
 }
 if (pFileSearch)
 	delete pFileSearch;
-}
-
-void _fastcall SHSpecialFolder(ParamBlkEx& parm)
-{
-try
-{
-	if (fpGetSpecialFolder == 0)
-	{
-		HMODULE hDll;
-		hDll = GetModuleHandle("shell32.dll");
-		if (hDll)
-		{
-			fpGetSpecialFolder = (PGETSPECIALFOLDER)GetProcAddress(hDll,"SHGetSpecialFolderPathA");
-			if (fpGetSpecialFolder == 0)
-				throw E_NOENTRYPOINT;
-		}
-		else
-		{
-			SaveWin32Error("GetModuleHandle", GetLastError());
-			throw E_APIERROR;
-		}
-	}
-
-	FoxString pFolder(MAX_PATH);
-	LocatorEx& pRef = parm(2);
-	BOOL bCreateDir = parm.PCount() >= 3 ? parm(3)->ev_length : FALSE;
-
-	if (fpGetSpecialFolder(WTopHwnd(),pFolder,parm(1)->ev_long, bCreateDir))
-	{
-		pFolder.Len(strlen(pFolder));
-		pRef = pFolder;
-		Return(true);
-	}
-	else
-		Return(false);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall SHCopyFiles(ParamBlkEx& parm)
-{
-try
-{
-	FoxString pFrom(parm(1),2);
-	FoxString pTo(parm(2),2);
-	FoxString pTitle(parm,4);
-
-	SHFILEOPSTRUCT sFileOp = {0};
-
-	sFileOp.wFunc = FO_COPY;
-	sFileOp.fFlags = (FILEOP_FLAGS)parm(3)->ev_long;
-	sFileOp.hwnd = WTopHwnd();
-
-	sFileOp.pFrom = pFrom;
-	sFileOp.pTo = pTo;
-
-	if (pTitle.Len())
-	{
-		sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-		sFileOp.lpszProgressTitle = pTitle;
-	}
-
-	int nRet = SHFileOperation(&sFileOp);
-	if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
-		Return(1);
-	else if (sFileOp.fAnyOperationsAborted)
-		Return(0);
-	else
-		Return(nRet);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall SHDeleteFiles(ParamBlkEx& parm)
-{
-try
-{
-	FoxString pFile(parm(1),2);
-	FoxString pTitle(parm,3);
-
-	SHFILEOPSTRUCT sFileOp = {0};
-
-	sFileOp.wFunc = FO_DELETE;
-	sFileOp.fFlags = (FILEOP_FLAGS)parm(2)->ev_long;
-	sFileOp.hwnd = WTopHwnd();
-
-	sFileOp.pFrom = pFile;
-
-	if (pTitle.Len())
-	{
-		sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-		sFileOp.lpszProgressTitle = pTitle;
-	}
-
-	int nRet = SHFileOperation(&sFileOp);
-	if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
-		Return(1);
-	else if (sFileOp.fAnyOperationsAborted)
-		Return(0);
-	else
-		Return(nRet);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall SHMoveFiles(ParamBlkEx& parm)
-{
-try
-{
-	FoxString pFrom(parm(1),2);
-	FoxString pTo(parm(2),2);
-	FoxString pTitle(parm,4);
-
-	SHFILEOPSTRUCT sFileOp = {0};
-    
-	sFileOp.wFunc = FO_MOVE;
-	sFileOp.fFlags = (FILEOP_FLAGS)parm(3)->ev_long;
-	sFileOp.hwnd = WTopHwnd();
-
-	sFileOp.pFrom = pFrom;
-	sFileOp.pTo = pTo;
-
-	if (pTitle.Len())
-	{
-		sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-		sFileOp.lpszProgressTitle = pTitle;
-	}
-
-	int nRet = SHFileOperation(&sFileOp);
-	if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
-		Return(1);
-	else if (sFileOp.fAnyOperationsAborted)
-		Return(0);
-	else
-		Return(nRet);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall SHRenameFiles(ParamBlkEx& parm)
-{
-try
-{
-	FoxString pFrom(parm(1),2);
-	FoxString pTo(parm(2),2);
-	FoxString pTitle(parm,4);
-
-	SHFILEOPSTRUCT sFileOp = {0};
-
-	sFileOp.wFunc = FO_RENAME;
-	sFileOp.fFlags = (FILEOP_FLAGS)parm(3)->ev_long;
-	sFileOp.hwnd = WTopHwnd();
-
-	sFileOp.pFrom = parm(1)->HandleToPtr();
-	sFileOp.pTo = parm(2)->HandleToPtr();
-
-	if (pTitle.Len())
-	{
-		sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-		sFileOp.lpszProgressTitle = pTitle;
-	}
-
-	int nRet = SHFileOperation(&sFileOp);
-	if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
-		Return(1);
-	else if (sFileOp.fAnyOperationsAborted)
-		Return(0);
-	else
-		Return(nRet);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall SHBrowseFolder(ParamBlkEx& parm)
-{
-try
-{
-	FoxString pTitle(parm(1));
-	FoxWString<MAX_PATH> pRootFolder(parm,4);
-	FoxString pCallback(parm,5);
-	FoxString pFolder(MAX_PATH);
-	CoTaskPtr pIdl, pRootIdl;
-
-	BROWSEINFO sBrow;
-	CFoxCallback sCallback;
-	char aDisplayName[MAX_PATH];
-	HRESULT hr;
-	DWORD nRootAttr = 0;
-
-	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
-	{
-		SaveCustomError("SHBrowseFolder", "Callback function length is greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
-	}
-
-	if (pRootFolder)
-	{
-		if (fpSHILCreateFromPath == 0 && fpSHILCreateFromPathEx == 0)
-		{
-			HMODULE hDll;
-			hDll = GetModuleHandle("shell32.dll");
-			if (hDll)
-			{
-				fpSHILCreateFromPath = (PSHILCREATEFROMPATH)GetProcAddress(hDll,"SHILCreateFromPath");
-				fpSHILCreateFromPathEx = (PSHILCREATEFROMPATHEX)GetProcAddress(hDll, (LPCSTR)SHILCREATEFROMPATHEXID);
-				if (fpSHILCreateFromPath == 0 && fpSHILCreateFromPathEx == 0)
-					throw E_NOENTRYPOINT;
-			}
-			else
-			{
-				SaveWin32Error("GetModuleHandle", GetLastError());
-				throw E_APIERROR;
-			}
-		}
-
-		if (fpSHILCreateFromPath)
-		{
-			hr = fpSHILCreateFromPath(pRootFolder,pRootIdl,&nRootAttr);
-			if (FAILED(hr))
-			{
-				SaveCustomError("SHILCreateFromPath", "Function failed. HRESULT: %I", hr);
-				throw E_APIERROR;
-			}
-		}
-		else
-			pRootIdl = fpSHILCreateFromPathEx(pRootFolder);
-
-		sBrow.pidlRoot = pRootIdl;
-	}
-	else
-		sBrow.pidlRoot = 0;
-
-	if (pCallback.Len())
-		sCallback.SetCallback(pCallback);
-
-	sBrow.lpfn = pCallback.Len() ? SHBrowseCallback : 0;
-	sBrow.lParam = pCallback.Len() ? reinterpret_cast<LPARAM>(&sCallback) : 0;
-	sBrow.iImage = 0;
-	sBrow.hwndOwner = WTopHwnd();
-	sBrow.pszDisplayName = aDisplayName;
-	sBrow.lpszTitle = pTitle;
-	sBrow.ulFlags = parm(2)->ev_long;
-
-	pIdl = SHBrowseForFolder(&sBrow);
-
-	if (pIdl)
-	{
-		if (!SHGetPathFromIDList(pIdl,pFolder))
-		{
-			SaveCustomError("SHGetPathFromIDList","Function failed.");
-			throw E_APIERROR;
-		}
-		LocatorEx& pRef = parm(3);
-		pRef = pFolder.StringLen();
-		Return(true);
-	}
-	else
-		Return(false);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-int _stdcall SHBrowseCallback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
-{
-	int nRetVal = 0;
-	FoxValue vRetVal;
-	CFoxCallback *pCallback = reinterpret_cast<CFoxCallback*>(lpData);
-	int nErrorNo = pCallback->Evaluate(vRetVal, hwnd, uMsg, lParam);
-	if (nErrorNo == 0)
-	{
-		if (vRetVal.Vartype() == 'I')
-			nRetVal = vRetVal->ev_long;
-		else if (vRetVal.Vartype() == 'L')
-			nRetVal = vRetVal->ev_length;
-		else if (vRetVal.Vartype() == 'N')
-			nRetVal = static_cast<int>(vRetVal->ev_real);
-	}
-	return nRetVal;
 }
 
 void _fastcall GetOpenFileNameLib(ParamBlkEx& parm)

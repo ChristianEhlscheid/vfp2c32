@@ -26,6 +26,7 @@
 #include "vfp2cwininet.h" /* wrappers around wininet.dll functions */
 #include "vfp2ccallback.h" /* C Callback function emulation */
 #include "vfp2cwinsock.h" /* winsock initialization */
+#include "vfp2cshell.h" /* windows shell wrappers */
 #include "vfp2csntp.h"	/* SNTP (RFC 1769) implementation */
 #include "vfp2cservices.h" /* win service functions */
 #include "vfp2cwindows.h" /* some window functions */
@@ -571,6 +572,7 @@ FoxInfo VFP2CFuncs[] =
 	{"SHDeleteFiles", (FPFI) SHDeleteFiles, 3, "C.I.C"},
 	{"SHRenameFiles", (FPFI) SHRenameFiles, 3, "CC.I"},
 	{"SHBrowseFolder", (FPFI) SHBrowseFolder, 5, "CIR.C.C"},
+	{"SHGetShellItem", (FPFI)SHGetShellItem, 1, "C"},
 
 	/* windows message hooks */
 #ifndef _THREADSAFE

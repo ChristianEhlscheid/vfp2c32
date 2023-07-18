@@ -33,7 +33,7 @@
 If you specify ADIREX_DEST_CURSOR in the nFlags parameter and the cursor does not exist a cursor with of default fieldnames is created.</p>
 <div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
 <div class="block"><pre id="code_1">CREATE CURSOR theCursorName (filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20,0), fileattribs I)
-&amp;&amp; or if ADIREX_FILEATTRIBUTES_STRING is passed
+&amp;&amp; or if ADIREX_STRING_FILEATTRIBUTES is passed
 CREATE CURSOR theCursorName (filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20,0), fileattribs V(10))
 </pre></div>
 <p>A self created cursor with additional fields is also possible.<br />
@@ -98,7 +98,7 @@ but if you specify  ADIREX_UTC_TIMES filetimes are returned as UTC (GMT) times.<
 ADIREX_RECURSE - recurse into subdirectories.<br />
 ADIREX_FULLPATH - return full path to files<br />
 ADIREX_DISABLE_FSREDIRECTION - disables fs redirection for 32/64 bit system directories<br />
-ADIREX_FILEATTRIBUTES_STRING - file attributes will be returned in stringified form instead of a numeric value</p>
+ADIREX_STRING_FILEATTRIBUTES - file attributes will be returned in stringified form instead of a numeric value</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p5">nMaxRecursion: default 0 (unlimited)</a></dt>
 <dd><p>The maximal subdirectory depth to search when specifiying ADIREX_RECURSE.</p>

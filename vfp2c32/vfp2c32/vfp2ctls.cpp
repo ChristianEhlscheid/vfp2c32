@@ -137,6 +137,7 @@ void VFP2CTls::FreeGlobalResources()
 		FreeLibrary(NetApi32);
 	if (Heap)
 		HeapDestroy(Heap);
+
 }
 
 VFP2CTls& _stdcall VFP2CTls::Tls()

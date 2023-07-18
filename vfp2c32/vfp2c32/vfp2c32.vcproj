@@ -28,7 +28,7 @@
 				ImproveFloatingPointConsistency="TRUE"
 				FavorSizeOrSpeed="0"
 				OmitFramePointers="FALSE"
-				PreprocessorDefinitions="_WIN32_WINNT=0x0500;WIN32;_DEBUG;_WINDOWS;_USRDLL;VFPSTRUCTS_EXPORTS"
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32;_DEBUG;_WINDOWS;_USRDLL;VFPSTRUCTS_EXPORTS"
 				StringPooling="TRUE"
 				MinimalRebuild="FALSE"
 				ExceptionHandling="TRUE"
@@ -50,7 +50,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib"
+				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib propsys.lib"
 				OutputFile="$(OutDir)/vfp2c32d.fll"
 				LinkIncremental="1"
 				IgnoreDefaultLibraryNames="msvcrt; msvcprtd"
@@ -126,7 +126,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib"
+				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib propsys.lib"
 				ShowProgress="0"
 				OutputFile="$(OutDir)/vfp2c32.fll"
 				LinkIncremental="1"
@@ -197,7 +197,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib"
+				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib propsys.lib"
 				OutputFile="$(OutDir)/vfp2c32rd.fll"
 				LinkIncremental="1"
 				IgnoreDefaultLibraryNames="msvcprt"
@@ -270,7 +270,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib"
+				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib propsys.lib"
 				OutputFile="$(OutDir)/vfp2c32td.fll"
 				LinkIncremental="1"
 				IgnoreDefaultLibraryNames="msvcrt; msvcprtd"
@@ -342,7 +342,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib"
+				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib propsys.lib"
 				ShowProgress="0"
 				OutputFile="$(OutDir)/vfp2c32t.fll"
 				LinkIncremental="1"
@@ -410,7 +410,7 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib"
+				AdditionalDependencies="winapims.lib shlwapi.lib urlmon.lib wininet.lib ws2_32.lib propsys.lib"
 				OutputFile="$(OutDir)/vfp2c32trd.fll"
 				LinkIncremental="1"
 				IgnoreDefaultLibraryNames="msvcprt"
@@ -1224,6 +1224,9 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\vfp2cshell.cpp">
+			</File>
+			<File
 				RelativePath=".\vfp2csntp.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -1515,6 +1518,9 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			</File>
 			<File
 				RelativePath=".\vfp2cservices.h">
+			</File>
+			<File
+				RelativePath=".\vfp2cshell.h">
 			</File>
 			<File
 				RelativePath=".\vfp2csntp.h">

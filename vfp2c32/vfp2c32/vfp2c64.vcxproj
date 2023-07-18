@@ -239,7 +239,7 @@
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>msvcrt; msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -266,7 +266,7 @@ copy "$(SolutionDir)x64\Debug\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exampl
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>msvcrt; msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -291,7 +291,7 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -313,7 +313,7 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
     <Link>
       <IgnoreSpecificDefaultLibraries>msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
@@ -359,6 +359,7 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
     <ClInclude Include="vfp2cras.h" />
     <ClInclude Include="vfp2cregistry.h" />
     <ClInclude Include="vfp2cservices.h" />
+    <ClInclude Include="vfp2cshell.h" />
     <ClInclude Include="vfp2csntp.h" />
     <ClInclude Include="vfp2cstring.h" />
     <ClInclude Include="vfp2ctemplates.h" />
@@ -397,6 +398,7 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
     <ClCompile Include="vfp2cras.cpp" />
     <ClCompile Include="vfp2cregistry.cpp" />
     <ClCompile Include="vfp2cservices.cpp" />
+    <ClCompile Include="vfp2cshell.cpp" />
     <ClCompile Include="vfp2csntp.cpp" />
     <ClCompile Include="vfp2cstring.cpp" />
     <ClCompile Include="vfp2ctime.cpp" />
@@ -419,6 +421,7 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ml64 -DX64 /Fo $(TargetDir)%(Filename).obj /c /Cx %(FullPath)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
     </CustomBuild>
+    <None Include="vfp2c32.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

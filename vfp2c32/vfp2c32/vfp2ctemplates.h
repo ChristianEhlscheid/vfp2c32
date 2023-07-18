@@ -1229,6 +1229,7 @@ public:
 	T operator->() { return m_Pointer; }
 	T operator=(int nValue) { assert(nValue == 0);  if (m_Pointer) m_Pointer->Release(); m_Pointer = 0; return m_Pointer; }
 	T operator=(T pValue) { if (m_Pointer) m_Pointer->Release(); m_Pointer = pValue; return m_Pointer; }
+	T Detach() { T pPointer = m_Pointer; m_Pointer = 0; return pPointer; }
 
 private:
 	T m_Pointer;

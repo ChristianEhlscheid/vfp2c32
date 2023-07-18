@@ -960,6 +960,10 @@
 			<param name="Local" value="pages\shdeletefiles.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SHGetShellItem">
+			<param name="Local" value="pages\shgetshellitem.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SHMoveFiles">
 			<param name="Local" value="pages\shmovefiles.html">
 			</OBJECT>
@@ -2472,6 +2476,10 @@
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SHDeleteFiles">
 			<param name="Local" value="pages\shdeletefiles.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SHGetShellItem">
+			<param name="Local" value="pages\shgetshellitem.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SHMoveFiles">
