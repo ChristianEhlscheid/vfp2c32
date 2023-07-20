@@ -318,9 +318,9 @@ inline CStringView FileSearch::StringFileAttributes()
 	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY) > 0)
 		m_StringFileAttributes.Append('T');
 	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) > 0)
-		m_StringFileAttributes.Append('F');
-	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0)
 		m_StringFileAttributes.Append('P');
+	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0)
+		m_StringFileAttributes.Append('L');
 	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_COMPRESSED) > 0)
 		m_StringFileAttributes.Append('C');
 	if ((m_CurrentFiledata->dwFileAttributes & FILE_ATTRIBUTE_OFFLINE) > 0)

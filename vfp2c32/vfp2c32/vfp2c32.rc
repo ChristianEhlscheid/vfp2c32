@@ -71,8 +71,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,26
- PRODUCTVERSION 2,0,0,26
+ FILEVERSION 2,0,0,27
+ PRODUCTVERSION 2,0,0,27
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -89,11 +89,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Christian Ehlscheid"
             VALUE "FileDescription", "VFP2C32"
-            VALUE "FileVersion", "2.0.0.26"
+            VALUE "FileVersion", "2.0.0.27"
             VALUE "LegalCopyright", "Shared Source License for VFPX"
-            VALUE "OriginalFilename", "vfp2c32.fll"
+            VALUE "OriginalFilename", "vfp2c64.fll"
             VALUE "ProductName", "VFP2C32"
-            VALUE "ProductVersion", "2.0.0.26"
+            VALUE "ProductVersion", "2.0.0.27"
         END
     END
     BLOCK "VarFileInfo"

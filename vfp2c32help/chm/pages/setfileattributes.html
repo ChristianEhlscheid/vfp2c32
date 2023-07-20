@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Sets the attributes for a file or directory.</p>
 
-<div class="block"><pre>SetFileAttributes(<a href="#p1">cFileName</a>, <a href="#p2">nAttributes</a>)</pre></div>
+<div class="block"><pre>SetFileAttributes(<a href="#p1">cFileName</a>, <a href="#p2">ncAttributes</a>)</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cFileName</a></dt>
 <dd><p>The name of the file for which to set the attributes.<br />
@@ -24,18 +24,18 @@
 The usual VFP search path (<a href="its:dv_foxhelp.chm::/html/047f2e74-3552-43b7-a18d-ee2c7dd2db6e.htm">SET PATH</a>) is used.
 </p></div>
 </dd></dl>
-<dl class="parm"><dt><a id="p2">nAttributes (additional)</a></dt>
+<dl class="parm"><dt><a id="p2">ncAttributes (additional)</a></dt>
 <dd><table>
-<caption>One or a combination of the following values.</caption>
-<tr><th style="width: 40px;">Attribute</th><th>Description</th></tr>
-<tr><td>FILE_ATTRIBUTE_ARCHIVE</td><td>A file or directory that is an archive file or directory. Applications typically use this attribute to mark files for backup or removal.</td></tr>
-<tr><td>FILE_ATTRIBUTE_HIDDEN</td><td>The file or directory is hidden. It is not included in an ordinary directory listing.</td></tr>
-<tr><td>FILE_ATTRIBUTE_NORMAL</td><td>A file that does not have other attributes set. This attribute is valid only when used alone.</td></tr>
-<tr><td>FILE_ATTRIBUTE_NOT_CONTENT_INDEXED</td><td>The file or directory is not to be indexed by the content indexing service.</td></tr>
-<tr><td>FILE_ATTRIBUTE_OFFLINE</td><td>The data of a file is not available immediately. This attribute indicates that the file data is physically moved to offline storage. This attribute is used by Remote Storage, which is the hierarchical storage management software. Applications should not arbitrarily change this attribute.</td></tr>
-<tr><td>FILE_ATTRIBUTE_READONLY</td><td>A file that is read-only. Applications can read the file, but cannot write to it or delete it. This attribute is not honored on directories.</td></tr>
-<tr><td>FILE_ATTRIBUTE_SYSTEM</td><td>A file or directory that the operating system uses a part of, or uses exclusively.</td></tr>
-<tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.</td></tr>
+<caption>One or a combination of the following constants or a string where each character represents an attribute.</caption>
+<tr><th style="width: 40px;">Attribute</th><th>Character</th><th>Description</th></tr>
+<tr><td>FILE_ATTRIBUTE_ARCHIVE</td><td>A</td><td>A file or directory that is an archive file or directory. Applications typically use this attribute to mark files for backup or removal.</td></tr>
+<tr><td>FILE_ATTRIBUTE_HIDDEN</td><td>H</td><td>The file or directory is hidden. It is not included in an ordinary directory listing.</td></tr>
+<tr><td>FILE_ATTRIBUTE_NORMAL</td><td>N</td><td>A file that does not have other attributes set. This attribute is valid only when used alone.</td></tr>
+<tr><td>FILE_ATTRIBUTE_NOT_CONTENT_INDEXED</td><td>I</td><td>The file or directory is not to be indexed by the content indexing service.</td></tr>
+<tr><td>FILE_ATTRIBUTE_OFFLINE</td><td>O</td><td>The data of a file is not available immediately. This attribute indicates that the file data is physically moved to offline storage. This attribute is used by Remote Storage, which is the hierarchical storage management software. Applications should not arbitrarily change this attribute.</td></tr>
+<tr><td>FILE_ATTRIBUTE_READONLY</td><td>R</td><td>A file that is read-only. Applications can read the file, but cannot write to it or delete it. This attribute is not honored on directories.</td></tr>
+<tr><td>FILE_ATTRIBUTE_SYSTEM</td><td>S</td><td>A file or directory that the operating system uses a part of, or uses exclusively.</td></tr>
+<tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>T</td><td>A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.</td></tr>
 </table></dd></dl>
 <h2>Return Value</h2>
 <p>Always .T.</p>

@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Retrieves the attributes of a file or directory.</p>
 
-<div class="block"><pre>GetFileAttributes(<a href="#p1">cFileName</a>)</pre></div>
+<div class="block"><pre>GetFileAttributes(<a href="#p1">cFileName</a>[, <a href="#p2">bStringAttributes</a>])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cFileName</a></dt>
 <dd><p>The name of the file for which to retrieve the attributes.<br />
@@ -23,6 +23,11 @@
 <div class="block"><p>This can be a relative path or only a filename, the VFP function <a href="its:dv_foxhelp.chm::/html/a3944489-2eaa-4f99-8dd7-98d7a355426a.htm">FULLPATH</a> is used to retrieve the fully qualified filename. <br />
 The usual VFP search path (<a href="its:dv_foxhelp.chm::/html/047f2e74-3552-43b7-a18d-ee2c7dd2db6e.htm">SET PATH</a>) is used.
 </p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">bStringAttributes (optional)</a></dt>
+<dd><p>default = .F.<br />
+<br />
+If .T. the file attributes are returned in string form.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>A numeric value representing the file attributes.</p>

@@ -520,14 +520,14 @@ FoxInfo VFP2CFuncs[] =
 
 	/* file system functions */
 	{"ADirEx",(FPFI) ADirEx, 7, "CC.?.I.I.C.I"},
-	{"AFileAttributes", (FPFI) AFileAttributes, 3, "CC.L"},
-	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 3, "CC.L"},
+	{"AFileAttributes", (FPFI) AFileAttributes, 4, "CC.L.L"},
+	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 4, "CC.L.L"},
 	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "CC"},
 	{"GetFileTimes", (FPFI) GetFileTimes, 5, "C?.?.?.L"},
 	{"SetFileTimes", (FPFI) SetFileTimes, 5, "C?.?.?.L"},
 	{"GetFileSize", (FPFI) GetFileSizeLib, 1, "C"},
-	{"GetFileAttributes", (FPFI) GetFileAttributesLib, 1, "C"},
-	{"SetFileAttributes", (FPFI) SetFileAttributesLib, 2, "CI"},
+	{"GetFileAttributes", (FPFI) GetFileAttributesLib, 2, "C.L"},
+	{"SetFileAttributes", (FPFI) SetFileAttributesLib, 2, "C?"},
 	{"GetFileOwner", (FPFI) GetFileOwner, 4, "CR.R.R"},
 	{"GetLongPathName", (FPFI) GetLongPathNameLib, 1, "C"},
 	{"GetShortPathName", (FPFI) GetShortPathNameLib, 1, "C"},

@@ -373,9 +373,6 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
     <ClInclude Include="vfp2cwinsock.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="vfp2c32.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="vfp2c32.cpp" />
     <ClCompile Include="vfp2carray.cpp" />
     <ClCompile Include="vfp2cassembly.cpp" />
@@ -422,6 +419,9 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
     </CustomBuild>
     <None Include="vfp2c32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="vfp2c32.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -133,7 +133,7 @@ bool FileSearchStorageArray::Store(FileSearch* pFileSearch)
 		m_Array(nRow, m_Index_Fileattribs) = pFileSearch->FileAttributes();
 	
 	if (m_Index_StringFileattribs >= 1)
-		m_Array(nRow, m_Index_StringFileattribs) = m_FileName = pFileSearch->StringFileAttributes();
+		m_Array(nRow, m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pFileSearch->FileAttributes());
 
 	return true;
 }
@@ -286,7 +286,7 @@ bool FileSearchStorageCursor::Store(FileSearch* pFileSearch)
 		m_Cursor(m_Index_Fileattribs) = pFileSearch->FileAttributes();
 	
 	if (m_Index_StringFileattribs >= 0)
-		m_Cursor(m_Index_StringFileattribs) = m_FileName = pFileSearch->StringFileAttributes();
+		m_Cursor(m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pFileSearch->FileAttributes());
 
 	return true;
 }
@@ -1168,14 +1168,14 @@ DWORD _fastcall AdirEx_FileFilter(FoxString& pFileFilter, DWORD& nMatch)
 			if (bNegate == false)
 				nMatch |= FILE_ATTRIBUTE_TEMPORARY;
 			break;
-		case 'F':
-		case 'f':
+		case 'P':
+		case 'p':
 			nFileFilter |= FILE_ATTRIBUTE_SPARSE_FILE;
 			if (bNegate == false)
 				nMatch |= FILE_ATTRIBUTE_SPARSE_FILE;
 			break;
-		case 'P':
-		case 'p':
+		case 'L':
+		case 'l':
 			nFileFilter |= FILE_ATTRIBUTE_REPARSE_POINT;
 			if (bNegate == false)
 				nMatch |= FILE_ATTRIBUTE_REPARSE_POINT;
@@ -1335,6 +1335,7 @@ try
 	FoxArray pArray(parm(1),5,1);
 	FoxString pFileName(parm(2));
 	bool bToLocal = parm.PCount() == 2 || !parm(3)->ev_length;
+	bool bStringFileAttributes = parm.PCount() == 4 && parm(4)->ev_length;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
 	WIN32_FILE_ATTRIBUTE_DATA sFileAttribs;
@@ -1360,7 +1361,11 @@ try
 		throw E_APIERROR;
 	}
 
-	pArray(1) = sFileAttribs.dwFileAttributes;
+	if (bStringFileAttributes)
+		pArray(1) = pFileName.FileAttributesToString(sFileAttribs.dwFileAttributes);
+	else
+		pArray(1) = sFileAttribs.dwFileAttributes;
+
 	pArray(2) = pFileSize = Ints2Double(sFileAttribs.nFileSizeLow, sFileAttribs.nFileSizeHigh);
 	
 	pFileTime = sFileAttribs.ftCreationTime;
@@ -1391,6 +1396,7 @@ try
 	FoxArray pArray(parm(1),9,1);
 	FoxString pFileName(parm(2));
 	bool bToLocal = parm.PCount() == 2 || !parm(3)->ev_length;
+	bool bStringFileAttributes = parm.PCount() == 4 && parm(4)->ev_length;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
 	ApiHandle hFile;
@@ -1422,7 +1428,11 @@ try
 		throw E_APIERROR;
 	}
 
-	pArray(1) = sFileAttribs.dwFileAttributes;
+	if (bStringFileAttributes)
+		pArray(1) = pFileName.FileAttributesToString(sFileAttribs.dwFileAttributes);
+	else
+		pArray(1) = sFileAttribs.dwFileAttributes;
+
 	pArray(2) = pFileSize = Ints2Double(sFileAttribs.nFileSizeLow, sFileAttribs.nFileSizeHigh);
 
 	pFileTime = sFileAttribs.ftCreationTime;
@@ -1681,6 +1691,7 @@ void _fastcall GetFileAttributesLib(ParamBlkEx& parm)
 try
 {
 	FoxString pFileName(parm(1));
+	bool bStringFileAttributes = parm.PCount() == 2 && parm(2)->ev_length;
 	DWORD nAttribs;
     
 	if (pFileName.Len() < MAX_PATH)
@@ -1703,7 +1714,14 @@ try
 		throw E_APIERROR;
 	}
 
-	Return(nAttribs);
+	if (bStringFileAttributes)
+	{
+		FoxString pString(10);
+		pString.FileAttributesToString(nAttribs);
+		pString.Return();
+	}
+	else
+		Return(nAttribs);
 }
 catch(int nErrorNo)
 {
@@ -1716,20 +1734,30 @@ void _fastcall SetFileAttributesLib(ParamBlkEx& parm)
 try
 {
 	FoxString pFileName(parm(1));
-	BOOL bRet;
+	DWORD dwFileAttributes;
+	if (parm(2)->Vartype() == 'I')
+		dwFileAttributes = parm(2)->ev_long;
+	else if (parm(2)->Vartype() == 'C')
+	{
+		FoxString pAttributes(parm(2));
+		dwFileAttributes = pAttributes.StringToFileAttributes();
+	}
+	else
+		throw E_INVALIDPARAMS;
 
+	BOOL bRet;
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
 
 	if (pFileName.Len() < MAX_PATH)
 	{
-		bRet = SetFileAttributes(pFileName.Fullpath(), parm(2)->ev_long);
+		bRet = SetFileAttributes(pFileName.Fullpath(), dwFileAttributes);
 	}
 	else
 	{
 		FoxWString<MAX_PATH * 2> pWideFilename;
 		pWideFilename = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		bRet = SetFileAttributesW(pWideFilename, parm(2)->ev_long);
+		bRet = SetFileAttributesW(pWideFilename, dwFileAttributes);
 	}
 	
 	if (!bRet)

@@ -466,6 +466,8 @@ public:
 	FoxString& AddBs();
 	FoxString& AddBsWildcard();
 	FoxString& Fullpath();
+	FoxString& FileAttributesToString(DWORD dwAttributes);
+	DWORD StringToFileAttributes() const;
 	FoxString& Alltrim(char cParseChar = ' ');
 	FoxString& LTrim(char cParseChar = ' ');
 	FoxString& RTrim(char cParseChar = ' ');

@@ -14,13 +14,13 @@
 <div id="content">
 <p class="description">Stores extended attributes for a specified file or directory into an array.</p>
 
-<div class="block"><pre>AFileAttributesEx(<a href="#p1">cArrayName</a>, <a href="#p2">cFileName</a> [, <a href="#p3">bUTCTimes</a>])</pre></div>
+<div class="block"><pre>AFileAttributesEx(<a href="#p1">cArrayName</a>, <a href="#p2">cFileName</a> [, <a href="#p3">bUTCTimes</a>[, <a href="#p4">bStringAttributes</a>]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cArrayName</a></dt>
 <dd><table>
 <caption>On return the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/aa363788(VS.85).aspx">BY_HANDLE_FILE_INFORMATION</a> structure.</caption>
 <tr><th style="width: 40px;">Element</th><th>Content</th><th>Datatype</th></tr>
-<tr><td>1</td><td>Attributes</td><td>N</td></tr>
+<tr><td>1</td><td>Attributes</td><td>N or C</td></tr>
 <tr><td>2</td><td>Filesize</td><td>N</td></tr>
 <tr><td>3</td><td>Creation time</td><td>T</td></tr>
 <tr><td>4</td><td>Last access time</td><td>T</td></tr>
@@ -39,6 +39,11 @@ The identifier (low and high parts) and the volume serial number uniquely identi
 <dd><p>default = .F.<br />
 <br />
 If .T. the filetimes are retrieved as UTC times, otherwise they are converted to the current local timezone.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">bStringAttributes (optional)</a></dt>
+<dd><p>default = .F.<br />
+<br />
+If .T. the file attributes are retrieved in string form.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>Always .T.</p>

@@ -935,6 +935,109 @@ FoxString& FoxString::Fullpath()
 	return Attach(vFullpath);
 }
 
+FoxString& FoxString::FileAttributesToString(DWORD dwFileAttributes)
+{
+	ExtendBuffer(10);
+	char* pString = m_String;
+	if ((dwFileAttributes & FILE_ATTRIBUTE_READONLY) > 0)
+		*pString++ = 'R';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) > 0)
+		*pString++ = 'H';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) > 0)
+		*pString++ = 'S';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0)
+		*pString++ = 'D';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) > 0)
+		*pString++ = 'A';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY) > 0)
+		*pString++ = 'T';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) > 0)
+		*pString++ = 'P';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0)
+		*pString++ = 'L';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_COMPRESSED) > 0)
+		*pString++ = 'C';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_OFFLINE) > 0)
+		*pString++ = 'O';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED) > 0)
+		*pString++ = 'I';
+	if ((dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED) > 0)
+		*pString++ = 'E';
+	if ((dwFileAttributes & 0x80000000 /* FILE_ATTRIBUTE_FAKEDIRECTORY */) > 0)
+		*pString++ = 'K';
+	
+	Len(pString - m_String);
+	return *this;
+}
+
+DWORD FoxString::StringToFileAttributes() const
+{
+	DWORD nAttributes = 0;
+	for (unsigned long xj = 0; xj < Len(); xj++)
+	{
+		switch (m_String[xj])
+		{
+		case 'R':
+		case 'r':
+			nAttributes |= FILE_ATTRIBUTE_READONLY;
+			break;
+		case 'H':
+		case 'h':
+			nAttributes |= FILE_ATTRIBUTE_HIDDEN;
+			break;
+		case 'S':
+		case 's':
+			nAttributes |= FILE_ATTRIBUTE_SYSTEM;
+			break;
+		case 'D':
+		case 'd':
+			nAttributes |= FILE_ATTRIBUTE_DIRECTORY;
+			break;
+		case 'A':
+		case 'a':
+			nAttributes |= FILE_ATTRIBUTE_ARCHIVE;
+			break;
+		case 'N':
+		case 'n':
+			nAttributes |= FILE_ATTRIBUTE_NORMAL;
+			break;
+		case 'T':
+		case 't':
+			nAttributes |= FILE_ATTRIBUTE_TEMPORARY;
+			break;
+		case 'P':
+		case 'p':
+			nAttributes |= FILE_ATTRIBUTE_SPARSE_FILE;
+			break;
+		case 'L':
+		case 'l':
+			nAttributes |= FILE_ATTRIBUTE_REPARSE_POINT;
+			break;
+		case 'C':
+		case 'c':
+			nAttributes |= FILE_ATTRIBUTE_COMPRESSED;
+			break;
+		case 'O':
+		case 'o':
+			nAttributes |= FILE_ATTRIBUTE_OFFLINE;
+			break;
+		case 'I':
+		case 'i':
+			nAttributes |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+			break;
+		case 'E':
+		case 'e':
+			nAttributes |= FILE_ATTRIBUTE_ENCRYPTED;
+			break;
+		case 'K':
+		case 'k':
+			nAttributes |= 0x80000000; // FILE_ATTRIBUTE_FAKEDIRECTORY
+			break;
+		}
+	}
+	return nAttributes;
+}
+
 bool FoxString::ICompare(CStringView pString) const
 {
 	if (m_String && pString.Data)
