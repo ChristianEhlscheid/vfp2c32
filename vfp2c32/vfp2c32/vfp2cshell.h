@@ -166,11 +166,16 @@ private:
 };
 
 // typedef's for runtime dynamic linking to shell32.dll
-typedef BOOL(_stdcall* PGETSPECIALFOLDER)(HWND, LPSTR, int, BOOL); // SHGetSpecialFolderPathA
-typedef HRESULT(_stdcall* PSHILCREATEFROMPATH)(LPCWSTR, LPITEMIDLIST*, DWORD*); // SHILCreateFromPath
-typedef HRESULT(_stdcall* PSHCREATEITEMFROMPARSINGNAME)(PCWSTR, IBindCtx* pbc, REFIID, void**); // SHCreateItemFromParsingName
-typedef LPITEMIDLIST(_stdcall* PSHILCREATEFROMPATHEX)(LPCWSTR); // undocumented func #162
+typedef BOOL(_stdcall *PGETSPECIALFOLDER)(HWND, LPSTR, int, BOOL); // SHGetSpecialFolderPathA
+typedef HRESULT(_stdcall *PSHILCREATEFROMPATH)(LPCWSTR, LPITEMIDLIST*, DWORD*); // SHILCreateFromPath
+typedef HRESULT(_stdcall *PSHCREATEITEMFROMPARSINGNAME)(PCWSTR, IBindCtx* pbc, REFIID, void**); // SHCreateItemFromParsingName
+typedef LPITEMIDLIST(_stdcall *PSHILCREATEFROMPATHEX)(LPCWSTR); // undocumented func #162
 #define SHILCREATEFROMPATHEXID	162
+
+// typedef's for runtime dynamic linking to propsys.dll
+typedef HRESULT(_stdcall *PPSGETPROPERTYKEYFROMNAME)(PCWSTR, PROPERTYKEY*); // PSGetPropertyKeyFromName
+typedef HRESULT(_stdcall *PPROPVARIANTTOVARIANT)(PROPVARIANT*, VARIANT*); // PropVariantToVariant
+typedef HRESULT(_stdcall* PVARIANTTOPROPVARIANT)(VARIANT*, PROPVARIANT*); // VariantToPropVariant
 
 // shell api wrappers
 void _fastcall SHSpecialFolder(ParamBlkEx& parm);

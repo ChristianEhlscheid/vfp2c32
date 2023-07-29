@@ -91,6 +91,7 @@ public:
 	static HMODULE IpHlpApi;
 	static HMODULE Icmp;
 	static HMODULE NetApi32;
+	static HMODULE Propsys;
 
 private:
 	HANDLE JitHeap;

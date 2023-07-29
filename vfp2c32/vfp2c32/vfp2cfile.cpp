@@ -1751,7 +1751,7 @@ try
 
 	if (pFileName.Len() < MAX_PATH)
 	{
-		bRet = SetFileAttributes(pFileName.Fullpath(), dwFileAttributes);
+		bRet = SetFileAttributes(pFileName, dwFileAttributes);
 	}
 	else
 	{

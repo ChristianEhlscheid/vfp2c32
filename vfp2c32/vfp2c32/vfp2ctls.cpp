@@ -34,6 +34,7 @@ HMODULE VFP2CTls::RasDlg = 0;
 HMODULE VFP2CTls::IpHlpApi = 0;
 HMODULE VFP2CTls::Icmp = 0;
 HMODULE VFP2CTls::NetApi32 = 0;
+HMODULE VFP2CTls::Propsys = 0;
 
 VFP2CTls::VFP2CTls()
 {
@@ -135,6 +136,8 @@ void VFP2CTls::FreeGlobalResources()
 		FreeLibrary(Icmp);
 	if (NetApi32)
 		FreeLibrary(NetApi32);
+	if (Propsys)
+		FreeLibrary(Propsys);
 	if (Heap)
 		HeapDestroy(Heap);
 

@@ -11,27 +11,52 @@ static PGETSPECIALFOLDER fpGetSpecialFolder = 0;
 static PSHILCREATEFROMPATH fpSHILCreateFromPath = 0;
 static PSHILCREATEFROMPATHEX fpSHILCreateFromPathEx = 0;
 static PSHCREATEITEMFROMPARSINGNAME fpSHCreateItemFromParsingName = 0;
+static PPSGETPROPERTYKEYFROMNAME fpPSGetPropertyKeyFromName = 0;
+static PPROPVARIANTTOVARIANT fpPropVariantToVariant = 0;
+static PVARIANTTOPROPVARIANT fpVariantToPropVariant = 0;
+
+void _stdcall VFP2C_Init_Shell()
+{
+	if (fpGetSpecialFolder == 0)
+	{
+		HMODULE hDll = GetModuleHandle("shell32.dll");
+		if (hDll)
+		{
+			fpGetSpecialFolder = (PGETSPECIALFOLDER)GetProcAddress(hDll, "SHGetSpecialFolderPathA");
+			fpSHILCreateFromPath = (PSHILCREATEFROMPATH)GetProcAddress(hDll, "SHILCreateFromPath");
+			fpSHILCreateFromPathEx = (PSHILCREATEFROMPATHEX)GetProcAddress(hDll, (LPCSTR)SHILCREATEFROMPATHEXID);
+			fpSHCreateItemFromParsingName = (PSHCREATEITEMFROMPARSINGNAME)GetProcAddress(hDll, "SHCreateItemFromParsingName");
+		}
+		else
+		{
+			SaveWin32Error("GetModuleHandle", GetLastError());
+		}
+	}
+
+	VFP2CTls& tls = VFP2CTls::Tls();
+	if (tls.Propsys)
+		return;
+
+	tls.Propsys = LoadLibrary("propsys.dll");
+	if (tls.Propsys)
+	{
+		fpPSGetPropertyKeyFromName = (PPSGETPROPERTYKEYFROMNAME)GetProcAddress(tls.Propsys, "PSGetPropertyKeyFromName");
+		fpPropVariantToVariant = (PPROPVARIANTTOVARIANT)GetProcAddress(tls.Propsys, "PropVariantToVariant");
+		fpVariantToPropVariant = (PVARIANTTOPROPVARIANT)GetProcAddress(tls.Propsys, "VariantToPropVariant");
+	}
+	else
+	{
+		SaveWin32Error("LoadLibrary", GetLastError());
+	}
+}
 
 void _fastcall SHSpecialFolder(ParamBlkEx& parm)
 {
 	try
 	{
+		VFP2C_Init_Shell();
 		if (fpGetSpecialFolder == 0)
-		{
-			HMODULE hDll;
-			hDll = GetModuleHandle("shell32.dll");
-			if (hDll)
-			{
-				fpGetSpecialFolder = (PGETSPECIALFOLDER)GetProcAddress(hDll, "SHGetSpecialFolderPathA");
-				if (fpGetSpecialFolder == 0)
-					throw E_NOENTRYPOINT;
-			}
-			else
-			{
-				SaveWin32Error("GetModuleHandle", GetLastError());
-				throw E_APIERROR;
-			}
-		}
+			throw E_NOENTRYPOINT;
 
 		FoxString pFolder(MAX_PATH);
 		LocatorEx& pRef = parm(2);
@@ -222,24 +247,7 @@ void _fastcall SHBrowseFolder(ParamBlkEx& parm)
 
 		if (pRootFolder)
 		{
-			if (fpSHILCreateFromPath == 0 && fpSHILCreateFromPathEx == 0)
-			{
-				HMODULE hDll;
-				hDll = GetModuleHandle("shell32.dll");
-				if (hDll)
-				{
-					fpSHILCreateFromPath = (PSHILCREATEFROMPATH)GetProcAddress(hDll, "SHILCreateFromPath");
-					fpSHILCreateFromPathEx = (PSHILCREATEFROMPATHEX)GetProcAddress(hDll, (LPCSTR)SHILCREATEFROMPATHEXID);
-					if (fpSHILCreateFromPath == 0 && fpSHILCreateFromPathEx == 0)
-						throw E_NOENTRYPOINT;
-				}
-				else
-				{
-					SaveWin32Error("GetModuleHandle", GetLastError());
-					throw E_APIERROR;
-				}
-			}
-
+			VFP2C_Init_Shell();
 			if (fpSHILCreateFromPath)
 			{
 				hr = fpSHILCreateFromPath(pRootFolder, pRootIdl, &nRootAttr);
@@ -249,8 +257,10 @@ void _fastcall SHBrowseFolder(ParamBlkEx& parm)
 					throw E_APIERROR;
 				}
 			}
-			else
+			else if (fpSHILCreateFromPathEx)
 				pRootIdl = fpSHILCreateFromPathEx(pRootFolder);
+			else
+				throw E_NOENTRYPOINT;
 
 			sBrow.pidlRoot = pRootIdl;
 		}
@@ -312,22 +322,9 @@ void _fastcall SHGetShellItem(ParamBlkEx& parm)
 {
 	try
 	{
-		if (fpSHCreateItemFromParsingName == 0)
-		{
-			HMODULE hDll;
-			hDll = GetModuleHandle("shell32.dll");
-			if (hDll)
-			{
-				fpSHCreateItemFromParsingName = (PSHCREATEITEMFROMPARSINGNAME)GetProcAddress(hDll, "SHCreateItemFromParsingName");
-				if (fpSHCreateItemFromParsingName == 0)
-					throw E_NOENTRYPOINT;
-			}
-			else
-			{
-				SaveWin32Error("GetModuleHandle", GetLastError());
-				throw E_APIERROR;
-			}
-		}
+		VFP2C_Init_Shell();
+		if (fpSHCreateItemFromParsingName == 0 || fpPSGetPropertyKeyFromName == 0)
+			throw E_NOENTRYPOINT;
 
 		FoxWString<MAX_WIDE_PATH> pFileName(parm(1));
 		IShellItem2* pShellItem;
@@ -632,13 +629,13 @@ STDMETHODIMP CPropertyStore::Invoke(DISPID dispidMember, REFIID riid, LCID lcid,
 			CPropVariant pProp;
 			PROPERTYKEY pKey;
 			PCWSTR pProperty = pdispparams->rgvarg[0].bstrVal ? pdispparams->rgvarg[0].bstrVal : 0;
-			hr = PSGetPropertyKeyFromName(pProperty, &pKey);
+			hr = fpPSGetPropertyKeyFromName(pProperty, &pKey);
 			if (SUCCEEDED(hr))
 			{
 				hr = m_Store->GetValue(pKey, &pProp);
 				if (SUCCEEDED(hr))
 				{
-					hr = PropVariantToVariant(&pProp, pvarResult);
+					hr = fpPropVariantToVariant(&pProp, pvarResult);
 					// VT_UI8 cannot be marshaled back to FoxPro, convert it to a VT_DECIMAL instead
 					if (SUCCEEDED(hr) && pvarResult->vt == VT_UI8)
 					{
@@ -663,10 +660,10 @@ STDMETHODIMP CPropertyStore::Invoke(DISPID dispidMember, REFIID riid, LCID lcid,
 			CPropVariant pProp;
 			PROPERTYKEY pKey;
 			PCWSTR pProperty = pdispparams->rgvarg[1].bstrVal ? pdispparams->rgvarg[1].bstrVal : 0;
-			hr = PSGetPropertyKeyFromName(pProperty, &pKey);
+			hr = fpPSGetPropertyKeyFromName(pProperty, &pKey);
 			if (SUCCEEDED(hr))
 			{
-				hr = VariantToPropVariant(&pdispparams->rgvarg[0], &pProp);
+				hr = fpVariantToPropVariant(&pdispparams->rgvarg[0], &pProp);
 				if (SUCCEEDED(hr))
 					hr = m_Store->SetValue(pKey, pProp);
 			}
@@ -714,13 +711,13 @@ STDMETHODIMP CShellItem::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WOR
 		{
 			CPropVariant pProp;
 			PCWSTR pProperty = pdispparams->rgvarg[0].bstrVal ? pdispparams->rgvarg[0].bstrVal : 0;
-			hr = PSGetPropertyKeyFromName(pProperty, &pKey);
+			hr = fpPSGetPropertyKeyFromName(pProperty, &pKey);
 			if (SUCCEEDED(hr))
 			{
 				hr = m_ShellItem->GetProperty(pKey, &pProp);
 				if (SUCCEEDED(hr))
 				{
-					hr = PropVariantToVariant(&pProp, pvarResult);
+					hr = fpPropVariantToVariant(&pProp, pvarResult);
 					// VT_UI8 cannot be marshaled back to FoxPro, convert it to a VT_DECIMAL instead
 					if (SUCCEEDED(hr) && pvarResult->vt == VT_UI8)
 					{
@@ -741,7 +738,7 @@ STDMETHODIMP CShellItem::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WOR
 		if (pdispparams->cArgs == 1)
 		{
 			PCWSTR pProperty = pdispparams->rgvarg[0].bstrVal ? pdispparams->rgvarg[0].bstrVal : 0;
-			hr = PSGetPropertyKeyFromName(pProperty, &pKey);
+			hr = fpPSGetPropertyKeyFromName(pProperty, &pKey);
 		}
 		else if (pdispparams->cArgs == 0)
 		{
