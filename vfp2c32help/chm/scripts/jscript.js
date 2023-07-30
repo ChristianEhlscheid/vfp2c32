@@ -9,7 +9,7 @@ if ( window.addEventListener ) {
 function setvfp2c32version()
 {
 	var version = document.getElementById('vfp2c32version');
-	version.innerText = 'VFP2C32 2.0.0.28';
+	version.innerText = 'VFP2C32 2.0.0.29';
 }			
 			
 function CopyCode(cElement)

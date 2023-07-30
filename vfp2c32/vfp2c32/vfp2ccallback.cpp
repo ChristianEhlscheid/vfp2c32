@@ -913,7 +913,7 @@ try
 	CStringView pParameters = pParameterlist;
 	for (nParmNo = 0; nParmNo < nParmCount; ++nParmNo)
 	{
-		pParm = pParameters.GetWordNum(nParmNo + 1, ',');
+		pParm = pParameters.GetWordNum(1, ',');
 		pParmType = pParm.Alltrim();
 
 		nWordCount = pParmType.GetWordCount(' ');
@@ -1118,7 +1118,7 @@ try
 			throw E_INVALIDPARAMS;
 		}
 
-		pParameters = pParameters + pParm.Len;
+		pParameters = pParameters + (pParm.Len + 1);
 	}
 
 	// add ')' and nullterminate
