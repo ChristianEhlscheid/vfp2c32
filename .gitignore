@@ -67,7 +67,7 @@ ipch/
 # Visual Studio 6 build log
 *.plg
 /vfpsrvhost/WTL
-/vfp2c32examples/vfp2c32dt.fll
-/vfp2c32examples/vfp2c32rdt.fll
-/vfp2c32front/vfp2c32dt.fll
+/vfp2c32examples/vfp2c32td.fll
+/vfp2c32examples/vfp2c32rtd.fll
+/vfp2c32front/vfp2c32td.fll
 /vfp2c32front/vfp2c32rd.fll

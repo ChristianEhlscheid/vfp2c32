@@ -1739,7 +1739,7 @@ try
 		dwFileAttributes = parm(2)->ev_long;
 	else if (parm(2)->Vartype() == 'C')
 	{
-		FoxString pAttributes(parm(2));
+		FoxString pAttributes(parm(2), 0);
 		dwFileAttributes = pAttributes.StringToFileAttributes();
 	}
 	else
