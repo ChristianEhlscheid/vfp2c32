@@ -970,72 +970,124 @@ FoxString& FoxString::FileAttributesToString(DWORD dwFileAttributes)
 	return *this;
 }
 
-DWORD FoxString::StringToFileAttributes() const
+bool FoxString::StringToFileAttributes(DWORD& nAttributesSet, DWORD& nAttributesClear) const
 {
-	DWORD nAttributes = 0;
+	nAttributesSet = 0;
+	nAttributesClear = 0;
+	bool bClearOrSet = false, bSet = true;
 	for (unsigned long xj = 0; xj < Len(); xj++)
 	{
 		switch (m_String[xj])
 		{
+		case '+':
+			bClearOrSet = true;
+			bSet = true;
+			break;
+		case '-':
+			bClearOrSet = true;
+			bSet = false;
+			break;
 		case 'R':
 		case 'r':
-			nAttributes |= FILE_ATTRIBUTE_READONLY;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_READONLY;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_READONLY;
 			break;
 		case 'H':
 		case 'h':
-			nAttributes |= FILE_ATTRIBUTE_HIDDEN;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_HIDDEN;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_HIDDEN;
 			break;
 		case 'S':
 		case 's':
-			nAttributes |= FILE_ATTRIBUTE_SYSTEM;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_SYSTEM;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_SYSTEM;
 			break;
 		case 'D':
 		case 'd':
-			nAttributes |= FILE_ATTRIBUTE_DIRECTORY;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_DIRECTORY;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_DIRECTORY;
 			break;
 		case 'A':
 		case 'a':
-			nAttributes |= FILE_ATTRIBUTE_ARCHIVE;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_ARCHIVE;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_ARCHIVE;
 			break;
 		case 'N':
 		case 'n':
-			nAttributes |= FILE_ATTRIBUTE_NORMAL;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_NORMAL;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_NORMAL;
 			break;
 		case 'T':
 		case 't':
-			nAttributes |= FILE_ATTRIBUTE_TEMPORARY;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_TEMPORARY;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_TEMPORARY;
 			break;
 		case 'P':
 		case 'p':
-			nAttributes |= FILE_ATTRIBUTE_SPARSE_FILE;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_SPARSE_FILE;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_SPARSE_FILE;
 			break;
 		case 'L':
 		case 'l':
-			nAttributes |= FILE_ATTRIBUTE_REPARSE_POINT;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_REPARSE_POINT;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_REPARSE_POINT;
 			break;
 		case 'C':
 		case 'c':
-			nAttributes |= FILE_ATTRIBUTE_COMPRESSED;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_COMPRESSED;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_COMPRESSED;
 			break;
 		case 'O':
 		case 'o':
-			nAttributes |= FILE_ATTRIBUTE_OFFLINE;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_OFFLINE;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_OFFLINE;
 			break;
 		case 'I':
 		case 'i':
-			nAttributes |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
 			break;
 		case 'E':
 		case 'e':
-			nAttributes |= FILE_ATTRIBUTE_ENCRYPTED;
+			if (bSet)
+				nAttributesSet |= FILE_ATTRIBUTE_ENCRYPTED;
+			else
+				nAttributesClear |= FILE_ATTRIBUTE_ENCRYPTED;
 			break;
 		case 'K':
 		case 'k':
-			nAttributes |= 0x80000000; // FILE_ATTRIBUTE_FAKEDIRECTORY
+			if (bSet)
+				nAttributesSet |= 0x80000000; // FILE_ATTRIBUTE_FAKEDIRECTORY;
+			else
+				nAttributesClear |= 0x80000000; // FILE_ATTRIBUTE_FAKEDIRECTORY;
 			break;
 		}
 	}
-	return nAttributes;
+	return bClearOrSet;
 }
 
 bool FoxString::ICompare(CStringView pString) const

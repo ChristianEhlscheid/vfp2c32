@@ -874,6 +874,10 @@
 			<param name="Local" value="pages\setfileattributes.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SetFileAttributesEx">
+			<param name="Local" value="pages\setfileattributesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SetFileTimes">
 			<param name="Local" value="pages\setfiletimes.html">
 			</OBJECT>

@@ -521,7 +521,7 @@ unsigned int FileSearch::ExecuteSearch()
 	return m_FileCount;
 }
 
-void FileSearch::ExecuteReverse(FileSearchReverseFunc pCallback)
+void FileSearch::ExecuteReverse(FileSearchReverseFunc pCallback, DWORD nParam1, DWORD nParam2)
 {
 	if (m_DisableFsRedirection)
 		DisableFsRedirection();
@@ -552,13 +552,13 @@ void FileSearch::ExecuteReverse(FileSearchReverseFunc pCallback)
 		while (pFiles.Dequeue(pSearchEntry))
 		{
 			m_StrBuilder = pSearchEntry.Path;
-			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes);
+			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, nParam1, nParam2);
 		}
 
 		while (pDirectories.Dequeue(pSearchEntry))
 		{
 			m_StrBuilder = pSearchEntry.Path;
-			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes);
+			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, nParam1, nParam2);
 		}
 	}
 	catch (int nErrorNo)
@@ -1734,43 +1734,144 @@ void _fastcall SetFileAttributesLib(ParamBlkEx& parm)
 try
 {
 	FoxString pFileName(parm(1));
-	DWORD dwFileAttributes;
-	if (parm(2)->Vartype() == 'I')
-		dwFileAttributes = parm(2)->ev_long;
-	else if (parm(2)->Vartype() == 'C')
+	FoxWString<MAX_PATH * 2> pWideFilename;
+	DWORD dwFileAttributes, dwFileAttributesSet, dwFileAttributesClear;
+	bool bClearOrSet;
+	if (parm.PCount() == 2)
 	{
-		FoxString pAttributes(parm(2), 0);
-		dwFileAttributes = pAttributes.StringToFileAttributes();
+		if (parm(2)->Vartype() == 'I')
+		{
+			dwFileAttributes = parm(2)->ev_long;
+			bClearOrSet = false;
+		}
+		else if (parm(2)->Vartype() == 'C')
+		{
+			FoxString pAttributes(parm(2), 0);
+			bClearOrSet = pAttributes.StringToFileAttributes(dwFileAttributesSet, dwFileAttributesClear);
+			if (!bClearOrSet)
+				dwFileAttributes = dwFileAttributesSet;
+		}
+		else
+			throw E_INVALIDPARAMS;
 	}
-	else
-		throw E_INVALIDPARAMS;
+	else if (parm.PCount() == 3)
+	{
+		bClearOrSet = true;
+		if (parm(2)->Vartype() == 'I')
+		{
+			dwFileAttributesSet = parm(2)->ev_long;
+			dwFileAttributesClear = parm(3)->ev_long;
+		}
+		else
+			throw E_INVALIDPARAMS;
+	}
 
 	BOOL bRet;
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
 
-	if (pFileName.Len() < MAX_PATH)
-	{
-		bRet = SetFileAttributes(pFileName, dwFileAttributes);
-	}
-	else
-	{
-		FoxWString<MAX_PATH * 2> pWideFilename;
+	if (pFileName.Len() >= MAX_PATH)
 		pWideFilename = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		bRet = SetFileAttributesW(pWideFilename, dwFileAttributes);
+	
+	if (bClearOrSet)
+	{
+		if (pFileName.Len() < MAX_PATH)
+			dwFileAttributes = GetFileAttributes(pFileName);
+		else
+			dwFileAttributes = GetFileAttributesW(pWideFilename);
+		if (dwFileAttributes == INVALID_FILE_ATTRIBUTES)
+		{
+			SaveWin32Error("GetFileAttributes", GetLastError());
+			throw E_APIERROR;
+		}
+
+		dwFileAttributes |= dwFileAttributesSet;
+		dwFileAttributes &= ~dwFileAttributesClear;
 	}
+
+	if (pFileName.Len() < MAX_PATH)
+		bRet = SetFileAttributes(pFileName, dwFileAttributes);
+	else
+		bRet = SetFileAttributesW(pWideFilename, dwFileAttributes);
 	
 	if (!bRet)
 	{
 		SaveWin32Error("SetFileAttributes", GetLastError());
 		throw E_APIERROR;
 	}
-
 }
 catch(int nErrorNo)
 {
 	RaiseError(nErrorNo);
 }
+}
+
+void _stdcall SetFileAttributesExCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nFileAttributes, DWORD nFileAttributesSet, DWORD nFileAttributesClear)
+{
+	BOOL bRet;
+
+	if (nFileAttributesClear == 0xFFFFFFFF)
+		nFileAttributes = nFileAttributesSet;
+	else
+	{
+		nFileAttributes |= nFileAttributesSet;
+		nFileAttributes &= ~nFileAttributesClear;
+	}
+
+	if (pPath.Len() < MAX_PATH)
+	{
+		bRet = SetFileAttributes(pPath, nFileAttributes);
+	}
+	else
+	{
+		FoxWString<MAX_PATH * 2> pWidePath;
+		pWidePath = pPath.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+		bRet = SetFileAttributesW(pWidePath, nFileAttributes);
+	}
+
+	if (!bRet)
+	{
+		SaveWin32Error("SetFileAttributes", GetLastError());
+		throw E_APIERROR;
+	}
+}
+
+void _fastcall SetFileAttributesLibEx(ParamBlkEx& parm)
+{
+FileSearch* pFileSearch = 0;
+try
+{
+	FoxString pWildcard(parm(1));
+	DWORD dwFileAttributesSet, dwFileAttributesClear;
+	bool bClearOrSet;
+	if (parm(2)->Vartype() == 'I')
+	{
+		dwFileAttributesSet = parm(2)->ev_long;
+		dwFileAttributesClear = 0xFFFFFFFF;
+	}
+	else if (parm(2)->Vartype() == 'C')
+	{
+		FoxString pAttributes(parm(2), 0);
+		bClearOrSet = pAttributes.StringToFileAttributes(dwFileAttributesSet, dwFileAttributesClear);
+		if (!bClearOrSet)
+			dwFileAttributesClear = 0xFFFFFFFF;
+	}
+	else
+		throw E_INVALIDPARAMS;
+	
+	bool bRecurse = parm.PCount() < 3 ? false : parm(3)->ev_length > 0;
+	pFileSearch = new FileSearch(bRecurse, pWildcard, 0, 0, 0, ADIREX_FULLPATH);
+	if (pFileSearch == 0)
+		throw E_INSUFMEMORY;
+
+	pFileSearch->ExecuteReverse(SetFileAttributesExCallback, dwFileAttributesSet, dwFileAttributesClear);
+}
+catch (int nErrorNo)
+{
+	RaiseError(nErrorNo);
+}
+if (pFileSearch)
+	delete pFileSearch;
 }
 
 void _fastcall GetFileOwner(ParamBlkEx& parm)
@@ -2214,7 +2315,7 @@ catch(int nErrorNo)
 }
 }
 
-void FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nAttributes)
+void FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nAttributes, DWORD nParam1, DWORD nParam2)
 {
 	if (nAttributes & FILE_ATTRIBUTE_DIRECTORY)
 	{
@@ -2252,10 +2353,10 @@ try
 	FoxString pDirectory(parm(1));
 	FoxString pSearch(pDirectory);
 	pSearch.AddBsWildcard();
-	pFileSearch = new FileSearch(true, pSearch, 0, 0, ADIREX_FULLPATH);
+	pFileSearch = new FileSearch(true, pSearch, 0, 0, 0, ADIREX_FULLPATH);
 	if (pFileSearch == 0)
 		throw E_INSUFMEMORY;
-	pFileSearch->ExecuteReverse(FileSearchDeleteCallback);
+	pFileSearch->ExecuteReverse(FileSearchDeleteCallback, 0, 0);
 	if (pDirectory.Len() < MAX_PATH)
 	{
 		RemoveDirectoryEx(pDirectory);

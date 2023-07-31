@@ -139,7 +139,7 @@ public:
 	}
 } FileSearchEntry;
 
-typedef void(*FileSearchReverseFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWORD nFileAttributes);
+typedef void(_stdcall *FileSearchReverseFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWORD nFileAttributes, DWORD nParam1, DWORD nParam2);
 
 class FileSearch
 {
@@ -148,7 +148,7 @@ public:
 	~FileSearch();
 
 	unsigned int ExecuteSearch();
-	void ExecuteReverse(FileSearchReverseFunc pCallback);
+	void ExecuteReverse(FileSearchReverseFunc pCallback, DWORD nParam1, DWORD nParam2);
 	bool FindFirst();
 	bool FindNext();
 	bool IsRealDirectory() const;
@@ -467,6 +467,7 @@ void _fastcall SetFileTimes(ParamBlkEx& parm);
 void _fastcall GetFileSizeLib(ParamBlkEx& parm);
 void _fastcall GetFileAttributesLib(ParamBlkEx& parm);
 void _fastcall SetFileAttributesLib(ParamBlkEx& parm);
+void _fastcall SetFileAttributesLibEx(ParamBlkEx& parm);
 void _fastcall GetFileOwner(ParamBlkEx& parm);
 void _fastcall GetLongPathNameLib(ParamBlkEx& parm);
 void _fastcall GetShortPathNameLib(ParamBlkEx& parm);
