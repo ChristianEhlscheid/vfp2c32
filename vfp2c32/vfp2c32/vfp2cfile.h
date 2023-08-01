@@ -139,7 +139,7 @@ public:
 	}
 } FileSearchEntry;
 
-typedef void(_stdcall *FileSearchReverseFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWORD nFileAttributes, DWORD nParam1, DWORD nParam2);
+typedef void(_stdcall *FileSearchCallbackFunc)(CStrBuilder<MAX_WIDE_PATH>& pPathName, DWORD nFileAttributes, LPVOID pParam);
 
 class FileSearch
 {
@@ -148,7 +148,8 @@ public:
 	~FileSearch();
 
 	unsigned int ExecuteSearch();
-	void ExecuteReverse(FileSearchReverseFunc pCallback, DWORD nParam1, DWORD nParam2);
+	unsigned int ExecuteSearchCallback(FileSearchCallbackFunc pCallback, LPVOID pParam);
+	void ExecuteReverse(FileSearchCallbackFunc pCallback, LPVOID pParam);
 	bool FindFirst();
 	bool FindNext();
 	bool IsRealDirectory() const;
@@ -439,6 +440,12 @@ public:
 	CFoxCallback pCallback;
 };
 
+typedef struct _SETFILEATTRIBUTEPARAM
+{
+	bool bClearOrSet;
+	DWORD nFileAttributesSet;
+	DWORD nFileAttributesClear;
+} SETFILEATTRIBUTEPARAM, *LPSETFILEATTRIBUTEPARAM;
 
 // 
 typedef BOOL (_stdcall *PGETVOLUMEPATHNAMESFORVOLUMENAME)(LPCTSTR, LPTSTR, DWORD, PDWORD); // GetVolumePathNamesForVolumeName

@@ -40,9 +40,9 @@ a '+' sign adds the attribute.</caption>
 <tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>T</td><td>A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p3">nAttributesRemove (optional)</a></dt>
-<dd><p>When passing the parameter "ncAttributes" has to be a numeric value and these attributes are<br />
+<dd><p>When passed the parameter "ncAttributes" has to be a numeric value and these attributes are<br />
 added to the current file attributes.<br />
-The numeric value passed in this parameter are removed from the file attributes.</p>
+The attributes supplied in this parameter are removed from the file attributes.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>Always .T.</p>

@@ -1008,13 +1008,6 @@ bool FoxString::StringToFileAttributes(DWORD& nAttributesSet, DWORD& nAttributes
 			else
 				nAttributesClear |= FILE_ATTRIBUTE_SYSTEM;
 			break;
-		case 'D':
-		case 'd':
-			if (bSet)
-				nAttributesSet |= FILE_ATTRIBUTE_DIRECTORY;
-			else
-				nAttributesClear |= FILE_ATTRIBUTE_DIRECTORY;
-			break;
 		case 'A':
 		case 'a':
 			if (bSet)
@@ -1035,28 +1028,7 @@ bool FoxString::StringToFileAttributes(DWORD& nAttributesSet, DWORD& nAttributes
 				nAttributesSet |= FILE_ATTRIBUTE_TEMPORARY;
 			else
 				nAttributesClear |= FILE_ATTRIBUTE_TEMPORARY;
-			break;
-		case 'P':
-		case 'p':
-			if (bSet)
-				nAttributesSet |= FILE_ATTRIBUTE_SPARSE_FILE;
-			else
-				nAttributesClear |= FILE_ATTRIBUTE_SPARSE_FILE;
-			break;
-		case 'L':
-		case 'l':
-			if (bSet)
-				nAttributesSet |= FILE_ATTRIBUTE_REPARSE_POINT;
-			else
-				nAttributesClear |= FILE_ATTRIBUTE_REPARSE_POINT;
-			break;
-		case 'C':
-		case 'c':
-			if (bSet)
-				nAttributesSet |= FILE_ATTRIBUTE_COMPRESSED;
-			else
-				nAttributesClear |= FILE_ATTRIBUTE_COMPRESSED;
-			break;
+			break;			
 		case 'O':
 		case 'o':
 			if (bSet)
@@ -1071,20 +1043,9 @@ bool FoxString::StringToFileAttributes(DWORD& nAttributesSet, DWORD& nAttributes
 			else
 				nAttributesClear |= FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
 			break;
-		case 'E':
-		case 'e':
-			if (bSet)
-				nAttributesSet |= FILE_ATTRIBUTE_ENCRYPTED;
-			else
-				nAttributesClear |= FILE_ATTRIBUTE_ENCRYPTED;
-			break;
-		case 'K':
-		case 'k':
-			if (bSet)
-				nAttributesSet |= 0x80000000; // FILE_ATTRIBUTE_FAKEDIRECTORY;
-			else
-				nAttributesClear |= 0x80000000; // FILE_ATTRIBUTE_FAKEDIRECTORY;
-			break;
+		default:
+			SaveCustomError("StringToFileAttributes", "Unknown file attribute letter '%s'.", m_String[xj]);
+			throw E_APIERROR;
 		}
 	}
 	return bClearOrSet;

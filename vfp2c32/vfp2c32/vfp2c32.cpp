@@ -528,7 +528,7 @@ FoxInfo VFP2CFuncs[] =
 	{"GetFileSize", (FPFI) GetFileSizeLib, 1, "C"},
 	{"GetFileAttributes", (FPFI) GetFileAttributesLib, 2, "C.L"},
 	{"SetFileAttributes", (FPFI) SetFileAttributesLib, 3, "C?.I"},
-	{"SetFileAttributesEx", (FPFI)SetFileAttributesLibEx, 3, "C?.L"},
+	{"SetFileAttributesEx", (FPFI) SetFileAttributesLibEx, 3, "C?.I"},
 	{"GetFileOwner", (FPFI) GetFileOwner, 4, "CR.R.R"},
 	{"GetLongPathName", (FPFI) GetLongPathNameLib, 1, "C"},
 	{"GetShortPathName", (FPFI) GetShortPathNameLib, 1, "C"},

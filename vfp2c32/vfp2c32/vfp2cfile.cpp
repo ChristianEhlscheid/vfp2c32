@@ -450,7 +450,7 @@ FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD
 	m_FilterFunc = FileSearch::Filter_Default;
 	if (nDest & ADIREX_FILTER_ALL)
 	{
-		m_FilterMatch = nFilterMatch;
+		m_FilterMatch = m_FilterAttributes;
 	}
 	else if (nDest & ADIREX_FILTER_NONE)
 	{
@@ -463,10 +463,8 @@ FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD
 	}
 	else
 	{
-		if (nFileFilter == nFilterMatch)
+		if (m_FilterAttributes != 0 && m_FilterAttributes == m_FilterMatch)
 			m_FilterFunc = FileSearch::Filter_Any;
-		else
-			m_FilterFunc = FileSearch::Filter_Default;
 	}
 	m_StoreFullPath = (nDest & ADIREX_FULLPATH) > 0;
 }
@@ -521,7 +519,48 @@ unsigned int FileSearch::ExecuteSearch()
 	return m_FileCount;
 }
 
-void FileSearch::ExecuteReverse(FileSearchReverseFunc pCallback, DWORD nParam1, DWORD nParam2)
+unsigned int FileSearch::ExecuteSearchCallback(FileSearchCallbackFunc pCallback, LPVOID pParam)
+{
+	m_FileCount = 0;
+	if (m_DisableFsRedirection)
+		DisableFsRedirection();
+
+	try
+	{
+		if (!FindFirst())
+			return m_FileCount;
+
+		do
+		{
+			if (m_FilterFunc(FileAttributes(), m_FilterAttributes, m_FilterMatch))
+			{
+				if (m_Recurse && !MatchFile())
+					continue;
+
+				m_FileCount++;
+				m_StrBuilder = FileName();
+				(*pCallback)(m_StrBuilder, FileAttributes(), pParam);
+			}
+		} while (FindNext());
+	}
+	catch (int nErrorNo)
+	{
+		if (m_DisableFsRedirection)
+			RevertFsRedirection();
+
+		throw nErrorNo;
+	}
+
+	if (m_DisableFsRedirection)
+		RevertFsRedirection();
+
+	if (m_Storage)
+		m_Storage->Finalize();
+
+	return m_FileCount;
+}
+
+void FileSearch::ExecuteReverse(FileSearchCallbackFunc pCallback, LPVOID pParam)
 {
 	if (m_DisableFsRedirection)
 		DisableFsRedirection();
@@ -552,13 +591,13 @@ void FileSearch::ExecuteReverse(FileSearchReverseFunc pCallback, DWORD nParam1, 
 		while (pFiles.Dequeue(pSearchEntry))
 		{
 			m_StrBuilder = pSearchEntry.Path;
-			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, nParam1, nParam2);
+			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, pParam);
 		}
 
 		while (pDirectories.Dequeue(pSearchEntry))
 		{
 			m_StrBuilder = pSearchEntry.Path;
-			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, nParam1, nParam2);
+			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, pParam);
 		}
 	}
 	catch (int nErrorNo)
@@ -614,6 +653,8 @@ bool FileSearch::FindFirst()
 			else
 				goto try_again_FindFirstFileExW;
 		}
+		else if (IgnorableSearchError(nLastError, false))
+			return false;
 		else
 		{
 			SaveWin32Error("FindFirstFile", nLastError);
@@ -708,7 +749,7 @@ try_again_FindFirstFileExW:
 	if (m_FilterFakeDirectory && IsFakeDir())
 		return FindNextRecurse();
 
-	// add subdirectory to queque
+	// add subdirectory to queue
 	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
 	{
 		if (m_StoreFullPath)
@@ -1806,17 +1847,17 @@ catch(int nErrorNo)
 }
 }
 
-void _stdcall SetFileAttributesExCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nFileAttributes, DWORD nFileAttributesSet, DWORD nFileAttributesClear)
+void _stdcall SetFileAttributesExCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nFileAttributes, LPVOID pParam)
 {
 	BOOL bRet;
-
-	if (nFileAttributesClear == 0xFFFFFFFF)
-		nFileAttributes = nFileAttributesSet;
-	else
+	LPSETFILEATTRIBUTEPARAM pFileAttributes = (LPSETFILEATTRIBUTEPARAM)pParam;
+	if (pFileAttributes->bClearOrSet)
 	{
-		nFileAttributes |= nFileAttributesSet;
-		nFileAttributes &= ~nFileAttributesClear;
+		nFileAttributes |= pFileAttributes->nFileAttributesSet;
+		nFileAttributes &= ~pFileAttributes->nFileAttributesClear;
 	}
+	else
+		nFileAttributes = pFileAttributes->nFileAttributesSet;
 
 	if (pPath.Len() < MAX_PATH)
 	{
@@ -1842,29 +1883,28 @@ FileSearch* pFileSearch = 0;
 try
 {
 	FoxString pWildcard(parm(1));
-	DWORD dwFileAttributesSet, dwFileAttributesClear;
-	bool bClearOrSet;
+	SETFILEATTRIBUTEPARAM pCallbackParam;
 	if (parm(2)->Vartype() == 'I')
 	{
-		dwFileAttributesSet = parm(2)->ev_long;
-		dwFileAttributesClear = 0xFFFFFFFF;
+		pCallbackParam.bClearOrSet = false;
+		pCallbackParam.nFileAttributesSet = parm(2)->ev_long;
 	}
 	else if (parm(2)->Vartype() == 'C')
 	{
 		FoxString pAttributes(parm(2), 0);
-		bClearOrSet = pAttributes.StringToFileAttributes(dwFileAttributesSet, dwFileAttributesClear);
-		if (!bClearOrSet)
-			dwFileAttributesClear = 0xFFFFFFFF;
+		pCallbackParam.bClearOrSet = pAttributes.StringToFileAttributes(pCallbackParam.nFileAttributesSet, pCallbackParam.nFileAttributesClear);
 	}
 	else
 		throw E_INVALIDPARAMS;
 	
-	bool bRecurse = parm.PCount() < 3 ? false : parm(3)->ev_length > 0;
-	pFileSearch = new FileSearch(bRecurse, pWildcard, 0, 0, 0, ADIREX_FULLPATH);
+	int nMaxRecursion = parm.PCount() < 3 ? -1 : parm(3)->ev_long;
+	bool bRecurse = nMaxRecursion >= 0;
+	pFileSearch = new FileSearch(bRecurse, pWildcard, 0, 0, 0, ADIREX_FULLPATH, false, false, nMaxRecursion);
 	if (pFileSearch == 0)
 		throw E_INSUFMEMORY;
 
-	pFileSearch->ExecuteReverse(SetFileAttributesExCallback, dwFileAttributesSet, dwFileAttributesClear);
+	unsigned int nFileCount = pFileSearch->ExecuteSearchCallback(SetFileAttributesExCallback, (LPVOID)&pCallbackParam);
+	Return(nFileCount);
 }
 catch (int nErrorNo)
 {
@@ -2315,7 +2355,7 @@ catch(int nErrorNo)
 }
 }
 
-void FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nAttributes, DWORD nParam1, DWORD nParam2)
+void FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nAttributes, LPVOID pParam)
 {
 	if (nAttributes & FILE_ATTRIBUTE_DIRECTORY)
 	{
@@ -2356,7 +2396,7 @@ try
 	pFileSearch = new FileSearch(true, pSearch, 0, 0, 0, ADIREX_FULLPATH);
 	if (pFileSearch == 0)
 		throw E_INSUFMEMORY;
-	pFileSearch->ExecuteReverse(FileSearchDeleteCallback, 0, 0);
+	pFileSearch->ExecuteReverse(FileSearchDeleteCallback, 0);
 	if (pDirectory.Len() < MAX_PATH)
 	{
 		RemoveDirectoryEx(pDirectory);

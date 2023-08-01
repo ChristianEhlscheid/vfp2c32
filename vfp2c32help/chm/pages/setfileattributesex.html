@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Changes the attributes of a set of files/directories specified by a wildcard search.</p>
 
-<div class="block"><pre>SetFileAttributesEx(<a href="#p1">cFileSkeleton</a>, <a href="#p2">ncAttributes</a>[, <a href="#p3">bRecursive</a>])</pre></div>
+<div class="block"><pre>SetFileAttributesEx(<a href="#p1">cFileSkeleton</a>, <a href="#p2">ncAttributes</a>[, <a href="#p3">nMaxRecursion</a>]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cFileSkeleton</a></dt>
 <dd><p>Fully qualified (drive:\path\wildcard) search string e.g. "C:\Winnt\*.dll"</p>
@@ -35,13 +35,15 @@ When passing a numeric value, the file attributes are overwritten with the new v
 <tr><td>FILE_ATTRIBUTE_SYSTEM</td><td>S</td><td>A file or directory that the operating system uses a part of, or uses exclusively.</td></tr>
 <tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>T</td><td>A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.</td></tr>
 </table></dd></dl>
-<dl class="parm"><dt><a id="p3">bRecursive (optional)</a></dt>
-<dd><p>default = .F.<br />
+<dl class="parm"><dt><a id="p3">nMaxRecursion (optional)</a></dt>
+<dd><p>default = -1<br />
 <br />
-Recurse into all subdirectories.</p>
+-1 = no recursion<br />
+0 = recurse into all subdirectories<br />
+&gt;0 = recurse into x subdirectories</p>
 </dd></dl>
 <h2>Return Value</h2>
-<p>Always .T.</p>
+<p>The number of files that were changed.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
