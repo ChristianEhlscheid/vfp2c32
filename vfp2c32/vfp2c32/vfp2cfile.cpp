@@ -690,8 +690,7 @@ bool FileSearch::FindFirstRecurse()
 		m_SearchPattern = m_SubDirectory;
 		CStringView pSubdir = m_SubDirectory;
 		pSubdir = pSubdir + m_Directory.Len();
-		if (m_MaxRecursion > 0)
-			m_RecursionLevel = pSubdir.GetWordCount('\\') - 1;
+		m_RecursionLevel = pSubdir.GetWordCount('\\') - 1;
 		if (m_StoreFullPath)
 			m_CompleteFilename = m_SubDirectory;
 		else
@@ -738,6 +737,7 @@ try_again_FindFirstFileExW:
 				m_SubDirectory = pSubdir;
 				return FindFirstRecurse();
 			}
+			return false;
 		}
 		else
 		{
@@ -791,7 +791,7 @@ bool FileSearch::FindNext()
 			}
 		}
 		if (m_FilterFakeDirectory && IsFakeDir())
-			return FindNext();
+			continue;
 		return true;
 	}
 }
@@ -799,50 +799,142 @@ bool FileSearch::FindNext()
 bool FileSearch::FindNextRecurse()
 {
 	BOOL	bNext;
-	while (true)
+
+find_next:
+	if (m_WSearch == false)
+		bNext = FindNextFile(m_Handle, &m_Filedata);
+	else
+		bNext = FindNextFileW(m_Handle, &m_WideFiledata);
+
+	if (bNext == FALSE)
 	{
-		if (m_WSearch == false)
-			bNext = FindNextFile(m_Handle, &m_Filedata);
+		DWORD nLastError = GetLastError();
+		if (nLastError == ERROR_NO_MORE_FILES)
+		{
+			FindClose(m_Handle);
+			m_Handle = INVALID_HANDLE_VALUE;
+			CStringView pSubdir;
+			if (m_Subdirectories.Dequeue(pSubdir))
+			{
+				m_SubDirectory = pSubdir;
+				goto find_first;
+			}
+			return false;
+		}
 		else
-			bNext = FindNextFileW(m_Handle, &m_WideFiledata);
-
-		if (bNext == FALSE)
 		{
-			DWORD nLastError = GetLastError();
-			if (nLastError == ERROR_NO_MORE_FILES)
-			{
-				FindClose(m_Handle);
-				m_Handle = INVALID_HANDLE_VALUE;
-				CStringView pSubdir;
-				if (m_Subdirectories.Dequeue(pSubdir))
-				{
-					m_SubDirectory = pSubdir;
-					return FindFirstRecurse();
-				}
-				return false;
-			}
-			else
-			{
-				SaveWin32Error("FindNextFile", nLastError);
-				throw E_APIERROR;
-			}
+			SaveWin32Error("FindNextFile", nLastError);
+			throw E_APIERROR;
 		}
-
-		if (m_FilterFakeDirectory && IsFakeDir())
-			return FindNextRecurse();
-
-		if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
-		{
-			if (m_StoreFullPath)
-				m_StrBuilder = FileName();
-			else
-				m_StrBuilder.AppendFromBase(FileName());
-			m_StrBuilder.AddBs();
-			CStringView pSubdir = m_StrBuilder;
-			m_Subdirectories.Enqueue(pSubdir);
-		}
-		return true;
 	}
+
+	if (m_FilterFakeDirectory && IsFakeDir())
+		goto find_next;
+
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
+	{
+		if (m_StoreFullPath)
+			m_StrBuilder = FileName();
+		else
+			m_StrBuilder.AppendFromBase(FileName());
+		m_StrBuilder.AddBs();
+		CStringView pSubdir = m_StrBuilder;
+		m_Subdirectories.Enqueue(pSubdir);
+	}
+	return true;
+
+find_first:
+	if (m_SubDirectory.Len() == 0)
+	{
+		if (m_StoreFullPath)
+		{
+			m_CompleteFilename = m_Directory;
+			m_CompleteFilename.SetFormatBase();
+		}
+		else
+		{
+			m_StrBuilder = m_Directory;
+			m_StrBuilder.SetFormatBase();
+		}
+		m_SearchPattern = m_Directory;
+		m_RecursionLevel = 0;
+	}
+	else
+	{
+		m_SearchPattern = m_SubDirectory;
+		CStringView pSubdir = m_SubDirectory;
+		pSubdir = pSubdir + m_Directory.Len();
+		m_RecursionLevel = pSubdir.GetWordCount('\\') - 1;
+		if (m_StoreFullPath)
+			m_CompleteFilename = m_SubDirectory;
+		else
+			m_CompleteFilename = pSubdir;
+		m_CompleteFilename.SetFormatBase();
+	}
+	m_SearchPattern += "*";
+	if (m_SearchPattern.Len() < MAX_PATH)
+	{
+		m_CurrentFiledata = &m_Filedata;
+		m_WSearch = false;
+	try_again_FindFirstFileEx:
+		m_Handle = FindFirstFileEx(m_SearchPattern, FindExInfoStandard, &m_Filedata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
+	}
+	else
+	{
+		if (!m_WideWildcard)
+			m_WideWildcard = m_Wildcard;
+		m_WideSearchPattern = m_SearchPattern.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+		m_CurrentFiledata = reinterpret_cast<WIN32_FIND_DATA*>(&m_WideFiledata);
+		m_WSearch = true;
+	try_again_FindFirstFileExW:
+		m_Handle = FindFirstFileExW(m_WideSearchPattern, FindExInfoStandard, &m_WideFiledata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
+	}
+
+	if (m_Handle == INVALID_HANDLE_VALUE)
+	{
+		DWORD nLastError = GetLastError();
+		if (nLastError == ERROR_INVALID_PARAMETER && GetFindFirstFlags() == FIND_FIRST_EX_LARGE_FETCH)
+		{
+			SetFindFirstFlags(0);
+			if (m_WSearch == false)
+				goto try_again_FindFirstFileEx;
+			else
+				goto try_again_FindFirstFileExW;
+		}
+
+		if (IgnorableSearchError(nLastError, m_RecursionLevel > 0))
+		{
+			// Did we access something we can't access while recursing?
+			CStringView pSubdir;
+			if (m_Subdirectories.Dequeue(pSubdir))
+			{
+				m_SubDirectory = pSubdir;
+				goto find_first;
+			}
+			return false;
+		}
+		else
+		{
+			SaveWin32Error("FindFirstFile", nLastError);
+			throw E_APIERROR;
+		}
+	}
+
+	if (m_FilterFakeDirectory && IsFakeDir())
+		goto find_next;
+
+	// add subdirectory to queue
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
+	{
+		if (m_StoreFullPath)
+			m_StrBuilder = FileName();
+		else
+			m_StrBuilder.AppendFromBase(FileName());
+		m_StrBuilder.AddBs();
+		CStringView pSubdir = m_StrBuilder;
+		m_Subdirectories.Enqueue(pSubdir);
+	}
+	return true;
 }
 
 /* like FindFirst, but drills through all subdirectories and returns the files in the deepest directories first */
