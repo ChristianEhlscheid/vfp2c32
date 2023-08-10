@@ -196,7 +196,10 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 			else if (pField.ICompare("cfileattribs"))
 			{
 				m_Index_StringFileattribs = nFieldNo;
-				pCursorDefinition.Append("cfileattribs V(10)");
+				if (CFoxVersion::MajorVersion() >= 9)
+					pCursorDefinition.Append("cfileattribs V(10)");
+				else
+					pCursorDefinition.Append("cfileattribs C(10)");
 			}
 			else
 			{
@@ -214,9 +217,15 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 	{
 		pCursorDefinition = "filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20, 0), ";
 		if (bStringFileAttribs)
-			pCursorDefinition.Append("cfileattribs V(10)");
+		{
+			if (CFoxVersion::MajorVersion() >= 9)
+				pCursorDefinition.Append("cfileattribs V(10)");
+			else
+				pCursorDefinition.Append("cfileattribs C(10)");
+		}
 		else
 			pCursorDefinition.Append("fileattribs I");
+
 		created = m_Cursor.Create(pDestination, pCursorDefinition);
 		if (created == false)
 		{

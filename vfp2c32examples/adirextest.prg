@@ -27,7 +27,7 @@ lnCount = ADIREX('curFiles',ADDBS(FULLPATH(CURDIR()))+"*.*",0,ADIREX_DEST_CURSOR
 USE IN curfiles
 
 && enumerate all files by calling back into AdirCallback function
-?ADIREX('AdirCallback',ADDBS(FULLPATH(CURDIR()))+"*.*",0,ADIREX_DEST_CALLBACK)
+?ADIREX('AdirExCallback',ADDBS(FULLPATH(CURDIR()))+"*.*",0,ADIREX_DEST_CALLBACK)
 
 && enumerate all system and hidden files into array laFiles
 && underlying filter algorithm: BITAND(nFileAttributes,nYourFilter) == nYourFilter

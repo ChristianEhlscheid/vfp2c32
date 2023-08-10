@@ -21,7 +21,7 @@
 	#endif
 #else
 	#if defined(_THREADSAFE)
-		#define FLLFILENAME "vfp2c32dt.fll"
+		#define FLLFILENAME "vfp2c32td.fll"
 	#else
 		#define FLLFILENAME "vfp2c32d.fll"
 	#endif
@@ -35,7 +35,7 @@
 	#endif
 #else
 	#if defined(_THREADSAFE)
-		#define FLLFILENAME "vfp2c64dt.fll"
+		#define FLLFILENAME "vfp2c64td.fll"
 	#else
 		#define FLLFILENAME "vfp2c64d.fll"
 	#endif

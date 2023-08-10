@@ -2211,7 +2211,6 @@ bool FoxCursor::Create(CStringView pCursorName, CStringView pFields, bool bAttac
 	// get fieldcount
 	vValue.Evaluate("FCOUNT()");
 	m_FieldCnt = vValue->ev_long;
-
 	if (m_pFieldLocs)
 	{
 		delete[] m_pFieldLocs;
