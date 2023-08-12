@@ -77,7 +77,8 @@ int _stdcall ReplaceMemoEx(Locator *pLoc, char *pData, int nLen, FCHAN hFile);
 int _stdcall AppendMemo(char *pData, int nLen, FCHAN hFile, long *nLoc);
 int _stdcall MemoChan(int nWorkarea, FCHAN *nChan);
 int _stdcall DBAppendRecords(int nWorkArea, unsigned int nRecords);
-int _stdcall Zap(char *pCursor);
+int _stdcall Zap(CStringView pCursor);
+bool _stdcall Used(CStringView pCursor);
 
 void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime);
 void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime);

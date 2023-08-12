@@ -42,6 +42,7 @@ const unsigned int SQLEXECEX_NATIVE_SQL			= 0x00000008;
 const unsigned int SQLEXECEX_CALLBACK_PROGRESS	= 0x00000010;
 const unsigned int SQLEXECEX_CALLBACK_INFO		= 0x00000020;
 const unsigned int SQLEXECEX_STORE_INFO			= 0x00000040;
+const unsigned int SQLEXECEX_APPEND_CURSOR		= 0x00000080;
 
 // defines for TableUpdateEx
 const int VFP2C_ODBC_MAX_SQLSTATEMENT	= 16384;

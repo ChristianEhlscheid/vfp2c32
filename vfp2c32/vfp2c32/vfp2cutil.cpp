@@ -322,11 +322,23 @@ int _stdcall AppendMemo(char *pData, int nLen, FCHAN hFile, long *nLoc)
 	return 0;
 }
 
-int _stdcall Zap(char *pCursor)
+int _stdcall Zap(CStringView pCursor)
 {
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
-	pExeBuffer.Format("ZAP IN %S", pCursor);
+	pExeBuffer.Format("ZAP IN %V", &pCursor);
 	return _Execute(pExeBuffer);
+}
+
+bool _stdcall Used(CStringView pCursor)
+{
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	Value vValue;
+	pExeBuffer.Format("USED('%V')", &pCursor);
+	vValue.ev_type = '0';
+	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
+	if (nErrorNo)
+		throw nErrorNo;
+	return vValue.ev_length > 0;
 }
 
 //converts a filetime value to a datetime value .. milliseconds are truncated ..

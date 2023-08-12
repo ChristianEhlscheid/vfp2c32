@@ -274,6 +274,45 @@ private:
 	Value m_Value;
 };
 
+class AutoOnOffSetting
+{
+public:
+	AutoOnOffSetting(const char* pSetting, bool bOn) : m_Setting(pSetting), m_Reset(false)
+	{
+		m_Value.ev_type = '0';
+		m_Command.Format("SET('%S')", m_Setting);
+		if (_Evaluate(&m_Value, m_Command) == 0)
+		{
+			if ((bOn && m_Value.ev_length == 3) || (!bOn && m_Value.ev_length == 2))
+			{
+				m_Reset = true;
+				m_ResetTo = bOn ? "OFF" : "ON";
+				m_Command.Format("SET %S ", m_Setting);
+				m_Command.SetFormatBase();
+				m_Command.AppendFromBase(bOn ? "ON" : "OFF");
+				_Execute(m_Command);
+			}
+			_FreeHand(m_Value.ev_handle);
+		}
+	}
+	
+	~AutoOnOffSetting()
+	{
+		if (m_Reset)
+		{
+			m_Command.AppendFromBase(m_ResetTo);
+			_Execute(m_Command);
+		}
+	}
+
+private:
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> m_Command;
+	Value m_Value;
+	bool m_Reset;
+	char* m_ResetTo;
+	const char* m_Setting;
+};
+
 /* base class for variable types*/
 class FoxValue
 {

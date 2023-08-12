@@ -460,8 +460,8 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		SQLINTEGER nSQLLen;
 		SQLRETURN nApiRet;
 		ValueEx vRowCount;
+		bool bUsed;
 		vRowCount.SetDouble(0, 0);
-		
 		int nErrorNo = VFP2C_Init_Odbc();
 		if (nErrorNo)
 			throw nErrorNo;
@@ -625,7 +625,8 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		}
 
 		// 6.1
-		if (pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
+		bUsed = Used(pStmt->pCursorName);
+		if (bUsed && pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
 		{
 			pStmt->ParseCursorSchemaEx(pStmt->pCursorName);
 		}
@@ -654,10 +655,14 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		else
 		{
 			// else destination is a cursor ...
-			if (pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
+			if (bUsed && pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
 			{
-				if (nErrorNo = Zap(pStmt->pCursorName))
-					throw nErrorNo;
+				if ((pStmt->nFlags & SQLEXECEX_APPEND_CURSOR) == 0)
+				{
+					AutoOnOffSetting pSetting("SAFETY", false);
+					if (nErrorNo = Zap(pStmt->pCursorName))
+						throw nErrorNo;
+				}
 			}
 			else
 			{
@@ -2607,15 +2612,17 @@ void SqlStatement::ParseCursorSchemaEx(char *pCursor)
 	ValueEx vValue;
 	vValue = 0;
 	char* pValue;
-	int nErrorNo = 0, nFieldCount, nRow;
+	int nFieldCount, nRow;
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pArrayName;
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	CStringView pArrayView;
 
 try {
 	// create unique array name .. since pStmt is a dynamically allocated pointer it's value is
 	// always unique .. so we can use it to build a variable name ..
 	pArrayName.Format("__VFP2C_ODBC_ARRAY_%U", this);
-	pExeBuffer.Format("AFIELDS(%S,'%S')", pArrayName, pCursor);
+	pArrayView = pArrayName;
+	pExeBuffer.Format("AFIELDS(%V,'%S')", &pArrayView, pCursor);
 
 	Execute(pExeBuffer);
 	lArrayLoc.FindVar(pArrayName);
@@ -2624,7 +2631,7 @@ try {
 
 	while (nFieldCount--)
 	{
-		nRow = lArrayLoc.l_sub1++;
+		nRow = ++lArrayLoc.l_sub1;
 
 		// fieldname
 		vValue = lArrayLoc(nRow, 1);
@@ -2666,14 +2673,14 @@ try {
 		lpCS->bCustomSchema = TRUE;
 	}
 
-	pExeBuffer.Format("RELEASE %S", pArrayName);
+	pExeBuffer.Format("RELEASE %V", &pArrayView);
 	Execute(pExeBuffer);
 }
 catch (int nError)
 {
-	nErrorNo = nError;
-	pExeBuffer.Format("RELEASE %S", pArrayName);
+	pExeBuffer.Format("RELEASE %V", &pArrayView);
 	_Execute(pExeBuffer);
+	throw nError;
 }
 }
 

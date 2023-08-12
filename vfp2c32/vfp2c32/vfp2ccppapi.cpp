@@ -2058,10 +2058,11 @@ void FoxArray::ReDimension(unsigned int nRows, unsigned int nDims)
 {
 	assert(m_Name.Len());
 	CStrBuilder<256> pExeBuffer;
+	CStringView vName = m_Name;
 	if (nDims > 1)
-		pExeBuffer.Format("DIMENSION %V[%U,%U]", &(CStringView)m_Name, nRows, nDims);
+		pExeBuffer.Format("DIMENSION %V[%U,%U]", &vName, nRows, nDims);
 	else
-		pExeBuffer.Format("DIMENSION %V[%U]", &(CStringView)m_Name, nRows);
+		pExeBuffer.Format("DIMENSION %V[%U]", &vName, nRows);
 	Execute(pExeBuffer);
 	m_Rows = nRows;
 	m_Dims = nDims;
@@ -2130,7 +2131,7 @@ unsigned int FoxArray::CompactOverflow()
 	{
 		CStrBuilder<512> pExeBuffer;
 		CStrBuilder<VFP_MAX_VARIABLE_NAME + 1> pArrayName;
-
+		CStringView pArrayView, pNameView = m_Name;
 		m_Name.ResetToFormatBase();
 		pArrayName = m_Name;
 		pArrayName.SetFormatBase();
@@ -2145,10 +2146,11 @@ unsigned int FoxArray::CompactOverflow()
 		{
 			pArrayName.AppendFormatBase("_VFP2C_OF_%U", xj);
 			// append elements from 2nd, 3rd .. array into the first array
-			pExeBuffer.Format("ACOPY(%V,%V,1,%U,%U)", &(CStringView)pArrayName, &(CStringView)m_Name, min(nMaxElementsPerArray, nTotalElementsToCopy), nFirstDestinationElement);
+			pArrayView = pArrayName;
+			pExeBuffer.Format("ACOPY(%V,%V,1,%U,%U)", &pArrayView, &pNameView, min(nMaxElementsPerArray, nTotalElementsToCopy), nFirstDestinationElement);
 			Execute(pExeBuffer);
 			// release the intermediary arrays
-			pExeBuffer.Format("RELEASE %V", &(CStringView)pArrayName);
+			pExeBuffer.Format("RELEASE %V", &pArrayView);
 			Execute(pExeBuffer);
 			nFirstDestinationElement += nMaxElementsPerArray;
 			nTotalElementsToCopy -= nMaxElementsPerArray;

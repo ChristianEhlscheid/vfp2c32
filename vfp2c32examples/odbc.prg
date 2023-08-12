@@ -1,6 +1,5 @@
 #INCLUDE vfp2c.h
 
-
 CD (FULLPATH(JUSTPATH(SYS(16))))
 
 IF TYPE('_WIN64') = 'L' AND _WIN64
@@ -9,25 +8,38 @@ ELSE
 SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
-LOCAL lnCon, lValue, lnRet, laInfo[1]
-lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.0 ANSI Driver};Server=localhost;User=root;Pwd=********',.F.)
+LOCAL lnCon, lValue, lnRet, laInfo[1], lcName
+&& lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=SQLEXPRESS;User=sa;Pwd=****',.F.)
+lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.1 ANSI Driver};Server=localhost;User=root;Pwd=*****',.F.)
 IF lnCon = -1
 	AERROR(laError)
 	DISPLAY MEMORY LIKE laError
 	RETURN
 ENDIF
+
 lnRet = SQLEXECEX(lnCon,'USE sakila')
-&& lnRet = SQLEXECEX(lnCon,'SELECT * FROM film', 'cCursor', '', 0, 'css_id I')
-lnRet = SQLEXECEX(lnCon,'SELECT * FROM film', 'cCursor')
+m.lcName = 'A%'
+lnRet = SQLEXECEX(lnCon, 'SELECT * FROM actor WHERE first_name LIKE ?{lcName}', 'cCursor', 'laInfo', SQLEXECEX_REUSE_CURSOR)
 ?lnRet
 IF lnRet = -1
 	AERROREX('laError')
 	DISPLAY MEMORY LIKE laError
+ELSE
+	DISPLAY MEMORY LIKE laInfo
+ENDIF
+
+m.lcName = 'B%'
+lnRet = SQLEXECEX(lnCon,'SELECT * FROM actor WHERE first_name LIKE ?{lcName}', 'cCursor', 'laInfo', SQLEXECEX_REUSE_CURSOR)
+?lnRet
+IF lnRet = -1
+	AERROREX('laError')
+	DISPLAY MEMORY LIKE laError
+ELSE
+	DISPLAY MEMORY LIKE laInfo
 ENDIF
 
 SQLDISCONNECT(lnCon)
 RETURN
-
 
 && enable/disable ODBC tracing 
 ? SQLSETPROPEX(lnCon,"TRACE",.F.)
