@@ -14,6 +14,14 @@
 </div>
 <div id="content">
 
+<h2>Version 2.0.0.35 -- 2023-08-12</h2>
+<ul>
+<li>bugfix in SqlExecEx - SQLEXEC_REUSE_CURSOR was broken, cursorschema of existing cursor was read incorrectly</li>
+<li>enhancement in SqlExecEx - if SQLEXECEX_REUSE_CURSOR is passed and the cursor does not exist it is created instead of raising an error</li>
+<li>enhancement in SqlExecEx - if SQLEXECEX_REUSE_CURSOR is passed and the cursor exists, SET SAFETY OFF is executed to suppress the messagebox if neccessary before ZAP on the cursor is executed</li>
+<li>enhancement in SqlExecEx - new flag SQLEXEC_APPEND_CURSOR - use in combination with SQLEXECEX_REUSE_CURSOR, just appends records to an existing cursor instead of first deleting the old records</li>
+</ul>
+
 <h2>Version 2.0.0.34 -- 2023-08-10</h2>
 <ul>
 <li>bugfix in ADirEx - in old FoxPro versions which don't support the V datatype for cursors</li>
