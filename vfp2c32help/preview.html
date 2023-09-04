@@ -392,7 +392,7 @@ if ( window.addEventListener ) {
 function setvfp2c32version()
 {
 	var version = document.getElementById('vfp2c32version');
-	version.innerText = 'VFP2C32 2.0.0.19';
+	version.innerText = 'VFP2C32 2.0.0.36';
 }			
 			
 function CopyCode(cElement)
@@ -443,7 +443,7 @@ One of:</p>
 Valid types:</p>
 <table>
 <tr><th style="width: 18%;">Datatype</th><th>Description</th></tr>
-<tr><td>INTEGER or LONG</td><td>a signed 32bit integer</td></tr>
+<tr><td>INTEGER or LONG</td><td>a signed 32bit integer - in the 64bit version of the library LONG is synonymous with INT64</td></tr>
 <tr><td>UINTEGER or ULONG</td><td>an unsigned 32bit integer</td></tr>
 <tr><td>SHORT</td><td>a signed 16bit integer</td></tr>
 <tr><td>USHORT</td><td>an unsigned 16bit integer</td></tr>
@@ -474,7 +474,8 @@ and CURRENCY as a currency literal.
 </p></div>
 <p></p>
 <div class="blockheader"><p class="note">Note</p></div>
-<div class="block"><p>The number of parameters is limited to 27, the limit of parameters a VFP function can except.
+<div class="block"><p>It's best to use LONG for any pointer datatype, this will marshal the correct values in the 32bit or 64bit version of the library respectivly.<br />
+The number of parameters is limited to 27, the limit of parameters a VFP function can except.
 </p></div>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">oObjectRef (optional)</a></dt>

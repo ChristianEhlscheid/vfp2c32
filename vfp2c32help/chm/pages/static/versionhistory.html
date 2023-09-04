@@ -14,6 +14,12 @@
 </div>
 <div id="content">
 
+<h2>Version 2.0.0.36 -- 2023-09-04</h2>
+<ul>
+<li>bugfix in CreateCallbackFunc - the calling convention passed in the nFlags parameter wasn't stored correctly, this could produce random exceptions, CALLBACK_CDECL was completly broken</li>
+<li>bugfix in GetLongPathName and GetShortPathName - when the passed pathname was longer than MAX_PATH characters</li>
+</ul>
+
 <h2>Version 2.0.0.35 -- 2023-08-12</h2>
 <ul>
 <li>bugfix in SqlExecEx - SQLEXEC_REUSE_CURSOR was broken, cursorschema of existing cursor was read incorrectly</li>
