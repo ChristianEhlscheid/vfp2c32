@@ -44,7 +44,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v100</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -116,7 +117,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>vfp2c32d</TargetName>
+    <TargetExt>.fll</TargetExt>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -141,6 +146,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.fll</TargetExt>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|x64'">
     <TargetExt>.fll</TargetExt>
@@ -156,22 +162,34 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <CallingConvention>StdCall</CallingConvention>
+      <CallingConvention>FastCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <StringPooling>true</StringPooling>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <TargetMachine>MachineX86</TargetMachine>
-      <OutputFile>$(OutputDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt; msvcprtd</IgnoreSpecificDefaultLibraries>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
+copy "$(SolutionDir)$(Platform)\Debug\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32examples\$(TargetName).pdb"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">
     <ClCompile>
@@ -237,6 +255,8 @@
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <WarningLevel>Level1</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -336,7 +356,6 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
     <ClInclude Include="resource.h" />
     <ClInclude Include="vfp2c32.h" />
     <ClInclude Include="vfp2carray.h" />
-    <ClInclude Include="vfp2casmfuncs.h" />
     <ClInclude Include="vfp2cassembly.h" />
     <ClInclude Include="vfp2casync.h" />
     <ClInclude Include="vfp2casynccom.h" />
@@ -419,6 +438,14 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
     </CustomBuild>
     <None Include="vfp2c32.ico" />
+    <CustomBuild Include="vfp2casmfuncs.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </Outputs>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="vfp2c32.rc" />

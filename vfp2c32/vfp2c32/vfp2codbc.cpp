@@ -437,7 +437,7 @@ catch(int nErrorNo)
 void _fastcall SQLExecEx(ParamBlkEx& parm)
 {
 	// 1. setup
-	// 2. parse & rewrite SQL for parameter markers (replace ?varName with ?)
+	// 2. parse & rewrite SQL for parameter markers (replace ?{varName} with ?)
 	// 3. SQLBindParamter() - Bind input/output parameters
 	// 4. SQLExecDirect() - Execute SQL statement
 	// 4.1 if SQLExecDirect returns SQL_NEED_DATA we need to send long parameter data with SQLParamData/SQLPutData
@@ -447,7 +447,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 	// 7. SQLPrepareColumnBindings - based on the meta data and the cursorschema desired create Value buffers for the columns
 	// 8. SQLBindColumnEx() - bind all columns that are fixed width to the Value buffers
 	// 9. SQLFetchToCursor/SQLFetchToVariables - loop over SQLFetch() until no more data is returned
-	// 10 STORE number of fetched / updated / deleted / inserted rows into array
+	// 10 store number of fetched / updated / deleted / inserted rows into array
 	// 11. SQLMoreResults - check if more result sets are available - if so move to step 5
 	// 12. cleanup
 
@@ -901,7 +901,7 @@ try
 		}
 		if (!(pStmt->nFlags & (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_CALLBACK_PROGRESS)))
 		{
-			SaveCustomError("SqlExecEx", "Callback function passed, but no nFlags parameter does not specify either SQLEXECEX_CALLBACK_INFO or SQLEXECEX_CALLBACK_PROGRESS.");
+			SaveCustomError("SqlExecEx", "Callback function passed, but the nFlags parameter does not specify SQLEXECEX_CALLBACK_INFO or SQLEXECEX_CALLBACK_PROGRESS.");
 			throw E_INVALIDPARAMS;
 		}
 		FoxString pCallback(parm(8));

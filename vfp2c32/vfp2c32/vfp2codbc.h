@@ -257,11 +257,6 @@ void _stdcall CurrencyToNumeric_Struct(Value *pValue, SQL_NUMERIC_STRUCT *lpNum)
 void _stdcall NumericLiteralToCurrency(SQLCHAR *pLiteral, Value *pValue);
 void _stdcall CurrencyToNumericLiteral(Value *pValue, SQLCHAR *pLiteral);
 
-void _fastcall TableUpdateEx(ParamBlkEx& parm);
-int _stdcall SQLCreateDeleteStmt(char *pSQLBuffer, char *pTable, char *pKeyFields);
-int _stdcall SQLCreateInsertStmt(char *pSQL, char *pCursor, char *pTable, char *pKeyFields, char *pColumns);
-int _stdcall SQLCreateUpdateStmt(char *pSQL, char *pCursor, char *pTable, char *pKeyFields, char *pColumns, int nFlags);
-
 #ifdef __cplusplus
 }
 #endif // end of extern "C"

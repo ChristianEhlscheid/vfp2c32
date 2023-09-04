@@ -8,7 +8,7 @@ int CFoxVersion::m_Version = 0;
 int CFoxVersion::m_MajorVersion = 0;
 int CFoxVersion::m_MinorVersion = 0;
 
-void ReturnIDispatch(void* pObject)
+void _stdcall ReturnIDispatch(void* pObject)
 {
 	Value vObject = { '0' };
 	CStrBuilder<32> pCommand;

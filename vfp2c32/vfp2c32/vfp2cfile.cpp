@@ -432,7 +432,7 @@ FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD
 	m_Wildcard = (CStringView)m_StrBuilder;
 	if (m_Directory.Len() == m_Wildcard.Len())
 	{
-		m_Directory.Len(GetCurrentDirectory(sizeof(m_Directory), m_Directory));
+		m_Directory.Len(GetCurrentDirectory(m_Directory.Size(), m_Directory));
 		m_Directory.AddBs();
 	}
 	else
@@ -2113,27 +2113,32 @@ try
 {
 	FoxString pFileName(parm(1));
 	FoxString pPathName(MAX_PATH);
-	
+	DWORD nLen = 0;
+
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
 
-	DWORD nLen = GetLongPathName(pFileName, pPathName, MAX_PATH);
-	if (nLen >= MAX_PATH)
+	if (pFileName.Len() < MAX_PATH)
 	{
-		FoxWString<MAX_PATH*2> pWideFileName;
+		nLen = GetLongPathName(pFileName, pPathName, MAX_PATH);
+		pPathName.Len(nLen);
+	}
+
+	if (nLen > MAX_PATH)
+	{
+		FoxWString<MAX_PATH*2> pWideFilename;
 		FoxWString<0> pWidePathName;
-		pWideFileName = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		nLen += sizeof(FILE_UNICODE_EXTENSION);
-		pWidePathName.Size(nLen);
-		nLen = GetLongPathNameW(pWideFileName, pWidePathName, pWidePathName.Size());
+		pWideFilename = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+		pWidePathName.Size(pWideFilename.Len() + MAX_PATH);
+		nLen = GetLongPathNameW(pWideFilename, pWidePathName, pWidePathName.Size());
 		if (nLen != 0)
 		{
 			pWidePathName.Len(nLen);
-			pPathName = pWidePathName;
+			CWideStringView pPath(pWidePathName, pWidePathName.Len());
+			pPath = pPath + 4; // "\\?\"
+			pPathName = pPath;
 		}
 	}
-	else if (nLen > 0)
-		pPathName.Len(nLen);
 
 	if (nLen == 0)
 	{
@@ -2154,27 +2159,31 @@ try
 {
 	FoxString pFileName(parm(1));
 	FoxString pPathName(MAX_PATH);
+	DWORD nLen;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
 
-	DWORD nLen = GetShortPathName(pFileName, pPathName, MAX_PATH);
-	if (nLen >= MAX_PATH)
+	if (pFileName.Len() < MAX_PATH)
+	{
+		nLen = GetShortPathName(pFileName, pPathName, MAX_PATH);
+		pPathName.Len(nLen);
+	}
+	else
 	{
 		FoxWString<MAX_PATH * 2> pWideFilename;
 		FoxWString<0> pWidePathName;
 		pWideFilename = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		nLen += sizeof(FILE_UNICODE_EXTENSION);
-		pWidePathName.Size(nLen);
+		pWidePathName.Size(pWideFilename.Len());
 		nLen = GetShortPathNameW(pWideFilename, pWidePathName, pWidePathName.Size());
 		if (nLen != 0)
 		{
 			pWidePathName.Len(nLen);
-			pPathName = pWidePathName;
+			CWideStringView pPath(pWidePathName, pWidePathName.Len());
+			pPath = pPath + 4; // "\\?\"
+			pPathName = pPath;
 		}
 	}
-	else if (nLen > 0)
-		pPathName.Len(nLen);
 
 	if (nLen == 0)
 	{
@@ -2456,7 +2465,7 @@ catch(int nErrorNo)
 }
 }
 
-void FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nAttributes, LPVOID pParam)
+void _stdcall FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD nAttributes, LPVOID pParam)
 {
 	if (nAttributes & FILE_ATTRIBUTE_DIRECTORY)
 	{

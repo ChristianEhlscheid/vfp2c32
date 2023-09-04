@@ -21,9 +21,6 @@
     <ClInclude Include="vfp2carray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vfp2casmfuncs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="vfp2cassembly.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -244,6 +241,9 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="vfp2casmtest.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="vfp2casmfuncs.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>

@@ -8,37 +8,65 @@ ELSE
 SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
-LOCAL lnCon, lValue, lnRet, laInfo[1], lcName
+LOCAL lnCon, lnRet, laInfo[1], laTables[16], xj
+m.lnCon = -1
+m.laTables[1] = 'actor'
+m.laTables[2] = 'address'
+m.laTables[3] = 'category'
+m.laTables[4] = 'city'
+m.laTables[5] = 'country'
+m.laTables[6] = 'customer'
+m.laTables[7] = 'film'
+m.laTables[8] = 'film_actor'
+m.laTables[9] = 'film_category'
+m.laTables[10] = 'film_text'
+m.laTables[11] = 'inventory'
+m.laTables[12] = 'language'
+m.laTables[13] = 'payment'
+m.laTables[14] = 'rental'
+m.laTables[15] = 'staff'
+m.laTables[16] = 'store'
+
+CLOSE DATABASES ALL
+
+TRY
 && lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=SQLEXPRESS;User=sa;Pwd=****',.F.)
-lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.1 ANSI Driver};Server=localhost;User=root;Pwd=*****',.F.)
-IF lnCon = -1
-	AERROR(laError)
-	DISPLAY MEMORY LIKE laError
-	RETURN
-ENDIF
+	lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.1 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
+	IF lnCon = -1
+		THROW
+	ENDIF
 
-lnRet = SQLEXECEX(lnCon,'USE sakila')
-m.lcName = 'A%'
-lnRet = SQLEXECEX(lnCon, 'SELECT * FROM actor WHERE first_name LIKE ?{lcName}', 'cCursor', 'laInfo', SQLEXECEX_REUSE_CURSOR)
-?lnRet
-IF lnRet = -1
+	lnRet = SQLEXECEX(lnCon,'USE sakila')
+	IF lnRet = -1
+		THROW
+	ENDIF
+
+	FOR m.xj = 1 TO ALEN(m.laTables, 1)
+		lnRet = SQLEXECEX(lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo')
+		IF lnRet = -1
+			THROW 
+		ENDIF
+
+		lnRet = SQLEXECEX(lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR)
+		IF lnRet = -1
+			THROW 
+		ENDIF
+
+		lnRet = SQLEXECEX(lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR + SQLEXECEX_APPEND_CURSOR)
+		IF lnRet = -1
+			THROW 
+		ENDIF
+	ENDFOR
+	
+CATCH TO loError
 	AERROREX('laError')
 	DISPLAY MEMORY LIKE laError
-ELSE
-	DISPLAY MEMORY LIKE laInfo
-ENDIF
+FINALLY
+	IF lnCon != -1
+		SQLDISCONNECT(lnCon)
+	ENDIF
+ENDTRY
 
-m.lcName = 'B%'
-lnRet = SQLEXECEX(lnCon,'SELECT * FROM actor WHERE first_name LIKE ?{lcName}', 'cCursor', 'laInfo', SQLEXECEX_REUSE_CURSOR)
-?lnRet
-IF lnRet = -1
-	AERROREX('laError')
-	DISPLAY MEMORY LIKE laError
-ELSE
-	DISPLAY MEMORY LIKE laInfo
-ENDIF
-
-SQLDISCONNECT(lnCon)
 RETURN
 
 && enable/disable ODBC tracing 

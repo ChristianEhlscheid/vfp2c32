@@ -223,6 +223,7 @@ void RuntimeAssembler::Reset(AsmCallingConvention nCallConv, bool bSpillParamete
 	m_SpillParameters = bSpillParameters;
 	m_UseFramePointer = bUseFramePointer;
 	m_FrameOffset = bUseFramePointer ? 8 : 0;
+	m_CallConv = nCallConv;
 	m_Finished = false;
 }
 

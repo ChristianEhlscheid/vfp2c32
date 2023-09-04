@@ -202,6 +202,14 @@ typedef struct CWideStringView
 		return CWideStringView(pStart, nLength);
 	}
 
+	CWideStringView operator+(int nLen)
+	{
+		if ((unsigned int)nLen < Len)
+			return CWideStringView(Data + nLen, Len - nLen);
+		else
+			return 0;
+	}
+
 	CWideStringView operator+(unsigned int nLen)
 	{ 
 		if (nLen < Len)
