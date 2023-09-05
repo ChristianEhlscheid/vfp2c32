@@ -31,7 +31,12 @@ CLOSE DATABASES ALL
 
 TRY
 && lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=SQLEXPRESS;User=sa;Pwd=****',.F.)
+IF TYPE('_WIN64') = 'L' AND _WIN64
 	lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.1 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
+ELSE
+	lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.0 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
+ENDIF
+
 	IF lnCon = -1
 		THROW
 	ENDIF

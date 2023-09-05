@@ -218,7 +218,7 @@ void _fastcall SQLCancelEx(ParamBlkEx& parm);
 SqlStatement* _stdcall SQLAllocStatement(ParamBlkEx& parm, bool prepared) throw(int);
 #pragma warning(default : 4290)
 
-BOOL _stdcall SQLTypeConvertable(SQLSMALLINT nSQLType, char aVFPType);
+BOOL _stdcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType);
 unsigned int _stdcall SQLExtractInfo(char *pMessage, unsigned int nMsgLen);
 
 int _stdcall SQLStoreByBinding(LPSQLCOLUMNDATA lpCS);

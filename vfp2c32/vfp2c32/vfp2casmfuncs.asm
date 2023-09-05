@@ -8,7 +8,7 @@
 LOWORD EQU [0]
 HIWORD EQU [4]
 
-Multiply_Int64 PROC USES ebx esi edi, ALO:DWORD, AHI:DWORD, BLO:DWORD, BHI:DWORD, OF:PTR
+Multiply_Int64 PROC PUBLIC USES ebx esi edi, ALO:DWORD, AHI:DWORD, BLO:DWORD, BHI:DWORD, OF:PTR
 
 ;       AHI, BHI : upper 32 bits of A and B
 ;       ALO, BLO : lower 32 bits of A and B

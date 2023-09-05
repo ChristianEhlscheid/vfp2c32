@@ -441,9 +441,11 @@ copy "$(SolutionDir)x64\DebugTS\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32exam
     <CustomBuild Include="vfp2casmfuncs.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ml /Fo $(TargetDir)%(Filename).obj /c /Cx %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </Outputs>
     </CustomBuild>
   </ItemGroup>

@@ -2394,7 +2394,7 @@ void SqlStatement::PrepareColumnBindings()
 	} // while(nNumberOfCols--)
 }
 
-BOOL _stdcall SQLTypeConvertable(SQLSMALLINT nSQLType, char aVFPType)
+BOOL _stdcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType)
 {
 	switch (nSQLType)
 	{
@@ -2500,7 +2500,7 @@ void SqlStatement::ParseCursorSchema()
 			lpCS->aVFPType = ToUpper(lpCS->aVFPType);
 
 			// check if column is convertable to specified type
-			if (!SQLTypeConvertable(lpCS->nSQLType,lpCS->aVFPType))
+			if (!SQLTypeConvertible(lpCS->nSQLType,lpCS->aVFPType))
 			{
 				SaveCustomError("SQLExecEx", "Datatype conversion for column '%S' to VFP type '%s' not supported.", aColName, lpCS->aVFPType);
 				throw E_APIERROR;
@@ -4234,10 +4234,10 @@ int _stdcall SQLStoreMemoCharVar(LPSQLCOLUMNDATA lpCS)
 {
 	SQLRETURN nApiRet;
 	ValueEx vData;
-	vData = 0;
 	char *pData;
 	int nRetVal;
 
+	vData.SetString();
 	if (!vData.AllocHandle(VFP2C_ODBC_MAX_BUFFER))
 		return E_INSUFMEMORY;
 	
@@ -4353,6 +4353,7 @@ int _stdcall SQLStoreMemoWCharVar(LPSQLCOLUMNDATA lpCS)
 	char *pData;
 	int nRetVal;
 
+	vData.SetString();
 	if (!vData.AllocHandle(VFP2C_ODBC_MAX_BUFFER))
 		return E_INSUFMEMORY;
 	
@@ -4469,8 +4470,8 @@ int _stdcall SQLStoreMemoBinaryVar(LPSQLCOLUMNDATA lpCS)
 	ValueEx vData;
 	char *pData;
 	int nRetVal;
-	vData = 0;
-
+	
+	vData.SetString();
 	if (!vData.AllocHandle(VFP2C_ODBC_MAX_BUFFER))
 		return E_INSUFMEMORY;
 	
