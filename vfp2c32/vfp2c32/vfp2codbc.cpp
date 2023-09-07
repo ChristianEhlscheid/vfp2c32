@@ -952,6 +952,26 @@ catch (int nErrorNo)
 }
 #pragma warning(default : 4290)
 
+SqlStatement::SqlStatement() {
+	pColumnData = 0;
+	pParamData = 0;
+	hStmt = 0;
+	hConn = 0;
+	nNoOfCols = 0;
+	nNoOfParms = 0;
+	bOutputParams = FALSE;
+	pSQLSend = 0;
+	pCursorname = 0;
+	nSQLLen = 0;
+	nResultset = 0;
+	nCallbackInterval = 100;
+	nRowsTotal = 0;
+	nRowsFetched = 0;
+	nFlags = 0;
+	bMapVarchar = false;
+	bPrepared = false;
+}
+
 SqlStatement::~SqlStatement()
 {
 	FreeParameters();
@@ -995,11 +1015,12 @@ void SqlStatement::FreeColumnBuffers()
 	{
 		LPSQLCOLUMNDATA lpCS = pColumnData;
 		int count = nNoOfCols;
+		SQLPOINTER pGetDataPtr = pGetDataBuffer.Ptr<SQLPOINTER>();
 		while (count--)
 		{
 			// if the handle is valid and the buffer isn't our 
 			// general purpose buffer for long data we need to free it
-			if (lpCS->vData.Vartype() == 'C' && lpCS->pData != pGetDataBuffer.Ptr<SQLPOINTER>())
+			if (lpCS->vData.Vartype() == 'C' && lpCS->pData != pGetDataPtr)
 			{
 				lpCS->vData.UnlockHandle();
 				lpCS->vData.FreeHandle();

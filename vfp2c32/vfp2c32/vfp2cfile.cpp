@@ -3349,12 +3349,12 @@ try
 
 	bApiRet = WriteFile(hFile, pData.Ptr<LPCVOID>(), dwLength, &dwWritten,0);
 	if (!bApiRet)
-		SaveWin32Error("WriteFile",GetLastError());
-
-	if (bApiRet)
-		Return(dwWritten);
-	else
+	{
+		SaveWin32Error("WriteFile", GetLastError());
 		Return(0);
+	}
+	else
+		Return(dwWritten);
 }
 catch(int nErrorNo)
 {

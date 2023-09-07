@@ -7,9 +7,6 @@
 #include "vfp2ccom.h"
 #include "vfp2ccomcall.h"
 
-// static list<RegisteredComDll*> glRegisteredComDlls;
-// static PLOADTYPELIBEX fpLoadTypeLibEx = 0;
-
 void _stdcall VFP2C_Init_Com()
 {
 try

@@ -40,12 +40,21 @@
 
 /* Global variables: module handle for this DLL */
 HMODULE ghModule = 0;
+typedef BOOL(_stdcall* FPGETMODULEHANDLEEX)(DWORD, LPCSTR, HMODULE*); // GetModuleHandleExA
 
 void _fastcall OnLoad()
 {
 	/* get module handle - _GetAPIHandle() doesn't work (unresolved external error from linker) */
 	if (!ghModule)
-		ghModule = GetModuleHandle(FLLFILENAME);
+	{
+		HMODULE hMod = GetModuleHandle("kernel32.dll");
+		FPGETMODULEHANDLEEX fpGetModuleHandleex = (FPGETMODULEHANDLEEX)GetProcAddress(hMod, "GetModuleHandleExA");
+		BOOL ret = fpGetModuleHandleex(0x04 /*GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS*/ | 0x02 /* GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT*/, (LPCSTR)&OnUnload, &ghModule);
+		if (ret == FALSE)
+		{
+			SaveWin32Error("GetModuleHandleEx", GetLastError());
+		}
+	}
 	VFP2CTls::OnLoad();
 
 	/* get OS information */

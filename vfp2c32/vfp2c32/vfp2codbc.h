@@ -22,8 +22,6 @@ const int VFP2C_ODBC_MAX_COLUMN_NAME		= 256;
 const int VFP2C_ODBC_MAX_TABLE_NAME			= 256;
 const int VFP2C_ODBC_MAX_FIELD_NAME			= VFP2C_ODBC_MAX_SCHEMA_NAME + 1 + VFP2C_ODBC_MAX_TABLE_NAME + 1 + VFP2C_ODBC_MAX_COLUMN_NAME;
 const int VFP2C_ODBC_MAX_CHAR_LEN			= 255;
-const int VFP2C_ODBC_MAX_VARCHAR			= 8000;
-const int VFP2C_ODBC_DEFAULT_BUFFER			= 256;
 const int VFP2C_ODBC_MAX_SQLTYPE			= 32;
 const int VFP2C_ODBC_MAX_BIGINT_LITERAL		= 20;
 const int VFP2C_ODBC_MAX_CURRENCY_LITERAL	= 22;
@@ -43,19 +41,6 @@ const unsigned int SQLEXECEX_CALLBACK_PROGRESS	= 0x00000010;
 const unsigned int SQLEXECEX_CALLBACK_INFO		= 0x00000020;
 const unsigned int SQLEXECEX_STORE_INFO			= 0x00000040;
 const unsigned int SQLEXECEX_APPEND_CURSOR		= 0x00000080;
-
-// defines for TableUpdateEx
-const int VFP2C_ODBC_MAX_SQLSTATEMENT	= 16384;
-
-// flags for TableUpdateEx
-const int TABLEUPDATEEX_CURRENT_ROW			= 0x00000001;
-const int TABLEUPDATEEX_ALL_ROWS			= 0x00000002;
-const int TABLEUPDATEEX_KEY_ONLY			= 0x00000004;
-const int TABLEUPDATEEX_KEY_AND_MODIFIED	= 0x00000008;
-
-const int VFP_FLDSTATE_CHANGED	= 1;
-const int VFP_FLDSTATE_DELETED	= 2;
-const int VFP_FLDSTATE_APPENDED	= 3;
 
 // function typedef for indirect funtion call's in SQLCOLUMNDATA
 typedef int (_stdcall *LPSQLSTOREFUNC)(struct _SQLCOLUMNDATA*);
@@ -116,25 +101,7 @@ typedef struct _SQLPARAMDATA {
 // all common data for a SQL statement + pointers to column & parameter data
 class SqlStatement {
 public:
-	SqlStatement() {
-		pColumnData = 0;
-		pParamData = 0;
-		hStmt = 0;
-		hConn = 0;
-		nNoOfCols = 0;
-		nNoOfParms = 0;
-		bOutputParams = FALSE;
-		pSQLSend = 0;
-		pCursorname = 0;
-		nSQLLen = 0;
-		nResultset = 0;
-		nCallbackInterval = 100;
-		nRowsTotal = 0;
-		nRowsFetched = 0;
-		nFlags = 0;
-		bMapVarchar = false;
-		bPrepared = false;
-	}
+	SqlStatement();
 	~SqlStatement();
 
 	void CreateCursor();
@@ -195,7 +162,6 @@ extern "C" {
 
 // function forward definitions
 void _stdcall SaveODBCError(char *pFunction, SQLHANDLE hHandle, SQLSMALLINT nHandleType);
-void _stdcall ODBCInstallerErrorHandler(char *pFunction);
 
 inline void SafeODBCDbcError(char *pFunction, SQLHANDLE hHandle) { SaveODBCError(pFunction, hHandle, SQL_HANDLE_DBC); }
 inline void SafeODBCStmtError(char *pFunction, SQLHANDLE hHandle) { SaveODBCError(pFunction, hHandle, SQL_HANDLE_STMT); }
@@ -209,7 +175,6 @@ void _fastcall ASQLDataSources(ParamBlkEx& parm);
 void _fastcall ASQLDrivers(ParamBlkEx& parm);
 void _fastcall SQLGetPropEx(ParamBlkEx& parm);
 void _fastcall SQLSetPropEx(ParamBlkEx& parm);
-void _fastcall DBSetPropEx(ParamBlkEx& parm);
 void _fastcall SQLExecEx(ParamBlkEx& parm);
 void _fastcall SQLPrepareEx(ParamBlkEx& parm);
 void _fastcall SQLCancelEx(ParamBlkEx& parm);

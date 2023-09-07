@@ -11,37 +11,6 @@
 #include "vfp2ctls.h"
 #include "vfp2ctypes.h"
 
-// filename of FLL
-#if !defined(_WIN64)
-#if !defined(_DEBUG)
-	#if defined(_THREADSAFE)
-		#define FLLFILENAME "vfp2c32t.fll"
-	#else
-		#define FLLFILENAME "vfp2c32.fll"
-	#endif
-#else
-	#if defined(_THREADSAFE)
-		#define FLLFILENAME "vfp2c32td.fll"
-	#else
-		#define FLLFILENAME "vfp2c32d.fll"
-	#endif
-#endif
-#else
-#if !defined(_DEBUG)
-	#if defined(_THREADSAFE)
-		#define FLLFILENAME "vfp2c64t.fll"
-	#else
-		#define FLLFILENAME "vfp2c64.fll"
-	#endif
-#else
-	#if defined(_THREADSAFE)
-		#define FLLFILENAME "vfp2c64td.fll"
-	#else
-		#define FLLFILENAME "vfp2c64d.fll"
-	#endif
-#endif
-#endif
-
 #if _MSC_VER >= 1900
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 #endif
