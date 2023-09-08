@@ -90,3 +90,6 @@ read.lock
 *.db-shm
 *.db-wal
 /vfp2c32/.vs/vfp2c64/v17/fileList.bin
+/vfp2c32front/vfp2c32front.exe
+/vfpexampleservice/msvcr71.dll
+/vfpexampleservice/vfp2c32t.fll
