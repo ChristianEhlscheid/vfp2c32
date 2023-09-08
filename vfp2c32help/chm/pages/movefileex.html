@@ -29,6 +29,16 @@ The function should have the following prototype:</p>
 <div class="block"><pre id="code_1">FUNCTION MoveCallback(nBytesCopied, nFileSize, nPercentCopied)
 ENDFUNC
 </pre></div>
+<p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>You can return the following values from the function:<br />
+PROGRESS_CONTINUE - continues the move operation <br />
+PROGRESS_CANCEL - cancels the move operation <br />
+PROGRESS_QUIET - continues the move operation but stops any further callbacks<br />
+PROGRESS_STOP - stops the move operation<br />
+.T. - equals PROGRESS_CONTINUE <br />
+.F. - equals PROGRESS_CANCEL
+</p></div>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">nFlags (optional)</a></dt>
 <dd><p>defaults to  MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH<br />
@@ -44,7 +54,11 @@ Settings this to lower values can decrease the copy throughput.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>The status of the move operation.<br />
-PROGRESS_CONTINUE (0), PROGRESS_CANCEL (1), PROGRESS_STOP (2) or PROGRESS_QUIET (3).</p>
+PROGRESS_CONTINUE (0), PROGRESS_CANCEL (1), PROGRESS_STOP (2) or PROGRESS_QUIET (3).<br />
+<br />
+PROGRESS_CONTINUE and PROGRESS_QUIET mean success.<br />
+PROGRESS_STOP means to move operation was stopped and the destination file is left as is on disk.<br />
+PROGRESS_CANCEL means the move operation was aborted and the destination file is deleted.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
