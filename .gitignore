@@ -71,3 +71,11 @@ ipch/
 /vfp2c32examples/vfp2c32rtd.fll
 /vfp2c32front/vfp2c32td.fll
 /vfp2c32front/vfp2c32rd.fll
+/vfp2c32examples/vfp2c32.fll
+/vfp2c32examples/vfp2c32d.fll
+/vfp2c32examples/vfp2c32t.fll
+/vfp2c32examples/vfp2c64.fll
+/vfp2c32examples/vfp2c64d.fll
+/vfp2c32examples/vfp2c64t.fll
+/vfp2c32examples/vfp2c64td.fll
+/vfp2c32examples/msvcr71d.dll
