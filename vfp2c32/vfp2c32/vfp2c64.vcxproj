@@ -59,7 +59,7 @@
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v100</PlatformToolset>
-    <UseOfAtl>Dynamic</UseOfAtl>
+    <UseOfAtl>false</UseOfAtl>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -93,7 +93,7 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">
     <PlatformToolset>v100</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseOfAtl>Dynamic</UseOfAtl>
+    <UseOfAtl>false</UseOfAtl>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
@@ -122,26 +122,29 @@
     <TargetName>vfp2c32d</TargetName>
     <TargetExt>.fll</TargetExt>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>vfp2c32td</TargetName>
     <TargetExt>.fll</TargetExt>
-    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>$(SourcePath);$(LibraryPath)</LibraryPath>
-    <TargetName>vfp2c64</TargetName>
+    <TargetName>vfp2c32</TargetName>
     <TargetExt>.fll</TargetExt>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>vfp2c64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.fll</TargetExt>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>vfp2c64d</TargetName>
@@ -152,23 +155,29 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.fll</TargetExt>
     <LinkIncremental>false</LinkIncremental>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|x64'">
     <TargetExt>.fll</TargetExt>
+    <LinkIncremental>false</LinkIncremental>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">
     <TargetExt>.fll</TargetExt>
-    <TargetName>vfp2c64t</TargetName>
+    <TargetName>vfp2c32t</TargetName>
     <LinkIncremental>false</LinkIncremental>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|x64'">
     <TargetExt>.fll</TargetExt>
     <TargetName>vfp2c64t</TargetName>
+    <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallingConvention>FastCall</CallingConvention>
@@ -199,7 +208,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallingConvention>FastCall</CallingConvention>
@@ -229,7 +238,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -249,8 +258,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutputDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <LargeAddressAware>false</LargeAddressAware>
       <TargetMachine>MachineX86</TargetMachine>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
@@ -359,13 +368,15 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">
     <Link>
-      <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <ClCompile>
       <CallingConvention>StdCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
+      <WarningLevel>Level2</WarningLevel>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -466,6 +477,10 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       </Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">ml /Fo $(TargetDir)%(Filename).obj /c /Cx %(FullPath)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ml /Fo $(TargetDir)%(Filename).obj /c /Cx %(FullPath)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">ml /Fo $(TargetDir)%(Filename).obj /c /Cx %(FullPath)</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

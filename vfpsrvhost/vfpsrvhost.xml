@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Services>
+	<ServiceConfig>
+        <DisplayName>VFP Example Service #1</DisplayName>
+        <ServiceName>vfpsrvexample_1</ServiceName>
+		<StartType>Demandstart</StartType>
+		<ComClass>vfpexampleservice.ExampleService1</ComClass>
+		<PowerNotifications>GUID_ACDC_POWER_SOURCE;GUID_BATTERY_PERCENTAGE_REMAINING;GUID_IDLE_BACKGROUND_TASK;GUID_MONITOR_POWER_ON;GUID_POWERSCHEME_PERSONALITY;GUID_SYSTEM_AWAYMODE</PowerNotifications>
+	</ServiceConfig>
+	<ServiceConfig>
+        <DisplayName>VFP Example Service #2</DisplayName>
+        <ServiceName>vfpsrvexample_2</ServiceName>
+		<StartType>Demandstart</StartType>
+		<ComClass>vfpexampleservice.ExampleService2</ComClass>
+	</ServiceConfig>
+	<ServiceConfig>
+        <DisplayName>VFP Example Service #3</DisplayName>
+        <ServiceName>vfpsrvexample_3</ServiceName>
+		<StartType>Demandstart</StartType>
+		<ComClass>vfpexampleservice.ExampleService3</ComClass>
+	</ServiceConfig>
+</Services>

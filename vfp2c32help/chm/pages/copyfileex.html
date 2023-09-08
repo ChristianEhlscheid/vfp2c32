@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Copies a file, an optional callback function can be passed which receives status while the copy operation is in progress.</p>
 
-<div class="block"><pre>CopyFileEx(<a href="#p1">cSourceFile</a>, <a href="#p2">cDestinationFile</a> [, <a href="#p3">cCallback</a> [, <a href="#p4">nShareMode</a>]])</pre></div>
+<div class="block"><pre>CopyFileEx(<a href="#p1">cSourceFile</a>, <a href="#p2">cDestinationFile</a> [, <a href="#p3">cCallback</a> [, <a href="#p4">nFlags</a>[, <a href="#p5">nCallbackLimiter</a>]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cSourceFile</a></dt>
 <dd><p>Fully qualified path of the file to copy.</p>
@@ -30,15 +30,21 @@ The function should have the following prototype:</p>
 ENDFUNC
 </pre></div>
 </dd></dl>
-<dl class="parm"><dt><a id="p4">nShareMode (optional)</a></dt>
-<dd><p>The share mode with which the copied files are opened in the <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> API call.<br />
+<dl class="parm"><dt><a id="p4">nFlags (optional)</a></dt>
+<dd><p>defaults to COPY_FILE_NO_BUFFERING<br />
 <br />
-Defaults to 0 (no sharing).<br />
+For possible values and their meaning have a look at the original CopyFileEx documentation (parameter dwCopyFlags).</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nCallbackLimiter (optional)</a></dt>
+<dd><p>The time in milliseconds which controls how often the callback function is invoked.<br />
 <br />
-Other possible values are FILE_SHARE_READ, FILE_SHARE_WRITE and FILE_SHARE_DELETE or any combination of these values.</p>
+Defaults to 100 milliseconds.<br />
+<br />
+Settings this to lower values can decrease the copy throughput.</p>
 </dd></dl>
 <h2>Return Value</h2>
-<p>.T. if the file was copied, .F. if the copy operation was aborted by the callback routine.</p>
+<p>The status of the copy operation.<br />
+PROGRESS_CONTINUE (0), PROGRESS_CANCEL (1), PROGRESS_STOP (2) or PROGRESS_QUIET (3).</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
@@ -64,10 +70,7 @@ Other possible values are FILE_SHARE_READ, FILE_SHARE_WRITE and FILE_SHARE_DELET
 <a href="/pages/setfiletimes.html">SetFileTimes</a><br />
 </p>
 <h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa364952(VS.85).aspx">GetFileInformationByHandle</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa365467(VS.85).aspx">ReadFile</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa365747(VS.85).aspx">WriteFile</a></p>
+<p><a href="https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfileexa">CopyFileEx</a></p>
 
 
 </div>
