@@ -279,7 +279,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <IgnoreSpecificDefaultLibraries>msvcrt; msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <Profile>true</Profile>
+      <Profile>false</Profile>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"

@@ -49,7 +49,7 @@ void _fastcall OnLoad()
 	{
 		HMODULE hMod = GetModuleHandle("kernel32.dll");
 		FPGETMODULEHANDLEEX fpGetModuleHandleex = (FPGETMODULEHANDLEEX)GetProcAddress(hMod, "GetModuleHandleExA");
-		BOOL ret = fpGetModuleHandleex(0x04 /*GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS*/ | 0x02 /* GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT*/, (LPCSTR)&OnUnload, &ghModule);
+		BOOL ret = fpGetModuleHandleex(0x04 /*GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS*/ | 0x02 /*GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT*/, (LPCSTR)&OnUnload, &ghModule);
 		if (ret == FALSE)
 		{
 			SaveWin32Error("GetModuleHandleEx", GetLastError());
