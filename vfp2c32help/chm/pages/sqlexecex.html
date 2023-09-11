@@ -121,7 +121,7 @@ The interval to use for calling back into the callback procedure while fetching 
 Your callback procedure will be called once before the first row is fetched, then on every n'th record and once after the last row was fetched.</p>
 </dd></dl>
 <h2>Return Value</h2>
-<p>The number of resultsets or 1 for SQL statements which don't produce a resultset.<br />
+<p>The number of resultsets or 0 for SQL statements which don't produce a resultset.<br />
 -1 if the function failed, -2 if the operation was aborted by the callback function.</p>
 
 <h2>Example</h2>

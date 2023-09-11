@@ -5,11 +5,13 @@ CD (FULLPATH(JUSTPATH(SYS(16))))
 IF TYPE('_WIN64') = 'L' AND _WIN64
 SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32.fll ADDITIVE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
 ENDIF
 
-LOCAL lnCon, lnRet, laInfo[1], laTables[16], xj
+
+LOCAL lnCon, lnSqlHandle, lnRet, lcParm, laInfo[1], laTables[16], xj
 m.lnCon = -1
+m.lnSqlHandle = -1
 m.laTables[1] = 'actor'
 m.laTables[2] = 'address'
 m.laTables[3] = 'category'
@@ -29,44 +31,92 @@ m.laTables[16] = 'store'
 
 CLOSE DATABASES ALL
 
+
 TRY
 && lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=SQLEXPRESS;User=sa;Pwd=****',.F.)
 IF TYPE('_WIN64') = 'L' AND _WIN64
-	lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.1 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
+	m.lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.1 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
 ELSE
-	lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.0 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
+	m.lnCon = SQLSTRINGCONNECT('Driver={MySQL ODBC 8.0 ANSI Driver};Server=localhost;User=root;Pwd=pwd#4#mysql;Options=67108864',.F.)
 ENDIF
 
-	IF lnCon = -1
+	IF m.lnCon = -1
 		THROW
 	ENDIF
 
-	lnRet = SQLEXECEX(lnCon,'USE sakila')
-	IF lnRet = -1
+	m.lnRet = SQLEXECEX(lnCon,'USE sakila')
+	IF m.lnRet = -1
 		THROW
 	ENDIF
 
+	&& reusing cursors
 	FOR m.xj = 1 TO ALEN(m.laTables, 1)
-		lnRet = SQLEXECEX(lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo')
-		IF lnRet = -1
+		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], '')
+		IF m.lnRet = -1
 			THROW 
 		ENDIF
 
-		lnRet = SQLEXECEX(lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR)
-		IF lnRet = -1
+		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR)
+		IF m.lnRet = -1
 			THROW 
 		ENDIF
 
-		lnRet = SQLEXECEX(lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR + SQLEXECEX_APPEND_CURSOR)
-		IF lnRet = -1
+		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR + SQLEXECEX_APPEND_CURSOR)
+		IF m.lnRet = -1
 			THROW 
 		ENDIF
 	ENDFOR
+
+
+	&& update statement
+	LOCAL lnActorId, lcFirstName, lcLastName, ldLastUpdate
+	m.lnActorId = 20
+	m.lcFirstName = 'JOHN'
+	m.lnRet = SQLEXECEX(m.lnCon, 'UPDATE actor SET first_name = ?{lcFirstName} WHERE actor_id = ?{lnActorId}', '', 'laInfo') 
+	IF m.lnRet = -1
+		THROW 
+	ENDIF
+	DISPLAY MEMORY LIKE laInfo	
+
+	&& fetch to variables
+	m.lcParm = 20
+	m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM actor WHERE actor_id = ?{lcParm}', 'lnActorId,lcFirstName,lcLastName,ldLastUpdate', '', SQLEXECEX_DEST_VARIABLE) 
+	? lnActorId, lcFirstName, lcLastName, ldLastUpdate
+
+	&& prepared statements
+	m.lnSqlHandle = SQLPREPAREEX(m.lnCon, 'SELECT * FROM actor WHERE first_name LIKE ?{lcParm}', 'actor_1', 'laInfo', SQLEXECEX_REUSE_CURSOR + SQLEXECEX_APPEND_CURSOR) 
+	IF m.lnSqlHandle = -1
+		THROW 
+	ENDIF
+	DISPLAY MEMORY LIKE laInfo
+		
+	m.lcParm = 'A%'
+	m.lnRet = SQLEXECEX(m.lnSqlHandle)
+	IF lnRet = -1
+		THROW 
+	ENDIF
+	DISPLAY MEMORY LIKE laInfo
 	
+	m.lcParm = 'B%'
+	m.lnRet = SQLEXECEX(m.lnSqlHandle)
+	IF lnRet = -1
+		THROW 
+	ENDIF
+	DISPLAY MEMORY LIKE laInfo
+			
+	m.lnRet = SQLCANCELEX(m.lnSqlHandle)
+	IF m.lnRet = -1
+		THROW 
+	ENDIF
+	m.lnSqlHandle = -1
+		
 CATCH TO loError
 	AERROREX('laError')
 	DISPLAY MEMORY LIKE laError
 FINALLY
+	IF m.lnSqlHandle != -1
+		SQLCANCELEX(m.lnSqlHandle)
+	ENDIF
 	IF lnCon != -1
 		SQLDISCONNECT(lnCon)
 	ENDIF
@@ -126,7 +176,6 @@ ELSE
 	AERROREX('laInfo')
 	DISPLAY MEMORY LIKE laInfo
 ENDIF
-
 
 && ----------------------------------- &&
 && USING the cursor & parameter schema &&
@@ -224,8 +273,6 @@ lnRet = SQLEXECEX(lnCon,'SELECT someCol FROM yourTable WHERE yourCondition','you
 lnRet = SQLEXECEX(lnCon,'SELECT someCol FROM yourTable WHERE someCol2 = some?regular?expression','cCursor','',SQLEXECEX_NATIVE_SQL)
 && the statement is not parsed for parameters, it's passed on to SQLExecDirect (the underlying ODBC function)
 && without any modification
-
-
 
 SQLDISCONNECT(lnCon)
 

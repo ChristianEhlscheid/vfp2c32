@@ -1124,36 +1124,19 @@ SAFEARRAY* FoxString::ToU1SafeArray() const
 	return pArray;
 }
 
-void FoxString::Detach()
-{
-	UnlockHandle();
-	m_BufferSize = m_Value.ev_length = m_Value.ev_handle = 0;
-	m_String = 0;
-}
-
-void FoxString::Detach(ValueEx &pValue)
-{
-	pValue.ev_type = 'C';
-	pValue.ev_handle = m_Value.ev_handle;
-	pValue.ev_length = m_Value.ev_length;
-	pValue.ev_width = m_Value.ev_width;
-	UnlockHandle();
-	m_BufferSize = m_Value.ev_length = m_Value.ev_handle = 0;
-	m_String = 0;
-}
-
 void FoxString::DetachParameter()
 {
 	assert(m_ParameterRef == true && m_Value.ev_type == 'C' && m_Value.ev_handle);
 	ValueEx vValue;
-	if (!vValue.AllocHandle(m_Value.ev_length))
+	vValue.SetString(m_Value.ev_length);
+	vValue.ev_width = m_Value.ev_width;
+	if (!vValue.AllocHandle(m_BufferSize))
 		throw E_INSUFMEMORY;
 	vValue.LockHandle();
 	char* pString = vValue.HandleToPtr();
-	memcpy(pString, m_String, m_Value.ev_length);
-	Release();
+	memcpy(pString, m_String, m_BufferSize);
+	UnlockHandle();
 	m_Value.ev_handle = vValue.ev_handle;
-	m_BufferSize = m_Value.ev_length;
 	m_String = pString;
 	m_ParameterRef = false;
 	m_Locked = true;
@@ -1166,6 +1149,10 @@ FoxString& FoxString::operator=(LocatorEx &pLoc)
 	int nErrorNo;
 	if (nErrorNo = _Load(pLoc, &m_Value))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 	return *this;	
 }
 
@@ -2093,6 +2080,13 @@ void FoxArray::Release()
 			throw nErrorNo;
 		m_Loc.l_NTI = 0;
 	}
+}
+
+FoxArray& FoxArray::Reset()
+{
+	m_Loc.l_sub1 = 0;
+	m_Loc.l_sub2 = 0;
+	return *this;
 }
 
 unsigned int FoxArray::Grow()

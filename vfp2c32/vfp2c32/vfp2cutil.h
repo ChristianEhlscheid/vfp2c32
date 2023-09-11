@@ -79,6 +79,7 @@ int _stdcall MemoChan(int nWorkarea, FCHAN *nChan);
 int _stdcall DBAppendRecords(int nWorkArea, unsigned int nRecords);
 int _stdcall Zap(CStringView pCursor);
 bool _stdcall Used(CStringView pCursor);
+int _stdcall Select(CStringView pCursor);
 
 void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime);
 void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime);

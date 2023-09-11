@@ -10,9 +10,9 @@ void ValueEx::StoreObjectRef(char* pName, NTI& nVarNti)
 		vTmpObject = 0;
 		// FindVar(nVarNti, lVar);
 		lVar.FindVar(nVarNti),
-			// increment reference count by calling evaluate
-			// Evaluate(vTmpObject, pName);
-			vTmpObject.Evaluate(pName);
+		// increment reference count by calling evaluate
+		// Evaluate(vTmpObject, pName);
+		vTmpObject.Evaluate(pName);
 		// Store(lVar, sObject);
 		lVar = this;
 		// ObjectRelease(sObject);

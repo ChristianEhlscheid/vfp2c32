@@ -42,11 +42,89 @@ const unsigned int SQLEXECEX_CALLBACK_INFO		= 0x00000020;
 const unsigned int SQLEXECEX_STORE_INFO			= 0x00000040;
 const unsigned int SQLEXECEX_APPEND_CURSOR		= 0x00000080;
 
+// forward declarations
+class SqlResultSet;
+class SqlColumn;
+class SqlParameter;
+
 // function typedef for indirect funtion call's in SQLCOLUMNDATA
-typedef int (_stdcall *LPSQLSTOREFUNC)(struct _SQLCOLUMNDATA*);
+typedef int (_fastcall *LPSQLSTOREFUNC)(SqlColumn*);
+
+// all common data for a SQL statement + pointers to column & parameter data
+class SqlStatement {
+public:
+	SqlStatement();
+	~SqlStatement();
+
+	void FreeParameters();
+	void SaveOutputParameters();
+	void PutData();
+	void BindParameters();
+	void NumParamsEx(char* pSQL);
+	void ExtractParamsAndRewriteStatement(SQLINTEGER* nLen);
+	void ParseParamSchema();
+	void EvaluateParams();
+	void InfoCallbackOrStore();
+	void ProgressCallback(int nRowsFetched, BOOL* bAbort);
+	SqlResultSet* AddResultSet();
+
+	CAutoPtrArray<SqlResultSet> pResultSets;
+	SqlParameter* pParamData;
+	SQLHSTMT hStmt;
+	SQLHDBC hConn;
+	SQLSMALLINT nNoOfParms;
+	BOOL bOutputParams;
+	FoxString pGetDataBuffer;
+	FoxString pCursorNames;
+	FoxString pSQLInput;
+	FoxString pCursorSchema;
+	FoxString pParamSchema;
+	FoxArray pInfoArray;
+	CFoxCallback pCallback;
+	char* pSQLSend;
+	SQLINTEGER nSQLLen;
+	unsigned int nResultset;
+	int nCallbackInterval;
+	SQLLEN nRowsTotal;
+	int nRowsFetched;
+	DWORD nFlags;
+	bool bMapVarchar;
+	bool bPrepared;
+	bool bExecutedOnce;
+};
+
+class SqlResultSet
+{
+public:
+	SqlResultSet(SqlStatement* stmt);
+	~SqlResultSet();
+
+	int AllocateColumns(SQLSMALLINT columncount);
+	void GetMetaData();
+	void BindColumns();
+	void FixColumnName(char* pColumn);
+	void BindFieldLocators();
+	void BindVariableLocators();
+	void BindVariableLocatorsEx();
+	void ParseCursorSchema();
+	void ParseCursorSchemaEx();
+	void PrepareColumnBindings();
+	SqlColumn* FindColumn(char* pColName);
+	void CreateCursor();
+	void FetchToCursor(BOOL* bAborted);
+	void FetchToVariables();
+
+	SqlStatement* pStmt;
+	SqlColumn* pColumnData;
+	FoxString pCursorName;
+	SQLSMALLINT nNoOfCols;
+	int nWorkArea;
+};
 
 // holds data for each column in a SQL resultset
-typedef struct _SQLCOLUMNDATA {
+class SqlColumn {
+public:
+	SqlColumn();
 	ValueEx vData;
 	ValueEx vNull;
 	LocatorEx lField;
@@ -73,10 +151,12 @@ typedef struct _SQLCOLUMNDATA {
 	SQLCHAR aColName[VFP2C_ODBC_MAX_COLUMN_NAME];
 	SQL_TIMESTAMP_STRUCT sDateTime;
 	SQLCHAR aNumeric[VFP2C_ODBC_MAX_CURRENCY_LITERAL+1];
-} SQLCOLUMNDATA, *LPSQLCOLUMNDATA;
+};
 
 // holds data for each parameter in a SQL statement
-typedef struct _SQLPARAMDATA {
+class SqlParameter {
+public:
+	SqlParameter();
 	char aParmExpr[VFP2C_ODBC_MAX_PARAMETER_EXPR]; // buffer into which the parameter expression is stored
 	char aParmName[VFP2C_ODBC_MAX_PARAMETER_NAME]; // name of parameter, if it's a named parameter
 	Locator lVarOrField;		// for output parameters one can only pass variables or fieldnames of course, this will hold the Locator referencing the variable/field
@@ -95,65 +175,7 @@ typedef struct _SQLPARAMDATA {
 	BOOL bCustomSchema;			// use custom type from parameter schema?
 	BOOL bNamed;				// named parameter?
 	SQL_TIMESTAMP_STRUCT sDateTime; // we need this if the parameter is of type date/datetime
-	SQLCHAR aNumeric[VFP2C_ODBC_MAX_CURRENCY_LITERAL+1];
-} SQLPARAMDATA, *LPSQLPARAMDATA;
-
-// all common data for a SQL statement + pointers to column & parameter data
-class SqlStatement {
-public:
-	SqlStatement();
-	~SqlStatement();
-
-	void CreateCursor();
-	void FreeParameters();
-	void FreeColumnBuffers();
-	void SaveOutputParameters();
-	void PutData();
-	void GetMetaData();
-	void BindColumns();
-	void BindParameters();
-	void BindFieldLocators();
-	void BindVariableLocators();
-	void BindVariableLocatorsEx();
-	void ParseCursorSchema();
-	void ParseCursorSchemaEx(char* pCursor);
-	void PrepareColumnBindings();
-	void NumParamsEx(char* pSQL);
-	void FetchToCursor(BOOL* bAborted);
-	void FetchToVariables();
-	LPSQLCOLUMNDATA FindColumn(char* pColName);
-	void FixColumnName(char* pColumn);
-	void ExtractParamsAndRewriteStatement(SQLINTEGER* nLen);
-	void ParseParamSchema();
-	void EvaluateParams();
-	void InfoCallbackOrStore();
-	void ProgressCallback(int nRowsFetched, BOOL* bAbort);
-
-	LPSQLCOLUMNDATA pColumnData;
-	LPSQLPARAMDATA pParamData;
-	SQLHSTMT hStmt;
-	SQLHDBC hConn;
-	SQLSMALLINT nNoOfCols;
-	SQLSMALLINT nNoOfParms;
-	BOOL bOutputParams;
-	FoxString pGetDataBuffer;
-	FoxString pCursorName;
-	FoxString pCursorNames;
-	FoxString pSQLInput;
-	FoxArray pInfoArray;
-	FoxString pCursorSchema;
-	FoxString pParamSchema;
-	CFoxCallback pCallback;
-	char *pSQLSend;
-	char *pCursorname;
-	SQLINTEGER nSQLLen;
-	int nResultset;
-	int nCallbackInterval;
-	SQLLEN nRowsTotal;
-	int nRowsFetched;
-	DWORD nFlags;
-	bool bMapVarchar;
-	bool bPrepared;
+	SQLCHAR aNumeric[VFP2C_ODBC_MAX_CURRENCY_LITERAL + 1];
 };
 
 #ifdef __cplusplus
@@ -180,47 +202,47 @@ void _fastcall SQLPrepareEx(ParamBlkEx& parm);
 void _fastcall SQLCancelEx(ParamBlkEx& parm);
 
 #pragma warning(disable : 4290)
-SqlStatement* _stdcall SQLAllocStatement(ParamBlkEx& parm, bool prepared) throw(int);
+SqlStatement* _fastcall SQLAllocStatement(ParamBlkEx& parm, bool prepared) throw(int);
 #pragma warning(default : 4290)
 
-BOOL _stdcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType);
-unsigned int _stdcall SQLExtractInfo(char *pMessage, unsigned int nMsgLen);
+BOOL _fastcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType);
+unsigned int _fastcall SQLExtractInfo(char *pMessage, unsigned int nMsgLen);
 
-int _stdcall SQLStoreByBinding(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreByBindingVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreByGetData(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreByGetDataVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCharByBinding(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCharByBindingVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCharByGetData(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCharByGetDataVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateByBinding(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateByBindingVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateByGetData(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateByGetDataVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateTimeByBinding(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateTimeByBindingVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateTimeByGetData(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreDateTimeByGetDataVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCurrencyByBinding(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCurrencyByBindingVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCurrencyByGetData(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreCurrencyByGetDataVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreMemoChar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreMemoCharVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreMemoWChar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreMemoWCharVar(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreMemoBinary(LPSQLCOLUMNDATA lpCS);
-int _stdcall SQLStoreMemoBinaryVar(LPSQLCOLUMNDATA lpCS);
+int _fastcall SQLStoreByBinding(SqlColumn* lpCS);
+int _fastcall SQLStoreByBindingVar(SqlColumn* lpCS);
+int _fastcall SQLStoreByGetData(SqlColumn* lpCS);
+int _fastcall SQLStoreByGetDataVar(SqlColumn* lpCS);
+int _fastcall SQLStoreCharByBinding(SqlColumn* lpCS);
+int _fastcall SQLStoreCharByBindingVar(SqlColumn* lpCS);
+int _fastcall SQLStoreCharByGetData(SqlColumn* lpCS);
+int _fastcall SQLStoreCharByGetDataVar(SqlColumn* lpCS);
+int _fastcall SQLStoreDateByBinding(SqlColumn* lpCS);
+int _fastcall SQLStoreDateByBindingVar(SqlColumn* lpCS);
+int _fastcall SQLStoreDateByGetData(SqlColumn* lpCS);
+int _fastcall SQLStoreDateByGetDataVar(SqlColumn* lpCS);
+int _fastcall SQLStoreDateTimeByBinding(SqlColumn* lpCS);
+int _fastcall SQLStoreDateTimeByBindingVar(SqlColumn* lpCS);
+int _fastcall SQLStoreDateTimeByGetData(SqlColumn* lpCS);
+int _fastcall SQLStoreDateTimeByGetDataVar(SqlColumn* lpCS);
+int _fastcall SQLStoreCurrencyByBinding(SqlColumn* lpCS);
+int _fastcall SQLStoreCurrencyByBindingVar(SqlColumn* lpCS);
+int _fastcall SQLStoreCurrencyByGetData(SqlColumn* lpCS);
+int _fastcall SQLStoreCurrencyByGetDataVar(SqlColumn* lpCS);
+int _fastcall SQLStoreMemoChar(SqlColumn* lpCS);
+int _fastcall SQLStoreMemoCharVar(SqlColumn* lpCS);
+int _fastcall SQLStoreMemoWChar(SqlColumn* lpCS);
+int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpCS);
+int _fastcall SQLStoreMemoBinary(SqlColumn* lpCS);
+int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpCS);
 
-void _stdcall Timestamp_StructToDateTime(TIMESTAMP_STRUCT *pTime, Value *pDateTime);
-void _stdcall DateTimeToTimestamp_Struct(Value *pDateTime, TIMESTAMP_STRUCT *pTime);
-void _stdcall Timestamp_StructToDate(TIMESTAMP_STRUCT *pTime, Value *pDateTime);
-void _stdcall DateToTimestamp_Struct(Value *pDateTime, TIMESTAMP_STRUCT *pTime);
-void _stdcall Numeric_StructToCurrency(SQL_NUMERIC_STRUCT *lpNum, Value *pValue);
-void _stdcall CurrencyToNumeric_Struct(Value *pValue, SQL_NUMERIC_STRUCT *lpNum);
-void _stdcall NumericLiteralToCurrency(SQLCHAR *pLiteral, Value *pValue);
-void _stdcall CurrencyToNumericLiteral(Value *pValue, SQLCHAR *pLiteral);
+void _fastcall Timestamp_StructToDateTime(TIMESTAMP_STRUCT *pTime, Value *pDateTime);
+void _fastcall DateTimeToTimestamp_Struct(Value *pDateTime, TIMESTAMP_STRUCT *pTime);
+void _fastcall Timestamp_StructToDate(TIMESTAMP_STRUCT *pTime, Value *pDateTime);
+void _fastcall DateToTimestamp_Struct(Value *pDateTime, TIMESTAMP_STRUCT *pTime);
+void _fastcall Numeric_StructToCurrency(SQL_NUMERIC_STRUCT *lpNum, Value *pValue);
+void _fastcall CurrencyToNumeric_Struct(Value *pValue, SQL_NUMERIC_STRUCT *lpNum);
+void _fastcall NumericLiteralToCurrency(SQLCHAR *pLiteral, Value *pValue);
+void _fastcall CurrencyToNumericLiteral(Value *pValue, SQLCHAR *pLiteral);
 
 #ifdef __cplusplus
 }

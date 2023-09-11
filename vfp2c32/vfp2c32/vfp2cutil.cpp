@@ -341,6 +341,18 @@ bool _stdcall Used(CStringView pCursor)
 	return vValue.ev_length > 0;
 }
 
+int _stdcall Select(CStringView pCursor)
+{
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	Value vValue;
+	pExeBuffer.Format("SELECT('%V')", &pCursor);
+	vValue.ev_type = '0';
+	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
+	if (nErrorNo)
+		throw nErrorNo;
+	return vValue.ev_long;
+}
+
 //converts a filetime value to a datetime value .. milliseconds are truncated ..
 void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime)
 {

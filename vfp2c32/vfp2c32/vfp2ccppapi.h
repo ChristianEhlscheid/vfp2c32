@@ -19,11 +19,15 @@ inline void Evaluate(Value &pVal, char *pExpression)
 	int nErrorNo;
 	if (nErrorNo = _Evaluate(&pVal, pExpression))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (pVal.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 }
 
 inline void Execute(char *pExpression)
 {
-	register int nErrorNo;
+	int nErrorNo;
 	if (nErrorNo = _Execute(pExpression))
 		throw nErrorNo;
 }
@@ -534,8 +538,6 @@ public:
 	BSTR ToBSTR() const ;
 	SAFEARRAY* ToU1SafeArray() const;
 
-	void Detach();
-	void Detach(ValueEx &pValue);
 	void DetachParameter();
 	void Return();
 	void Release();
@@ -1002,6 +1004,7 @@ public:
 	bool AutoOverflow() const;
 	unsigned int CompactOverflow();
 	FoxArray& ValidateDimension(unsigned int nDim);
+	FoxArray& Reset();
 	unsigned int Grow();
 	unsigned int ALen(unsigned int &nDims);
 	unsigned int ARows() const { return m_Rows; }
@@ -2232,6 +2235,10 @@ inline FoxValue::FoxValue(LocatorEx& pLoc) : m_Locked(false)
 	m_Value.ev_type = '0';
 	if (nErrorNo = _Load(pLoc, &m_Value))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 }
 
 inline FoxValue::~FoxValue()
@@ -2254,6 +2261,10 @@ inline FoxValue& FoxValue::Evaluate(char* pExpression)
 	int nErrorNo;
 	if (nErrorNo = _Evaluate(&m_Value, pExpression))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 	return *this;
 }
 
@@ -2312,6 +2323,9 @@ inline FoxValue& FoxValue::AllocHandle(int nBytes)
 	m_Value.ev_handle = _AllocHand(nBytes);
 	if (m_Value.ev_handle == 0)
 		throw E_INSUFMEMORY;
+#if defined(_DEBUGALLOCATIONS)
+	VfpAllocationCount++;
+#endif
 	return *this;
 }
 
@@ -2321,6 +2335,9 @@ inline FoxValue& FoxValue::FreeHandle()
 	{
 		_FreeHand(m_Value.ev_handle);
 		m_Value.ev_handle = 0;
+#if defined(_DEBUGALLOCATIONS)
+		VfpAllocationCount--;
+#endif
 	}
 	return *this;
 }
@@ -2432,6 +2449,10 @@ inline FoxValue& FoxValue::operator=(LocatorEx& pLoc)
 	int nErrorNo;
 	if (nErrorNo = _Load(pLoc, &m_Value))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 	return *this;
 }
 
@@ -2441,6 +2462,10 @@ inline FoxValue& FoxValue::operator<<(FoxObject& pObject)
 	int nErrorNo;
 	if (nErrorNo = _GetObjectProperty(&m_Value, pObject, pObject.Property()))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 	return *this;
 }
 
@@ -2450,6 +2475,10 @@ inline FoxString& FoxString::Evaluate(char* pExpression)
 	int nErrorNo;
 	if (nErrorNo = _Evaluate(&m_Value, pExpression))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 	return *this;
 }
 
@@ -2459,6 +2488,10 @@ inline FoxObject& FoxObject::Evaluate(char* pExpression)
 	int nErrorNo;
 	if (nErrorNo = _Evaluate(&m_Value, pExpression))
 		throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+	if (m_Value.ev_type == 'C')
+		VfpAllocationCount++;
+#endif
 	return *this;
 }
 
@@ -2761,7 +2794,7 @@ inline bool FoxCursor::Deleted()
 	loc.l_offset = -1;
 	int nErrorNo = _Load(loc, value);
 	if (nErrorNo)
-		throw - nErrorNo;
+		throw -nErrorNo;
 	return value.ev_length > 0;
 }
 

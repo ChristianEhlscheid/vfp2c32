@@ -1,6 +1,10 @@
 #ifndef _VFP2CTYPES_H__
 #define _VFP2CTYPES_H__
 
+#if defined(_DEBUGALLOCATIONS)
+extern int VfpAllocationCount;
+#endif
+
 // some VFP internal error numbers
 const int E_ALIASNOTFOUND = 137;
 const int E_NUMERICOVERFLOW = 159;
@@ -79,20 +83,88 @@ typedef struct ValueEx : public Value
 	char Vartype() { return ev_type; }
 	
 	unsigned int Len() { return ev_length; }
-	bool AllocHandle(int nBytes) { assert(ev_type == 'C' && ev_handle == 0); ev_handle = _AllocHand(nBytes); return ev_handle != 0; }
-	void FreeHandle() { assert(ev_type == 'C');  if (ev_handle) _FreeHand(ev_handle); }
-	char* HandleToPtr() { assert(ev_type == 'C' && ev_handle != 0); return reinterpret_cast<char*>(_HandToPtr(ev_handle)); }
-	bool ValidHandle() { assert(ev_type == 'C'); return ev_handle > 0; }
-	void LockHandle() { assert(ev_type == 'C' && ev_handle != 0);  _HLock(ev_handle); }
-	void UnlockHandle() { assert(ev_type == 'C' && ev_handle != 0);  _HUnLock(ev_handle); }
-	unsigned long GetHandleSize() { assert(ev_type == 'C' && ev_handle != 0); return _GetHandSize(ev_handle); }
-	bool SetHandleSize(unsigned long nSize) { assert(ev_type == 'C' && ev_handle != 0); return _SetHandSize(ev_handle, nSize) > 0; }
-	bool ExpandHandleSize(int nBytes) { assert(ev_type == 'C' && ev_handle != 0); return _SetHandSize(ev_handle, ev_length + nBytes) > 0; }
-	bool NullTerminate() { assert(ev_type == 'C' && ev_handle != 0); return _SetHandSize(ev_handle, ev_length + 1) > 0; }
+
+	bool AllocHandle(int nBytes)
+	{
+		assert(ev_type == 'C' && ev_handle == 0); 
+		ev_handle = _AllocHand(nBytes); 
+#if defined(_DEBUGALLOCATIONS)
+		if (ev_handle)
+			VfpAllocationCount++;
+#endif
+		return ev_handle != 0;
+	}
+
+	void FreeHandle() { 
+		assert(ev_type == 'C');  
+		if (ev_handle)
+		{
+#if defined(_DEBUGALLOCATIONS)
+			VfpAllocationCount--;
+#endif
+			_FreeHand(ev_handle);
+			ev_handle = 0;
+		}
+	}
+	
+	char* HandleToPtr() 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0);
+		return reinterpret_cast<char*>(_HandToPtr(ev_handle));
+	}
+
+	bool ValidHandle() 
+	{ 
+		assert(ev_type == 'C'); 
+		return ev_handle > 0;
+	}
+
+	void LockHandle() 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0);  
+		_HLock(ev_handle);
+	}
+
+	void UnlockHandle() 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0);  
+		_HUnLock(ev_handle);
+	}
+
+	unsigned long GetHandleSize() 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0);
+		return _GetHandSize(ev_handle);
+	}
+
+	bool SetHandleSize(unsigned long nSize) 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0); 
+		return _SetHandSize(ev_handle, nSize) > 0;
+	}
+
+	bool ExpandHandleSize(int nBytes) 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0); 
+		return _SetHandSize(ev_handle, ev_length + nBytes) > 0;
+	}
+
+	bool NullTerminate() 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0);
+		return _SetHandSize(ev_handle, ev_length + 1) > 0;
+	}
+
 	void Release()
 	{
 		if (ev_type == 'C' && ev_handle > 0)
+		{
+#if defined(_DEBUGALLOCATIONS)
+			VfpAllocationCount--;
+#endif
 			_FreeHand(ev_handle);
+			ev_handle = 0;
+		}
 		else if (ev_type == 'O' && ev_object > 0)
 			_FreeObject(*this);
 	}
@@ -104,7 +176,12 @@ typedef struct ValueEx : public Value
 
 	int Evaluate(char* pExpression)
 	{
-		return _Evaluate(*this, pExpression);
+		int retval = _Evaluate(*this, pExpression);
+#if defined(_DEBUGALLOCATIONS)
+		if (ev_type == 'C')
+			VfpAllocationCount++;
+#endif
+		return retval;
 	}
 
 	void ObjectRelease()
@@ -128,6 +205,10 @@ typedef struct ValueEx : public Value
 		int nErrorNo;
 		if (nErrorNo = _Load(&pLoc, *this))
 			throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+		if (ev_type == 'C')
+			VfpAllocationCount++;
+#endif
 		return *this;
 	};
 /*
@@ -217,6 +298,10 @@ typedef struct LocatorEx : public Locator
 		int nErrorNo;
 		if (nErrorNo = _Load(*this, sValue))
 			throw nErrorNo;
+#if defined(_DEBUGALLOCATIONS)
+		if (sValue.ev_type == 'C')
+			VfpAllocationCount++;
+#endif
 	}
 
 	long ALen(int mode)

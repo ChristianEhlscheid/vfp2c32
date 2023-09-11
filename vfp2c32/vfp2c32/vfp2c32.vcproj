@@ -1395,9 +1395,6 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\vfp2cwininet.cpp">
-			</File>
-			<File
 				RelativePath=".\vfp2cwinsock.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -1548,9 +1545,6 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			</File>
 			<File
 				RelativePath=".\vfp2cwindows.h">
-			</File>
-			<File
-				RelativePath=".\vfp2cwininet.h">
 			</File>
 			<File
 				RelativePath=".\vfp2cwinsock.h">

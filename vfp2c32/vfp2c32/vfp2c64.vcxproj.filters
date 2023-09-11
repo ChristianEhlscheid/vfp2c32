@@ -42,9 +42,6 @@
     <ClInclude Include="vfp2ccppapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vfp2cdbf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="vfp2cenum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -102,9 +99,6 @@
     <ClInclude Include="vfp2cwindows.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vfp2cwininet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="vfp2cwinsock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -132,9 +126,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vfp2cwinsock.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="vfp2cwininet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="vfp2cwindows.cpp">
@@ -189,9 +180,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="vfp2cenum.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="vfp2cdbf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="vfp2ccppapi.cpp">

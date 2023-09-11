@@ -1,11 +1,16 @@
 #include <windows.h> /* no comment .. */
 #include <stdio.h>
 
+#if defined(_DEBUGALLOCATIONS)
+#include "vld.h" // Visual Memory Leak Detector
+#endif
+
 #if !defined(_WIN64)
 #include "pro_ext.h"
 #else
 #include "pro_ext64.h"
 #endif
+
 /* VFP2C specific includes */
 #include "vfp2c32.h"  /* VFP2C32 specific types & defines */
 #include "vfp2carray.h" /* array functions */
@@ -23,7 +28,6 @@
 #include "vfp2ccom.h" /* COM functions */
 #include "vfp2casynccom.h" /* Asynchronous COM calls */
 #include "vfp2curlmon.h" /* wrappers around urlmon.dll functions */
-#include "vfp2cwininet.h" /* wrappers around wininet.dll functions */
 #include "vfp2ccallback.h" /* C Callback function emulation */
 #include "vfp2cwinsock.h" /* winsock initialization */
 #include "vfp2cshell.h" /* windows shell wrappers */
@@ -40,21 +44,18 @@
 
 /* Global variables: module handle for this DLL */
 HMODULE ghModule = 0;
-typedef BOOL(_stdcall* FPGETMODULEHANDLEEX)(DWORD, LPCSTR, HMODULE*); // GetModuleHandleExA
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+
+#if defined(_DEBUGALLOCATIONS)
+int VfpAllocationCount = 0;
+#endif
 
 void _fastcall OnLoad()
 {
 	/* get module handle - _GetAPIHandle() doesn't work (unresolved external error from linker) */
 	if (!ghModule)
-	{
-		HMODULE hMod = GetModuleHandle("kernel32.dll");
-		FPGETMODULEHANDLEEX fpGetModuleHandleex = (FPGETMODULEHANDLEEX)GetProcAddress(hMod, "GetModuleHandleExA");
-		BOOL ret = fpGetModuleHandleex(0x04 /*GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS*/ | 0x02 /*GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT*/, (LPCSTR)&OnUnload, &ghModule);
-		if (ret == FALSE)
-		{
-			SaveWin32Error("GetModuleHandleEx", GetLastError());
-		}
-	}
+		ghModule = reinterpret_cast<HMODULE>(&__ImageBase);
+
 	VFP2CTls::OnLoad();
 
 	/* get OS information */
@@ -80,6 +81,10 @@ void _fastcall OnUnload()
 	VFP2C_Destroy_File(tls);
 
 	VFP2CTls::OnUnload();
+
+#if defined(_DEBUGALLOCATIONS)
+	int nCount = VfpAllocationCount;
+#endif
 }
 
 /* error handling routine to store the last error occurred in a Win32 API call 
@@ -506,7 +511,6 @@ FoxInfo VFP2CFuncs[] =
 	{"SQLExecEx", (FPFI) SQLExecEx, 9,        "I.C.C.C.I.C.C.C.I"},
 	{"SQLPrepareEx", (FPFI) SQLPrepareEx, 9,  "IC.C.C.I.C.C.C.I"},
 	{"SQLCancelEx", (FPFI) SQLCancelEx, 1, "I"},
-	//{"TableUpdateEx", (FPFI) TableUpdateEx, 6, "IICCC.C"},
 
 	/* printer functions */
 	{"APrintersEx", (FPFI) APrintersEx, 5, "C.?.I.I.I"},
@@ -658,19 +662,6 @@ FoxInfo VFP2CFuncs[] =
 	/* IP Helper */
 	{"Ip2MacAddress", (FPFI) Ip2MacAddress, 1, "C"},
 	{"IcmpPing", (FPFI)IcmpPing, 8, "CC.I.I.I.I.L.I"},
-
-	/* WinInet wrappers */
-	/*
-	{"InitWinInet", (FPFI) InitWinInet, 5, ".C.I.C.C.I"},
-	{"FTPConnect", (FPFI) FTPConnect, 5, "CCC.I.I"}, 
-	{"FTPDisconnect", (FPFI) FTPDisconnect, 1, "I"},
-	{"FTPGetFile", (FPFI) FTPGetFileLib, 2, "IC"},
-	{"FTPPutFile", (FPFI) FTPPutFileLib, 2, "IC"},
-	{"FTPGetDirectory", (FPFI) FTPGetDirectory, 1, "I"},
-	{"FTPSetDirectory", (FPFI) FTPSetDirectory, 2, "IC"},
-	{"AFTPFiles", (FPFI) AFTPFiles, 3, "C"},
-	{"HTTPGetFile", (FPFI) HTTPGetFile, 4, "C.C.C.L"},
-	*/
 
 	/* service functions */
 	{"OpenService", (FPFI) OpenServiceLib, 4, "C.I.C.C"},
