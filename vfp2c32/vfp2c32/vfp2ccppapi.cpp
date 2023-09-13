@@ -1203,7 +1203,8 @@ FoxString& FoxString::operator=(const CStringView pString)
 		if (m_BufferSize < nBufferSize)
 			Size(nBufferSize);
 
-		memcpy(m_String, pString.Data, nBufferSize);
+		memcpy(m_String, pString.Data, pString.Len);
+		m_String[pString.Len] = '\0';
 		Len(pString.Len);
 	}
 	else

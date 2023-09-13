@@ -747,9 +747,6 @@ public:
 		register char c;
 		unsigned __int64 nValue;
 
-		*pString++ = '0';
-		*pString = 'x';
-
 		if (nNumber < 0)
 		{
 			m_Length++;
@@ -760,6 +757,8 @@ public:
 		{
 			nValue = static_cast<unsigned __int64>(nNumber);
 		}
+		*pString++ = '0';
+		*pString = 'x';
 
 		if ((nValue & 0xFFFFFFFF00000000) > 0)
 		{

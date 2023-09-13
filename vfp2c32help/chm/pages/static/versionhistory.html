@@ -14,6 +14,17 @@
 </div>
 <div id="content">
 
+<h2>Version 2.0.0.41 -- 2023-09-13</h2>	
+<ul>
+<li>bugfix in internal FoxString class - could result in character data corruption</li>
+<li>bugfix in internal CFoxCallback class - marshaling of negative 64bit signed integers was broken</li>
+<li>extended SqlExecEx - added new flag SQLEXECEX_PRESERVE_RECNO - use in combination with SQLEXECEX_APPEND_CURSOR - the current RECNO of the cursor is restored after appending new records</li>
+<li>extended SqlExecEx - simplified passing of the nFlags parameters 
+- SQLEXECEX_APPEND_CURSOR automatically includes SQLEXECEX_REUSE_CURSOR and SQLEXECEX_DEST_CUSOR
+- SQLEXECEX_REUSE_CURSOR automatically includes SQLEXECEX_DEST_CUSOR</li>
+<li>extended SqlExecEx - added more checks for invalid nFlags combinations</li>
+</ul>
+
 <h2>Version 2.0.0.40 -- 2023-09-11</h2>	
 <ul>
 <li>overhauled SqlExecEx</li>

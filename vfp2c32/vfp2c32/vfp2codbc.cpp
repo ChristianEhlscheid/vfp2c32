@@ -458,6 +458,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 	try
 	{
 		SqlResultSet* pResultSet;
+		SQLCHAR* pSqlCommand;
 		SQLINTEGER nSQLLen;
 		SQLRETURN nApiRet;
 		ValueEx vRowCount;
@@ -483,7 +484,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 				nApiRet = SQLFreeStmt(pStmt->hStmt, SQL_RESET_PARAMS);
 				if (nApiRet == SQL_ERROR)
 				{
-					SafeODBCStmtError("SQLFreeStmt", pStmt->hStmt);
+					SafeODBCStmtError("SQLFreeStmt - SQL_RESET_PARAMS", pStmt->hStmt);
 					throw E_APIERROR;
 				}
 
@@ -512,20 +513,14 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 			// if statement contained parameters parse them out
 			if (pStmt->nNoOfParms)
 			{
-				pStmt->pSQLSend = new char[parm(2)->Len() + 1];
-				if (!pStmt->pSQLSend)
-				{
-					throw E_INSUFMEMORY;
-				}
-
 				pStmt->pParamData = new SqlParameter[pStmt->nNoOfParms];
 				if (!pStmt->pParamData)
-				{
 					throw E_INSUFMEMORY;
-				}
 
 				// 2.3
-				pStmt->ExtractParamsAndRewriteStatement(&nSQLLen);
+				pStmt->ExtractParamsAndRewriteStatement();
+				pSqlCommand = pStmt->pSQLSend.Ptr<SQLCHAR*>();
+				nSQLLen = pStmt->pSQLSend.Len();
 
 				// 2.4 - parse parameterschema
 				pStmt->ParseParamSchema();
@@ -538,8 +533,8 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 			}
 			else // no parameters in SQL statement .. just send it as it is ..
 			{
-				pStmt->pSQLSend = pStmt->pSQLInput;
-				nSQLLen = parm(2)->Len();
+				pSqlCommand = pStmt->pSQLInput.Ptr<SQLCHAR*>();
+				nSQLLen = pStmt->pSQLInput.Len();
 			}
 		}
 
@@ -547,14 +542,14 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		if (prepared)
 			nApiRet = SQLExecute(pStmt->hStmt);
 		else
-			nApiRet = SQLExecDirect(pStmt->hStmt, (SQLCHAR*)pStmt->pSQLSend, nSQLLen);
+			nApiRet = SQLExecDirect(pStmt->hStmt, pSqlCommand, nSQLLen);
 
+		// 4.1
 		if (nApiRet == SQL_ERROR)
 		{
-			SafeODBCStmtError("SQLExecDirect", pStmt->hStmt);
+			SafeODBCStmtError(prepared ? "SQLExecute" : "SQLExecDirect", pStmt->hStmt);
 			throw E_APIERROR;
 		}
-		// 4.1
 		else if (nApiRet == SQL_NEED_DATA)
 		{
 			pStmt->PutData();
@@ -576,11 +571,11 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		if (nNoOfCols)
 		{
 			pResultSet = pStmt->AddResultSet();
-			if (nErrorNo = pResultSet->AllocateColumns(nNoOfCols))
-				throw nErrorNo;
+			pResultSet->AllocateColumns(nNoOfCols);
 
 			// read total rows found (if not supported it'll be -1/0 depending on driver in use)
-			SQLRowCount(pStmt->hStmt, &pStmt->nRowsTotal);
+			if (pStmt->nFlags & SQLEXECEX_CALLBACK_PROGRESS)
+				SQLRowCount(pStmt->hStmt, &pStmt->nRowsTotal);
 		}
 		else
 		{
@@ -596,8 +591,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 				}
 
 				int nIndex = pStmt->pInfoArray.Grow();
-				FoxString pCursorName;
-				pStmt->pInfoArray(nIndex, 1) = pCursorName = "";
+				pStmt->pInfoArray(nIndex, 1) = pStmt->pGetDataBuffer.Len(0);
 
 				vRowCount.ev_real = (double)nRowCount;
 				pStmt->pInfoArray(nIndex, 2) = vRowCount;
@@ -608,15 +602,14 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		// 6
 		pResultSet->GetMetaData();
 
-		if (pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_REUSE_CURSOR))
+		if (pStmt->nFlags & SQLEXECEX_DEST_CURSOR)
 		{
-			if (!pStmt->bPrepared || !pStmt->bExecutedOnce)
+			if (!pStmt->bExecutedOnce)
 			{
-				/* if a cursorname is not passed for the resultset
-				   generate a default cursorname */
-				if (!pStmt->pCursorNames.Len())
+				/* if a cursorname is not passed for the resultset generate a default cursorname */
+				if (pStmt->pCursorNames.Len() == 0)
 				{
-					CStrBuilder<32> pCursor;
+					CStrBuilder<16> pCursor;
 					if (pStmt->nResultset == 1)
 						pCursor = "sqlresult";
 					else
@@ -629,19 +622,25 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 			}
 
 			// 6.1
-			pResultSet->nWorkArea = Select(pResultSet->pCursorName);
-			if (pResultSet->nWorkArea && pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
-				pResultSet->ParseCursorSchemaEx();
+			if (pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
+			{
+				pResultSet->nWorkArea = Select(pResultSet->pCursorName);
+				if (pResultSet->nWorkArea)
+					pResultSet->ParseCursorSchemaEx();
+				else
+					pResultSet->ParseCursorSchema();
+			}
 			else
 				pResultSet->ParseCursorSchema();
-
+				
 			// 7
 			pResultSet->PrepareColumnBindings();
 
 			// 8
 			pResultSet->BindColumns();
 
-			if (pResultSet->nWorkArea && pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
+			int nRecNo = 0;
+			if (pResultSet->nWorkArea && (pStmt->nFlags & SQLEXECEX_REUSE_CURSOR))
 			{
 				if ((pStmt->nFlags & SQLEXECEX_APPEND_CURSOR) == 0)
 				{
@@ -649,6 +648,8 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 					if (nErrorNo = Zap(pResultSet->pCursorName))
 						throw nErrorNo;
 				}
+				if ((pStmt->nFlags & SQLEXECEX_PRESERVE_RECNO) && !Bof(pResultSet->nWorkArea) && !Eof(pResultSet->nWorkArea))
+					nRecNo = RecNo(pResultSet->nWorkArea);
 			}
 			else
 			{
@@ -660,7 +661,10 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 			// 9.
 			pResultSet->FetchToCursor(&bAbort);
 
-			GoTop(pResultSet->nWorkArea);
+			if (nRecNo && (pStmt->nFlags & SQLEXECEX_PRESERVE_RECNO))
+				Go(nRecNo, pResultSet->nWorkArea);
+			else
+				GoTop(pResultSet->nWorkArea);
 
 			if (pStmt->pInfoArray)
 			{
@@ -688,8 +692,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 			if (pStmt->pInfoArray)
 			{
 				int nIndex = pStmt->pInfoArray.Grow();
-				FoxString pCursorName;
-				pStmt->pInfoArray(nIndex, 1) = pCursorName = "";
+				pStmt->pInfoArray(nIndex, 1) = pStmt->pGetDataBuffer.Len(0);
 
 				vRowCount.ev_real = (double)pStmt->nRowsFetched;
 				pStmt->pInfoArray(nIndex, 2) = vRowCount;
@@ -703,7 +706,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		nApiRet = SQLFreeStmt(pStmt->hStmt, SQL_UNBIND);
 		if (nApiRet == SQL_ERROR)
 		{
-			SafeODBCStmtError("SQLFreeStmt", pStmt->hStmt);
+			SafeODBCStmtError("SQLFreeStmt - SQL_UNBIND", pStmt->hStmt);
 			throw E_APIERROR;
 		}
 		
@@ -759,6 +762,8 @@ void _fastcall SQLPrepareEx(ParamBlkEx& parm)
 {
 	SQLRETURN nApiRet;
 	SqlStatement* pStmt = 0;
+	SQLCHAR* pSqlCommand;
+	SQLINTEGER nSqlLen;
 
 	try
 	{
@@ -776,28 +781,25 @@ void _fastcall SQLPrepareEx(ParamBlkEx& parm)
 		// if statement contained parameters parse them out
 		if (pStmt->nNoOfParms)
 		{
-			pStmt->pSQLSend = new char[parm(2)->ev_length + 1];
-			if (!pStmt->pSQLSend)
-				throw E_INSUFMEMORY;
-
 			pStmt->pParamData = new SqlParameter[pStmt->nNoOfParms];
 			if (!pStmt->pParamData)
 				throw E_INSUFMEMORY;
 
-			// 2.3
-			pStmt->ExtractParamsAndRewriteStatement(&pStmt->nSQLLen);
+			pStmt->ExtractParamsAndRewriteStatement();
+			pSqlCommand = pStmt->pSQLSend.Ptr<SQLCHAR*>();
+			nSqlLen = pStmt->pSQLSend.Len();
 
 			// 2.4 - parse parameterschema
 			pStmt->ParseParamSchema();
 		}
 		else // no parameters in SQL statement .. just send it as it is ..
 		{
-			pStmt->pSQLSend = pStmt->pSQLInput;
-			pStmt->nSQLLen = parm(2)->ev_length;
+			pSqlCommand = pStmt->pSQLInput.Ptr<SQLCHAR*>();
+			nSqlLen = pStmt->pSQLInput.Len();
 		}
 
 		// 4.
-		nApiRet = SQLPrepare(pStmt->hStmt, (SQLCHAR*)pStmt->pSQLSend, pStmt->nSQLLen);
+		nApiRet = SQLPrepare(pStmt->hStmt, pSqlCommand, nSqlLen);
 		if (nApiRet == SQL_ERROR)
 		{
 			SafeODBCStmtError("SQLPrepare", pStmt->hStmt);
@@ -864,19 +866,31 @@ try
 	if (parm.PCount() >= 5 && parm(5)->ev_long)
 	{
 		pStmt->nFlags = parm(5)->ev_long;
-		if (!(pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_DEST_VARIABLE | SQLEXECEX_REUSE_CURSOR)))
+		if ((pStmt->nFlags & SQLEXECEX_APPEND_CURSOR))
+			pStmt->nFlags |= SQLEXECEX_REUSE_CURSOR;
+		if ((pStmt->nFlags & SQLEXECEX_REUSE_CURSOR))
 			pStmt->nFlags |= SQLEXECEX_DEST_CURSOR;
 	}
 	else
 		pStmt->nFlags = SQLEXECEX_DEST_CURSOR | SQLEXECEX_CALLBACK_PROGRESS | SQLEXECEX_CALLBACK_INFO;
 
-	if ((pStmt->nFlags & (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_STORE_INFO)) == (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_STORE_INFO))
+	if ((pStmt->nFlags & SQLEXECEX_DEST_VARIABLE) && (pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_REUSE_CURSOR | SQLEXECEX_APPEND_CURSOR | SQLEXECEX_PRESERVE_RECNO)))
 	{
-		SaveCustomError("SqlExecEx", "SQLEXECEX_CALLBACK_INFO and SQLEXECEX_STORE_INFO or mutually exclusive.");
+		SaveCustomError("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_DEST_VARIABLE in combination with SQLEXECEX_DEST_CURSOR, SQLEXECEX_REUSE_CURSOR, SQLEXECEX_APPEND_CURSOR or SQLEXECEX_PRESERVE_RECNO.");
 		throw E_INVALIDPARAMS;
 	}
 
-	pStmt->pGetDataBuffer.Size(VFP2C_ODBC_MAX_BUFFER);
+	if ((pStmt->nFlags & SQLEXECEX_PRESERVE_RECNO) && (pStmt->nFlags & SQLEXECEX_APPEND_CURSOR) == 0)
+	{
+		SaveCustomError("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_PRESERVE_RECNO requires SQLEXECEX_APPEND_CURSOR.");
+		throw E_INVALIDPARAMS;
+	}
+
+	if ((pStmt->nFlags & (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_STORE_INFO)) == (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_STORE_INFO))
+	{
+		SaveCustomError("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_CALLBACK_INFO and SQLEXECEX_STORE_INFO or mutually exclusive.");
+		throw E_INVALIDPARAMS;
+	}
 
 	pStmt->pSQLInput.Attach(parm(2));
 
@@ -978,8 +992,6 @@ SqlStatement::SqlStatement() {
 	hConn = 0;
 	nNoOfParms = 0;
 	bOutputParams = FALSE;
-	pSQLSend = 0;
-	nSQLLen = 0;
 	nResultset = 0;
 	nCallbackInterval = 100;
 	nRowsTotal = 0;
@@ -997,12 +1009,6 @@ SqlStatement::~SqlStatement()
 
 	if (pParamData)
 		delete[] pParamData;
-
-	if (pSQLInput.Len())
-	{
-		if (pSQLSend != (char*)pSQLInput)
-			delete[] pSQLSend;
-	}
 
 	if (hStmt)
 	{
@@ -1082,14 +1088,15 @@ void SqlStatement::FreeParameters()
 	}
 }
 
-void SqlStatement::ExtractParamsAndRewriteStatement(SQLINTEGER* nLen)
+void SqlStatement::ExtractParamsAndRewriteStatement()
 {
 	SqlParameter* lpPS = pParamData;
-	char* pParmExpr, * pSQLIn, * pSQLOut;
+	char* pParmExpr, * pSQLIn, *pSQLOut, *pSqlOutStart;
 	int nParamNo = 1, nParmLen;
 
+	pSQLSend.Size(pSQLInput.Size());
 	pSQLIn = pSQLInput;
-	pSQLOut = pSQLSend;
+	pSQLOut = pSqlOutStart = pSQLSend;
 
 	while (*pSQLIn)
 	{
@@ -1141,7 +1148,7 @@ void SqlStatement::ExtractParamsAndRewriteStatement(SQLINTEGER* nLen)
 			}
 			if (!nParmLen)
 			{
-				SaveCustomError("SQLExecEx", "Parameter expression '%20S...' exceeds limit of 512 characters", lpPS->aParmExpr);
+				SaveCustomError("SQLExecEx", "Parameter expression '%20S...' exceeds limit of 256 characters", lpPS->aParmExpr);
 				throw E_APIERROR;
 			}
 			*pParmExpr = '\0'; // nullterminate parameter expression
@@ -1155,7 +1162,7 @@ void SqlStatement::ExtractParamsAndRewriteStatement(SQLINTEGER* nLen)
 	}
 
 	*pSQLOut = '\0'; // nullterminate Sql output
-	*nLen = pSQLOut - pSQLSend; // store length of rewritten SQL statement
+	pSQLSend.Len(pSQLOut - pSqlOutStart); // store length of rewritten SQL statement
 }
 
 void SqlStatement::ParseParamSchema()
@@ -1741,24 +1748,21 @@ void SqlStatement::PutData()
 
 void SqlStatement::SaveOutputParameters()
 {
-	SqlParameter* lpPS;
-	Value vNull = { '0' };
-	int nErrorNo, xj;
-
 	if (!bOutputParams)
 		return;
 
+	SqlParameter* lpPS;
+	Value vNull = { '0' };
+
 	lpPS = pParamData;
 
-	for (xj = 1; xj <= nNoOfParms; xj++)
+	for (int xj = 1; xj <= nNoOfParms; xj++)
 	{
 		if (lpPS->nParmDirection == SQL_PARAM_INPUT_OUTPUT || lpPS->nParmDirection == SQL_PARAM_OUTPUT)
 		{
 			if (lpPS->nIndicator == SQL_NULL_DATA)
 			{
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, &vNull))
-					throw nErrorNo;
-
+				lpPS->lVarOrField = vNull;
 				lpPS++;
 				continue;
 			}
@@ -1767,26 +1771,19 @@ void SqlStatement::SaveOutputParameters()
 			{
 
 			case 'L':
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, lpPS->vParmValue))
-					throw nErrorNo;
-				break;
-
 			case 'I':
 			case 'N':
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, lpPS->vParmValue))
-					throw nErrorNo;
+				lpPS->lVarOrField = lpPS->vParmValue;
 				break;
 
 			case 'D':
 				Timestamp_StructToDate(&lpPS->sDateTime, lpPS->vParmValue);
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, lpPS->vParmValue))
-					throw nErrorNo;
+				lpPS->lVarOrField = lpPS->vParmValue;
 				break;
 
 			case 'T':
 				Timestamp_StructToDateTime(&lpPS->sDateTime, lpPS->vParmValue);
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, lpPS->vParmValue))
-					throw nErrorNo;
+				lpPS->lVarOrField = lpPS->vParmValue;
 				break;
 
 			case 'C':
@@ -1795,14 +1792,12 @@ void SqlStatement::SaveOutputParameters()
 			case 'M':
 			case 'W':
 				lpPS->vParmValue.ev_length = lpPS->nIndicator;
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, lpPS->vParmValue))
-					throw nErrorNo;
+				lpPS->lVarOrField = lpPS->vParmValue;
 				break;
 
 			case 'Y':
 				NumericLiteralToCurrency((SQLCHAR*)lpPS->pParmData, lpPS->vParmValue);
-				if (nErrorNo = StoreEx(&lpPS->lVarOrField, lpPS->vParmValue))
-					throw nErrorNo;
+				lpPS->lVarOrField = lpPS->vParmValue;
 				break;
 
 			default:
@@ -1852,8 +1847,9 @@ void SqlStatement::InfoCallbackOrStore()
 
 	if ((nFlags & SQLEXECEX_STORE_INFO) || (nFlags & SQLEXECEX_CALLBACK_INFO))
 	{
+		pGetDataBuffer.Size(VFP2C_ODBC_MAX_BUFFER);
 		nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, nError++, aSQLState, &nNativeError,
-			(SQLCHAR*)pGetDataBuffer, VFP2C_ODBC_MAX_BUFFER, &nMsgLen);
+			pGetDataBuffer.Ptr<SQLCHAR*>(), pGetDataBuffer.Size(), &nMsgLen);
 
 		while (nApiRet == SQL_SUCCESS)
 		{
@@ -1869,7 +1865,7 @@ void SqlStatement::InfoCallbackOrStore()
 				pCallback.Execute(-1, pInfo);
 			}
 			nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, nError++, aSQLState, &nNativeError,
-				(SQLCHAR*)pGetDataBuffer, VFP2C_ODBC_MAX_BUFFER, &nMsgLen);
+				pGetDataBuffer.Ptr<SQLCHAR*>(), VFP2C_ODBC_MAX_BUFFER, &nMsgLen);
 		}
 	}
 }
@@ -1887,26 +1883,26 @@ SqlResultSet::~SqlResultSet()
 {
 	if (pColumnData)
 	{
-		SqlColumn* lpCS = pColumnData;
+		SqlColumn* lpSC = pColumnData;
 		int count = nNoOfCols;
 		SQLPOINTER pGetDataPtr = pStmt->pGetDataBuffer.Ptr<SQLPOINTER>();
 		while (count--)
 		{
 			// if the handle is valid and the buffer isn't our 
 			// general purpose buffer for long data we need to free it
-			if (lpCS->vData.Vartype() == 'C' && lpCS->pData != pGetDataPtr)
+			if (lpSC->vData.Vartype() == 'C' && lpSC->vData.ValidHandle() && lpSC->pData != pGetDataPtr)
 			{
-				lpCS->vData.UnlockHandle();
-				lpCS->vData.FreeHandle();
+				lpSC->vData.UnlockHandle();
+				lpSC->vData.FreeHandle();
 			}
-			lpCS++;
+			lpSC++;
 		}
 		delete[] pColumnData;
 		pColumnData = 0;
 	}
 }
 
-int SqlResultSet::AllocateColumns(SQLSMALLINT columncount)
+void SqlResultSet::AllocateColumns(SQLSMALLINT columncount)
 {
 	// we've got a resultset, allocate space to store metadata for each column
 	if (pColumnData == 0 || nNoOfCols != columncount)
@@ -1919,40 +1915,39 @@ int SqlResultSet::AllocateColumns(SQLSMALLINT columncount)
 		nNoOfCols = columncount;
 		pColumnData = new SqlColumn[nNoOfCols];
 		if (!pColumnData)
-			return E_INSUFMEMORY;
+			throw E_INSUFMEMORY;
 	}
-	return 0;
 }
 
 void SqlResultSet::GetMetaData()
 {
-	if (pStmt->bPrepared && pStmt->bExecutedOnce)
+	if (pStmt->bExecutedOnce)
 		return;
 
 	SQLRETURN nApiRet = SQL_SUCCESS;
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	SQLSMALLINT xj;
 	int nUnnamedCol = 0;
 
 	for (xj = 1; xj <= nNoOfCols; xj++)
 	{
 
-		nApiRet = SQLDescribeCol(pStmt->hStmt,xj,lpCS->aColName,VFP2C_ODBC_MAX_COLUMN_NAME,
-								&lpCS->nNameLen,&lpCS->nSQLType,&lpCS->nSize,
-								&lpCS->nScale,&lpCS->bNullable);
+		nApiRet = SQLDescribeCol(pStmt->hStmt,xj,lpSC->aColName,VFP2C_ODBC_MAX_COLUMN_NAME,
+								&lpSC->nNameLen,&lpSC->nSQLType,&lpSC->nSize,
+								&lpSC->nScale,&lpSC->bNullable);
 		if (nApiRet == SQL_ERROR)
 		{
 			SafeODBCStmtError("SQLDescribeCol", pStmt->hStmt);
 			throw E_APIERROR;
 		}
 
-		switch (lpCS->nSQLType)
+		switch (lpSC->nSQLType)
 		{
 			case SQL_INTEGER:
 			case SQL_SMALLINT:
 			case SQL_TINYINT:
 				// if integer type check sign
-				nApiRet = SQLColAttribute(pStmt->hStmt,xj,SQL_DESC_UNSIGNED,0,0,0,&lpCS->bUnsigned);
+				nApiRet = SQLColAttribute(pStmt->hStmt,xj,SQL_DESC_UNSIGNED,0,0,0,&lpSC->bUnsigned);
 				if (nApiRet == SQL_ERROR)
 				{
 					SafeODBCStmtError("SQLColAttribute", pStmt->hStmt);
@@ -1963,27 +1958,27 @@ void SqlResultSet::GetMetaData()
 			case SQL_NUMERIC:
 			case SQL_DECIMAL:
 				// if numeric or decimal check for money datatype, add 2 to the size, if NUMERIC or DECIMAL since FoxPro N datatype defines size including scale and decimal point
-				nApiRet = SQLColAttribute(pStmt->hStmt,xj,SQL_COLUMN_MONEY,0,0,0,&lpCS->bMoney);
+				nApiRet = SQLColAttribute(pStmt->hStmt,xj,SQL_COLUMN_MONEY,0,0,0,&lpSC->bMoney);
 				if (nApiRet == SQL_ERROR)
 				{
 					SafeODBCStmtError("SQLColAttribute", pStmt->hStmt);
 					throw E_APIERROR;
 				}
-				if (!lpCS->bMoney)
+				if (!lpSC->bMoney)
 				{
-					lpCS->nSize += 2;
-					if (lpCS->nSize > 20)
-						lpCS->nSize = 20;
-					if (lpCS->nScale > 16)
-						lpCS->nScale = 16;
+					lpSC->nSize += 2;
+					if (lpSC->nSize > 20)
+						lpSC->nSize = 20;
+					if (lpSC->nScale > 16)
+						lpSC->nScale = 16;
 				}
 				break;
 
 			case SQL_REAL:
 			case SQL_FLOAT:
 			case SQL_DOUBLE:
-				lpCS->nSize = 20;
-				lpCS->nScale = 16;
+				lpSC->nSize = 20;
+				lpSC->nScale = 16;
 				break;
 
 			case SQL_CHAR:
@@ -1994,14 +1989,14 @@ void SqlResultSet::GetMetaData()
 			case SQL_WVARCHAR:
 				if (pStmt->bMapVarchar == false)
 				{
-					if (lpCS->nSQLType == SQL_VARCHAR)
-						lpCS->nSQLType = SQL_CHAR;
-					else if (lpCS->nSQLType == SQL_WVARCHAR)
-						lpCS->nSQLType = SQL_WCHAR;
+					if (lpSC->nSQLType == SQL_VARCHAR)
+						lpSC->nSQLType = SQL_CHAR;
+					else if (lpSC->nSQLType == SQL_WVARCHAR)
+						lpSC->nSQLType = SQL_WCHAR;
 				}
 				// force character/binary fields of len 0 to Memo/Blob
-				if (lpCS->nSize == 0)
-					lpCS->nSize = VFP2C_VFP_MAX_CHARCOLUMN + 1;
+				if (lpSC->nSize == 0)
+					lpSC->nSize = VFP2C_VFP_MAX_CHARCOLUMN + 1;
 				break;
 
 			case SQL_LONGVARCHAR:
@@ -2016,67 +2011,71 @@ void SqlResultSet::GetMetaData()
 				break;
 
 			default:
-				nApiRet = SQLColAttribute(pStmt->hStmt,xj,SQL_DESC_DISPLAY_SIZE,0,0,0,&lpCS->nDisplaySize);
+				nApiRet = SQLColAttribute(pStmt->hStmt,xj,SQL_DESC_DISPLAY_SIZE,0,0,0,&lpSC->nDisplaySize);
 				if (nApiRet == SQL_ERROR)
 				{
 					SafeODBCStmtError("SQLColAttribute", pStmt->hStmt);
 					throw E_APIERROR;
 				}
 				// if no displaysize is returned, force to a memo field
-				if (!lpCS->nDisplaySize)
-					lpCS->nDisplaySize = VFP2C_VFP_MAX_CHARCOLUMN + 1;
+				if (!lpSC->nDisplaySize)
+					lpSC->nDisplaySize = VFP2C_VFP_MAX_CHARCOLUMN + 1;
 		}
 
 		// empty column name (from an expression for example)
-		if (lpCS->aColName[0] == '\0')
+		if (lpSC->aColName[0] == '\0')
 		{
 			if (nUnnamedCol)
-				sprintfex((char*)lpCS->aColName,"expr%I",nUnnamedCol);
+			{
+				sprintfex((char*)lpSC->aColName, "expr%I", nUnnamedCol);
+			}
 			else
+			{
 #pragma warning(disable : 4996)
-				strcpy((char*)lpCS->aColName,"expr");
+				strcpy((char*)lpSC->aColName, "expr");
 #pragma warning(default : 4996)
+			}
 
 			nUnnamedCol++;
 		}
 		else
-			FixColumnName((char*)lpCS->aColName);
+			FixColumnName((char*)lpSC->aColName);
 
-		lpCS++;	
+		lpSC++;	
 	}
 }
 
 void SqlResultSet::BindColumns()
 {
 	SQLRETURN nApiRet = SQL_SUCCESS;
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	int xj = nNoOfCols;
 
 	while (xj--)
 	{
-		if (lpCS->bBindColumn)
+		if (lpSC->bBindColumn)
 		{
-			nApiRet = SQLBindCol(pStmt->hStmt,lpCS->nColNo, lpCS->nCType, lpCS->pData, 
-				lpCS->nBufferSize, &lpCS->nIndicator);
+			nApiRet = SQLBindCol(pStmt->hStmt,lpSC->nColNo, lpSC->nCType, lpSC->pData, 
+				lpSC->nBufferSize, &lpSC->nIndicator);
 			if (nApiRet == SQL_ERROR)
 			{
 				SafeODBCStmtError("SQLBindCol", pStmt->hStmt);
 				throw E_APIERROR;
 			}
 		}
-		lpCS++;
+		lpSC++;
 	}
 }
 
 void SqlResultSet::PrepareColumnBindings()
 {
-	if (pStmt->bPrepared && pStmt->bExecutedOnce)
+	if (pStmt->bExecutedOnce)
 		return;
 
 	SQLRETURN nApiRet;
 	SQLUINTEGER bGetDataExt;
 	BOOL bUnicodeConversion = VFP2CTls::Tls().SqlUnicodeConversion;
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	FoxString* pGetDataBuffer = &pStmt->pGetDataBuffer;
 	BOOL bBindCol = TRUE;
     int nColNo = 0;
@@ -2101,862 +2100,708 @@ void SqlResultSet::PrepareColumnBindings()
 	while (nColNo++ < nNoOfCols)
 	{
 
-	lpCS->nColNo = nColNo;
-	lpCS->hStmt = pStmt->hStmt;
+	lpSC->nColNo = nColNo;
+	lpSC->hStmt = pStmt->hStmt;
 
-	switch (lpCS->nSQLType)
+	switch (lpSC->nSQLType)
 	{
 		// character data
 		case SQL_CHAR:
-			lpCS->vData.SetString();
-			lpCS->nCType = SQL_C_CHAR;
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			lpSC->nCType = SQL_C_CHAR;
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+						lpSC->pStore = SQLStoreMemoCharVar;
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->aVFPType = 'C';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->aVFPType = 'C';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->aVFPType = 'M';
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
+					lpSC->aVFPType = 'M';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+						lpSC->pStore = SQLStoreMemoCharVar;
 				}
 			}
 			break;
 
 		case SQL_BINARY:
-			lpCS->vData.SetString();
-			lpCS->nCType = SQL_C_BINARY;
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			lpSC->nCType = SQL_C_BINARY;
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoBinary;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoBinary;
 					else
-						lpCS->pStore = SQLStoreMemoBinaryVar;
+						lpSC->pStore = SQLStoreMemoBinaryVar;
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize, bBindCol, pGetDataBuffer);
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize;
+					AllocateColumnBuffer(lpSC, lpSC->nSize, bBindCol, pGetDataBuffer);
 					if (CFoxVersion::MajorVersion() >= 9)
-						lpCS->aVFPType = 'Q';
+						lpSC->aVFPType = 'Q';
 					else
 					{
-						lpCS->aVFPType = 'C';
-						lpCS->bBinary = TRUE;
+						lpSC->aVFPType = 'C';
+						lpSC->bBinary = TRUE;
 					}
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
+					bBindCol = bGetDataExt;
 					if (CFoxVersion::MajorVersion() >= 9)
-						lpCS->aVFPType = 'W';
+						lpSC->aVFPType = 'W';
 					else
 					{
-						lpCS->aVFPType = 'M';
-						lpCS->bBinary = TRUE;
+						lpSC->aVFPType = 'M';
+						lpSC->bBinary = TRUE;
 					}
-					lpCS->bBindColumn = FALSE;
-					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoBinary;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoBinary;
 					else
-						lpCS->pStore = SQLStoreMemoBinaryVar;
+						lpSC->pStore = SQLStoreMemoBinaryVar;
 				}
 			}
 			break;
 
 		case SQL_VARCHAR:
-			lpCS->vData.SetString();
-			lpCS->nCType = SQL_C_CHAR;
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			lpSC->nCType = SQL_C_CHAR;
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+						lpSC->pStore = SQLStoreMemoCharVar;
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
 					if (CFoxVersion::MajorVersion() >= 9)
-						lpCS->aVFPType = 'V';
+						lpSC->aVFPType = 'V';
 					else
-						lpCS->aVFPType = 'C';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+						lpSC->aVFPType = 'C';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->aVFPType = 'M';
-					lpCS->bBindColumn = FALSE;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
+					lpSC->aVFPType = 'M';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+						lpSC->pStore = SQLStoreMemoCharVar;
 					bBindCol = bGetDataExt;					
 				}
 			}
 			break;
 
 		case SQL_VARBINARY:
-			lpCS->vData.SetString();
-			lpCS->nCType = SQL_C_BINARY;
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			lpSC->nCType = SQL_C_BINARY;
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoBinary;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoBinary;
 					else
-						lpCS->pStore = SQLStoreMemoBinaryVar;
+						lpSC->pStore = SQLStoreMemoBinaryVar;
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize;
-					lpCS->aVFPType = 'C';
-					lpCS->bBinary = TRUE;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize, bBindCol, pGetDataBuffer);
+					lpSC->aVFPType = 'C';
+					lpSC->bBinary = TRUE;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
+					bBindCol = bGetDataExt;
 					if (CFoxVersion::MajorVersion() >= 9)
-						lpCS->aVFPType = 'W';
+						lpSC->aVFPType = 'W';
 					else
 					{
-						lpCS->aVFPType = 'M';
-						lpCS->bBinary = TRUE;
+						lpSC->aVFPType = 'M';
+						lpSC->bBinary = TRUE;
 					}
-					lpCS->bBindColumn = FALSE;
-					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoBinary;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoBinary;
 					else
-						lpCS->pStore = SQLStoreMemoBinaryVar;
+						lpSC->pStore = SQLStoreMemoBinaryVar;
 				}
 			}
 			break;
 
 		case SQL_LONGVARCHAR:
-			lpCS->vData.SetString();
-			lpCS->nCType = SQL_C_CHAR;
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			lpSC->nCType = SQL_C_CHAR;
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+						lpSC->pStore = SQLStoreMemoCharVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreCharByGetData;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreCharByGetData;
 					else
-						lpCS->pStore = SQLStoreCharByGetDataVar;
+						lpSC->pStore = SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-				lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-				lpCS->nBufferSize = pGetDataBuffer->Size();
-				lpCS->aVFPType = 'M';
-				lpCS->bBindColumn = FALSE;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = SQLStoreMemoChar;
-				else
-					lpCS->pStore = SQLStoreMemoCharVar;
+				BindGetDataBuffer(lpSC, pGetDataBuffer);
 				bBindCol = bGetDataExt;
+				lpSC->aVFPType = 'M';
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = SQLStoreMemoChar;
+				else
+					lpSC->pStore = SQLStoreMemoCharVar;
 			}
 			break;
 
 		case SQL_LONGVARBINARY:
-			lpCS->vData.SetString();
-			lpCS->nCType = SQL_C_BINARY;
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			lpSC->nCType = SQL_C_BINARY;
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoBinary;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoBinary;
 					else
-						lpCS->pStore = SQLStoreMemoBinaryVar;
+						lpSC->pStore = SQLStoreMemoBinaryVar;
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize, bBindCol, pGetDataBuffer);
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-				lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-				lpCS->nBufferSize = pGetDataBuffer->Size();
+				BindGetDataBuffer(lpSC, pGetDataBuffer);
+				bBindCol = bGetDataExt;
 				if (CFoxVersion::MajorVersion() >= 9)
-					lpCS->aVFPType = 'W';
+					lpSC->aVFPType = 'W';
 				else
 				{
-					lpCS->aVFPType = 'M';
-					lpCS->bBinary = TRUE;
+					lpSC->aVFPType = 'M';
+					lpSC->bBinary = TRUE;
 				}
-				lpCS->bBindColumn = FALSE;
-				bBindCol = bGetDataExt;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = SQLStoreMemoBinary;
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = SQLStoreMemoBinary;
 				else
-					lpCS->pStore = SQLStoreMemoBinaryVar;
+					lpSC->pStore = SQLStoreMemoBinaryVar;
 			}
 			break;
 
 		case SQL_WCHAR:
-			lpCS->vData.SetString();
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (lpCS->aVFPType == 'W' || lpCS->bBinary)
+					if (lpSC->aVFPType == 'W' || lpSC->bBinary)
 					{
-						lpCS->nCType = SQL_C_WCHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoWChar;
+						lpSC->nCType = SQL_C_WCHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoWChar;
 						else
-							lpCS->pStore = SQLStoreMemoWCharVar;
+							lpSC->pStore = SQLStoreMemoWCharVar;
 					}
 					else
 					{
-						lpCS->nCType = SQL_C_CHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoChar;
+						lpSC->nCType = SQL_C_CHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoChar;
 						else
-							lpCS->pStore = SQLStoreMemoCharVar;
+							lpSC->pStore = SQLStoreMemoCharVar;
 					}
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 2))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 2;
-					if (lpCS->aVFPType == 'Q' || lpCS->bBinary)
-						lpCS->nCType = SQL_C_WCHAR;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 2, bBindCol, pGetDataBuffer);
+					if (lpSC->aVFPType == 'Q' || lpSC->bBinary)
+						lpSC->nCType = SQL_C_WCHAR;
 					else
-						lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+						lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
-					lpCS->aVFPType = 'C';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+					lpSC->aVFPType = 'C';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
-					lpCS->aVFPType = 'M';
-					lpCS->bBindColumn = FALSE;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bUnicodeConversion ? SQLStoreMemoChar : SQLStoreMemoWChar;
-					else
-						lpCS->pStore = bUnicodeConversion ? SQLStoreMemoCharVar : SQLStoreMemoWCharVar;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
+					lpSC->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+					lpSC->aVFPType = 'M';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bUnicodeConversion ? SQLStoreMemoChar : SQLStoreMemoWChar;
+					else
+						lpSC->pStore = bUnicodeConversion ? SQLStoreMemoCharVar : SQLStoreMemoWCharVar;
 				}
 			}
 			break;
 
 		case SQL_WVARCHAR:
-			lpCS->vData.SetString();
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (lpCS->aVFPType == 'W' || lpCS->bBinary)
+					if (lpSC->aVFPType == 'W' || lpSC->bBinary)
 					{
-						lpCS->nCType = SQL_C_WCHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoWChar;
+						lpSC->nCType = SQL_C_WCHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoWChar;
 						else
-							lpCS->pStore = SQLStoreMemoWCharVar;
+							lpSC->pStore = SQLStoreMemoWCharVar;
 					}
 					else
 					{
-						lpCS->nCType = SQL_C_CHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoChar;
+						lpSC->nCType = SQL_C_CHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoChar;
 						else
-							lpCS->pStore = SQLStoreMemoCharVar;
+							lpSC->pStore = SQLStoreMemoCharVar;
 					}
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 2))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 2;
-
-					if (lpCS->aVFPType == 'Q' || lpCS->bBinary)
-						lpCS->nCType = SQL_C_WCHAR;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 2, bBindCol, pGetDataBuffer);
+					if (lpSC->aVFPType == 'Q' || lpSC->bBinary)
+						lpSC->nCType = SQL_C_WCHAR;
 					else
-						lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+						lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nSize <= VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
-					lpCS->aVFPType = 'C';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+					lpSC->aVFPType = 'C';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
-					bBindCol = bGetDataExt;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
-					lpCS->aVFPType = 'M';
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
+					bBindCol = bGetDataExt;
+					lpSC->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+					lpSC->aVFPType = 'M';
 					if (bUnicodeConversion)
 					{
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoChar;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoChar;
 						else
-							lpCS->pStore = SQLStoreMemoCharVar;
+							lpSC->pStore = SQLStoreMemoCharVar;
 					}
 					else
 					{
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoWChar;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoWChar;
 						else
-							lpCS->pStore = SQLStoreMemoWCharVar;
+							lpSC->pStore = SQLStoreMemoWCharVar;
 					}
-					bBindCol = bGetDataExt;
 				}
 			}
 			break;
 
 		case SQL_WLONGVARCHAR:
-			lpCS->vData.SetString();
-			if (lpCS->bCustomSchema)
+			lpSC->vData.SetString();
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (lpCS->aVFPType == 'W' || lpCS->bBinary)
+					if (lpSC->aVFPType == 'W' || lpSC->bBinary)
 					{
-						lpCS->nCType = SQL_C_WCHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoWChar;
+						lpSC->nCType = SQL_C_WCHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoWChar;
 						else
-							lpCS->pStore = SQLStoreMemoWCharVar;
+							lpSC->pStore = SQLStoreMemoWCharVar;
 					}
 					else
 					{
-						lpCS->nCType = SQL_C_CHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoChar;
+						lpSC->nCType = SQL_C_CHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoChar;
 						else
-							lpCS->pStore = SQLStoreMemoCharVar;
+							lpSC->pStore = SQLStoreMemoCharVar;
 					}
 				}
 				else
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 2))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 2;
-					if (lpCS->aVFPType == 'Q' || lpCS->bBinary)
-						lpCS->nCType = SQL_C_WCHAR;
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 2, bBindCol, pGetDataBuffer);
+					if (lpSC->aVFPType == 'Q' || lpSC->bBinary)
+						lpSC->nCType = SQL_C_WCHAR;
 					else
-						lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					bBindCol = bGetDataExt;	
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+						lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-				lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-				lpCS->nBufferSize = pGetDataBuffer->Size();
-				lpCS->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
-				lpCS->aVFPType = 'M';
-				lpCS->bBindColumn = FALSE;
+				BindGetDataBuffer(lpSC, pGetDataBuffer);
 				bBindCol = bGetDataExt;
+				lpSC->nCType = bUnicodeConversion ? SQL_C_CHAR : SQL_C_WCHAR;
+				lpSC->aVFPType = 'M';
 				if (bUnicodeConversion)
 				{
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
 					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+						lpSC->pStore = SQLStoreMemoCharVar;
 				}
 				else
 				{
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoWChar;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoWChar;
 					else
-						lpCS->pStore = SQLStoreMemoWCharVar;
+						lpSC->pStore = SQLStoreMemoWCharVar;
 				}
 			}
 			break;
 
 		// bit (logical) data
 		case SQL_BIT:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V')
+				if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V')
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(lpCS->nSize+1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 					break;
 				}
 			}
 
-			lpCS->vData.SetLogical();
-			lpCS->pData = &lpCS->vData.ev_length;
-			lpCS->nCType = SQL_C_ULONG;
-			lpCS->aVFPType = 'L';
-			lpCS->bBindColumn = bBindCol;
-			if (!lpCS->lField.IsVariableRef())
-				lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+			lpSC->vData.SetLogical();
+			lpSC->pData = &lpSC->vData.ev_length;
+			lpSC->nCType = SQL_C_ULONG;
+			lpSC->aVFPType = 'L';
+			lpSC->bBindColumn = bBindCol;
+			if (!lpSC->lField.IsVariableRef())
+				lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 			else
-				lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+				lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 			break;
 
 		// integral numeric types
 		case SQL_TINYINT:
 		case SQL_SMALLINT:
 		case SQL_INTEGER:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q')
+				if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q')
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_CHAR;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F' || lpCS->aVFPType == 'B')
+				else if (lpSC->aVFPType == 'N' || lpSC->aVFPType == 'F' || lpSC->aVFPType == 'B')
 				{
-					lpCS->vData.SetNumeric(lpCS->nSize,lpCS->nScale);
-					lpCS->pData = &lpCS->vData.ev_real;
-					lpCS->nCType = SQL_C_DOUBLE;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetNumeric(lpSC->nSize,lpSC->nScale);
+					lpSC->pData = &lpSC->vData.ev_real;
+					lpSC->nCType = SQL_C_DOUBLE;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'I')
+				else if (lpSC->aVFPType == 'I')
 				{
-					lpCS->vData.SetInt();
-					lpCS->pData = &lpCS->vData.ev_long;
-					lpCS->nCType = SQL_C_SLONG;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetInt();
+					lpSC->pData = &lpSC->vData.ev_long;
+					lpSC->nCType = SQL_C_SLONG;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
-				if (lpCS->aVFPType == 'L')
+				if (lpSC->aVFPType == 'L')
 				{
-					lpCS->vData.SetLogical();
-					lpCS->pData = &lpCS->vData.ev_length;
-					lpCS->nCType = SQL_C_SLONG;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetLogical();
+					lpSC->pData = &lpSC->vData.ev_length;
+					lpSC->nCType = SQL_C_SLONG;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
-				lpCS->bBindColumn = bBindCol;
+				lpSC->bBindColumn = bBindCol;
 			}
 			else
 			{
-				if (lpCS->nSQLType == SQL_INTEGER && lpCS->bUnsigned)
+				if (lpSC->nSQLType == SQL_INTEGER && lpSC->bUnsigned)
 				{
-					lpCS->vData.SetUInt();
-					lpCS->nCType = SQL_C_DOUBLE;
-					lpCS->pData = &lpCS->vData.ev_real;
-					lpCS->aVFPType = 'N';
-					lpCS->nSize = 10;
-					lpCS->nScale = 0;
+					lpSC->vData.SetUInt();
+					lpSC->nCType = SQL_C_DOUBLE;
+					lpSC->pData = &lpSC->vData.ev_real;
+					lpSC->aVFPType = 'N';
+					lpSC->nSize = 10;
+					lpSC->nScale = 0;
 				}
 				else
 				{
-					lpCS->vData.SetInt();
-					lpCS->nCType = SQL_C_SLONG;
-					lpCS->pData = &lpCS->vData.ev_long;
-					lpCS->aVFPType = 'I';
+					lpSC->vData.SetInt();
+					lpSC->nCType = SQL_C_SLONG;
+					lpSC->pData = &lpSC->vData.ev_long;
+					lpSC->aVFPType = 'I';
 				}
-				lpCS->bBindColumn = bBindCol;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+				lpSC->bBindColumn = bBindCol;
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 				else
-					lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+					lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 			}
 			break;
 		
 		case SQL_BIGINT:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q')
+				if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q')
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(VFP2C_ODBC_MAX_BIGINT_LITERAL+1))
-							throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = VFP2C_ODBC_MAX_BIGINT_LITERAL+1;
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, VFP2C_ODBC_MAX_BIGINT_LITERAL + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
 			else
 			{
-				lpCS->vData.SetString();
-				if (!lpCS->vData.AllocHandle(VFP2C_ODBC_MAX_BIGINT_LITERAL+1))
-					throw E_INSUFMEMORY;
-				lpCS->vData.LockHandle();
-				lpCS->pData = lpCS->vData.HandleToPtr();
-				lpCS->nSize = VFP2C_ODBC_MAX_BIGINT_LITERAL;
-				lpCS->nBufferSize = VFP2C_ODBC_MAX_BIGINT_LITERAL+1;
-				lpCS->aVFPType = 'C';
-				lpCS->nCType = SQL_C_CHAR;
-				lpCS->bBindColumn = bBindCol;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+				lpSC->vData.SetString();
+				AllocateColumnBuffer(lpSC, VFP2C_ODBC_MAX_BIGINT_LITERAL + 1, bBindCol, pGetDataBuffer);
+				lpSC->nSize = VFP2C_ODBC_MAX_BIGINT_LITERAL;
+				lpSC->aVFPType = 'C';
+				lpSC->nCType = SQL_C_CHAR;
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 				else
-					lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+					lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 			}
 			break;
 		
 		case SQL_NUMERIC:
 		case SQL_DECIMAL:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-					if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V')
+					if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V')
 					{
-						lpCS->vData.SetString();
-						if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-								throw E_INSUFMEMORY;
-						lpCS->vData.LockHandle();
-						lpCS->pData = lpCS->vData.HandleToPtr();
-						lpCS->nBufferSize = lpCS->nSize + 1;
-						lpCS->nCType = SQL_C_CHAR;
-						lpCS->bBindColumn = bBindCol;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+						lpSC->vData.SetString();
+						AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+						lpSC->nCType = SQL_C_CHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 						else
-							lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+							lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 					}
-					else if (lpCS->aVFPType == 'I')
+					else if (lpSC->aVFPType == 'I')
 					{
-						lpCS->vData.SetInt();
-						lpCS->pData = &lpCS->vData.ev_long;
-						lpCS->nCType = SQL_C_LONG;
-						lpCS->bBindColumn = bBindCol;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+						lpSC->vData.SetInt();
+						lpSC->pData = &lpSC->vData.ev_long;
+						lpSC->nCType = SQL_C_LONG;
+						lpSC->bBindColumn = bBindCol;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 						else
-							lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+							lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 					}
-					else if (lpCS->aVFPType == 'N' || lpCS->aVFPType == 'B' || lpCS->aVFPType == 'F')
+					else if (lpSC->aVFPType == 'N' || lpSC->aVFPType == 'B' || lpSC->aVFPType == 'F')
 					{
-						lpCS->vData.SetNumeric(lpCS->aVFPType == 'N' ? (short)lpCS->nSize : 20, lpCS->nScale);
-						lpCS->pData = &lpCS->vData.ev_real;
-						lpCS->nCType = SQL_DOUBLE;
-						lpCS->bBindColumn = bBindCol;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+						lpSC->vData.SetNumeric(lpSC->aVFPType == 'N' ? (short)lpSC->nSize : 20, lpSC->nScale);
+						lpSC->pData = &lpSC->vData.ev_real;
+						lpSC->nCType = SQL_DOUBLE;
+						lpSC->bBindColumn = bBindCol;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 						else
-							lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+							lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 					}
-					else if (lpCS->aVFPType == 'Y')
+					else if (lpSC->aVFPType == 'Y')
 					{
-						lpCS->vData.SetCurrency();
-						lpCS->pData = lpCS->aNumeric;
-						lpCS->nSize = VFP2C_VFP_CURRENCY_PRECISION;
-						lpCS->nScale = VFP2C_VFP_CURRENCY_SCALE;
-						lpCS->nBufferSize = VFP2C_ODBC_MAX_CURRENCY_LITERAL;
-						lpCS->nCType = SQL_C_CHAR;
-						lpCS->aVFPType = 'Y';
-						lpCS->bBindColumn = bBindCol;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = bBindCol ? SQLStoreCurrencyByBinding : SQLStoreCurrencyByGetData;
+						lpSC->vData.SetCurrency();
+						lpSC->pData = lpSC->aNumeric;
+						lpSC->nSize = VFP2C_VFP_CURRENCY_PRECISION;
+						lpSC->nScale = VFP2C_VFP_CURRENCY_SCALE;
+						lpSC->nBufferSize = VFP2C_ODBC_MAX_CURRENCY_LITERAL;
+						lpSC->nCType = SQL_C_CHAR;
+						lpSC->aVFPType = 'Y';
+						lpSC->bBindColumn = bBindCol;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = bBindCol ? SQLStoreCurrencyByBinding : SQLStoreCurrencyByGetData;
 						else
-							lpCS->pStore = bBindCol ? SQLStoreCurrencyByBindingVar : SQLStoreCurrencyByGetDataVar;
+							lpSC->pStore = bBindCol ? SQLStoreCurrencyByBindingVar : SQLStoreCurrencyByGetDataVar;
 					}
 			}
 			else
 			{
-				if (!lpCS->bMoney)
+				if (!lpSC->bMoney)
 				{
-					lpCS->vData.SetNumeric(lpCS->nSize, lpCS->nScale);
-					lpCS->pData = &lpCS->vData.ev_real;
-					lpCS->nCType = SQL_C_DOUBLE;
-					lpCS->aVFPType = 'N';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+					lpSC->pData = &lpSC->vData.ev_real;
+					lpSC->nCType = SQL_C_DOUBLE;
+					lpSC->aVFPType = 'N';
+					lpSC->bBindColumn = bBindCol;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
 				else
 				{
-					lpCS->vData.SetCurrency();
-					lpCS->pData = lpCS->aNumeric;
-					lpCS->nSize = VFP2C_VFP_CURRENCY_PRECISION;
-					lpCS->nScale = VFP2C_VFP_CURRENCY_SCALE;
-					lpCS->nBufferSize = VFP2C_ODBC_MAX_CURRENCY_LITERAL;
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->aVFPType = 'Y';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCurrencyByBinding : SQLStoreCurrencyByGetData;
+					lpSC->vData.SetCurrency();
+					lpSC->pData = lpSC->aNumeric;
+					lpSC->nSize = VFP2C_VFP_CURRENCY_PRECISION;
+					lpSC->nScale = VFP2C_VFP_CURRENCY_SCALE;
+					lpSC->nBufferSize = VFP2C_ODBC_MAX_CURRENCY_LITERAL;
+					lpSC->nCType = SQL_C_CHAR;
+					lpSC->aVFPType = 'Y';
+					lpSC->bBindColumn = bBindCol;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCurrencyByBinding : SQLStoreCurrencyByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCurrencyByBindingVar : SQLStoreCurrencyByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCurrencyByBindingVar : SQLStoreCurrencyByGetDataVar;
 				}
 			}
 			break;
@@ -2964,361 +2809,340 @@ void SqlResultSet::PrepareColumnBindings()
 		case SQL_REAL:
 		case SQL_FLOAT:
 		case SQL_DOUBLE:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q')
+				if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q')
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'N' || lpCS->aVFPType == 'B' || lpCS->aVFPType == 'F')
+				else if (lpSC->aVFPType == 'N' || lpSC->aVFPType == 'B' || lpSC->aVFPType == 'F')
 				{
-					lpCS->vData.SetNumeric(lpCS->nSize, lpCS->nScale);
-					lpCS->pData = &lpCS->vData.ev_real;
-					lpCS->nCType = SQL_C_DOUBLE;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+					lpSC->pData = &lpSC->vData.ev_real;
+					lpSC->nCType = SQL_C_DOUBLE;
+					lpSC->bBindColumn = bBindCol;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
 			}
 			else
 			{
-				lpCS->vData.SetDouble();
-				lpCS->pData = &lpCS->vData.ev_real;
-				lpCS->nCType = SQL_C_DOUBLE;
-				lpCS->aVFPType = 'B';
-				lpCS->bBindColumn = bBindCol;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+				lpSC->vData.SetDouble();
+				lpSC->pData = &lpSC->vData.ev_real;
+				lpSC->nCType = SQL_C_DOUBLE;
+				lpSC->aVFPType = 'B';
+				lpSC->bBindColumn = bBindCol;
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 				else
-					lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+					lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 			}
 			break;
 
 		// this is only a date not a datetime ..	
 		case SQL_DATE:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if ((lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V') && !lpCS->bBinary)
+				if ((lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V') && !lpSC->bBinary)
 				{
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_CHAR;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'Q' ||
-					((lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V') && lpCS->bBinary))
+				else if (lpSC->aVFPType == 'Q' ||
+					((lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V') && lpSC->bBinary))
 				{
-					if (!lpCS->vData.AllocHandle(sizeof(SQL_TIMESTAMP_STRUCT)))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = sizeof(SQL_TIMESTAMP_STRUCT);
-					lpCS->nCType = SQL_C_TIMESTAMP;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, sizeof(SQL_TIMESTAMP_STRUCT), bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_TIMESTAMP;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'T' || lpCS->aVFPType == 'D')
+				else if (lpSC->aVFPType == 'T' || lpSC->aVFPType == 'D')
 				{
-					if (lpCS->aVFPType == 'T')
-						lpCS->vData.SetDateTime();
+					if (lpSC->aVFPType == 'T')
+						lpSC->vData.SetDateTime();
 					else
-						lpCS->vData.SetDate();
-					lpCS->pData = &lpCS->sDateTime;
-					lpCS->nCType = SQL_DATE;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreDateByBinding : SQLStoreDateByGetData;
+						lpSC->vData.SetDate();
+					lpSC->pData = &lpSC->sDateTime;
+					lpSC->nCType = SQL_DATE;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreDateByBinding : SQLStoreDateByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreDateByBindingVar : SQLStoreDateByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreDateByBindingVar : SQLStoreDateByGetDataVar;
 				}
-				lpCS->bBindColumn = bBindCol;
+				lpSC->bBindColumn = bBindCol;
 			}
 			else
 			{
-				lpCS->vData.SetDate();
-				lpCS->pData = &lpCS->sDateTime;
-				lpCS->nCType = SQL_C_DATE;
-				lpCS->aVFPType = 'D';
-				lpCS->bBindColumn = bBindCol;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = bBindCol ? SQLStoreDateByBinding : SQLStoreDateByGetData;
+				lpSC->vData.SetDate();
+				lpSC->pData = &lpSC->sDateTime;
+				lpSC->nCType = SQL_C_DATE;
+				lpSC->aVFPType = 'D';
+				lpSC->bBindColumn = bBindCol;
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = bBindCol ? SQLStoreDateByBinding : SQLStoreDateByGetData;
 				else
-					lpCS->pStore = bBindCol ? SQLStoreDateByBindingVar : SQLStoreDateByGetDataVar;
+					lpSC->pStore = bBindCol ? SQLStoreDateByBindingVar : SQLStoreDateByGetDataVar;
 			}
 			break;
 		
 		// this is a datetime
 		case SQL_TIMESTAMP:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'D')
+				if (lpSC->aVFPType == 'D')
 				{
-					lpCS->vData.SetDate();
-					lpCS->pData = &lpCS->sDateTime;
-					lpCS->nCType = SQL_C_TIMESTAMP;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreDateByBinding : SQLStoreDateByGetData;
+					lpSC->vData.SetDate();
+					lpSC->pData = &lpSC->sDateTime;
+					lpSC->nCType = SQL_C_TIMESTAMP;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreDateByBinding : SQLStoreDateByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreDateByBindingVar : SQLStoreDateByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreDateByBindingVar : SQLStoreDateByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'T')
+				else if (lpSC->aVFPType == 'T')
 				{
-					lpCS->vData.SetDateTime();
-					lpCS->pData = &lpCS->sDateTime;
-					lpCS->nCType = SQL_C_TIMESTAMP;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreDateTimeByBinding : SQLStoreDateTimeByGetData;
+					lpSC->vData.SetDateTime();
+					lpSC->pData = &lpSC->sDateTime;
+					lpSC->nCType = SQL_C_TIMESTAMP;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreDateTimeByBinding : SQLStoreDateTimeByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreDateTimeByBindingVar : SQLStoreDateTimeByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreDateTimeByBindingVar : SQLStoreDateTimeByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'Q' || 
-					((lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V') && lpCS->bBinary))
+				else if (lpSC->aVFPType == 'Q' || 
+					((lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V') && lpSC->bBinary))
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(sizeof(SQL_TIMESTAMP_STRUCT)))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nSize = lpCS->nBufferSize = sizeof(SQL_TIMESTAMP_STRUCT);
-					lpCS->nCType = SQL_C_TIMESTAMP;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, sizeof(SQL_TIMESTAMP_STRUCT), bBindCol, pGetDataBuffer);
+					lpSC->nSize = sizeof(SQL_TIMESTAMP_STRUCT);
+					lpSC->nCType = SQL_C_TIMESTAMP;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V')
+				else if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V')
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_CHAR;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
-				lpCS->bBindColumn = bBindCol;
+				lpSC->bBindColumn = bBindCol;
 			}
 			else
 			{
-				lpCS->vData.SetDateTime();
-				lpCS->pData = &lpCS->sDateTime;
-				lpCS->nCType = SQL_C_TIMESTAMP;
-				lpCS->aVFPType = 'T';
-				lpCS->bBindColumn = bBindCol;
-				if (!lpCS->lField.IsVariableRef())
-					lpCS->pStore = bBindCol ? SQLStoreDateTimeByBinding : SQLStoreDateTimeByGetData;
+				lpSC->vData.SetDateTime();
+				lpSC->pData = &lpSC->sDateTime;
+				lpSC->nCType = SQL_C_TIMESTAMP;
+				lpSC->aVFPType = 'T';
+				lpSC->bBindColumn = bBindCol;
+				if (!lpSC->lField.IsVariableRef())
+					lpSC->pStore = bBindCol ? SQLStoreDateTimeByBinding : SQLStoreDateTimeByGetData;
 				else
-					lpCS->pStore = bBindCol ? SQLStoreDateTimeByBindingVar : SQLStoreDateTimeByGetDataVar;
+					lpSC->pStore = bBindCol ? SQLStoreDateTimeByBindingVar : SQLStoreDateTimeByGetDataVar;
 			}
 			break;
 
 		case SQL_TIME:
-			lpCS->vData.SetString();
-			if (!lpCS->vData.AllocHandle(lpCS->nSize+1))
-				throw E_INSUFMEMORY;
-			lpCS->vData.LockHandle();
-			lpCS->pData = lpCS->vData.HandleToPtr();
-			lpCS->nBufferSize = lpCS->nSize + 1;
-			lpCS->nCType = SQL_C_CHAR;
-			lpCS->aVFPType = 'C';
-			lpCS->bBindColumn = bBindCol;
-			if (!lpCS->lField.IsVariableRef())
-				lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+			lpSC->vData.SetString();
+			AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+			lpSC->nCType = SQL_C_CHAR;
+			lpSC->aVFPType = 'C';
+			if (!lpSC->lField.IsVariableRef())
+				lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 			else
-				lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+				lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 			break;
 
 		// GUID
 		case SQL_GUID:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'Q')
+				if (lpSC->aVFPType == 'Q')
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(lpCS->nSize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->vData.ev_length = lpCS->nSize;
-					lpCS->nBufferSize = lpCS->nSize + 1;
-					lpCS->nCType = SQL_C_GUID;
-					lpCS->aVFPType = 'C';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nSize + 1, bBindCol, pGetDataBuffer);
+					lpSC->vData.ev_length = lpSC->nSize;
+					lpSC->nCType = SQL_C_GUID;
+					lpSC->aVFPType = 'C';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 					break;
 				}
 			}
 
-			lpCS->vData.SetString();
-			if (!lpCS->vData.AllocHandle(VFP2C_ODBC_MAX_GUID_LITERAL + 1))
-				throw E_INSUFMEMORY;
-			lpCS->vData.LockHandle();
-			lpCS->pData = lpCS->vData.HandleToPtr();
-			lpCS->vData.ev_length = VFP2C_ODBC_MAX_GUID_LITERAL;
-			lpCS->nBufferSize = VFP2C_ODBC_MAX_GUID_LITERAL + 1;
-			lpCS->nCType = SQL_C_CHAR;
-			lpCS->aVFPType = 'C';
-			lpCS->bBindColumn = bBindCol;
-			if (!lpCS->lField.IsVariableRef())
-				lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+			lpSC->vData.SetString();
+			AllocateColumnBuffer(lpSC, VFP2C_ODBC_MAX_GUID_LITERAL + 1, bBindCol, pGetDataBuffer);
+			lpSC->vData.ev_length = VFP2C_ODBC_MAX_GUID_LITERAL;
+			lpSC->nCType = SQL_C_CHAR;
+			lpSC->aVFPType = 'C';
+			if (!lpSC->lField.IsVariableRef())
+				lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 			else
-				lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+				lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 			break;
 		
 		default:
-			if (lpCS->bCustomSchema)
+			if (lpSC->bCustomSchema)
 			{
-				if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q')
+				if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q')
 				{
-					lpCS->vData.SetString();
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = FALSE;
+					lpSC->vData.SetString();
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreCharByGetData;
+					lpSC->nCType = SQL_C_CHAR;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreCharByGetData;
 					else
-						lpCS->pStore = SQLStoreCharByGetDataVar;
+						lpSC->pStore = SQLStoreCharByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
+				else if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
 				{
-					lpCS->vData.SetString();
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->bBindColumn = FALSE;
+					lpSC->vData.SetString();
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
-					if (lpCS->bBinary || lpCS->aVFPType == 'W')
+					if (lpSC->bBinary || lpSC->aVFPType == 'W')
 					{
-						lpCS->nCType = SQL_C_BINARY;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoBinary;
+						lpSC->nCType = SQL_C_BINARY;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoBinary;
 						else
-							lpCS->pStore = SQLStoreMemoBinaryVar;
+							lpSC->pStore = SQLStoreMemoBinaryVar;
 					}
 					else
 					{
-						lpCS->nCType = SQL_C_CHAR;
-						if (!lpCS->lField.IsVariableRef())
-							lpCS->pStore = SQLStoreMemoChar;
+						lpSC->nCType = SQL_C_CHAR;
+						if (!lpSC->lField.IsVariableRef())
+							lpSC->pStore = SQLStoreMemoChar;
 						else
-							lpCS->pStore = SQLStoreMemoCharVar;
+							lpSC->pStore = SQLStoreMemoCharVar;
 					}
 				}
-				else if (lpCS->aVFPType == 'I')
+				else if (lpSC->aVFPType == 'I')
 				{
-					lpCS->vData.SetInt();
-					lpCS->pData = &lpCS->vData.ev_long;
-					lpCS->nCType = SQL_C_SLONG;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetInt();
+					lpSC->pData = &lpSC->vData.ev_long;
+					lpSC->nCType = SQL_C_SLONG;
+					lpSC->bBindColumn = bBindCol;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'B' || lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F')
+				else if (lpSC->aVFPType == 'B' || lpSC->aVFPType == 'N' || lpSC->aVFPType == 'F')
 				{
-					lpCS->vData.SetNumeric(lpCS->nSize, lpCS->nScale);
-					lpCS->pData = &lpCS->vData.ev_real;
-					lpCS->nCType = SQL_C_DOUBLE;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
+					lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+					lpSC->pData = &lpSC->vData.ev_real;
+					lpSC->nCType = SQL_C_DOUBLE;
+					lpSC->bBindColumn = bBindCol;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreByBinding : SQLStoreByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreByBindingVar : SQLStoreByGetDataVar;
 				}
-				else if (lpCS->aVFPType == 'Y')
+				else if (lpSC->aVFPType == 'Y')
 				{
-					lpCS->vData.SetCurrency();
-					lpCS->pData = lpCS->aNumeric;
-					lpCS->nSize = VFP2C_VFP_CURRENCY_PRECISION;
-					lpCS->nScale = VFP2C_VFP_CURRENCY_SCALE;
-					lpCS->nBufferSize = VFP2C_ODBC_MAX_CURRENCY_LITERAL;
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCurrencyByBinding : SQLStoreCurrencyByGetData;
+					lpSC->vData.SetCurrency();
+					lpSC->pData = lpSC->aNumeric;
+					lpSC->nSize = VFP2C_VFP_CURRENCY_PRECISION;
+					lpSC->nScale = VFP2C_VFP_CURRENCY_SCALE;
+					lpSC->nBufferSize = VFP2C_ODBC_MAX_CURRENCY_LITERAL;
+					lpSC->nCType = SQL_C_CHAR;
+					lpSC->bBindColumn = bBindCol;
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCurrencyByBinding : SQLStoreCurrencyByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCurrencyByBindingVar : SQLStoreCurrencyByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCurrencyByBindingVar : SQLStoreCurrencyByGetDataVar;
 				}
 			}
 			else
 			{
-				if (lpCS->nDisplaySize > VFP2C_VFP_MAX_CHARCOLUMN)
+				if (lpSC->nDisplaySize > VFP2C_VFP_MAX_CHARCOLUMN)
 				{
-					lpCS->vData.SetString();
-					lpCS->vData.ev_handle = pGetDataBuffer->GetHandle();
-					lpCS->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
-					lpCS->nBufferSize = pGetDataBuffer->Size();
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->aVFPType = 'M';
-					lpCS->bBindColumn = FALSE;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = SQLStoreMemoChar;
-					else
-						lpCS->pStore = SQLStoreMemoCharVar;
+					lpSC->vData.SetString();
+					BindGetDataBuffer(lpSC, pGetDataBuffer);
 					bBindCol = bGetDataExt;
+					lpSC->nCType = SQL_C_CHAR;
+					lpSC->aVFPType = 'M';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = SQLStoreMemoChar;
+					else
+						lpSC->pStore = SQLStoreMemoCharVar;
 				}
 				else
 				{
-					lpCS->vData.SetString();
-					if (!lpCS->vData.AllocHandle(lpCS->nDisplaySize + 1))
-						throw E_INSUFMEMORY;
-					lpCS->vData.LockHandle();
-					lpCS->pData = lpCS->vData.HandleToPtr();
-					lpCS->nSize = lpCS->nDisplaySize;
-					lpCS->nBufferSize = lpCS->nDisplaySize + 1;
-					lpCS->nCType = SQL_C_CHAR;
-					lpCS->aVFPType = 'C';
-					lpCS->bBindColumn = bBindCol;
-					if (!lpCS->lField.IsVariableRef())
-						lpCS->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
+					lpSC->vData.SetString();
+					AllocateColumnBuffer(lpSC, lpSC->nDisplaySize + 1, bBindCol, pGetDataBuffer);
+					lpSC->nSize = lpSC->nDisplaySize;
+					lpSC->nCType = SQL_C_CHAR;
+					lpSC->aVFPType = 'C';
+					if (!lpSC->lField.IsVariableRef())
+						lpSC->pStore = bBindCol ? SQLStoreCharByBinding : SQLStoreCharByGetData;
 					else
-						lpCS->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
+						lpSC->pStore = bBindCol ? SQLStoreCharByBindingVar : SQLStoreCharByGetDataVar;
 				}
 			}
-	} // switch(lpCS-nType)
+	} // switch(lpSC-nType)
 
-	lpCS++;
+	lpSC++;
 
 	} // while(nNumberOfCols--)
 }
 
+void SqlResultSet::BindGetDataBuffer(SqlColumn* lpSC, FoxString* pGetDataBuffer)
+{
+	pGetDataBuffer->Size(VFP2C_ODBC_MAX_BUFFER);
+	lpSC->vData.ev_handle = pGetDataBuffer->GetHandle();
+	lpSC->pData = pGetDataBuffer->Ptr<SQLPOINTER>();
+	lpSC->nBufferSize = VFP2C_ODBC_MAX_BUFFER;
+	lpSC->bBindColumn = FALSE;
+}
+
+void SqlResultSet::AllocateColumnBuffer(SqlColumn* lpSC, int nLen, BOOL bBindColumn, FoxString *pGetDataBuffer)
+{
+	if (bBindColumn)
+	{
+		if (!lpSC->vData.AllocHandle(nLen))
+			throw E_INSUFMEMORY;
+		lpSC->vData.LockHandle();
+		lpSC->pData = lpSC->vData.HandleToPtr();
+		lpSC->nBufferSize = nLen;
+		lpSC->bBindColumn = bBindColumn;
+	}
+	else
+	{
+		BindGetDataBuffer(lpSC, pGetDataBuffer);
+	}
+}
+
 void SqlResultSet::ParseCursorSchema()
 {
-	if (!pStmt->pCursorSchema.Len() || (pStmt->bPrepared && pStmt->bExecutedOnce))
+	if (!pStmt->pCursorSchema.Len() || pStmt->bExecutedOnce)
 		return;
 
-	SqlColumn* lpCS;
+	SqlColumn* lpSC;
 	char *pSchema;
 	char aColName[VFP2C_ODBC_MAX_COLUMN_NAME];
 
@@ -3343,38 +3167,38 @@ void SqlResultSet::ParseCursorSchema()
 
 			// get pointer to SQLCOLUMNDATA struct for the specified column
 
-			lpCS = FindColumn(aColName);
-			if (!lpCS)
+			lpSC = FindColumn(aColName);
+			if (!lpSC)
 			{
 				SaveCustomError("SQLExecEx","Column '%S' not contained in resultset but specified in cursorschema.", aColName);
 				throw E_APIERROR;
 			}
 
 			// match the VFP datatype .. upper or lowercase ..
-			if (!match_one_chr(&pSchema,"CcVvQqWwMmNnBbFfIiYyDdTtLl",(char*)&lpCS->aVFPType))
+			if (!match_one_chr(&pSchema,"CcVvQqWwMmNnBbFfIiYyDdTtLl",(char*)&lpSC->aVFPType))
 			{
-				SaveCustomError("SQLExecEx", "Datatype in cursorschema for column '%S' is invalid.", lpCS->aColName);
+				SaveCustomError("SQLExecEx", "Datatype in cursorschema for column '%S' is invalid.", lpSC->aColName);
 				throw E_APIERROR;
 			}
 
 			// convert to uppercase so we don't have to deal with case anymore ..
-			lpCS->aVFPType = ToUpper(lpCS->aVFPType);
+			lpSC->aVFPType = ToUpper(lpSC->aVFPType);
 
 			// check if column is convertable to specified type
-			if (!SQLTypeConvertible(lpCS->nSQLType,lpCS->aVFPType))
+			if (!SQLTypeConvertible(lpSC->nSQLType,lpSC->aVFPType))
 			{
-				SaveCustomError("SQLExecEx", "Datatype conversion for column '%S' to VFP type '%s' not supported.", aColName, lpCS->aVFPType);
+				SaveCustomError("SQLExecEx", "Datatype conversion for column '%S' to VFP type '%s' not supported.", aColName, lpSC->aVFPType);
 				throw E_APIERROR;
 			}
 
-			if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q')
+			if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q')
 			{
 				if (!match_chr(&pSchema,'('))
 				{
 					SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%S', expected '('.", aColName);
 					throw E_APIERROR;
 				}
-				if (!match_int(&pSchema,(int*)&lpCS->nSize))
+				if (!match_int(&pSchema,(int*)&lpSC->nSize))
 				{
 					SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%S', expected column size.", aColName);
 					throw E_APIERROR;
@@ -3385,14 +3209,14 @@ void SqlResultSet::ParseCursorSchema()
 					throw E_APIERROR;
 				}
 				// set binary flag for varbinary type
-				if (lpCS->aVFPType == 'Q')
-					lpCS->bBinary = TRUE;
+				if (lpSC->aVFPType == 'Q')
+					lpSC->bBinary = TRUE;
 			}
-			else if (lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F')
+			else if (lpSC->aVFPType == 'N' || lpSC->aVFPType == 'F')
 			{
 				if (match_chr(&pSchema,'('))
 				{
-					if (!match_int(&pSchema,(int*)&lpCS->nSize))
+					if (!match_int(&pSchema,(int*)&lpSC->nSize))
 					{
 						SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%S', expected column precision.", aColName);
 						throw E_APIERROR;
@@ -3400,14 +3224,14 @@ void SqlResultSet::ParseCursorSchema()
 
 					if (match_chr(&pSchema,','))
 					{
-						if (!match_short(&pSchema,&lpCS->nScale))
+						if (!match_short(&pSchema,&lpSC->nScale))
 						{
 							SaveCustomError("SQLExecEx","Invalid cursorschema for column '%S', expected column scale.", aColName);
 							throw E_APIERROR;
 						}
 					}
 					else
-						lpCS->nScale = 0;
+						lpSC->nScale = 0;
 
 					if (!match_chr(&pSchema,')'))
 					{
@@ -3418,15 +3242,15 @@ void SqlResultSet::ParseCursorSchema()
 				// set default size
 				else
 				{
-					lpCS->nSize = 10;
-					lpCS->nScale = 0;
+					lpSC->nSize = 10;
+					lpSC->nScale = 0;
 				}
 			}
-			else if (lpCS->aVFPType == 'B')
+			else if (lpSC->aVFPType == 'B')
 			{
 				if (match_chr(&pSchema,'('))
 				{
-					if (!match_short(&pSchema,&lpCS->nScale))
+					if (!match_short(&pSchema,&lpSC->nScale))
 					{
 						SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%S', expected column size.", aColName);
 						throw E_APIERROR;
@@ -3436,25 +3260,25 @@ void SqlResultSet::ParseCursorSchema()
 						SaveCustomError("SQLExecEx","Invalid cursorschema for column '%S', expected ')'.", aColName);
 						throw E_APIERROR;
 					}
-					lpCS->nSize = VFP2C_VFP_DOUBLE_PRECISION;
+					lpSC->nSize = VFP2C_VFP_DOUBLE_PRECISION;
 				}
 				else
 				{
-					lpCS->nSize = 8;
-					lpCS->nScale = 2;
+					lpSC->nSize = 8;
+					lpSC->nScale = 2;
 				}
 			}
 			// set binary flag for blob datatype
-			else if (lpCS->aVFPType == 'W')
-				lpCS->bBinary = TRUE;
+			else if (lpSC->aVFPType == 'W')
+				lpSC->bBinary = TRUE;
 			
 			if (match_istr(&pSchema,"NULL"))
-				lpCS->bNullable = TRUE;
+				lpSC->bNullable = TRUE;
 
 			if (match_istr(&pSchema,"NOCPTRANS"))
-				lpCS->bBinary = TRUE;
+				lpSC->bBinary = TRUE;
 
-			lpCS->bCustomSchema = TRUE;
+			lpSC->bCustomSchema = TRUE;
 
 		} while (match_chr(&pSchema,','));	// do while there are new ',' 
 
@@ -3468,10 +3292,10 @@ void SqlResultSet::ParseCursorSchema()
 
 void SqlResultSet::ParseCursorSchemaEx()
 {
-	if (pStmt->bPrepared && pStmt->bExecutedOnce)
+	if (pStmt->bExecutedOnce)
 		return;
 
-	SqlColumn* lpCS;
+	SqlColumn* lpSC;
 	LocatorEx lArrayLoc;
 	ValueEx vValue;
 	vValue = 0;
@@ -3505,8 +3329,8 @@ try {
 			throw E_INSUFMEMORY;
 		pValue = vValue.HandleToPtr();
 
-		lpCS = FindColumn(pValue);
-		if (!lpCS)
+		lpSC = FindColumn(pValue);
+		if (!lpSC)
 		{
 			vValue.FreeHandle();
 			vValue = 0;
@@ -3519,23 +3343,23 @@ try {
 		// fieldtype
 		vValue = lArrayLoc(nRow, 2);
 		pValue = vValue.HandleToPtr();
-		lpCS->aVFPType = *pValue;
+		lpSC->aVFPType = *pValue;
 		vValue.FreeHandle();
 		vValue = 0;
 
 		// precision/width
 		vValue = lArrayLoc(nRow, 3);
-		lpCS->nSize = (SQLUINTEGER)vValue.ev_long;
+		lpSC->nSize = (SQLUINTEGER)vValue.ev_long;
 
 		// scale
 		vValue = lArrayLoc(nRow, 4);
-		lpCS->nScale = (SQLSMALLINT)vValue.ev_long;
+		lpSC->nScale = (SQLSMALLINT)vValue.ev_long;
 
 		// binary
 		vValue = lArrayLoc(nRow, 6);
-		lpCS->bBinary = (SQLSMALLINT)vValue.ev_length;
+		lpSC->bBinary = (SQLSMALLINT)vValue.ev_length;
 
-		lpCS->bCustomSchema = TRUE;
+		lpSC->bCustomSchema = TRUE;
 	}
 
 	pExeBuffer.Format("RELEASE %V", &pArrayView);
@@ -3551,10 +3375,10 @@ catch (int nError)
 
 void SqlResultSet::BindVariableLocators()
 {
-	if (pStmt->bPrepared && pStmt->bExecutedOnce)
+	if (pStmt->bExecutedOnce)
 		return;
 
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	int nErrorNo, xj;
 	char *pSchema;
 	char aCursorOrVar[VFP2C_VFP_MAX_CURSOR_NAME];
@@ -3577,7 +3401,7 @@ void SqlResultSet::BindVariableLocators()
 			{
 				if (match_identifier(&pSchema,aField,VFP2C_VFP_MAX_COLUMN_NAME))
 				{
-					if (nErrorNo = FindFoxFieldC(aField, lpCS->lField,aCursorOrVar))
+					if (nErrorNo = FindFoxFieldC(aField, lpSC->lField,aCursorOrVar))
 						throw nErrorNo;
 				}
 				else
@@ -3588,7 +3412,7 @@ void SqlResultSet::BindVariableLocators()
 			}
 			else
 			{
-				if (nErrorNo = FindFoxVar(aCursorOrVar, lpCS->lField))
+				if (nErrorNo = FindFoxVar(aCursorOrVar, lpSC->lField))
 					throw nErrorNo;
 			}
 		}
@@ -3598,7 +3422,7 @@ void SqlResultSet::BindVariableLocators()
 			throw E_APIERROR;
 		}
 
-		lpCS++;
+		lpSC++;
 
 		if (!--xj)
 			break;
@@ -3627,37 +3451,37 @@ void SqlResultSet::BindVariableLocators()
 
 void SqlResultSet::BindVariableLocatorsEx()
 {
-	if (pStmt->bPrepared && pStmt->bExecutedOnce)
+	if (pStmt->bExecutedOnce)
 		return;
 
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	int nColNo = nNoOfCols, nErrorNo;
 	
 	while (nColNo--)
 	{
-		if (!lpCS->lField.IsVariableRef() && (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W'))
+		if (!lpSC->lField.IsVariableRef() && (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W'))
 		{
-			if (nErrorNo = MemoChan(lpCS->lField.l_where,&lpCS->hMemoFile))
+			if (nErrorNo = MemoChan(lpSC->lField.l_where,&lpSC->hMemoFile))
 				throw nErrorNo;
 		}
-		lpCS++;
+		lpSC++;
 	}
 }
 
-SqlColumn* SqlResultSet::FindColumn(char *pColName)
+SqlColumn* SqlResultSet::FindColumn(CStringView pColName)
 {
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	int xj;
 
-	if (!lpCS)
+	if (!lpSC)
 		return 0;
 
 	for (xj = 1; xj <= nNoOfCols; xj++)
 	{
-		if (StrIEqual((char*)lpCS->aColName,pColName))
-			return lpCS;
+		if (pColName.Len == lpSC->nNameLen && StrIEqual(pColName.Data, (char*)lpSC->aColName))
+			return lpSC;
 
-		lpCS++;
+		lpSC++;
 	}
 
 	return 0;
@@ -3690,7 +3514,7 @@ void SqlResultSet::FixColumnName(char *pCol)
 void SqlResultSet::CreateCursor()
 {
 
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	FoxArray pArray;
 try
 {
@@ -3715,37 +3539,37 @@ try
 
 	for (int nRow = 1; nRow <= nNoOfCols; nRow++)
 	{
-		if ((lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q') && lpCS->nSize > 254)
+		if ((lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q') && lpSC->nSize > 254)
 		{
-			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%S': length %I", lpCS->aColName, lpCS->nSize);
+			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%S': length %I", lpSC->aColName, lpSC->nSize);
 			throw E_APIERROR;
 		}
-		else if ((lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F') && (lpCS->nSize > 20 || lpCS->nScale > 19))
+		else if ((lpSC->aVFPType == 'N' || lpSC->aVFPType == 'F') && (lpSC->nSize > 20 || lpSC->nScale > 19))
 		{
-			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%S': length %I, scale: %I", lpCS->aColName, lpCS->nSize, lpCS->nScale);
+			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%S': length %I, scale: %I", lpSC->aColName, lpSC->nSize, lpSC->nScale);
 			throw E_APIERROR;
 		}
-		else if (lpCS->aVFPType == 'B' && lpCS->nSize > 18)
+		else if (lpSC->aVFPType == 'B' && lpSC->nSize > 18)
 		{
-			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%S': length %I", lpCS->aColName, lpCS->nSize);
+			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%S': length %I", lpSC->aColName, lpSC->nSize);
 			throw E_APIERROR;
 		}
 
 		// store fieldname
-		vChar.Len(strcpyex(pChar, (char*)lpCS->aColName));
+		vChar.Len(strcpyex(pChar, (char*)lpSC->aColName));
 		pArray(nRow, 1) = vChar;
 
 		// store fieldtype
 		
 		vChar.Len(1);
-		*pChar = lpCS->aVFPType;
+		*pChar = lpSC->aVFPType;
 		pArray(nRow, 2) = vChar;
 
 		// store field width/precision
 		// if the VFP datatype is none of the below ones .. the field width is unneccesary
-		if (lpCS->aVFPType == 'C' || lpCS->aVFPType == 'V' || lpCS->aVFPType == 'Q' ||
-			lpCS->aVFPType == 'F' || lpCS->aVFPType == 'N')
-			vNumeric.ev_long = lpCS->nSize;
+		if (lpSC->aVFPType == 'C' || lpSC->aVFPType == 'V' || lpSC->aVFPType == 'Q' ||
+			lpSC->aVFPType == 'F' || lpSC->aVFPType == 'N')
+			vNumeric.ev_long = lpSC->nSize;
 		else
 			vNumeric.ev_long = 0;
 
@@ -3753,22 +3577,22 @@ try
 
 		// store field scale
 		// if the VFP datatype if none of the below ones .. the field scale is unneccesary
-		if (lpCS->aVFPType == 'N' || lpCS->aVFPType == 'F')
-			vNumeric.ev_long = lpCS->nScale;
+		if (lpSC->aVFPType == 'N' || lpSC->aVFPType == 'F')
+			vNumeric.ev_long = lpSC->nScale;
 		else
 			vNumeric.ev_long = 0;
 
 		pArray(nRow, 4) = vNumeric;
 
 		// store if field is nullable
-		vLogical.ev_length = lpCS->bNullable;
+		vLogical.ev_length = lpSC->bNullable;
 		pArray(nRow, 5) = vLogical;
 
 		// store if field is binary (NOCPTRANS)
-		vLogical.ev_length = lpCS->bBinary;
+		vLogical.ev_length = lpSC->bBinary;
 		pArray(nRow, 6) = vLogical;
 
-		lpCS++;
+		lpSC++;
 	}
 
 	CStringView pCursorView = pCursorName, pArrayView = pArrayName;
@@ -3785,10 +3609,10 @@ catch (int nErrorNo)
 
 void SqlResultSet::BindFieldLocators()
 {
-	if (pStmt->bPrepared && pStmt->bExecutedOnce)
+	if (pStmt->bExecutedOnce)
 		return;
 
-	SqlColumn* lpCS = pColumnData;
+	SqlColumn* lpSC = pColumnData;
 	int nErrorNo, nColNo = 0;
 
 	if (nWorkArea == 0)
@@ -3796,24 +3620,24 @@ void SqlResultSet::BindFieldLocators()
 
 	while (nColNo++ < nNoOfCols)
 	{
-		if (nErrorNo = FindFoxField((char*)lpCS->aColName, lpCS->lField, nWorkArea))
+		if (nErrorNo = FindFoxField((char*)lpSC->aColName, lpSC->lField, nWorkArea))
 			throw nErrorNo;
 
-		if (lpCS->aVFPType == 'M' || lpCS->aVFPType == 'W')
-			MemoChan(lpCS->lField.l_where, &lpCS->hMemoFile);
+		if (lpSC->aVFPType == 'M' || lpSC->aVFPType == 'W')
+			MemoChan(lpSC->lField.l_where, &lpSC->hMemoFile);
 
-		lpCS++;
+		lpSC++;
 	}
 }
 
 void SqlResultSet::FetchToCursor(BOOL *bAborted)
 {
 	SQLRETURN nApiRet;
-	SqlColumn* lpCS;
+	SqlColumn* lpSC;
 	int nErrorNo;
 	pStmt->nRowsFetched = 0;
 	
-	if ((pStmt->nFlags & SQLEXECEX_CALLBACK_PROGRESS))
+	if (pStmt->nFlags & SQLEXECEX_CALLBACK_PROGRESS)
 	{
 		// callback once before first row is fetched
 		pStmt->ProgressCallback(pStmt->nRowsFetched, bAborted);
@@ -3821,16 +3645,16 @@ void SqlResultSet::FetchToCursor(BOOL *bAborted)
 		nApiRet = SQLFetch(pStmt->hStmt);
 		while (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 		{
-			lpCS = pColumnData;
+			lpSC = pColumnData;
 			if (nErrorNo = Append(nWorkArea))
 				throw nErrorNo;
 
 			for (int xj = 0; xj < nNoOfCols; xj++)
 			{
-				if (nErrorNo = lpCS->pStore(lpCS))
+				if (nErrorNo = lpSC->pStore(lpSC))
 					throw nErrorNo;
 				
-				lpCS++;
+				lpSC++;
 			}
 
 			pStmt->nRowsFetched++;
@@ -3852,15 +3676,15 @@ void SqlResultSet::FetchToCursor(BOOL *bAborted)
 		nApiRet = SQLFetch(pStmt->hStmt);
 		while (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 		{
-			lpCS = pColumnData;
+			lpSC = pColumnData;
 			if (nErrorNo = Append(nWorkArea))
 				throw nErrorNo;
 
 			for (int xj = 0; xj < nNoOfCols; xj++)
 			{
-				if (nErrorNo = lpCS->pStore(lpCS))
+				if (nErrorNo = lpSC->pStore(lpSC))
 					throw nErrorNo;
-				lpCS++;
+				lpSC++;
 			}
 			pStmt->nRowsFetched++;
 			nApiRet = SQLFetch(pStmt->hStmt);
@@ -3877,18 +3701,18 @@ void SqlResultSet::FetchToCursor(BOOL *bAborted)
 void SqlResultSet::FetchToVariables()
 {
 	SQLRETURN nApiRet;
-	SqlColumn* lpCS;
+	SqlColumn* lpSC;
 	int nErrorNo;
 	pStmt->nRowsFetched = 0;
 	nApiRet = SQLFetch(pStmt->hStmt);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		lpCS = pColumnData;
+		lpSC = pColumnData;
 		for (int xj = 0; xj < nNoOfCols; xj++)
 		{
-			if (nErrorNo = lpCS->pStore(lpCS))
+			if (nErrorNo = lpSC->pStore(lpSC))
 				throw nErrorNo;
-			lpCS++;
+			lpSC++;
 		}
 		pStmt->nRowsFetched++;
 	}
@@ -4030,338 +3854,338 @@ unsigned int _fastcall SQLExtractInfo(char* pMessage, unsigned int nMsgLen)
 }
 
 
-int _fastcall SQLStoreByBinding(SqlColumn* lpCS)
+int _fastcall SQLStoreByBinding(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _DBReplace(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _DBReplace(lpSC->lField, lpSC->vNull);
 	else
-		return _DBReplace(lpCS->lField, lpCS->vData);
+		return _DBReplace(lpSC->lField, lpSC->vData);
 }
 
-int _fastcall SQLStoreByBindingVar(SqlColumn* lpCS)
+int _fastcall SQLStoreByBindingVar(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _Store(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _Store(lpSC->lField, lpSC->vNull);
 	else
-		return _Store(lpCS->lField, lpCS->vData);
+		return _Store(lpSC->lField, lpSC->vData);
 }
 
-int _fastcall SQLStoreByGetData(SqlColumn* lpCS)
+int _fastcall SQLStoreByGetData(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 		else
-			return _DBReplace(lpCS->lField, lpCS->vData);
+			return _DBReplace(lpSC->lField, lpSC->vData);
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreByGetDataVar(SqlColumn* lpCS)
+int _fastcall SQLStoreByGetDataVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _Store(lpSC->lField, lpSC->vNull);
 		else
-			return _Store(lpCS->lField, lpCS->vData);
+			return _Store(lpSC->lField, lpSC->vData);
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreCharByBinding(SqlColumn* lpCS)
+int _fastcall SQLStoreCharByBinding(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _DBReplace(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _DBReplace(lpSC->lField, lpSC->vNull);
 	else
 	{
-		lpCS->vData.ev_length = lpCS->nIndicator;
-		return _DBReplace(lpCS->lField, lpCS->vData);
+		lpSC->vData.ev_length = lpSC->nIndicator;
+		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreCharByBindingVar(SqlColumn* lpCS)
+int _fastcall SQLStoreCharByBindingVar(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _Store(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _Store(lpSC->lField, lpSC->vNull);
 	else
 	{
-		lpCS->vData.ev_length = lpCS->nIndicator;
-		return _Store(lpCS->lField, lpCS->vData);
+		lpSC->vData.ev_length = lpSC->nIndicator;
+		return _Store(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreCharByGetData(SqlColumn* lpCS)
+int _fastcall SQLStoreCharByGetData(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 		else
 		{
-			lpCS->vData.ev_length = lpCS->nIndicator;
-			return _DBReplace(lpCS->lField, lpCS->vData);
+			lpSC->vData.ev_length = lpSC->nIndicator;
+			return _DBReplace(lpSC->lField, lpSC->vData);
 		}
 	 }
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreCharByGetDataVar(SqlColumn* lpCS)
+int _fastcall SQLStoreCharByGetDataVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			lpCS->vData.ev_length = lpCS->nIndicator;
-			return _Store(lpCS->lField, lpCS->vData);
+			lpSC->vData.ev_length = lpSC->nIndicator;
+			return _Store(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreDateByBinding(SqlColumn* lpCS)
+int _fastcall SQLStoreDateByBinding(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _DBReplace(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _DBReplace(lpSC->lField, lpSC->vNull);
 	else
 	{
-		Timestamp_StructToDate(&lpCS->sDateTime, lpCS->vData);
-		return _DBReplace(lpCS->lField, lpCS->vData);
+		Timestamp_StructToDate(&lpSC->sDateTime, lpSC->vData);
+		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreDateByBindingVar(SqlColumn* lpCS)
+int _fastcall SQLStoreDateByBindingVar(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _Store(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _Store(lpSC->lField, lpSC->vNull);
 	else
 	{
-		Timestamp_StructToDate(&lpCS->sDateTime, lpCS->vData);
-		return _Store(lpCS->lField, lpCS->vData);
+		Timestamp_StructToDate(&lpSC->sDateTime, lpSC->vData);
+		return _Store(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreDateByGetData(SqlColumn* lpCS)
+int _fastcall SQLStoreDateByGetData(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 		else
 		{
-			Timestamp_StructToDate(&lpCS->sDateTime, lpCS->vData);
-			return _DBReplace(lpCS->lField, lpCS->vData);
+			Timestamp_StructToDate(&lpSC->sDateTime, lpSC->vData);
+			return _DBReplace(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreDateByGetDataVar(SqlColumn* lpCS)
+int _fastcall SQLStoreDateByGetDataVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			Timestamp_StructToDate(&lpCS->sDateTime, lpCS->vData);
-			return _Store(lpCS->lField, lpCS->vData);
+			Timestamp_StructToDate(&lpSC->sDateTime, lpSC->vData);
+			return _Store(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreDateTimeByBinding(SqlColumn* lpCS)
+int _fastcall SQLStoreDateTimeByBinding(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _DBReplace(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _DBReplace(lpSC->lField, lpSC->vNull);
 	else
 	{
-		Timestamp_StructToDateTime(&lpCS->sDateTime, lpCS->vData);
-		return _DBReplace(lpCS->lField, lpCS->vData);
+		Timestamp_StructToDateTime(&lpSC->sDateTime, lpSC->vData);
+		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreDateTimeByBindingVar(SqlColumn* lpCS)
+int _fastcall SQLStoreDateTimeByBindingVar(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _Store(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _Store(lpSC->lField, lpSC->vNull);
 	else
 	{
-		Timestamp_StructToDateTime(&lpCS->sDateTime, lpCS->vData);
-		return _Store(lpCS->lField, lpCS->vData);
+		Timestamp_StructToDateTime(&lpSC->sDateTime, lpSC->vData);
+		return _Store(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreDateTimeByGetData(SqlColumn* lpCS)
+int _fastcall SQLStoreDateTimeByGetData(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 		else
 		{
-			Timestamp_StructToDateTime(&lpCS->sDateTime, lpCS->vData);
-			return _DBReplace(lpCS->lField, lpCS->vData);
+			Timestamp_StructToDateTime(&lpSC->sDateTime, lpSC->vData);
+			return _DBReplace(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreDateTimeByGetDataVar(SqlColumn* lpCS)
+int _fastcall SQLStoreDateTimeByGetDataVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			Timestamp_StructToDateTime(&lpCS->sDateTime, lpCS->vData);
-			return _Store(lpCS->lField, lpCS->vData);
+			Timestamp_StructToDateTime(&lpSC->sDateTime, lpSC->vData);
+			return _Store(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreCurrencyByBinding(SqlColumn* lpCS)
+int _fastcall SQLStoreCurrencyByBinding(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _DBReplace(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _DBReplace(lpSC->lField, lpSC->vNull);
 	else
 	{
-		NumericLiteralToCurrency(lpCS->aNumeric, lpCS->vData);
-		return _DBReplace(lpCS->lField, lpCS->vData);
+		NumericLiteralToCurrency(lpSC->aNumeric, lpSC->vData);
+		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreCurrencyByBindingVar(SqlColumn* lpCS)
+int _fastcall SQLStoreCurrencyByBindingVar(SqlColumn* lpSC)
 {
-	if (lpCS->nIndicator == SQL_NULL_DATA)
-		return _Store(lpCS->lField, lpCS->vNull);
+	if (lpSC->nIndicator == SQL_NULL_DATA)
+		return _Store(lpSC->lField, lpSC->vNull);
 	else
 	{
-		NumericLiteralToCurrency(lpCS->aNumeric, lpCS->vData);
-		return _Store(lpCS->lField, lpCS->vData);
+		NumericLiteralToCurrency(lpSC->aNumeric, lpSC->vData);
+		return _Store(lpSC->lField, lpSC->vData);
 	}
 }
 
-int _fastcall SQLStoreCurrencyByGetData(SqlColumn* lpCS)
+int _fastcall SQLStoreCurrencyByGetData(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->aNumeric,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->aNumeric,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 		else
 		{
-			NumericLiteralToCurrency(lpCS->aNumeric, lpCS->vData);
-			return _DBReplace(lpCS->lField, lpCS->vData);
+			NumericLiteralToCurrency(lpSC->aNumeric, lpSC->vData);
+			return _DBReplace(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreCurrencyByGetDataVar(SqlColumn* lpCS)
+int _fastcall SQLStoreCurrencyByGetDataVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->aNumeric,lpCS->nBufferSize,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->aNumeric,lpSC->nBufferSize,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			return _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			return _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			NumericLiteralToCurrency(lpCS->aNumeric, lpCS->vData);
-			return _Store(lpCS->lField, lpCS->vData);
+			NumericLiteralToCurrency(lpSC->aNumeric, lpSC->vData);
+			return _Store(lpSC->lField, lpSC->vData);
 		}
 	}
-	SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+	SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 	return E_APIERROR;
 }
 
-int _fastcall SQLStoreMemoChar(SqlColumn* lpCS)
+int _fastcall SQLStoreMemoChar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	long nLoc;
 	int nErrorNo;
 
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
-		if (lpCS->nIndicator != SQL_NULL_DATA)
-			return ReplaceMemoEx(lpCS->lField,(char*)lpCS->pData,lpCS->nIndicator,lpCS->hMemoFile);
-		else if (lpCS->bNullable)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator != SQL_NULL_DATA)
+			return ReplaceMemoEx(lpSC->lField,(char*)lpSC->pData,lpSC->nIndicator,lpSC->hMemoFile);
+		else if (lpSC->bNullable)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 	}
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
 		// result is greater than buffer, allocate space for the memo field, nIndicator contains length of data
-		if (nErrorNo = AllocMemo(lpCS->lField,lpCS->nIndicator,&nLoc))
+		if (nErrorNo = AllocMemo(lpSC->lField,lpSC->nIndicator,&nLoc))
 			return nErrorNo;
 
 		// append the data from the buffer
-		if (nErrorNo = AppendMemo((char*)lpCS->pData,VFP2C_ODBC_MAX_BUFFER-1,lpCS->hMemoFile,&nLoc))
+		if (nErrorNo = AppendMemo((char*)lpSC->pData,VFP2C_ODBC_MAX_BUFFER-1,lpSC->hMemoFile,&nLoc))
 			return nErrorNo;
 
 		do
 		{
-			nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+			nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 			if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 			{
-				if (nErrorNo = AppendMemo((char*)lpCS->pData,VFP2C_ODBC_MAX_BUFFER-1,lpCS->hMemoFile,&nLoc))
+				if (nErrorNo = AppendMemo((char*)lpSC->pData,VFP2C_ODBC_MAX_BUFFER-1,lpSC->hMemoFile,&nLoc))
 					return nErrorNo;
 			}
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
 
 		if (nApiRet == SQL_ERROR)
 		{
-			SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+			SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 			return E_APIERROR;
 		}
 	}
 	else
 	{
-		SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+		SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 		return E_APIERROR;
 	}
 
 	return 0;
 }
 
-int _fastcall SQLStoreMemoCharVar(SqlColumn* lpCS)
+int _fastcall SQLStoreMemoCharVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	ValueEx vData;
@@ -4375,15 +4199,15 @@ int _fastcall SQLStoreMemoCharVar(SqlColumn* lpCS)
 	vData.LockHandle();
 	pData = vData.HandleToPtr();
 
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			nRetVal = _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			nRetVal = _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			vData.ev_length = lpCS->nIndicator;
-			nRetVal = _Store(lpCS->lField, vData);
+			vData.ev_length = lpSC->nIndicator;
+			nRetVal = _Store(lpSC->lField, vData);
 		}
 		vData.UnlockHandle();
 		vData.FreeHandle();
@@ -4391,9 +4215,9 @@ int _fastcall SQLStoreMemoCharVar(SqlColumn* lpCS)
 	}
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		vData.ev_length = lpCS->nIndicator;
+		vData.ev_length = lpSC->nIndicator;
 		vData.UnlockHandle();
-		if (!vData.SetHandleSize(lpCS->nIndicator+1))
+		if (!vData.SetHandleSize(lpSC->nIndicator+1))
 		{
 			vData.FreeHandle();
 			return E_INSUFMEMORY;
@@ -4404,16 +4228,16 @@ int _fastcall SQLStoreMemoCharVar(SqlColumn* lpCS)
 
 		do 
 		{
-			nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+			nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 			if (nApiRet == SQL_SUCCESS_WITH_INFO)
 				pData += VFP2C_ODBC_MAX_BUFFER-1;
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
 		
 		if (nApiRet == SQL_SUCCESS)
-			nRetVal = _Store(lpCS->lField, vData);
+			nRetVal = _Store(lpSC->lField, vData);
 		else
 		{
-			SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+			SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 			nRetVal = E_APIERROR;
 		}
 		vData.UnlockHandle();
@@ -4422,62 +4246,62 @@ int _fastcall SQLStoreMemoCharVar(SqlColumn* lpCS)
 	}
 	else
 	{
-		SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+		SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 		vData.UnlockHandle();
 		vData.FreeHandle();
 		return E_APIERROR;
 	}
 }
 
-int _fastcall SQLStoreMemoWChar(SqlColumn* lpCS)
+int _fastcall SQLStoreMemoWChar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	long nLoc;
 	int nErrorNo;
 
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
-		if (lpCS->nIndicator != SQL_NULL_DATA)
-			return ReplaceMemoEx(lpCS->lField,(char*)lpCS->pData,lpCS->nIndicator,lpCS->hMemoFile);
-		else if (lpCS->bNullable)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator != SQL_NULL_DATA)
+			return ReplaceMemoEx(lpSC->lField,(char*)lpSC->pData,lpSC->nIndicator,lpSC->hMemoFile);
+		else if (lpSC->bNullable)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 	}
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
 		// result is greater than buffer, allocate space for the memo field, nIndicator contains length of data
-		if (nErrorNo = AllocMemo(lpCS->lField,lpCS->nIndicator,&nLoc))
+		if (nErrorNo = AllocMemo(lpSC->lField,lpSC->nIndicator,&nLoc))
 			return nErrorNo;
 
 		// append the data from the buffer
-		if (nErrorNo = AppendMemo((char*)lpCS->pData,VFP2C_ODBC_MAX_BUFFER-2,lpCS->hMemoFile,&nLoc))
+		if (nErrorNo = AppendMemo((char*)lpSC->pData,VFP2C_ODBC_MAX_BUFFER-2,lpSC->hMemoFile,&nLoc))
 			return nErrorNo;
 
 		do 
 		{
-			nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+			nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 			if (nApiRet == SQL_SUCCESS_WITH_INFO || nApiRet == SQL_SUCCESS)
 			{
-				if (nErrorNo = AppendMemo((char*)lpCS->pData,VFP2C_ODBC_MAX_BUFFER-2,lpCS->hMemoFile,&nLoc))
+				if (nErrorNo = AppendMemo((char*)lpSC->pData,VFP2C_ODBC_MAX_BUFFER-2,lpSC->hMemoFile,&nLoc))
 					return nErrorNo;
 			}
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
 
 		if (nApiRet == SQL_ERROR)
 		{
-			SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+			SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 			return E_APIERROR;
 		}
 	}
 	else
 	{
-		SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+		SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 		return E_APIERROR;
 	}
 	return 0;
 }
 
-int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpCS)
+int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	ValueEx vData;
@@ -4491,15 +4315,15 @@ int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpCS)
 	vData.LockHandle();
 	pData = vData.HandleToPtr();
 
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			nRetVal = _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			nRetVal = _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			vData.ev_length = lpCS->nIndicator;
-			nRetVal = _Store(lpCS->lField, vData);
+			vData.ev_length = lpSC->nIndicator;
+			nRetVal = _Store(lpSC->lField, vData);
 		}
 		vData.UnlockHandle();
 		vData.FreeHandle();
@@ -4507,9 +4331,9 @@ int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpCS)
 	}
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		vData.ev_length = lpCS->nIndicator;
+		vData.ev_length = lpSC->nIndicator;
 		vData.UnlockHandle();
-		if (!vData.SetHandleSize(lpCS->nIndicator+2))
+		if (!vData.SetHandleSize(lpSC->nIndicator+2))
 		{
 			vData.FreeHandle();
 			return E_INSUFMEMORY;
@@ -4520,16 +4344,16 @@ int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpCS)
 
 		do 
 		{
-			nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+			nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 			if (nApiRet == SQL_SUCCESS_WITH_INFO)
 				pData += VFP2C_ODBC_MAX_BUFFER-2;
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
 
 		if (nApiRet == SQL_SUCCESS)
-			nRetVal = _Store(lpCS->lField, vData);
+			nRetVal = _Store(lpSC->lField, vData);
 		else
 		{
-			SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+			SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 			nRetVal = E_APIERROR;
 		}
 		vData.UnlockHandle();
@@ -4538,64 +4362,64 @@ int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpCS)
 	}
 	else
 	{
-		SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+		SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 		vData.UnlockHandle();
 		vData.FreeHandle();
 		return E_APIERROR;
 	}
 }
 
-int _fastcall SQLStoreMemoBinary(SqlColumn* lpCS)
+int _fastcall SQLStoreMemoBinary(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	long nLoc;
 	int nErrorNo;
 
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 	
 	if (nApiRet == SQL_SUCCESS)
 	{
-		if (lpCS->nIndicator != SQL_NULL_DATA)
-			return ReplaceMemoEx(lpCS->lField,(char*)lpCS->pData,lpCS->nIndicator,lpCS->hMemoFile);
-		else if (lpCS->bNullable)
-			return _DBReplace(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator != SQL_NULL_DATA)
+			return ReplaceMemoEx(lpSC->lField,(char*)lpSC->pData,lpSC->nIndicator,lpSC->hMemoFile);
+		else if (lpSC->bNullable)
+			return _DBReplace(lpSC->lField, lpSC->vNull);
 	}
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
 		// allocate space for the memo field, nIncicator contains length of full data
-		if (nErrorNo = AllocMemo(lpCS->lField,lpCS->nIndicator,&nLoc))
+		if (nErrorNo = AllocMemo(lpSC->lField,lpSC->nIndicator,&nLoc))
 			return nErrorNo;
 
 		// append the data from the buffer
-		if (nErrorNo = AppendMemo((char*)lpCS->pData,VFP2C_ODBC_MAX_BUFFER,lpCS->hMemoFile,&nLoc))
+		if (nErrorNo = AppendMemo((char*)lpSC->pData,VFP2C_ODBC_MAX_BUFFER,lpSC->hMemoFile,&nLoc))
 			return nErrorNo;
 
 		do 
 		{
-			nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,lpCS->pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+			nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,lpSC->pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 			if (nApiRet == SQL_SUCCESS || nApiRet == SQL_SUCCESS_WITH_INFO)
 			{
-				if (nErrorNo = AppendMemo((char*)lpCS->pData,VFP2C_ODBC_MAX_BUFFER,lpCS->hMemoFile,&nLoc))
+				if (nErrorNo = AppendMemo((char*)lpSC->pData,VFP2C_ODBC_MAX_BUFFER,lpSC->hMemoFile,&nLoc))
 					return nErrorNo;
 			}
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
 
 		if (nApiRet == SQL_ERROR)
 		{
-			SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+			SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 			return E_APIERROR;
 		}
 	}
 	else
 	{
-		SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+		SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 		return E_APIERROR;
 	}
 
 	return 0;
 }
 
-int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpCS)
+int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet;
 	ValueEx vData;
@@ -4609,15 +4433,15 @@ int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpCS)
 	vData.LockHandle();
 	pData = vData.HandleToPtr();
 
-	nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+	nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
-		if (lpCS->nIndicator == SQL_NULL_DATA)
-			nRetVal = _Store(lpCS->lField, lpCS->vNull);
+		if (lpSC->nIndicator == SQL_NULL_DATA)
+			nRetVal = _Store(lpSC->lField, lpSC->vNull);
 		else
 		{
-			vData.ev_length = lpCS->nIndicator;
-			nRetVal = _Store(lpCS->lField, vData);
+			vData.ev_length = lpSC->nIndicator;
+			nRetVal = _Store(lpSC->lField, vData);
 		}
 		vData.UnlockHandle();
 		vData.FreeHandle();
@@ -4625,9 +4449,9 @@ int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpCS)
 	}
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
-		vData.ev_length = lpCS->nIndicator;
+		vData.ev_length = lpSC->nIndicator;
 		vData.UnlockHandle();
-		if (!vData.SetHandleSize(lpCS->nIndicator+2))
+		if (!vData.SetHandleSize(lpSC->nIndicator+2))
 		{
 			vData.FreeHandle();
 			return E_INSUFMEMORY;
@@ -4638,16 +4462,16 @@ int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpCS)
 
 		do 
 		{
-			nApiRet = SQLGetData(lpCS->hStmt,lpCS->nColNo,lpCS->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpCS->nIndicator);
+			nApiRet = SQLGetData(lpSC->hStmt,lpSC->nColNo,lpSC->nCType,pData,VFP2C_ODBC_MAX_BUFFER,&lpSC->nIndicator);
 			if (nApiRet == SQL_SUCCESS_WITH_INFO)
 				pData += VFP2C_ODBC_MAX_BUFFER;
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
 
 		if (nApiRet == SQL_SUCCESS)
-			nRetVal = _Store(lpCS->lField, vData);
+			nRetVal = _Store(lpSC->lField, vData);
 		else
 		{
-			SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+			SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 			nRetVal = E_APIERROR;
 		}
 		vData.UnlockHandle();
@@ -4656,7 +4480,7 @@ int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpCS)
 	}
 	else
 	{
-		SafeODBCStmtError("SQLGetData", lpCS->hStmt);
+		SafeODBCStmtError("SQLGetData", lpSC->hStmt);
 		vData.UnlockHandle();
 		vData.FreeHandle();
 		return E_APIERROR;

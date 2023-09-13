@@ -56,13 +56,14 @@ If you omit the <em>nFlags</em> parameter or pass the value 0, the default is us
 <tr><td>SQLEXECEX_DEST_CURSOR</td><td>Store the resultset into one or more VFP cursors.</td></tr>
 <tr><td>SQLEXECEX_DEST_VARIABLE </td><td>Store the resultset into VFP variables/fields.<br />
 If you pass this flag only the values of the first row of the resultset are saved into the variables/fields.</td></tr>
-<tr><td>SQLEXECEX_REUSE_CURSOR</td><td>Reuse the cursor if it already exists, if the cursor exists it is ZAP'ed before storing new records into it.</td></tr>
+<tr><td>SQLEXECEX_REUSE_CURSOR</td><td>Reuse the cursor if it already exists, if the cursor exists it is ZAP'ed before storing new records into it. Passing SQLEXECEX_REUSE_CURSOR includes SQLEXECEX_DEST_CURSOR, you don't have to pass both.</td></tr>
 <tr><td>SQLEXECEX_NATIVE_SQL</td><td>Don't try to parse the passed SQL statement for parameters, just pass it on to the datasource as it is.<br />
 Of course you cannot embedd any parameters if you set this flag.</td></tr>
 <tr><td>SQLEXECEX_CALLBACK_PROGRESS</td><td>Callback into the function passed in the <i>cCallback</i> parameter while fetching rows, if you omit the <i>cCallback</i> parameter this flag is ignored.</td></tr>
 <tr><td>SQLEXECEX_CALLBACK_INFO</td><td>Callback into the function passed in the <i>cCallback</i> parameter if additional information from the backend is receveived (e.g. from PRINT or RAISERROR statements in a stored procedure).</td></tr>
 <tr><td>SQLEXECEX_STORE_INFO</td><td>Store additional info from the backend into the array passed in the <i>cArray</i> parameter.</td></tr>
-<tr><td>SQLEXECEX_APPEND_CURSOR</td><td>Only in combition with SQLEXECEX_REUSE_CURSOR, don't ZAP the cursor, records are just appended.</td></tr>
+<tr><td>SQLEXECEX_APPEND_CURSOR</td><td>Reuse the cursor and don't ZAP the cursor, new records are just appended.<br />
+Passing SQLEXECEX_APPEND_CURSOR includes SQLEXECEX_REUSE_CURSOR and SQLEXECEX_DEST_CURSOR, you don't have to pass all.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p6">cCursorSchema :</a></dt>
 <dd><p>The syntax for the schema is like in CREATE TABLE/CURSOR, a comma seperated list of column name and type description e.g.:<br />

@@ -41,6 +41,7 @@ const unsigned int SQLEXECEX_CALLBACK_PROGRESS	= 0x00000010;
 const unsigned int SQLEXECEX_CALLBACK_INFO		= 0x00000020;
 const unsigned int SQLEXECEX_STORE_INFO			= 0x00000040;
 const unsigned int SQLEXECEX_APPEND_CURSOR		= 0x00000080;
+const unsigned int SQLEXECEX_PRESERVE_RECNO		= 0x00000100;
 
 // forward declarations
 class SqlResultSet;
@@ -61,7 +62,7 @@ public:
 	void PutData();
 	void BindParameters();
 	void NumParamsEx(char* pSQL);
-	void ExtractParamsAndRewriteStatement(SQLINTEGER* nLen);
+	void ExtractParamsAndRewriteStatement();
 	void ParseParamSchema();
 	void EvaluateParams();
 	void InfoCallbackOrStore();
@@ -77,12 +78,11 @@ public:
 	FoxString pGetDataBuffer;
 	FoxString pCursorNames;
 	FoxString pSQLInput;
+	FoxString pSQLSend;
 	FoxString pCursorSchema;
 	FoxString pParamSchema;
 	FoxArray pInfoArray;
 	CFoxCallback pCallback;
-	char* pSQLSend;
-	SQLINTEGER nSQLLen;
 	unsigned int nResultset;
 	int nCallbackInterval;
 	SQLLEN nRowsTotal;
@@ -99,17 +99,15 @@ public:
 	SqlResultSet(SqlStatement* stmt);
 	~SqlResultSet();
 
-	int AllocateColumns(SQLSMALLINT columncount);
+	void AllocateColumns(SQLSMALLINT columncount);
 	void GetMetaData();
 	void BindColumns();
-	void FixColumnName(char* pColumn);
 	void BindFieldLocators();
 	void BindVariableLocators();
 	void BindVariableLocatorsEx();
 	void ParseCursorSchema();
 	void ParseCursorSchemaEx();
 	void PrepareColumnBindings();
-	SqlColumn* FindColumn(char* pColName);
 	void CreateCursor();
 	void FetchToCursor(BOOL* bAborted);
 	void FetchToVariables();
@@ -119,6 +117,12 @@ public:
 	FoxString pCursorName;
 	SQLSMALLINT nNoOfCols;
 	int nWorkArea;
+
+private:
+	SqlColumn* FindColumn(CStringView pColName);
+	void FixColumnName(char* pColumn);
+	void BindGetDataBuffer(SqlColumn* lpCs, FoxString* pGetDataBuffer);
+	void AllocateColumnBuffer(SqlColumn* lpSC, int nLen, BOOL bBindColumn, FoxString* pGetDataBuffer);
 };
 
 // holds data for each column in a SQL resultset
@@ -146,8 +150,8 @@ public:
 	BOOL bCustomSchema;
 	LPSQLSTOREFUNC pStore;
 	FCHAN hMemoFile;
-	SQLSMALLINT nNameLen;
 	SQLCHAR aVFPType;
+	SQLSMALLINT nNameLen;
 	SQLCHAR aColName[VFP2C_ODBC_MAX_COLUMN_NAME];
 	SQL_TIMESTAMP_STRUCT sDateTime;
 	SQLCHAR aNumeric[VFP2C_ODBC_MAX_CURRENCY_LITERAL+1];
@@ -159,7 +163,7 @@ public:
 	SqlParameter();
 	char aParmExpr[VFP2C_ODBC_MAX_PARAMETER_EXPR]; // buffer into which the parameter expression is stored
 	char aParmName[VFP2C_ODBC_MAX_PARAMETER_NAME]; // name of parameter, if it's a named parameter
-	Locator lVarOrField;		// for output parameters one can only pass variables or fieldnames of course, this will hold the Locator referencing the variable/field
+	LocatorEx lVarOrField;		// for output parameters one can only pass variables or fieldnames of course, this will hold the Locator referencing the variable/field
 	ValueEx vParmValue;			// Value structure into which the parameter is stored
 	SQLPOINTER pParmData;		// pointer to the data of the parameter
 	SQLUSMALLINT nParmNo;		// number of parameter (1 based)

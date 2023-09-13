@@ -811,7 +811,7 @@ typedef struct FieldLocatorEx : public LocatorEx
 } FieldLocatorEx;
 #pragma pack(pop)
 
-/* extended ParamBlkEx struct with operator-> for easy access to val */
+/* extended FoxParameterEx struct with operator-> for easy access to val */
 typedef union _FoxParamterEx
 {
 	ValueEx		val;

@@ -5,9 +5,8 @@ CD (FULLPATH(JUSTPATH(SYS(16))))
 IF TYPE('_WIN64') = 'L' AND _WIN64
 SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32d.fll ADDITIVE
+SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
-
 
 LOCAL lnCon, lnSqlHandle, lnRet, lcParm, laInfo[1], laTables[16], xj
 m.lnCon = -1
@@ -29,8 +28,12 @@ m.laTables[14] = 'rental'
 m.laTables[15] = 'staff'
 m.laTables[16] = 'store'
 
-CLOSE DATABASES ALL
+SET DATE GERMAN
+SET CENTURY ON
+SET HOURS TO 24
+_SCREEN.Cls()
 
+CLOSE DATABASES ALL
 
 TRY
 && lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=SQLEXPRESS;User=sa;Pwd=****',.F.)
@@ -51,7 +54,7 @@ ENDIF
 
 	&& reusing cursors
 	FOR m.xj = 1 TO ALEN(m.laTables, 1)
-		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], '')
+		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj])
 		IF m.lnRet = -1
 			THROW 
 		ENDIF
@@ -61,17 +64,16 @@ ENDIF
 			THROW 
 		ENDIF
 
-		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_REUSE_CURSOR + SQLEXECEX_APPEND_CURSOR)
+		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM ' + m.laTables[m.xj], m.laTables[m.xj], 'laInfo', SQLEXECEX_APPEND_CURSOR)
 		IF m.lnRet = -1
 			THROW 
 		ENDIF
 	ENDFOR
 
-
 	&& update statement
 	LOCAL lnActorId, lcFirstName, lcLastName, ldLastUpdate
 	m.lnActorId = 20
-	m.lcFirstName = 'JOHN'
+	m.lcFirstName = 'JOHNNY'
 	m.lnRet = SQLEXECEX(m.lnCon, 'UPDATE actor SET first_name = ?{lcFirstName} WHERE actor_id = ?{lnActorId}', '', 'laInfo') 
 	IF m.lnRet = -1
 		THROW 
@@ -84,7 +86,7 @@ ENDIF
 	? lnActorId, lcFirstName, lcLastName, ldLastUpdate
 
 	&& prepared statements
-	m.lnSqlHandle = SQLPREPAREEX(m.lnCon, 'SELECT * FROM actor WHERE first_name LIKE ?{lcParm}', 'actor_1', 'laInfo', SQLEXECEX_REUSE_CURSOR + SQLEXECEX_APPEND_CURSOR) 
+	m.lnSqlHandle = SQLPREPAREEX(m.lnCon, 'SELECT * FROM actor WHERE first_name LIKE ?{lcParm}', 'actor_1', 'laInfo', SQLEXECEX_APPEND_CURSOR) 
 	IF m.lnSqlHandle = -1
 		THROW 
 	ENDIF
@@ -110,7 +112,57 @@ ENDIF
 	ENDIF
 	m.lnSqlHandle = -1
 		
+	&& custom cursorschema
+	m.lcParm = 1
+	m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM actor WHERE actor_id = ?{lcParm}', 'actor_2', '', 0, 'actor_id N(6), first_name V(50), last_name V(50), last_update C(20)') 
+		
+		
 CATCH TO loError
+	AERROREX('laError')
+	DISPLAY MEMORY LIKE laError
+FINALLY
+	IF m.lnSqlHandle != -1
+		SQLCANCELEX(m.lnSqlHandle)
+	ENDIF
+	IF lnCon != -1
+		SQLDISCONNECT(lnCon)
+	ENDIF
+ENDTRY
+
+TRY
+	&& m.lnCon = SQLSTRINGCONNECT('Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-O83K0AE\SQLEXPRESS;UID=sa;PWD=iYV0eLDKmiQZ4RS6CRhs',.F.)
+	m.lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=DESKTOP-O83K0AE\SQLEXPRESS;UID=sa;PWD=iYV0eLDKmiQZ4RS6CRhs',.F.)
+	IF m.lnCon = -1
+		THROW
+	ENDIF
+
+	m.lnSqlHandle = SQLPREPAREEX(m.lnCon, 'SELECT * FROM INFORMATION_SCHEMA.TABLES' + CHR(10) + ;
+		'SELECT * FROM INFORMATION_SCHEMA.COLUMNS', 'tabs,cols', 'laInfo', SQLEXECEX_APPEND_CURSOR + SQLEXECEX_PRESERVE_RECNO + SQLEXECEX_CALLBACK_PROGRESS + SQLEXECEX_CALLBACK_INFO, '', '', 'SqlCallback')
+	IF m.lnSqlHandle = -1
+		THROW
+	ENDIF
+	
+	m.lnRet = SQLEXECEX(m.lnSqlHandle)
+	IF m.lnRet = -1
+		THROW
+	ENDIF
+	DISPLAY MEMORY LIKE laInfo
+	GO 2 IN tabs
+	GO 10 IN cols
+	m.lnRet = SQLEXECEX(m.lnSqlHandle)
+	IF m.lnRet = -1
+		THROW
+	ENDIF
+	DISPLAY MEMORY LIKE laInfo	
+	m.lnRet = SQLCANCELEX(m.lnSqlHandle)
+	IF m.lnRet = -1
+		THROW 
+	ENDIF
+	m.lnSqlHandle = -1	
+	
+	? RECNO('tabs'), RECNO('cols')
+	
+CATCH TO loError	
 	AERROREX('laError')
 	DISPLAY MEMORY LIKE laError
 FINALLY
@@ -288,4 +340,3 @@ FUNCTION SQLCallback(lnSet,lnRow,lnRowCount)
 		ENDIF
 	ENDIF
 ENDFUNC
-
