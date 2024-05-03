@@ -208,7 +208,7 @@ try
 	{
 		if (parm.PCount() == 4)
 		{
-			if (parm(4)->Vartype() == 'I' || parm(4)->Vartype() == 'N')
+			if (parm(4)->Numeric())
 				hHwnd = parm(4)->DynamicPtr<HWND>();
 			else if (parm(4)->Vartype() == 'C')
 			{
@@ -654,7 +654,7 @@ void _fastcall OsEx(ParamBlkEx& parm)
 void _fastcall Str2Short(ParamBlkEx& parm)
 {
 	short *pShort;
-	pShort = reinterpret_cast<short*>(parm(1)->HandleToPtr());
+	pShort = parm(1)->HandleToPtr<short*>();
 	Return(*pShort);
 }
 
@@ -667,7 +667,7 @@ void _fastcall Short2Str(ParamBlkEx& parm)
 	if (!vRetVal.AllocHandle(sizeof(short)))
 		RaiseError(E_INSUFMEMORY);
 
-	pRetVal = reinterpret_cast<short*>(vRetVal.HandleToPtr());
+	pRetVal = vRetVal.HandleToPtr<short*>();
 	*pRetVal = static_cast<short>(parm(1)->ev_long);
 	Return(vRetVal);
 }
@@ -675,7 +675,7 @@ void _fastcall Short2Str(ParamBlkEx& parm)
 void _fastcall Str2UShort(ParamBlkEx& parm)
 {
 	unsigned short *pUShort;
-	pUShort = reinterpret_cast<unsigned short*>(parm(1)->HandleToPtr());
+	pUShort = parm(1)->HandleToPtr<unsigned short*>();
 	Return(*pUShort);
 }
 
@@ -688,7 +688,7 @@ void _fastcall UShort2Str(ParamBlkEx& parm)
 	if (!vRetVal.AllocHandle(sizeof(unsigned short)))
 		RaiseError(E_INSUFMEMORY);
 
-	pRetVal = reinterpret_cast<unsigned short*>(vRetVal.HandleToPtr());
+	pRetVal = vRetVal.HandleToPtr<unsigned short*>();
 	*pRetVal = static_cast<unsigned short>(parm(1)->ev_long);
 
 	Return(vRetVal);
@@ -697,7 +697,7 @@ void _fastcall UShort2Str(ParamBlkEx& parm)
 void _fastcall Str2Long(ParamBlkEx& parm)
 {
 	long *pLong;
-	pLong = reinterpret_cast<long*>(parm(1)->HandleToPtr());
+	pLong = parm(1)->HandleToPtr<long*>();
 	Return(*pLong);
 }
 
@@ -710,7 +710,7 @@ void _fastcall Long2Str(ParamBlkEx& parm)
 	if (!vRetVal.AllocHandle(sizeof(long)))
 		RaiseError(E_INSUFMEMORY);
 
-	pRetVal = reinterpret_cast<long*>(vRetVal.HandleToPtr());
+	pRetVal = vRetVal.HandleToPtr<long*>();
 	*pRetVal = parm(1)->ev_long;
 	Return(vRetVal);
 }
@@ -718,7 +718,7 @@ void _fastcall Long2Str(ParamBlkEx& parm)
 void _fastcall Str2ULong(ParamBlkEx& parm)
 {
 	unsigned long *pULong;
-	pULong = reinterpret_cast<unsigned long*>(parm(1)->HandleToPtr());
+	pULong = parm(1)->HandleToPtr<unsigned long*>();
 	Return(*pULong);
 }
 
@@ -730,7 +730,7 @@ void _fastcall ULong2Str(ParamBlkEx& parm)
 	if (!vRetVal.AllocHandle(sizeof(unsigned long)))
 		RaiseError(E_INSUFMEMORY);
 	
-	pRetVal = reinterpret_cast<unsigned long*>(vRetVal.HandleToPtr());
+	pRetVal = vRetVal.HandleToPtr<unsigned long*>();
 	
 	if (parm(1)->Vartype() == 'I')
 		*pRetVal = parm(1)->ev_long;
@@ -748,7 +748,7 @@ void _fastcall ULong2Str(ParamBlkEx& parm)
 void _fastcall Str2Double(ParamBlkEx& parm)
 {
 	double *pDouble;
-	pDouble = reinterpret_cast<double*>(parm(1)->HandleToPtr());
+	pDouble = parm(1)->HandleToPtr<double*>();
 	Return(*pDouble);
 }
 
@@ -761,7 +761,7 @@ void _fastcall Double2Str(ParamBlkEx& parm)
 	if (!vRetVal.AllocHandle(sizeof(double)))
 		RaiseError(E_INSUFMEMORY);
 
-	pRetVal = reinterpret_cast<double*>(vRetVal.HandleToPtr());
+	pRetVal = vRetVal.HandleToPtr<double*>();
 	*pRetVal = parm(1)->ev_real;
 	Return(vRetVal);	
 }
@@ -769,7 +769,7 @@ void _fastcall Double2Str(ParamBlkEx& parm)
 void _fastcall Str2Float(ParamBlkEx& parm)
 {
 	float *pFloat;
-	pFloat = reinterpret_cast<float*>(parm(1)->HandleToPtr());
+	pFloat = parm(1)->HandleToPtr<float*>();
 	Return(*pFloat);
 }
 
@@ -782,7 +782,7 @@ void _fastcall Float2Str(ParamBlkEx& parm)
 	if (!vRetVal.AllocHandle(sizeof(float)))
 		RaiseError(E_INSUFMEMORY);
 
-	pRetVal = reinterpret_cast<float*>(vRetVal.HandleToPtr());
+	pRetVal = vRetVal.HandleToPtr<float*>();
 	*pRetVal = static_cast<float>(parm(1)->ev_real);
 	Return(vRetVal);	
 }
@@ -810,7 +810,7 @@ void _fastcall Str2Int64(ParamBlkEx& parm)
 	__int64 nInt;
 	if (parm(1)->Len() != 8)
 		RaiseError(E_INVALIDPARAMS);
-	nInt = *reinterpret_cast<__int64*>(parm(1)->HandleToPtr());
+	nInt = *(parm(1)->HandleToPtr<__int64*>());
 
 	if (parm.PCount() == 1 || parm(2)->ev_long == 1)
 		ReturnInt64AsCurrency(nInt);
@@ -845,7 +845,7 @@ void _fastcall Str2UInt64(ParamBlkEx& parm)
 	unsigned __int64 nInt;
 	if (parm(1)->Len() != 8)
 		RaiseError(E_INVALIDPARAMS);
-	nInt = *reinterpret_cast<unsigned __int64*>(parm(1)->HandleToPtr());
+	nInt = *(parm(1)->HandleToPtr<unsigned __int64*>());
 
 	if (parm.PCount() == 1 || parm(2)->ev_long == 1)
 		ReturnInt64AsCurrency(nInt);

@@ -177,6 +177,18 @@ typedef HRESULT(_stdcall *PPSGETPROPERTYKEYFROMNAME)(PCWSTR, PROPERTYKEY*); // P
 typedef HRESULT(_stdcall *PPROPVARIANTTOVARIANT)(PROPVARIANT*, VARIANT*); // PropVariantToVariant
 typedef HRESULT(_stdcall* PVARIANTTOPROPVARIANT)(VARIANT*, PROPVARIANT*); // VariantToPropVariant
 
+#define FOF_SOURCE_CURSOR		0x010000
+#define FOF_SOURCE_ARRAY		0x020000
+#define FOF_DEST_CURSOR			0x040000
+#define FOF_DEST_ARRAY			0x080000
+#define FOF_MAPPING_ARRAY		0x100000
+
+typedef struct _SHNAMEMPAPPINGS
+{
+	UINT              uNumberOfMappings;  // Number of mappings in the array.
+	LPSHNAMEMAPPINGW  lpSHNameMapping;    // Pointer to the array of mappings.
+} *LPSHNAMEMAPPINGS;
+
 // shell api wrappers
 void _fastcall SHSpecialFolder(ParamBlkEx& parm);
 void _fastcall SHMoveFiles(ParamBlkEx& parm);
@@ -186,6 +198,9 @@ void _fastcall SHRenameFiles(ParamBlkEx& parm);
 void _fastcall SHBrowseFolder(ParamBlkEx& parm);
 void _fastcall SHGetShellItem(ParamBlkEx& parm);
 
+void _fastcall SHCreateFileListCursor(FoxString& pSource, FoxString& pFileList);
+void _fastcall SHCreateFileListArray(FoxParameterEx& pSource, FoxString& pFileList);
+void _fastcall SHSaveFileMapping(SHFILEOPSTRUCT& sFileOp, FoxString& pParm, bool bMapToArray);
 int _stdcall SHBrowseCallback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData);
 
 #endif // _VFP2CSHELL_H__

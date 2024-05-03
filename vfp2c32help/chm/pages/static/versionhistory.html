@@ -14,6 +14,65 @@
 </div>
 <div id="content">
 
+<h2>Version 2.0.0.42 -- 2024-05-01</h2>	
+<ul>
+<li>new function VFP2C32</li>
+<li>enhanced DeleteFileEx to optionally don't raise an error and return an error status instead</li>
+<li>extended SHMoveFiles, SHCopyFiles, SHDeleteFiles to take an array or cursor as input</li>
+<li>extened SHMoveFiles and SHCopyFiles to optionally store a cursor or array of renamed files</li>
+<li>extened all functions that expect a filename as an parameter to also accept a memo field per reference</li>
+<li>combined SetFileAttributes and SetFileAttributesEx into one function</li>
+<li>extended SQLExecEx
+<ul>
+	<li>added flag SQLEXECEX_PARAMETER_ARRAY for parameter set batch processing</li>
+	<li>extended ability to pass all available parameter types including streaming parameters (new in ODBC 3.8) and table valued parameters for SQL Server</li>
+	<li>added optional parameter nRowFetchSize for fetching multiple rows at once, can potentially speedup data transfers over the network</li>
+	<li>added support to fetch the SQL Server specific datatype SQL_SS_VARIANT and added two new functions ValueToSQLVariant and SQLVariantToValue to convert between the SQL Server representation and FoxPro values</li>
+	<li>optimized fetching of SQL Server money datatype</li>
+</ul></li>
+<li>added new ODBC functions
+<ul>
+<li>SQLRegisterTableType</li>
+<li>SQLCreateTableTypeCursor</li>
+<li>SQLTablesEx</li>
+<li>SQLColumnsEx</li>
+<li>SQLPrimaryKeysEx</li>
+<li>SQLForeignKeysEx</li>
+<li>SQLProceduresEx</li>
+<li>SQLProcedureColumnsEx</li>
+<li>SQLTablePrivilegesEx</li>
+<li>SQLColumnPrivilegesEx</li>
+<li>SQLSpecialColumnsEx</li>
+<li>SQLStatisticsEx</li>
+<li>SQLGetTypeInfoEx</li>
+<li>SQLVariantToValue</li>
+<li>ValueToSQLVariant</li>
+</ul></li>
+<li>renamed the following functions that had the same name as the underlying windows api functions to avoid possible conflicts with existing FoxPro code
+<ul>
+	<li>GetFileSize -> GetFileSizeEx2</li>
+	<li>GetFileAttributes -> GetFileAttributesEx2</li>
+	<li>SetFileAttributes -> SetFileAttributesEx</li>
+	<li>GetLongPathName -> GetLongPathNameEx</li>
+	<li>GetShortPathName -> GetShortPathNameEx</li>
+	<li>GetWindowsDirectory -> GetWindowsDirectoryEx</li>
+	<li>GetSystemDirectory -> GetSystemDirectoryEx</li>
+	<li>ExpandEnvironmentStrings -> ExpandEnvironmentStringsEx</li>
+	<li>GetOpenFileName -> GetOpenFileNameEx</li>
+	<li>GetSaveFileName -> GetSaveFileNameEx</li>
+	<li>CopyFileEx -> CopyFileEx2</li>
+	<li>SetSystemTime -> SetSystemTimeEx</li>
+	<li>GetSystemTime -> GetSystemTimeEx</li>
+	<li>OpenService -> OpenServiceEx</li>
+	<li>CloseServiceHandle -> CloseServiceHandleEx</li>
+	<li>StartService -> StartServiceEx</li>
+	<li>StopService -> StopServiceEx</li>
+	<li>ControlService -> ControlServiceEx2</li>
+	<li>CreateService -> CreateServiceEx</li>
+	<li>DeleteService -> DeleteServiceEx</li>
+</ul></li>
+</ul>
+
 <h2>Version 2.0.0.41 -- 2023-09-13</h2>	
 <ul>
 <li>bugfix in internal FoxString class - could result in character data corruption</li>

@@ -61,7 +61,27 @@ void _fastcall OnLoad()
 	/* get OS information */
 	COs::Init();
 
-	VFP2C_Init_Com();
+	try
+	{
+		FoxVariable pTempVar("__VFP2C_FLL_FILENAME", false);
+		FoxString pFllFileName(MAX_PATH);
+
+		pFllFileName.Len(GetModuleFileName(ghModule, pFllFileName, pFllFileName.Size()));
+		if (!pFllFileName.Len())
+		{
+			AddWin32Error("GetModuleFileName", GetLastError());
+			return;
+		}
+
+		pTempVar() = pFllFileName;
+		// declare additional functions not nativly exported by the FLL
+		Execute("DECLARE LONG GetIDispatch IN (m.__VFP2C_FLL_FILENAME) AS GetIDispatch OBJECT");
+	}
+	catch (int nErrorNo)
+	{
+		AddCustomErrorEx("_Execute", "Failed to DECLARE function.", nErrorNo);
+	}
+
 }
 
 void _fastcall OnUnload()
@@ -85,6 +105,11 @@ void _fastcall OnUnload()
 #if defined(_DEBUGALLOCATIONS)
 	int nCount = VfpAllocationCount;
 #endif
+}
+
+void _fastcall VFP2C32(ParamBlk& parm)
+{
+	Return(false);
 }
 
 /* error handling routine to store the last error occurred in a Win32 API call 
@@ -225,12 +250,12 @@ try
 		case 3: /* set or return Unicode conversion codepage */
 			if (parm.PCount() == 2)
 			{
-				if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
+				if (parm(2)->Numeric())
 				{
-					UINT nCodePage = parm(2)->Vartype() == 'I' ? parm(2)->ev_long : static_cast<UINT>(parm(2)->ev_real);
-					if (IsValidCodePage((UINT)parm(2)->ev_long))
+					UINT nCodePage = parm(2)->NumericCast<UINT>();
+					if (IsValidCodePage(nCodePage))
 					{
-						VFP2CTls::Tls().ConvCP = (UINT)parm(2)->ev_long;
+						VFP2CTls::Tls().ConvCP = nCodePage;
 						Return(true);
 					}
 					else
@@ -249,12 +274,12 @@ try
 				Return(VFP2CTls::Tls().ConvCP);
 			break;
 
-		case 4:
+		case 4:  /* unicode conversion of SQLExecEx */
 			if (parm.PCount() == 2)
 			{
 				if (parm(2)->Vartype() == 'L')
 				{
-					VFP2CTls::Tls().SqlUnicodeConversion = parm(2)->ev_length;
+					VFP2CTls::Tls().SqlUnicodeConversion = parm(2)->ev_length > 0;
 					Return(true);
 				}
 				else
@@ -264,7 +289,43 @@ try
 				}
 			}
 			else
-				Return(VFP2CTls::Tls().SqlUnicodeConversion > 0);
+				Return(VFP2CTls::Tls().SqlUnicodeConversion);
+			break;
+
+		case 5:
+			if (parm.PCount() == 2)
+			{
+				if (parm(2)->Vartype() == 'L')
+				{
+					VFP2CTls::Tls().SqlStoreInfoAsError = parm(2)->ev_length > 0;
+					Return(true);
+				}
+				else
+				{
+					SaveCustomError("VFP2CSys", "Parameter 2 should be of type L.");
+					throw E_INVALIDPARAMS;
+				}
+			}
+			else
+				Return(VFP2CTls::Tls().SqlStoreInfoAsError);
+			break;
+
+		case 6:
+			if (parm.PCount() == 2)
+			{
+				if (parm(2)->Vartype() == 'L')
+				{
+					VFP2CTls::Tls().SqlMapBinaryToGeneral = parm(2)->ev_length > 0;
+					Return(true);
+				}
+				else
+				{
+					SaveCustomError("VFP2CSys", "Parameter 2 should be of type L.");
+					throw E_INVALIDPARAMS;
+				}
+			}
+			else
+				Return(VFP2CTls::Tls().SqlMapBinaryToGeneral);
 			break;
 
 		default: /* else wrong parameter */
@@ -325,21 +386,31 @@ try
 		return;
 	}
 
-	FoxArray pArray(parm(1), tls.ErrorCount+1, 4);
+	FoxArray pArray(parm(1), tls.ErrorCount+1, 6);
 	FoxString pErrorInfo(VFP2C_ERROR_MESSAGE_LEN);
 	FoxValue vNullValue;
+	LPVFP2CERROR pError;
 
 	unsigned int nRow = 0;
 	for (int xj = 0; xj <= tls.ErrorCount; xj++)
 	{
+		pError = &tls.ErrorInfo[xj];
 		nRow++;
-		pArray(nRow,1) = tls.ErrorInfo[xj].nErrorNo;
-		pArray(nRow,2) = pErrorInfo = tls.ErrorInfo[xj].aErrorFunction;
-		pArray(nRow,3) = pErrorInfo = tls.ErrorInfo[xj].aErrorMessage;
-		if (tls.ErrorInfo[xj].nErrorType == VFP2C_ERRORTYPE_ODBC)
-			pArray(nRow,4) = pErrorInfo = tls.ErrorInfo[xj].aSqlState;
+		pArray(nRow,1) = pError->nErrorNo;
+		pArray(nRow,2) = pErrorInfo = pError->aErrorFunction;
+		pArray(nRow,3) = pErrorInfo = pError->aErrorMessage;
+		if (pError->nErrorType == VFP2C_ERRORTYPE_ODBC)
+		{
+			pArray(nRow, 4) = pErrorInfo = tls.ErrorInfo[xj].aSqlState;
+			pArray(nRow, 5) = pError->nRowNumber;
+			pArray(nRow, 6) = pError->nColumnNumber;
+		}
 		else
-			pArray(nRow,4) = vNullValue;
+		{
+			pArray(nRow, 4) = vNullValue;
+			pArray(nRow, 5) = vNullValue;
+			pArray(nRow, 6) = vNullValue;
+		}
 	}
 
 	pArray.ReturnRows();
@@ -357,160 +428,176 @@ extern "C" {
 FoxInfo VFP2CFuncs[] = 
 {
 	/* common library routines (startup, cleanup & internal settings) */
-	{"OnLoad", (FPFI) OnLoad, CALLONLOAD, ""},
-	{"OnUnload", (FPFI) OnUnload, CALLONUNLOAD, ""},
-	{"VFP2CSys", (FPFI) VFP2CSys, 2, "I.?"},
-	
+	{"OnLoad", (FPFI)OnLoad, CALLONLOAD, ""},
+	{"OnUnload", (FPFI)OnUnload, CALLONUNLOAD, ""},
+	{"VFP2C32", (FPFI)VFP2C32, 0, ""},
+	{"VFP2CSys", (FPFI)VFP2CSys, 2, "I.?"},
+
 	/* memory management routines */
-	{"AllocMem", (FPFI) AllocMem, 1, "I"},
-	{"AllocMemTo", (FPFI) AllocMemTo, 2, "II"},
-	{"ReAllocMem", (FPFI) ReAllocMem, 2, "II"},
-	{"FreeMem", (FPFI) FreeMem, 1, "I"},
-	{"FreePMem", (FPFI) FreePMem, 1, "I"},
-	{"FreeRefArray", (FPFI) FreeRefArray, 3, "III"},
-	{"SizeOfMem", (FPFI) SizeOfMem, 1, "I"},
-	{"ValidateMem", (FPFI) ValidateMem, 1, "I"},
-	{"CompactMem", (FPFI) CompactMem, 0, ""},
-	{"AMemBlocks", (FPFI) AMemBlocks, 1, "C"},
+	{"AllocMem", (FPFI)AllocMem, 1, "I"},
+	{"AllocMemTo", (FPFI)AllocMemTo, 2, "II"},
+	{"ReAllocMem", (FPFI)ReAllocMem, 2, "II"},
+	{"FreeMem", (FPFI)FreeMem, 1, "I"},
+	{"FreePMem", (FPFI)FreePMem, 1, "I"},
+	{"FreeRefArray", (FPFI)FreeRefArray, 3, "III"},
+	{"SizeOfMem", (FPFI)SizeOfMem, 1, "I"},
+	{"ValidateMem", (FPFI)ValidateMem, 1, "I"},
+	{"CompactMem", (FPFI)CompactMem, 0, ""},
+	{"AMemBlocks", (FPFI)AMemBlocks, 1, "C"},
 
 	/* wrappers around Global memory functions */
-	{"AllocHGlobal", (FPFI) AllocHGlobal, 2, "I.I"},
-	{"FreeHGlobal", (FPFI) FreeHGlobal, 1, "I"},
-	{"ReAllocHGlobal", (FPFI) ReAllocHGlobal, 3, "II.I"},
-	{"LockHGlobal", (FPFI) LockHGlobal, 1, "I"},
-	{"UnlockHGlobal", (FPFI) UnlockHGlobal, 1, "I"},
+	{"AllocHGlobal", (FPFI)AllocHGlobal, 2, "I.I"},
+	{"FreeHGlobal", (FPFI)FreeHGlobal, 1, "I"},
+	{"ReAllocHGlobal", (FPFI)ReAllocHGlobal, 3, "II.I"},
+	{"LockHGlobal", (FPFI)LockHGlobal, 1, "I"},
+	{"UnlockHGlobal", (FPFI)UnlockHGlobal, 1, "I"},
 
 	/* read/write C types from/to memory */
-	{"WriteChar", (FPFI) WriteChar, 2, "IC"},
-	{"WritePChar", (FPFI) WritePChar, 2, "IC"},
-	{"WriteInt8", (FPFI) WriteInt8, 2, "II"},
-	{"WritePInt8", (FPFI) WritePInt8, 2, "II"},
-	{"WriteUInt8", (FPFI) WriteUInt8, 2, "II"},
-	{"WritePUInt8", (FPFI) WritePUInt8, 2, "II"},
-	{"WriteShort", (FPFI) WriteShort, 2, "II"},
-	{"WritePShort", (FPFI) WritePShort, 2, "II"},
-	{"WriteUShort", (FPFI) WriteUShort, 2, "II"},
-	{"WritePUShort", (FPFI) WritePUShort, 2, "II"},
-	{"WriteInt", (FPFI) WriteInt, 2, "II"},
-	{"WritePInt", (FPFI) WritePInt, 2, "II"},
-	{"WriteUInt", (FPFI) WriteUInt, 2, "IN"},
-	{"WritePUInt", (FPFI) WritePUInt, 2, "IN"},
-	{"WriteInt64", (FPFI) WriteInt64, 2, "I?"},
-	{"WritePInt64", (FPFI) WritePInt64, 2, "I?"},
-	{"WriteUInt64", (FPFI) WriteUInt64, 2, "I?"},
-	{"WritePUInt64", (FPFI) WritePUInt64, 2, "I?"},
-	{"WritePointer", (FPFI) WritePointer, 2, "II"},
-	{"WritePPointer", (FPFI) WritePPointer, 2, "II"},
-	{"WriteFloat", (FPFI) WriteFloat, 2, "IN"},
-	{"WritePFloat", (FPFI) WritePFloat, 2, "IN"},
-	{"WriteDouble", (FPFI) WriteDouble, 2, "IN"},
-	{"WritePDouble", (FPFI) WritePDouble, 2, "IN"},
-	{"WriteCString", (FPFI) WriteCString, 2, "IC"},
-	{"WritePCString", (FPFI) WritePCString, 2, "I?"},
-	{"WriteGPCString", (FPFI) WriteGPCString, 2, "I?"},
-	{"WriteCharArray", (FPFI) WriteCharArray, 3, "IC.I"},
-	{"WriteWString", (FPFI) WriteWString, 3, "IC.I"},
-	{"WritePWString", (FPFI) WritePWString, 3, "I?.I"},
-	{"WriteWCharArray", (FPFI) WriteWCharArray, 4, "ICI.I"},
-	{"WriteWChar", (FPFI) WriteWChar, 3, "IC.I"},
-	{"WritePWChar", (FPFI) WritePWChar, 3, "IC.I"},
-	{"WriteBytes", (FPFI) WriteBytes, 3, "IC.I"},
-	{"WriteLogical", (FPFI) WriteLogical, 2, "IL"},
-	{"WritePLogical", (FPFI) WritePLogical, 2, "IL"},
+	{"WriteChar", (FPFI)WriteChar, 2, "IC"},
+	{"WritePChar", (FPFI)WritePChar, 2, "IC"},
+	{"WriteInt8", (FPFI)WriteInt8, 2, "II"},
+	{"WritePInt8", (FPFI)WritePInt8, 2, "II"},
+	{"WriteUInt8", (FPFI)WriteUInt8, 2, "II"},
+	{"WritePUInt8", (FPFI)WritePUInt8, 2, "II"},
+	{"WriteShort", (FPFI)WriteShort, 2, "II"},
+	{"WritePShort", (FPFI)WritePShort, 2, "II"},
+	{"WriteUShort", (FPFI)WriteUShort, 2, "II"},
+	{"WritePUShort", (FPFI)WritePUShort, 2, "II"},
+	{"WriteInt", (FPFI)WriteInt, 2, "II"},
+	{"WritePInt", (FPFI)WritePInt, 2, "II"},
+	{"WriteUInt", (FPFI)WriteUInt, 2, "IN"},
+	{"WritePUInt", (FPFI)WritePUInt, 2, "IN"},
+	{"WriteInt64", (FPFI)WriteInt64, 2, "I?"},
+	{"WritePInt64", (FPFI)WritePInt64, 2, "I?"},
+	{"WriteUInt64", (FPFI)WriteUInt64, 2, "I?"},
+	{"WritePUInt64", (FPFI)WritePUInt64, 2, "I?"},
+	{"WritePointer", (FPFI)WritePointer, 2, "II"},
+	{"WritePPointer", (FPFI)WritePPointer, 2, "II"},
+	{"WriteFloat", (FPFI)WriteFloat, 2, "IN"},
+	{"WritePFloat", (FPFI)WritePFloat, 2, "IN"},
+	{"WriteDouble", (FPFI)WriteDouble, 2, "IN"},
+	{"WritePDouble", (FPFI)WritePDouble, 2, "IN"},
+	{"WriteCString", (FPFI)WriteCString, 2, "IC"},
+	{"WritePCString", (FPFI)WritePCString, 2, "I?"},
+	{"WriteGPCString", (FPFI)WriteGPCString, 2, "I?"},
+	{"WriteCharArray", (FPFI)WriteCharArray, 3, "IC.I"},
+	{"WriteWString", (FPFI)WriteWString, 3, "IC.I"},
+	{"WritePWString", (FPFI)WritePWString, 3, "I?.I"},
+	{"WriteWCharArray", (FPFI)WriteWCharArray, 4, "ICI.I"},
+	{"WriteWChar", (FPFI)WriteWChar, 3, "IC.I"},
+	{"WritePWChar", (FPFI)WritePWChar, 3, "IC.I"},
+	{"WriteBytes", (FPFI)WriteBytes, 3, "IC.I"},
+	{"WriteLogical", (FPFI)WriteLogical, 2, "IL"},
+	{"WritePLogical", (FPFI)WritePLogical, 2, "IL"},
 
-	{"ReadChar", (FPFI) ReadChar, 1, "I"},
-	{"ReadPChar", (FPFI) ReadPChar, 2, "I.?"},
-	{"ReadInt8", (FPFI) ReadInt8, 1, "I"},
-	{"ReadPInt8", (FPFI) ReadPInt8, 1, "I"},
-	{"ReadUInt8", (FPFI) ReadUInt8, 1, "I"},
-	{"ReadPUInt8", (FPFI) ReadPUInt8, 1, "I"},
-	{"ReadShort", (FPFI) ReadShort, 1, "I"},
-	{"ReadPShort", (FPFI) ReadPShort, 1, "I"},
-	{"ReadUShort", (FPFI) ReadUShort, 1, "I"},
-	{"ReadPUShort", (FPFI) ReadPUShort, 1, "I"},
-	{"ReadInt", (FPFI) ReadInt, 1, "I"},
-	{"ReadPInt", (FPFI) ReadPInt, 1, "I"},
-	{"ReadUInt", (FPFI) ReadUInt, 1, "I"},
-	{"ReadPUInt", (FPFI) ReadPUInt, 1, "I"},
-	{"ReadInt64", (FPFI) ReadInt64, 2, "I.I"},
-	{"ReadPInt64", (FPFI) ReadPInt64, 2, "I.I"},
-	{"ReadUInt64", (FPFI) ReadUInt64, 2, "I.I"},
-	{"ReadPUInt64", (FPFI) ReadPUInt64, 2, "I.I"},
-	{"ReadFloat", (FPFI) ReadFloat, 1, "I"},
-	{"ReadPFloat", (FPFI) ReadPFloat, 1, "I"},
-	{"ReadDouble", (FPFI) ReadDouble, 1, "I"},
-	{"ReadPDouble", (FPFI) ReadPDouble, 1, "I"},
-	{"ReadLogical", (FPFI) ReadLogical, 1, "I"},
-	{"ReadPLogical", (FPFI) ReadPLogical, 1, "I"},
-	{"ReadPointer",(FPFI) ReadPointer, 1, "I"},
-	{"ReadPPointer",(FPFI) ReadPPointer, 1, "I"},
-	{"ReadCString", (FPFI) ReadCString, 1, "I"},
-	{"ReadPCString", (FPFI) ReadPCString, 2, "I.?"},
-	{"ReadCharArray", (FPFI) ReadCharArray, 2, "II"},
-	{"ReadWString", (FPFI) ReadWString, 2, "I.I"},
-	{"ReadPWString", (FPFI) ReadPWString, 3, "I.I.?"},
-	{"ReadWCharArray", (FPFI) ReadWCharArray, 3, "II.I"},
-	{"ReadBytes", (FPFI) ReadBytes, 2, "II"},
+	{"ReadChar", (FPFI)ReadChar, 1, "I"},
+	{"ReadPChar", (FPFI)ReadPChar, 2, "I.?"},
+	{"ReadInt8", (FPFI)ReadInt8, 1, "I"},
+	{"ReadPInt8", (FPFI)ReadPInt8, 1, "I"},
+	{"ReadUInt8", (FPFI)ReadUInt8, 1, "I"},
+	{"ReadPUInt8", (FPFI)ReadPUInt8, 1, "I"},
+	{"ReadShort", (FPFI)ReadShort, 1, "I"},
+	{"ReadPShort", (FPFI)ReadPShort, 1, "I"},
+	{"ReadUShort", (FPFI)ReadUShort, 1, "I"},
+	{"ReadPUShort", (FPFI)ReadPUShort, 1, "I"},
+	{"ReadInt", (FPFI)ReadInt, 1, "I"},
+	{"ReadPInt", (FPFI)ReadPInt, 1, "I"},
+	{"ReadUInt", (FPFI)ReadUInt, 1, "I"},
+	{"ReadPUInt", (FPFI)ReadPUInt, 1, "I"},
+	{"ReadInt64", (FPFI)ReadInt64, 2, "I.I"},
+	{"ReadPInt64", (FPFI)ReadPInt64, 2, "I.I"},
+	{"ReadUInt64", (FPFI)ReadUInt64, 2, "I.I"},
+	{"ReadPUInt64", (FPFI)ReadPUInt64, 2, "I.I"},
+	{"ReadFloat", (FPFI)ReadFloat, 1, "I"},
+	{"ReadPFloat", (FPFI)ReadPFloat, 1, "I"},
+	{"ReadDouble", (FPFI)ReadDouble, 1, "I"},
+	{"ReadPDouble", (FPFI)ReadPDouble, 1, "I"},
+	{"ReadLogical", (FPFI)ReadLogical, 1, "I"},
+	{"ReadPLogical", (FPFI)ReadPLogical, 1, "I"},
+	{"ReadPointer",(FPFI)ReadPointer, 1, "I"},
+	{"ReadPPointer",(FPFI)ReadPPointer, 1, "I"},
+	{"ReadCString", (FPFI)ReadCString, 1, "I"},
+	{"ReadPCString", (FPFI)ReadPCString, 2, "I.?"},
+	{"ReadCharArray", (FPFI)ReadCharArray, 2, "II"},
+	{"ReadWString", (FPFI)ReadWString, 2, "I.I"},
+	{"ReadPWString", (FPFI)ReadPWString, 3, "I.I.?"},
+	{"ReadWCharArray", (FPFI)ReadWCharArray, 3, "II.I"},
+	{"ReadBytes", (FPFI)ReadBytes, 2, "II"},
 	{"ReadFoxValue", (FPFI)ReadFoxValue, 1, "I"},
 
 	/* convert FoxPro to C array and vice versa */
-	{"MarshalFoxArray2CArray", (FPFI) MarshalFoxArray2CArray, 5 ,"IRI.I.I"},
-	{"MarshalCArray2FoxArray", (FPFI) MarshalCArray2FoxArray, 5 ,"IRI.I.I"},
+	{"MarshalFoxArray2CArray", (FPFI)MarshalFoxArray2CArray, 5 ,"IRI.I.I"},
+	{"MarshalCArray2FoxArray", (FPFI)MarshalCArray2FoxArray, 5 ,"IRI.I.I"},
 
 	/* convert FoxPro fields in cursor to C array and vice versa */
-	{"MarshalCursor2CArray", (FPFI) MarshalCursor2CArray, 5,"ICI.I.I"},
-	{"MarshalCArray2Cursor", (FPFI) MarshalCArray2Cursor, 5,"ICI.I.I"},
+	{"MarshalCursor2CArray", (FPFI)MarshalCursor2CArray, 5,"ICI.I.I"},
+	{"MarshalCArray2Cursor", (FPFI)MarshalCArray2Cursor, 5,"ICI.I.I"},
 
 	/* numeric to binary & vice versa conversion routines */
-	{"Str2Short", (FPFI) Str2Short, 1, "C"},
-	{"Str2UShort", (FPFI) Str2UShort, 1, "C"},
-	{"Str2Long", (FPFI) Str2Long, 1, "C" },
-	{"Str2ULong", (FPFI) Str2ULong, 1, "C" },
-	{"Str2Double", (FPFI) Str2Double, 1, "C" },
-	{"Str2Float", (FPFI) Str2Float, 1, "C" },
-	{"Str2Int64", (FPFI) Str2Int64, 2, "C.I" },
-	{"Str2UInt64", (FPFI) Str2UInt64, 2, "C.I" },
-	{"Short2Str", (FPFI) Short2Str, 1, "I" },
-	{"UShort2Str", (FPFI) UShort2Str, 1, "I"},
-	{"Long2Str", (FPFI) Long2Str, 1, "I"},
-	{"ULong2Str", (FPFI) ULong2Str, 1, "N"},
-	{"Double2Str", (FPFI) Double2Str, 1, "N"},
-	{"Float2Str", (FPFI) Float2Str, 1, "N"},
-	{"Int642Str", (FPFI) Int642Str, 2, "?.I"},
-	{"UInt642Str", (FPFI) UInt642Str, 2, "?.I"},
+	{"Str2Short", (FPFI)Str2Short, 1, "C"},
+	{"Str2UShort", (FPFI)Str2UShort, 1, "C"},
+	{"Str2Long", (FPFI)Str2Long, 1, "C" },
+	{"Str2ULong", (FPFI)Str2ULong, 1, "C" },
+	{"Str2Double", (FPFI)Str2Double, 1, "C" },
+	{"Str2Float", (FPFI)Str2Float, 1, "C" },
+	{"Str2Int64", (FPFI)Str2Int64, 2, "C.I" },
+	{"Str2UInt64", (FPFI)Str2UInt64, 2, "C.I" },
+	{"Short2Str", (FPFI)Short2Str, 1, "I" },
+	{"UShort2Str", (FPFI)UShort2Str, 1, "I"},
+	{"Long2Str", (FPFI)Long2Str, 1, "I"},
+	{"ULong2Str", (FPFI)ULong2Str, 1, "N"},
+	{"Double2Str", (FPFI)Double2Str, 1, "N"},
+	{"Float2Str", (FPFI)Float2Str, 1, "N"},
+	{"Int642Str", (FPFI)Int642Str, 2, "?.I"},
+	{"UInt642Str", (FPFI)UInt642Str, 2, "?.I"},
 
 	/* toolhelp32 api wrappers */
-	{"AProcesses", (FPFI) AProcesses, 1, "C"},
-	{"AProcessThreads", (FPFI) AProcessThreads, 2, "CI"},
-	{"AProcessModules", (FPFI) AProcessModules, 2, "CI"},
-	{"AProcessHeaps", (FPFI) AProcessHeaps, 2, "CI"},
-	{"AHeapBlocks", (FPFI) AHeapBlocks, 3, "CII"},
-	{"ReadProcessMemoryEx", (FPFI) ReadProcessMemoryEx, 3, "III"},
-	
+	{"AProcesses", (FPFI)AProcesses, 1, "C"},
+	{"AProcessThreads", (FPFI)AProcessThreads, 2, "CI"},
+	{"AProcessModules", (FPFI)AProcessModules, 2, "CI"},
+	{"AProcessHeaps", (FPFI)AProcessHeaps, 2, "CI"},
+	{"AHeapBlocks", (FPFI)AHeapBlocks, 3, "CII"},
+	{"ReadProcessMemoryEx", (FPFI)ReadProcessMemoryEx, 3, "III"},
+
 	/* enumeration routines */
-	{"AWindowStations", (FPFI) AWindowStations, 1, "C"},
-	{"ADesktops", (FPFI) ADesktops, 2, "C.I"},
-	{"AWindows", (FPFI) AWindows, 3, "CI.I"},
-	{"AWindowsEx", (FPFI) AWindowsEx, 4, "CCI.I"},
-	{"AWindowProps", (FPFI) AWindowProps, 2, "CI"},
-	{"AMonitors", (FPFI) AMonitors, 1, "C"},
-	{"AResourceTypes", (FPFI) AResourceTypes, 2, "CI"},
-	{"AResourceNames", (FPFI) AResourceNames, 3, "CI?"},
-	{"AResourceLanguages", (FPFI) AResourceLanguages, 4, "CI??"},
-	{"AResolutions", (FPFI) AResolutions, 2, "C.C"},
-	{"ADisplayDevices", (FPFI) ADisplayDevices, 2, "C.C"},
+	{"AWindowStations", (FPFI)AWindowStations, 1, "C"},
+	{"ADesktops", (FPFI)ADesktops, 2, "C.I"},
+	{"AWindows", (FPFI)AWindows, 3, "CI.I"},
+	{"AWindowsEx", (FPFI)AWindowsEx, 4, "CCI.I"},
+	{"AWindowProps", (FPFI)AWindowProps, 2, "CI"},
+	{"AMonitors", (FPFI)AMonitors, 1, "C"},
+	{"AResourceTypes", (FPFI)AResourceTypes, 2, "CI"},
+	{"AResourceNames", (FPFI)AResourceNames, 3, "CI?"},
+	{"AResourceLanguages", (FPFI)AResourceLanguages, 4, "CI??"},
+	{"AResolutions", (FPFI)AResolutions, 2, "C.C"},
+	{"ADisplayDevices", (FPFI)ADisplayDevices, 2, "C.C"},
 
 	/* ODBC functions */
-	{"CreateSQLDataSource", (FPFI) CreateSQLDataSource, 3, "CC.I"},
-	{"DeleteSQLDataSource", (FPFI) DeleteSQLDataSource, 3, "CC.I"},
-	{"ChangeSQLDataSource", (FPFI) ChangeSQLDataSource, 3, "CC.I"},
-	{"ASQLDataSources", (FPFI) ASQLDataSources, 2, "C.I"},
-	{"ASQLDrivers", (FPFI) ASQLDrivers, 1, "C"},
-	{"SQLGetPropEx", (FPFI) SQLGetPropEx, 3, "?CR"},
-	{"SQLSetPropEx", (FPFI) SQLSetPropEx, 3, "?C.?"},
-	{"SQLExecEx", (FPFI) SQLExecEx, 9,        "I.C.C.C.I.C.C.C.I"},
-	{"SQLPrepareEx", (FPFI) SQLPrepareEx, 9,  "IC.C.C.I.C.C.C.I"},
+	{"CreateSQLDataSource", (FPFI)CreateSQLDataSource, 3, "CC.I"},
+	{"DeleteSQLDataSource", (FPFI)DeleteSQLDataSource, 3, "CC.I"},
+	{"ChangeSQLDataSource", (FPFI)ChangeSQLDataSource, 3, "CC.I"},
+	{"ASQLDataSources", (FPFI)ASQLDataSources, 2, "C.I"},
+	{"ASQLDrivers", (FPFI)ASQLDrivers, 1, "C"},
+	{"SQLGetPropEx", (FPFI)SQLGetPropEx, 3, "?CR"},
+	{"SQLSetPropEx", (FPFI)SQLSetPropEx, 3, "?C.?"},
+	{"SQLRegisterTableType", (FPFI)SQLRegisterTableType, 5, "ICCC.I" },
+	{"SQLCreateTableTypeCursor", (FPFI)SQLCreateTableTypeCursor, 4, "CCCC" },
+	{"SQLTablesEx", (FPFI)SQLTablesEx, 8, "I????C.I.I" },
+	{"SQLColumnsEx", (FPFI)SQLColumnsEx, 8, "ICCCCC.I.I" },
+	{"SQLPrimaryKeysEx", (FPFI)SQLPrimaryKeysEx, 6, "ICCCC.I" },
+	{"SQLForeignKeysEx", (FPFI)SQLForeignKeysEx, 9, "ICCCCCCC.I" },
+	{"SQLProceduresEx", (FPFI)SQLProceduresEx, 6, "ICCCC.I" },
+	{"SQLProcedureColumnsEx", (FPFI)SQLProcedureColumnsEx, 7, "ICCCCC.I" },
+	{"SQLTablePrivilegesEx", (FPFI)SQLTablePrivilegesEx, 6, "ICCCC.I" },
+	{"SQLColumnPrivilegesEx", (FPFI)SQLColumnPrivilegesEx, 7, "ICCCCC.I" },
+	{"SQLSpecialColumnsEx", (FPFI)SQLSpecialColumnsEx, 9, "ICCCIILC.I" },
+	{"SQLStatisticsEx", (FPFI)SQLStatisticsEx, 9, "ICCCCILC.I" },
+	{"SQLGetTypeInfoEx", (FPFI)SQLGetTypeInfoEx, 4, "IIC.I" },
+	{"SQLExecEx", (FPFI) SQLExecEx, 12, "I.C.C.C.I.C.C.C.I.C.I.I"},
+	{"SQLPrepareEx", (FPFI) SQLPrepareEx, 11, "IC.C.C.I.C.C.C.I.C.I"},
 	{"SQLCancelEx", (FPFI) SQLCancelEx, 1, "I"},
+	{"SQLVariantToValue", (FPFI)SQLVariantToValue, 4, "?.R.R.R"},
+	{"ValueToSQLVariant", (FPFI)ValueToSQLVariant, 4, "?.I.I.I"},
 
 	/* printer functions */
 	{"APrintersEx", (FPFI) APrintersEx, 5, "C.?.I.I.I"},
@@ -533,37 +620,36 @@ FoxInfo VFP2CFuncs[] =
 
 	/* file system functions */
 	{"ADirEx",(FPFI) ADirEx, 7, "CC.?.I.I.C.I"},
-	{"AFileAttributes", (FPFI) AFileAttributes, 4, "CC.L.L"},
-	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 4, "CC.L.L"},
-	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "CC"},
-	{"GetFileTimes", (FPFI) GetFileTimes, 5, "C?.?.?.L"},
-	{"SetFileTimes", (FPFI) SetFileTimes, 5, "C?.?.?.L"},
-	{"GetFileSize", (FPFI) GetFileSizeLib, 1, "C"},
-	{"GetFileAttributes", (FPFI) GetFileAttributesLib, 2, "C.L"},
-	{"SetFileAttributes", (FPFI) SetFileAttributesLib, 3, "C?.I"},
-	{"SetFileAttributesEx", (FPFI) SetFileAttributesLibEx, 3, "C?.I"},
-	{"GetFileOwner", (FPFI) GetFileOwner, 4, "CR.R.R"},
-	{"GetLongPathName", (FPFI) GetLongPathNameLib, 1, "C"},
-	{"GetShortPathName", (FPFI) GetShortPathNameLib, 1, "C"},
-	{"DeleteDirectory", (FPFI) DeleteDirectory, 1, "C"},
-	{"GetWindowsDirectory", (FPFI) GetWindowsDirectoryLib, 0, ""},
-	{"GetSystemDirectory", (FPFI) GetSystemDirectoryLib, 0, ""},
-	{"ExpandEnvironmentStrings", (FPFI) ExpandEnvironmentStringsLib, 1, "C"},
-	{"GetOpenFileName", (FPFI) GetOpenFileNameLib, 8, ".I.C.C.C.C.I.C.C"},
-	{"GetSaveFileName", (FPFI) GetSaveFileNameLib, 7, ".I.C.C.C.C.I.C"},
+	{"AFileAttributes", (FPFI) AFileAttributes, 4, "C?.L.L"},
+	{"AFileAttributesEx", (FPFI) AFileAttributesEx, 4, "C?.L.L"},
+	{"ADirectoryInfo", (FPFI) ADirectoryInfo, 2, "C?"},
+	{"GetFileTimes", (FPFI) GetFileTimes, 5, "??.?.?.L"},
+	{"SetFileTimes", (FPFI) SetFileTimes, 5, "??.?.?.L"},
+	{"GetFileSizeEx2", (FPFI) GetFileSizeExLib, 1, "?"},
+	{"GetFileAttributesEx2", (FPFI) GetFileAttributesEx2, 2, "?.L"},
+	{"SetFileAttributesEx", (FPFI) SetFileAttributesEx, 4, "??.I.L"},
+	{"GetFileOwner", (FPFI) GetFileOwner, 4, "?R.R.R"},
+	{"GetLongPathNameEx", (FPFI) GetLongPathNameEx, 1, "?"},
+	{"GetShortPathNameEx", (FPFI) GetShortPathNameEx, 1, "?"},
+	{"DeleteDirectory", (FPFI) DeleteDirectory, 1, "?"},
+	{"GetWindowsDirectoryEx", (FPFI) GetWindowsDirectoryEx, 0, ""},
+	{"GetSystemDirectoryEx", (FPFI) GetSystemDirectoryEx, 0, ""},
+	{"ExpandEnvironmentStringsEx", (FPFI) ExpandEnvironmentStringsEx, 1, "C"},
+	{"GetOpenFileNameEx", (FPFI) GetOpenFileNameEx, 8, ".I.C.C.C.C.I.C.C"},
+	{"GetSaveFileNameEx", (FPFI) GetSaveFileNameEx, 7, ".I.C.C.C.C.I.C"},
 	{"ADriveInfo", (FPFI) ADriveInfo, 1, "C"},
 	{"AVolumes", (FPFI) AVolumes, 1, "C"},
 	{"AVolumeMountPoints", (FPFI) AVolumeMountPoints, 2, "CC"},
 	{"AVolumePaths", (FPFI) AVolumePaths, 2, "CC"},
 	{"AVolumeInformation", (FPFI) AVolumeInformation, 2, "CC"},
-	{"CopyFileEx", (FPFI) CopyFileExLib, 4, "CC.C.I"},
-	{"MoveFileEx", (FPFI) MoveFileExLib, 4, "CC.C.I"},
-	{"CompareFileTimes", (FPFI) CompareFileTimes, 2, "CC"},
-	{"DeleteFileEx", (FPFI) DeleteFileEx, 1, "C"},
+	{"CopyFileEx2", (FPFI) CopyFileExLib, 4, "??.C.I"},
+	{"MoveFileEx", (FPFI) MoveFileExLib, 4, "??.C.I"},
+	{"CompareFileTimes", (FPFI) CompareFileTimes, 3, "??.I"},
+	{"DeleteFileEx", (FPFI) DeleteFileEx, 2, "?.I"},
 	
 	/* extended VFP like file functions */
-	{"FCreateEx", (FPFI) FCreateEx, 4, "C.I.I.I"},
-	{"FOpenEx", (FPFI) FOpenEx, 4, "C.I.I.I"},
+	{"FCreateEx", (FPFI) FCreateEx, 4, "?.I.I.I"},
+	{"FOpenEx", (FPFI) FOpenEx, 4, "?.I.I.I"},
 	{"FCloseEx", (FPFI) FCloseEx, 1, "I"},
 	{"FReadEx", (FPFI) FReadEx, 2, "II"},
 	{"FWriteEx", (FPFI) FWriteEx, 3, "IC.I"},
@@ -581,10 +667,10 @@ FoxInfo VFP2CFuncs[] =
 
 	/* some shell32.dll wrappers */
 	{"SHSpecialFolder", (FPFI) SHSpecialFolder, 3, "IR.L"},
-	{"SHMoveFiles", (FPFI) SHMoveFiles, 4, "CCI.C"},
-	{"SHCopyFiles", (FPFI) SHCopyFiles, 4, "CC.I.C"},
+	{"SHMoveFiles", (FPFI) SHMoveFiles, 5, "CC.I.C.C"},
+	{"SHCopyFiles", (FPFI) SHCopyFiles, 5, "CC.I.C.C"},
 	{"SHDeleteFiles", (FPFI) SHDeleteFiles, 3, "C.I.C"},
-	{"SHRenameFiles", (FPFI) SHRenameFiles, 3, "CC.I"},
+	{"SHRenameFiles", (FPFI) SHRenameFiles, 4, "CC.I.C"},
 	{"SHBrowseFolder", (FPFI) SHBrowseFolder, 5, "CIR.C.C"},
 	{"SHGetShellItem", (FPFI)SHGetShellItem, 1, "C"},
 
@@ -627,8 +713,8 @@ FoxInfo VFP2CFuncs[] =
 	{"Timet2DT", (FPFI) Timet2DT, 2, "I.L" },
 	{"DT2Double", (FPFI) DT2Double, 1, "T"},
 	{"Double2DT", (FPFI) Double2DT, 1, "N"},
-	{"SetSystemTime", (FPFI) SetSystemTimeLib, 2, "T.L"},
-	{"GetSystemTime", (FPFI) GetSystemTimeLib, 1, ".L"},
+	{"SetSystemTimeEx", (FPFI) SetSystemTimeLib, 2, "T.L"},
+	{"GetSystemTimeEx", (FPFI) GetSystemTimeLib, 1, ".L"},
 	{"ATimeZones", (FPFI) ATimeZones, 1, "C"},
 
 	/* netapi32 wrappers */
@@ -664,20 +750,20 @@ FoxInfo VFP2CFuncs[] =
 	{"IcmpPing", (FPFI)IcmpPing, 8, "CC.I.I.I.I.L.I"},
 
 	/* service functions */
-	{"OpenService", (FPFI) OpenServiceLib, 4, "C.I.C.C"},
-	{"CloseServiceHandle", (FPFI) CloseServiceHandleLib, 1, "I"},
-	{"StartService", (FPFI) StartServiceLib, 5, "?.?.?.C.C"},
-	{"StopService", (FPFI) StopServiceLib, 5, "?.?.L.C.C"},
+	{"OpenServiceEx", (FPFI) OpenServiceEx, 4, "C.I.C.C"},
+	{"CloseServiceHandleEx", (FPFI) CloseServiceHandleEx, 1, "I"},
+	{"StartServiceEx", (FPFI) StartServiceEx, 5, "?.?.?.C.C"},
+	{"StopServiceEx", (FPFI) StopServiceEx, 5, "?.?.L.C.C"},
 	{"PauseService", (FPFI) PauseService, 4, "?.?.C.C"},
 	{"ContinueService", (FPFI) ContinueService, 4, "?.?.C.C"},
-	{"ControlService", (FPFI) ControlServiceLib, 4, "?.I.C.C"},
+	{"ControlServiceEx2", (FPFI) ControlServiceEx2, 4, "?.I.C.C"},
 	{"AServiceStatus", (FPFI) AServiceStatus, 4, "C?.C.C"},
 	{"AServiceConfig", (FPFI) AServiceConfig, 4, "C?.C.C"},
 	{"AServices", (FPFI) AServices, 5, "C.C.C.I.I"},
 	{"ADependentServices", (FPFI) ADependentServices, 4, "C?.C.C"},
 	{"WaitForServiceStatus", (FPFI) WaitForServiceStatus, 5, "?I.I.C.C"},
-	{"CreateService", (FPFI) CreateServiceLib, 12, "CC.?.?.?.C.C.C.C.C.C.C"},
-	{"DeleteService", (FPFI) DeleteServiceLib, 3, "?.C.C"},
+	{"CreateServiceEx", (FPFI) CreateServiceEx, 12, "CC.?.?.?.C.C.C.C.C.C.C"},
+	{"DeleteServiceEx", (FPFI) DeleteServiceEx, 3, "?.C.C"},
 
 	/* misc data conversion/string functions */
 	{"PG_ByteA2Str", (FPFI) PG_ByteA2Str, 1, "?"},

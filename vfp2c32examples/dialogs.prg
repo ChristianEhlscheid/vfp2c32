@@ -24,7 +24,7 @@ ENDIF
 
 *!*	&& like standard GETFILE, but without places bar
 *!*	LOCAL lcFile
-*!*	lcFile = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Custom Title",OFN_EX_NOPLACESBAR)
+*!*	lcFile = GETOPENFILENAMEEX(0,"All Files" + CHR(0) + "*.*","","C:","Custom Title",OFN_EX_NOPLACESBAR)
 *!*	DO CASE
 *!*		CASE VARTYPE(lcFile) = 'C'
 *!*			? "File" + lcFile + " selected"
@@ -36,7 +36,7 @@ ENDIF
 
 *!*	&& multiselect GETFILE, by passing an arrayname in the 7th parameter
 *!*	&& always returns a numeric value !!
-*!*	lnFiles = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Multiselect Example",0,"laFiles")
+*!*	lnFiles = GETOPENFILENAMEEX(0,"All Files" + CHR(0) + "*.*","","C:","Multiselect Example",0,"laFiles")
 *!*	DO CASE
 *!*		CASE lnFiles = -1
 *!*			AERROREX('laError')
@@ -49,7 +49,7 @@ ENDIF
 *!*	ENDCASE
 
 && use of a callback function to respond to events inside the dialog 
-lnFiles = GETOPENFILENAME(OFN_FILEMUSTEXIST + OFN_NONETWORKBUTTON,"All Files" + CHR(0) + "*.*","","C:","",0,"laFiles","OpenFileCallback")
+lnFiles = GETOPENFILENAMEEX(OFN_FILEMUSTEXIST + OFN_NONETWORKBUTTON,"All Files" + CHR(0) + "*.*","","C:","",0,"laFiles","OpenFileCallback")
 DO CASE
 
 	CASE VARTYPE(lnFiles) = 'N'

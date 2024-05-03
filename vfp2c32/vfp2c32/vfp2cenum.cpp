@@ -816,7 +816,7 @@ try
 	
 	if (parm(3)->Vartype() == 'C')
 		pResourceType = pType;
-	else if (parm(3)->Vartype() == 'I' || parm(3)->Vartype() == 'N')
+	else if (parm(3)->Numeric())
 		pResourceType = parm(3)->DynamicPtr<char*>();
 	else
 	{
@@ -826,7 +826,7 @@ try
 
 	if (parm(4)->Vartype() == 'C')
         pResourceName = pName;
-	else if (parm(4)->Vartype() == 'I' || parm(4)->Vartype() == 'N')
+	else if (parm(4)->Numeric())
 		pResourceName = parm(1)->DynamicPtr<char*>();
 	else
 	{

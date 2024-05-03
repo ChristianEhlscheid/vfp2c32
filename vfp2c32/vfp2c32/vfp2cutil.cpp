@@ -14,344 +14,6 @@
 #include "vfp2cstring.h"
 
 // some helper functions for common tasks
-int _stdcall Dimension(char *pArrayName, unsigned long nRows, unsigned long nDims)
-{
-	CStrBuilder<256> pExeBuffer;
-	if (nDims > 1)
-		pExeBuffer.Format("DIMENSION %S[%U,%U]", pArrayName, nRows, nDims);
-	else
-		pExeBuffer.Format("DIMENSION %S[%U]", &pArrayName,nRows);
-	return _Execute(pExeBuffer);
-}
-
-int _stdcall DimensionEx(char *pArrayName, Locator *lArrayLoc, unsigned long nRows, unsigned long nDims)
-{
-	int nErrorNo;
-	Value vFalse;
-	vFalse.ev_type = 'L';
-
-	nErrorNo = FindFoxVar(pArrayName, lArrayLoc);
-	if (nErrorNo == E_VARIABLENOTFOUND)
-	{
-		// create array
-		nErrorNo = Dimension(pArrayName,nRows,nDims);
-		if (nErrorNo)
-			return nErrorNo;
-
-		if (nErrorNo = FindFoxVar(pArrayName, lArrayLoc))
-			return nErrorNo;
-	}
-	else if (nErrorNo == 0)
-	{
-		// redimension array to passed size
-		nErrorNo = Dimension(pArrayName,nRows,nDims);
-		if (nErrorNo)
-			return nErrorNo;
-
-		// initialize all elements to .F.
-		lArrayLoc->l_subs = 0;
-		if (nErrorNo = _Store(lArrayLoc,&vFalse))
-			return nErrorNo;
-
-		lArrayLoc->l_subs = nDims > 1 ? 2 : 1;
-	}
-	else
-		return nErrorNo;
-
-	lArrayLoc->l_sub1 = 0;
-	lArrayLoc->l_sub2 = 0;
-	return 0;
-}
-
-int _stdcall ASubscripts(Locator *pLoc, int *nRows, int *nDims)
-{
-	if ((*nRows = _ALen(pLoc->l_NTI,AL_SUBSCRIPT1)) == -1)
-		return E_NOTANARRAY;
-	*nDims = _ALen(pLoc->l_NTI,AL_SUBSCRIPT2);
-	return 0;
-}
-
-// fill a Locator with a reference to a FoxPro variable
-int _stdcall FindFoxVar(char *pName, Locator *pLoc)
-{
-	NTI nVarNti;
-	nVarNti = _NameTableIndex(pName);
-	if (nVarNti == -1)
-		return E_VARIABLENOTFOUND;
-
-	if (_FindVar(nVarNti,-1,pLoc))
-		return 0;
-	else
-		return E_VARIABLENOTFOUND;
-}
-
-// fill a Locator with a reference to a FoxPro field
-int _stdcall FindFoxField(char *pName, Locator *pLoc, int nWorkarea)
-{
-	NTI nVarNti;
-	nVarNti = _NameTableIndex(pName);
-	if (nVarNti == -1)
-		return E_FIELDNOTFOUND;
-
-	if (_FindVar(nVarNti,nWorkarea,pLoc))
-		return 0;
-	else
-		return E_FIELDNOTFOUND;
-}
-
-// like the above .. but instead of the workarea number the cursor/tablename can be passed
-int _stdcall FindFoxFieldC(char* pName, Locator *pLoc, char *pCursor)
-{
-	NTI nVarNti;
-	int nErrorNo;
-	Value vWorkarea = {'0'};
-	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
-
-	nVarNti = _NameTableIndex(pName);
-	if (nVarNti == -1)
-		return E_FIELDNOTFOUND;
-
-	pExeBuffer.Format("SELECT('%S')", pCursor);
-	if (nErrorNo = _Evaluate(&vWorkarea, pExeBuffer))
-		return nErrorNo;
-
-	if (_FindVar(nVarNti, vWorkarea.ev_long, pLoc))
-		return 0;
-	else
-		return E_FIELDNOTFOUND;
-
-}
-
-// fill a Locator with a reference to a FoxPro field, instead of passing the name one passes the field offset (1st field, 2nd field ..)
-int _stdcall FindFoxFieldEx(int nFieldNo, Locator *pLoc, int nWorkarea)
-{
-	ValueEx vFieldName;
-	vFieldName = 0;
-	NTI nVarNti;
-	int nErrorNo;
-	CStrBuilder<64> pExeBuffer;
-
-	pExeBuffer.Format("FIELD(%I,%I)+CHR(0)", nFieldNo, nWorkarea);
-	if (nErrorNo = _Evaluate(vFieldName, pExeBuffer))
-		return nErrorNo;
-
-    nVarNti = _NameTableIndex(vFieldName.HandleToPtr());
-	vFieldName.FreeHandle();
-
-	if (nVarNti == -1)
-		return E_FIELDNOTFOUND;
-	
-	if (_FindVar(nVarNti,nWorkarea,pLoc))
-		return 0;
-	else
-		return E_FIELDNOTFOUND;
-}
-
-int _stdcall FindFoxVarOrField(char *pName, Locator *pLoc)
-{
-	NTI nVarNti;
-	nVarNti = _NameTableIndex(pName);
-	if (nVarNti == -1)
-		return E_VARIABLENOTFOUND;
-
-	if (_FindVar(nVarNti,0,pLoc))
-		return 0;
-	else
-		return E_VARIABLENOTFOUND;
-}
-
-int _stdcall FindFoxVarOrFieldEx(char *pName, Locator *pLoc)
-{
-	char *pVarOrField = pName;
-	int nErrorNo;
-	Value vWorkArea = {'0'};
-	char aTableOrVar[VFP2C_VFP_MAX_CURSOR_NAME];
-	char aColumn[VFP2C_VFP_MAX_COLUMN_NAME];
-	char aExeBuffer[VFP2C_MAX_FUNCTIONBUFFER];
-
-	if (match_identifier(&pVarOrField,aTableOrVar,VFP2C_VFP_MAX_CURSOR_NAME))
-	{
-		if (match_chr(&pVarOrField,'.') && match_identifier(&pVarOrField,aColumn,VFP2C_VFP_MAX_COLUMN_NAME))
-		{
-			snprintfex(aExeBuffer, "SELECT('%S')", sizeof(aExeBuffer), aTableOrVar);
-			if (nErrorNo = _Evaluate(&vWorkArea, aExeBuffer))
-				return nErrorNo;
-
-			return FindFoxField(aColumn,pLoc,vWorkArea.ev_long);
-		}
-		else
-			return FindFoxVarOrField(aTableOrVar,pLoc);
-	}
-	else
-		return E_VARIABLENOTFOUND;
-}
-
-int _stdcall StoreEx(Locator *pLoc, Value *pValue)
-{
-	if (pLoc->l_where == -1)
-		return _Store(pLoc,pValue);
-	else
-		return _DBReplace(pLoc,pValue);
-}
-
-int _stdcall AllocMemo(Locator *pLoc, int nSize, long *nLoc)
-{
-	*nLoc = _AllocMemo(pLoc,nSize);
-	if (*nLoc == -1)
-	{
-		SaveCustomError("_AllocMemo","Function failed.");
-		return E_APIERROR;
-	}
-	return 0;
-}
-
-int _stdcall MemoChan(int nWorkarea, FCHAN *nChan)
-{
-	*nChan = _MemoChan(nWorkarea);
-	if (*nChan == -1)
-	{
-		SaveCustomError("_MemoChan","Function failed.");
-		return E_APIERROR;
-	}
-	return 0;
-}
-
-int _stdcall GetMemoContent(Value *pValue, char *pData)
-{
-	FCHAN hFile = pValue->ev_width;
-	int mLoc = (int)pValue->ev_real;
-	_FSeek(hFile,mLoc,FS_FROMBOF);
-	if (_FRead(hFile,pData,pValue->ev_long) != pValue->ev_long)
-		return _FError();
-	else
-		return 0;
-}
-
-int _stdcall GetMemoContentN(Value *pValue, char *pData, int nLen, int nOffset)
-{
-	FCHAN hFile = pValue->ev_width;
-	int mLoc = ((int)pValue->ev_real) + nOffset;
-	_FSeek(hFile,mLoc,FS_FROMBOF);
-	if (_FRead(hFile,pData,nLen) != nLen)
-		return _FError();
-	else
-		return 0;
-}
-
-int _stdcall GetMemoContentEx(Locator *pLoc, char **pData, int *nErrorNo)
-{
-	FCHAN hFile;
-	int mLoc, mLen;
-	
-	mLoc = _FindMemo(pLoc);
-	if (mLoc < 0)
-	{
-		*nErrorNo = E_INVALIDPARAMS;
-		return -1;
-	}
-
-	hFile = _MemoChan(pLoc->l_where);
-	if (hFile == -1)
-	{
-		SaveCustomError("_MemoChan", "Function failed for workarea %I.", pLoc->l_where);
-		return -1;
-	}
-
-	mLen = _MemoSize(pLoc);
-	if (mLen <= 0)
-	{
-		if (mLen == 0)
-			return 0;
-		else
-		{
-			*nErrorNo = mLen;
-			return -1;
-		}
-	}
-
-	*pData = (char*)malloc(mLen);
-	if (!*pData)
-	{
-		*nErrorNo = E_INSUFMEMORY;
-		return -1;
-	}
-
-	_FSeek(hFile,mLoc,FS_FROMBOF);
-	mLen = _FRead(hFile,*pData,mLen);
-	return mLen;
-}
-
-int _stdcall ReplaceMemo(Locator *pLoc, char *pData, int nLen)
-{
-	FCHAN hFile;
-	long nLoc;
-
-	hFile = _MemoChan(pLoc->l_where);
-	if (hFile == -1)
-		return E_FIELDNOTFOUND;
-
-	nLoc = _AllocMemo(pLoc,nLen);
-	if (nLoc == -1)
-		return E_INSUFMEMORY;
-
-	_FSeek(hFile,nLoc,FS_FROMBOF);
-	if (_FWrite(hFile,pData,nLen) != nLen)
-		return _FError();
-	return 0;
-}
-
-int _stdcall ReplaceMemoEx(Locator *pLoc, char *pData, int nLen, FCHAN hFile)
-{
-	long nLoc;
-	nLoc = _AllocMemo(pLoc,nLen);
-	if (nLoc == -1)
-		return E_INSUFMEMORY;
-
-	_FSeek(hFile,nLoc,FS_FROMBOF);
-	if (_FWrite(hFile,pData,nLen) != nLen)
-		return _FError();
-	return 0;
-}
-
-int _stdcall AppendMemo(char *pData, int nLen, FCHAN hFile, long *nLoc)
-{
-	_FSeek(hFile,*nLoc,FS_FROMBOF);
-	if (_FWrite(hFile,pData,nLen) != nLen)
-		return _FError();
-	*nLoc += nLen;
-	return 0;
-}
-
-int _stdcall Zap(CStringView pCursor)
-{
-	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
-	pExeBuffer.Format("ZAP IN %V", &pCursor);
-	return _Execute(pExeBuffer);
-}
-
-bool _stdcall Used(CStringView pCursor)
-{
-	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
-	Value vValue;
-	pExeBuffer.Format("USED('%V')", &pCursor);
-	vValue.ev_type = '0';
-	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
-	if (nErrorNo)
-		throw nErrorNo;
-	return vValue.ev_length > 0;
-}
-
-int _stdcall Select(CStringView pCursor)
-{
-	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
-	Value vValue;
-	pExeBuffer.Format("SELECT('%V')", &pCursor);
-	vValue.ev_type = '0';
-	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
-	if (nErrorNo)
-		throw nErrorNo;
-	return vValue.ev_long;
-}
 
 //converts a filetime value to a datetime value .. milliseconds are truncated ..
 void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime)
@@ -400,7 +62,7 @@ void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime)
 	pFileTime->dwHighDateTime = nFileTime.HighPart;
 }
 
-BOOL _stdcall FileTimeToDateTimeEx(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL bToLocal)
+BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL bToLocal)
 {
 	FILETIME sFileTime;
 	if (bToLocal)
@@ -418,7 +80,7 @@ BOOL _stdcall FileTimeToDateTimeEx(LPFILETIME pFileTime, ValueEx& pDateTime, BOO
 	return TRUE;
 }
 
-BOOL _stdcall DateTimeToFileTimeEx(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL bToUTC)
+BOOL _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL bToUTC)
 {
 	FILETIME sTime;
 	if (bToUTC)
@@ -436,7 +98,7 @@ BOOL _stdcall DateTimeToFileTimeEx(ValueEx& pDateTime, LPFILETIME pFileTime, BOO
 	return TRUE;
 }
 
-void _stdcall SystemTimeToDateTimeEx(LPSYSTEMTIME pSysTime, ValueEx& pDateTime)
+void _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime)
 {
 	int lnA, lnY, lnM, lnJDay;
 	lnA = (14 - pSysTime->wMonth) / 12;
@@ -446,7 +108,7 @@ void _stdcall SystemTimeToDateTimeEx(LPSYSTEMTIME pSysTime, ValueEx& pDateTime)
 	pDateTime.ev_real = ((double)lnJDay) + (((double)(pSysTime->wHour * 3600 + pSysTime->wMinute * 60 + pSysTime->wSecond)) / 86400);
 }
 
-void _stdcall DateTimeToSystemTimeEx(ValueEx& pDateTime, LPSYSTEMTIME pSysTime)
+void _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime)
 {
 	int lnA, lnB, lnC, lnD, lnE, lnM;
 	DWORD lnDays, lnSecs;

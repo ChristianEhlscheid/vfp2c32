@@ -14,10 +14,24 @@
 <div id="content">
 <p class="description">Deletes a file.</p>
 
-<div class="block"><pre>DeleteFileEx(<a href="#p1">cFilename</a>)</pre></div>
+<div class="block"><pre>DeleteFileEx(<a href="#p1">cFilename</a>[, <a href="#p2">nFlags</a>])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cFileName</a></dt>
 <dd><p>The fully qualified path of the file.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nFlags (optional)</a></dt>
+<dd><p>default = 0<br />
+<br />
+Controls the behaviour in case of an error and which kind of value the function returns.<br />
+</p>
+<table>
+<tr><th>Flag</th><th>Description</th></tr>
+<tr><td>0</td><td>Raises an error if one occurs. Return always .T.</td></tr>
+<tr><td>1</td><td>Does not raise an error. The function returns .T. or .F. to indicate if the deletion succeeded.</td></tr>
+<tr><td>2</td><td>Does not raise an error. The function returns 0 or the numerical API error value to indicate if the deletion succeeded.</td></tr>
+<tr><td>3</td><td>Does not raise an error. The function returns "" or the API error message to indicate if the deletion succeeded.</td></tr>
+</table><p><br />
+If an error occurs additional information is available via AERROREX.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>Always .T.</p>
@@ -34,17 +48,16 @@
 <a href="/pages/afileattributesex.html">AFileAttributesEx</a><br />
 <a href="/pages/cancelfilechange.html">CancelFileChange</a><br />
 <a href="/pages/comparefiletimes.html">CompareFileTimes</a><br />
-<a href="/pages/copyfileex.html">CopyFileEx</a><br />
+<a href="/pages/copyfileex2.html">CopyFileEx2</a><br />
 <a href="/pages/deletedirectory.html">DeleteDirectory</a><br />
 <a href="/pages/findfilechange.html">FindFileChange</a><br />
-<a href="/pages/getfileattributes.html">GetFileAttributes</a><br />
+<a href="/pages/getfileattributesex2.html">GetFileAttributesEx2</a><br />
 <a href="/pages/getfileowner.html">GetFileOwner</a><br />
-<a href="/pages/getfilesize.html">GetFileSize</a><br />
+<a href="/pages/getfilesizeex2.html">GetFileSizeEx2</a><br />
 <a href="/pages/getfiletimes.html">GetFileTimes</a><br />
-<a href="/pages/getlongpathname.html">GetLongPathName</a><br />
-<a href="/pages/getshortpathname.html">GetShortPathName</a><br />
+<a href="/pages/getlongpathnameex.html">GetLongPathNameEx</a><br />
+<a href="/pages/getshortpathnameex.html">GetShortPathNameEx</a><br />
 <a href="/pages/movefileex.html">MoveFileEx</a><br />
-<a href="/pages/setfileattributes.html">SetFileAttributes</a><br />
 <a href="/pages/setfileattributesex.html">SetFileAttributesEx</a><br />
 <a href="/pages/setfiletimes.html">SetFileTimes</a><br />
 </p>

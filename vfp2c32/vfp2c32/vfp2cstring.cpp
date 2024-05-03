@@ -1681,246 +1681,437 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 	return lpString - lpBuffer;
 }
 
-// skips over whitespace (space & tab)
-void _fastcall skip_ws(char** pString)
+CStringMatcher::CStringMatcher(CStringView pString)
 {
-	char* pStringEx = *pString;
-	while (*pStringEx == ' ' || *pStringEx == '\t') pStringEx++;
-	*pString = pStringEx;
+	m_String = pString.Data;
+	m_Length = pString.Len;
+	m_CurrentPos = 0;
 }
 
-// matches an identifier of up to nMaxLen and stores it into pBuffer
-BOOL _fastcall match_identifier(char** pString, char* pBuffer, int nMaxLen)
+unsigned int CStringMatcher::MatchIdentifier(int nMaxLen)
 {
-	char* pStringEx;
+	SkipWhitespace();
+	if (End())
+		return 0;
 
-	skip_ws(pString);
-	pStringEx = *pString;
+	unsigned int nPos = m_CurrentPos;
+	if (!IsCharacter(m_String[nPos]) && m_String[nPos] != '_')
+		return 0;
 
-	if (!IsCharacter(*pStringEx) && *pStringEx != '_')
-		return FALSE;
-
-	*pBuffer++ = *pStringEx++;
 	nMaxLen--;
-
-	while (*pStringEx && --nMaxLen)
+	nPos++;
+	while (nPos < m_Length && --nMaxLen)
 	{
-		if (IsCharacter(*pStringEx) || IsDigit(*pStringEx) || *pStringEx == '_')
-			*pBuffer++ = *pStringEx++;
+		if (IsCharacter(m_String[nPos]) || IsDigit(m_String[nPos]) || m_String[nPos] == '_')
+			nPos++;
 		else
 			break;
 	}
+	if (nMaxLen == 0)
+		return 0;
 
-	*pBuffer = '\0';
-	*pString = pStringEx;
-	return TRUE;
+	return nPos;
 }
 
-BOOL _fastcall match_dotted_identifier(char** pString, char* pBuffer, int nMaxLen)
+bool CStringMatcher::MatchIdentifier(char* pBuffer, int nMaxLen)
 {
-	char* pStringEx;
-
-	skip_ws(pString);
-	pStringEx = *pString;
-
-	if (!IsCharacter(*pStringEx) && *pStringEx != '_')
-		return FALSE;
-
-	*pBuffer++ = *pStringEx++;
-	nMaxLen--;
-
-	while (*pStringEx && --nMaxLen)
+	unsigned int nPos = MatchIdentifier(nMaxLen);
+	if (nPos)
 	{
-		if (IsCharacter(*pStringEx) || IsDigit(*pStringEx) || *pStringEx == '_' || *pStringEx == '.')
-			*pBuffer++ = *pStringEx++;
+		for (unsigned int xj = m_CurrentPos; xj < nPos; xj++)
+			*pBuffer++ = m_String[xj];
+		*pBuffer = '\0';
+		m_CurrentPos = nPos;
+		return true;
+	}
+	return false;
+}
+
+bool CStringMatcher::MatchIdentifier(CStringView& pMatch, int nMaxLen)
+{
+	unsigned int nPos = MatchIdentifier(nMaxLen);
+	if (nPos)
+	{
+		pMatch.Data = &m_String[m_CurrentPos];
+		pMatch.Len = nPos - m_CurrentPos;
+		m_CurrentPos = nPos;
+		return true;
+	}
+	return false;
+}
+
+unsigned int CStringMatcher::MatchDottedIdentifier(int nMaxLen)
+{
+	SkipWhitespace();
+	if (End())
+		return 0;
+
+	unsigned int nPos = m_CurrentPos;
+	if (!IsCharacter(m_String[nPos]) && m_String[nPos] != '_')
+		return 0;
+
+	nMaxLen--;
+	nPos++;
+
+	while (nPos < m_Length && --nMaxLen)
+	{
+		if (IsCharacter(m_String[nPos]) || IsDigit(m_String[nPos]) || m_String[nPos] == '_' || m_String[nPos] == '.')
+			nPos++;
 		else
 			break;
 	}
+	if (nMaxLen == 0)
+		return 0;
 
-	*pBuffer = '\0';
-	*pString = pStringEx;
-	return TRUE;
+	return nPos;
 }
 
-// match a string enclosed in ' or "
-BOOL _fastcall match_quoted_identifier(char** pString, char* pBuffer, int nMaxLen)
+bool CStringMatcher::MatchDottedIdentifier(char* pBuffer, int nMaxLen)
 {
-	char* pStringEx;
+	unsigned int nPos = MatchDottedIdentifier(nMaxLen);
+	if (nPos)
+	{
+		for (unsigned int xj = m_CurrentPos; xj < nPos; xj++)
+			*pBuffer++ = m_String[xj];
+		*pBuffer = '\0';
+		m_CurrentPos = nPos;
+		return true;
+	}
+	return false;
+}
+
+bool CStringMatcher::MatchDottedIdentifier(CStringView& pMatch, int nMaxLen)
+{
+	unsigned int nPos = MatchDottedIdentifier(nMaxLen);
+	if (nPos)
+	{
+		pMatch.Data = &m_String[m_CurrentPos];
+		pMatch.Len = nPos - m_CurrentPos;
+		m_CurrentPos = nPos;
+		return true;
+	}
+	return false;
+}
+
+unsigned int CStringMatcher::MatchQuotedIdentifier(int nMaxLen)
+{
 	char pStringDelim;
 
-	skip_ws(pString);
+	SkipWhitespace();
+	if (End())
+		return 0;
 
-	pStringEx = *pString;
-	pStringDelim = *pStringEx;
+	unsigned int nPos = m_CurrentPos;
+	pStringDelim = m_String[nPos];
 
 	if (pStringDelim == '\'' || pStringDelim == '"')
 	{
-		pStringEx++; // skip over ' or "
+		nPos++; // skip over ' or "
 
-		while (*pStringEx && *pStringEx != pStringDelim && --nMaxLen)
-			*pBuffer++ = *pStringEx++;
+		while (nPos < m_Length && m_String[nPos] != pStringDelim && --nMaxLen)
+			nPos++;
 
-		if (*pStringEx == pStringDelim)
-			pStringEx++; // skip over ending ' or " if it was found .. otherwise we are at the end of the string
+		if (nMaxLen == 0)
+			return 0;
 
-		*pBuffer = '\0';
-		*pString = pStringEx;
-		return TRUE;
+		if (m_String[nPos] == pStringDelim)
+			nPos++;
+
+		return nPos;
 	}
-	else
-		return FALSE;
+	return 0;
 }
 
-// match a string enclosed in ' or ", but also write the seperator into the buffer
-BOOL _fastcall match_quoted_identifier_ex(char** pString, char* pBuffer, int nMaxLen)
+bool CStringMatcher::MatchQuotedIdentifier(char* pBuffer, int nMaxLen)
 {
-	char* pStringEx;
-	char pStringDelim;
-
-	skip_ws(pString);
-
-	pStringEx = *pString;
-	pStringDelim = *pStringEx;
-
-	if (pStringDelim == '\'' || pStringDelim == '"')
+	unsigned int nPos = MatchQuotedIdentifier(nMaxLen);
+	if (nPos)
 	{
-		*pBuffer++ = *pStringEx++; // skip over ' or "
-
-		while (*pStringEx && *pStringEx != pStringDelim && --nMaxLen)
-			*pBuffer++ = *pStringEx++;
-
-		if (*pStringEx == pStringDelim)
-			*pBuffer++ = *pStringEx++; // skip over ending ' or " if it was found .. otherwise we are at the end of the string
-
+		for (unsigned int xj = m_CurrentPos + 1; xj < nPos - 2; xj++)
+			*pBuffer++ = m_String[xj];
 		*pBuffer = '\0';
-		*pString = pStringEx;
-		return TRUE;
+		m_CurrentPos = nPos;
+		return true;
 	}
-	else
-		return FALSE;
+	return false;
 }
 
-// match a string, case sensitive
-BOOL _fastcall match_str(char** pString, char* pSearch)
+bool CStringMatcher::MatchQuotedIdentifier(CStringView& pMatch, int nMaxLen)
 {
-	char* pStringEx;
-	skip_ws(pString);
-	pStringEx = *pString;
+	unsigned int nPos = MatchQuotedIdentifier(nMaxLen);
+	if (nPos)
+	{
+		pMatch.Data = &m_String[m_CurrentPos + 1];
+		pMatch.Len = nPos - m_CurrentPos - 2;
+		m_CurrentPos = nPos;
+		return true;
+	}
+	return false;
+}
 
+bool CStringMatcher::MatchString(const char* pSearch)
+{
+	SkipWhitespace();
+	if (End())
+		return false;
+	
+	unsigned int nPos = m_CurrentPos;
 	while (*pSearch)
 	{
-		if (*pStringEx++ != *pSearch++)
-			return FALSE;
+		if (m_String[nPos] != *pSearch)
+			return false;
+		pSearch++;
+		nPos++;
+		if (nPos == m_Length)
+			return false;
 	}
-	*pString = --pStringEx;
-	return TRUE;
+	m_CurrentPos = nPos;
+	return true;
 }
 
-//  match a string, case insensitive
-BOOL _fastcall match_istr(char** pString, char* pSearch)
+bool CStringMatcher::MatchStringCaseInsensitive(const char* pSearch)
 {
-	char* pStringEx;
+	SkipWhitespace();
+	if (End())
+		return false;
 
-	skip_ws(pString);
-	pStringEx = *pString;
-
+	unsigned int nPos = m_CurrentPos;
 	while (*pSearch)
 	{
-		if (ToUpper(*pStringEx) != ToUpper(*pSearch))
-			return FALSE;
-		else
-		{
-			pStringEx++;
-			pSearch++;
-		}
+		if (ToUpper(m_String[nPos]) != ToUpper(*pSearch))
+			return false;
+		pSearch++;
+		nPos++;
+		if (nPos == m_Length)
+			return false;
 	}
-	*pString = pStringEx;
-	return TRUE;
+	m_CurrentPos = nPos;
+	return true;
 }
 
-// match a single character
-BOOL _fastcall match_chr(char** pString, char pChar)
+bool CStringMatcher::MatchChar(char pSearch)
 {
-	skip_ws(pString);
+	if (pSearch != ' ')
+		SkipWhitespace();
+	if (End())
+		return false;
 
-	if (**pString == pChar)
+	if (m_String[m_CurrentPos] == pSearch)
 	{
-		*pString = *pString + 1;
-		return TRUE;
+		m_CurrentPos++;
+		return true;
 	}
-	return FALSE;
+	return false;
 }
 
-// match one of several characters and store found character in pFound
-BOOL _fastcall match_one_chr(char** pString, char* pChars, char* pFound)
+bool CStringMatcher::MatchChars(const char* pChars, char* pFound)
 {
-	char* pStringEx;
-	skip_ws(pString);
-	pStringEx = *pString;
+	SkipWhitespace();
+	if (End())
+		return false;
 
 	while (*pChars)
 	{
-		if (*pStringEx == *pChars)
+		if (m_String[m_CurrentPos] == *pChars)
 		{
 			*pFound = *pChars;
-			*pString = pStringEx + 1;
-			return TRUE;
+			m_CurrentPos++;
+			return true;
 		}
 		pChars++;
 	}
-	return FALSE;
+	return false;
 }
 
-// match an integer & store it into nInt
-BOOL _fastcall match_int(char** pString, int* nInt)
+bool CStringMatcher::MatchInteger(int* nInt)
 {
-	char* pStringEx;
 	char aBuffer[VFP2C_MAX_INT_LITERAL];
 	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_INT_LITERAL;
 
-	skip_ws(pString);
-	pStringEx = *pString;
+	SkipWhitespace();
+	if (End())
+		return false;
+	unsigned int nPos = m_CurrentPos;
 
-	if (*pStringEx == '-')
-		*pTmp++ = *pStringEx++;
+	if (m_String[nPos] == '-')
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+		nBuffLen--;
+	}
 
-	if (!IsDigit(*pStringEx))
-		return FALSE;
+	if (nPos == m_Length || !IsDigit(m_String[nPos]))
+		return false;
 
-	while (IsDigit(*pStringEx) && --nBuffLen)
-		*pTmp++ = *pStringEx++;
+	while (IsDigit(m_String[nPos]) && --nBuffLen && nPos < m_Length)
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+	}
+	if (nBuffLen == 0)
+		return false;
 	*pTmp = '\0';
-
 	*nInt = atoi(aBuffer);
-	*pString = pStringEx;
-
-	return TRUE;
+	m_CurrentPos = nPos;
+	return true;
 }
 
-// match a short and store it into nShort
-BOOL _fastcall match_short(char** pString, short* nShort)
+bool CStringMatcher::MatchUInteger(unsigned int* nUInt)
 {
-	char* pStringEx;
+	char aBuffer[VFP2C_MAX_INT_LITERAL];
+	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_INT_LITERAL;
+
+	SkipWhitespace();
+	if (End())
+		return false;
+	unsigned int nPos = m_CurrentPos;
+
+	if (!IsDigit(m_String[nPos]))
+		return false;
+
+	while (IsDigit(m_String[nPos]) && --nBuffLen && nPos < m_Length)
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+	}
+	if (nBuffLen == 0)
+		return false;
+	*pTmp = '\0';
+	*nUInt = strtoul(aBuffer, 0, 10);
+	m_CurrentPos = nPos;
+	return true;
+}
+
+bool CStringMatcher::MatchULong(unsigned long* nULong)
+{
+	char aBuffer[VFP2C_MAX_INT_LITERAL];
+	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_INT_LITERAL;
+
+	SkipWhitespace();
+	if (End())
+		return false;
+	unsigned int nPos = m_CurrentPos;
+
+	if (!IsDigit(m_String[nPos]))
+		return false;
+
+	while (IsDigit(m_String[nPos]) && --nBuffLen && nPos < m_Length)
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+	}
+	if (nBuffLen == 0)
+		return false;
+	*pTmp = '\0';
+	*nULong = strtoul(aBuffer, 0, 10);
+	m_CurrentPos = nPos;
+	return true;
+}
+
+bool CStringMatcher::MatchULong(unsigned long* nULong, int* nLen)
+{
+	char aBuffer[VFP2C_MAX_INT_LITERAL];
+	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_INT_LITERAL;
+
+	SkipWhitespace();
+	if (End())
+		return false;
+	unsigned int nPos = m_CurrentPos;
+
+	if (!IsDigit(m_String[nPos]))
+		return false;
+
+	while (IsDigit(m_String[nPos]) && --nBuffLen && nPos < m_Length)
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+	}
+	if (nBuffLen == 0)
+		return false;
+	*pTmp = '\0';
+	*nULong = strtoul(aBuffer, 0, 10);
+	*nLen = nPos - m_CurrentPos;
+	m_CurrentPos = nPos;
+	return true;
+}
+
+bool CStringMatcher::MatchShort(short* nShort)
+{
 	char aBuffer[VFP2C_MAX_SHORT_LITERAL];
 	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_SHORT_LITERAL;
 
-	skip_ws(pString);
-	pStringEx = *pString;
+	SkipWhitespace();
 
-	if (*pStringEx == '-')
-		*pTmp++ = *pStringEx++;
+	if (End())
+		return false;
+	unsigned int nPos = m_CurrentPos;
 
-	if (!IsDigit(*pStringEx))
-		return FALSE;
+	if (m_String[nPos] == '-')
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+		nBuffLen--;
+	}
 
-	while (IsDigit(*pStringEx) && --nBuffLen)
-		*pTmp++ = *pStringEx++;
+	if (nPos == m_Length || !IsDigit(m_String[nPos]))
+		return false;
+
+	while (IsDigit(m_String[nPos]) && --nBuffLen && nPos < m_Length)
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+	}
+	if (nBuffLen == 0)
+		return false;
 	*pTmp = '\0';
-
 	*nShort = (short)atoi(aBuffer);
-	*pString = pStringEx;
+	m_CurrentPos = nPos;
+	return true;
+}
 
-	return TRUE;
+bool CStringMatcher::MatchUShort(unsigned short* nShort)
+{
+	char aBuffer[VFP2C_MAX_SHORT_LITERAL];
+	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_SHORT_LITERAL;
+
+	SkipWhitespace();
+
+	if (End())
+		return false;
+	unsigned int nPos = m_CurrentPos;
+
+	if (!IsDigit(m_String[nPos]))
+		return false;
+
+	while (IsDigit(m_String[nPos]) && --nBuffLen && nPos < m_Length)
+	{
+		*pTmp++ = m_String[nPos];
+		nPos++;
+	}
+	if (nBuffLen == 0)
+		return false;
+	*pTmp = '\0';
+	*nShort = (unsigned short)atoi(aBuffer);
+	m_CurrentPos = nPos;
+	return true;
+}
+
+inline bool CStringMatcher::End()
+{
+	return m_CurrentPos == m_Length;
+}
+
+CStringView CStringMatcher::CurrentView()
+{
+	return CStringView(m_String + m_CurrentPos, m_Length - m_CurrentPos);
+}
+
+void CStringMatcher::SkipWhitespace()
+{
+	while (m_CurrentPos != m_Length && (m_String[m_CurrentPos] == ' ' || m_String[m_CurrentPos] == '\t'))
+	{
+		m_CurrentPos++;
+	}
 }
 
 // appends a string to the start of the string

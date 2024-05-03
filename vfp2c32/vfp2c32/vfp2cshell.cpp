@@ -81,14 +81,56 @@ void _fastcall SHCopyFiles(ParamBlkEx& parm)
 {
 	try
 	{
-		FoxString pFrom(parm(1), 2);
-		FoxString pTo(parm(2), 2);
+		FoxString pFrom;
+		FoxString pTo;
+		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		FoxString pTitle(parm, 4);
-
 		SHFILEOPSTRUCT sFileOp = { 0 };
+		bool bMapToArray;
+
+		if (wFlags & FOF_RENAMEONCOLLISION && parm.PCount() >= 5)
+		{
+			wFlags |= FOF_WANTMAPPINGHANDLE;
+			bMapToArray = (wFlags & FOF_MAPPING_ARRAY) > 0;
+			wFlags &= ~FOF_MAPPING_ARRAY;
+		}
+		else
+			wFlags &= ~FOF_WANTMAPPINGHANDLE;
+
+		if (wFlags & FOF_SOURCE_CURSOR)
+		{
+			pFrom.Attach(parm(1));
+			wFlags &= ~FOF_SOURCE_CURSOR;
+			SHCreateFileListCursor(pFrom, pFrom);
+		}
+		else if (wFlags & FOF_SOURCE_ARRAY)
+		{
+			wFlags &= ~FOF_SOURCE_ARRAY;
+			SHCreateFileListArray(parm(1), pFrom);
+		}
+		else
+		{
+			pFrom.Attach(parm(1), 2);
+		}
+
+		if (wFlags & FOF_DEST_CURSOR)
+		{
+			pTo.Attach(parm(2));
+			wFlags &= ~FOF_DEST_CURSOR;
+			SHCreateFileListCursor(pTo, pTo);
+		}
+		else if (wFlags & FOF_DEST_ARRAY)
+		{
+			wFlags &= ~FOF_DEST_ARRAY;
+			SHCreateFileListArray(parm(2), pTo);
+		}
+		else
+		{
+			pTo.Attach(parm(2), 2);
+		}
 
 		sFileOp.wFunc = FO_COPY;
-		sFileOp.fFlags = (FILEOP_FLAGS)parm(3)->ev_long;
+		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
 		sFileOp.pFrom = pFrom;
@@ -101,6 +143,12 @@ void _fastcall SHCopyFiles(ParamBlkEx& parm)
 		}
 
 		int nRet = SHFileOperation(&sFileOp);
+		if (wFlags & FOF_WANTMAPPINGHANDLE)
+		{
+			FoxString pMap(parm(5));
+			SHSaveFileMapping(sFileOp, pMap, bMapToArray);
+		}
+
 		if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
 			Return(1);
 		else if (sFileOp.fAnyOperationsAborted)
@@ -118,16 +166,32 @@ void _fastcall SHDeleteFiles(ParamBlkEx& parm)
 {
 	try
 	{
-		FoxString pFile(parm(1), 2);
+		FoxString pFiles;
+		DWORD wFlags = parm.PCount() >= 2 ? (DWORD)parm(2)->ev_long : 0;
 		FoxString pTitle(parm, 3);
-
 		SHFILEOPSTRUCT sFileOp = { 0 };
 
+		if (wFlags & FOF_SOURCE_CURSOR)
+		{
+			pFiles.Attach(parm(1));
+			wFlags &= ~FOF_SOURCE_CURSOR;
+			SHCreateFileListCursor(pFiles, pFiles);
+		}
+		else if (wFlags & FOF_SOURCE_ARRAY)
+		{
+			wFlags &= ~FOF_SOURCE_ARRAY;
+			SHCreateFileListArray(parm(1), pFiles);
+		}
+		else
+		{
+			pFiles.Attach(parm(1), 2);
+		}
+
 		sFileOp.wFunc = FO_DELETE;
-		sFileOp.fFlags = (FILEOP_FLAGS)parm(2)->ev_long;
+		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
-		sFileOp.pFrom = pFile;
+		sFileOp.pFrom = pFiles;
 
 		if (pTitle.Len())
 		{
@@ -136,6 +200,7 @@ void _fastcall SHDeleteFiles(ParamBlkEx& parm)
 		}
 
 		int nRet = SHFileOperation(&sFileOp);
+
 		if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
 			Return(1);
 		else if (sFileOp.fAnyOperationsAborted)
@@ -153,14 +218,56 @@ void _fastcall SHMoveFiles(ParamBlkEx& parm)
 {
 	try
 	{
-		FoxString pFrom(parm(1), 2);
-		FoxString pTo(parm(2), 2);
+		FoxString pFrom;
+		FoxString pTo;
+		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		FoxString pTitle(parm, 4);
-
 		SHFILEOPSTRUCT sFileOp = { 0 };
+		bool bMapToArray;
+
+		if (wFlags & FOF_RENAMEONCOLLISION && parm.PCount() >= 5)
+		{
+			wFlags |= FOF_WANTMAPPINGHANDLE;
+			bMapToArray = (wFlags & FOF_MAPPING_ARRAY) > 0;
+			wFlags &= ~FOF_MAPPING_ARRAY;
+		}
+		else
+			wFlags &= ~FOF_WANTMAPPINGHANDLE;
+			
+		if (wFlags & FOF_SOURCE_CURSOR)
+		{
+			pFrom.Attach(parm(1));
+			wFlags &= ~FOF_SOURCE_CURSOR;
+			SHCreateFileListCursor(pFrom, pFrom);
+		}
+		else if (wFlags & FOF_SOURCE_ARRAY)
+		{
+			wFlags &= ~FOF_SOURCE_ARRAY;
+			SHCreateFileListArray(parm(1), pFrom);
+		}
+		else
+		{
+			pFrom.Attach(parm(1), 2);
+		}
+
+		if (wFlags & FOF_DEST_CURSOR)
+		{
+			pTo.Attach(parm(2));
+			wFlags &= ~FOF_DEST_CURSOR;
+			SHCreateFileListCursor(pTo, pTo);
+		}
+		else if (wFlags & FOF_DEST_ARRAY)
+		{
+			wFlags &= ~FOF_DEST_ARRAY;
+			SHCreateFileListArray(parm(2), pTo);
+		}
+		else
+		{
+			pTo.Attach(parm(2), 2);
+		}
 
 		sFileOp.wFunc = FO_MOVE;
-		sFileOp.fFlags = (FILEOP_FLAGS)parm(3)->ev_long;
+		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
 		sFileOp.pFrom = pFrom;
@@ -173,6 +280,13 @@ void _fastcall SHMoveFiles(ParamBlkEx& parm)
 		}
 
 		int nRet = SHFileOperation(&sFileOp);
+
+		if (wFlags & FOF_WANTMAPPINGHANDLE)
+		{
+			FoxString pMap(parm(5));
+			SHSaveFileMapping(sFileOp, pMap, bMapToArray);
+		}
+
 		if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
 			Return(1);
 		else if (sFileOp.fAnyOperationsAborted)
@@ -190,26 +304,23 @@ void _fastcall SHRenameFiles(ParamBlkEx& parm)
 {
 	try
 	{
-		FoxString pFrom(parm(1), 2);
-		FoxString pTo(parm(2), 2);
-		FoxString pTitle(parm, 4);
-
+		FoxString pFrom;
+		FoxString pTo;
+		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		SHFILEOPSTRUCT sFileOp = { 0 };
 
+		pFrom.Attach(parm(1), 2);
+		pTo.Attach(parm(2), 2);
+		
 		sFileOp.wFunc = FO_RENAME;
-		sFileOp.fFlags = (FILEOP_FLAGS)parm(3)->ev_long;
+		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
-		sFileOp.pFrom = parm(1)->HandleToPtr();
-		sFileOp.pTo = parm(2)->HandleToPtr();
-
-		if (pTitle.Len())
-		{
-			sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-			sFileOp.lpszProgressTitle = pTitle;
-		}
+		sFileOp.pFrom = pFrom;
+		sFileOp.pTo = pTo;
 
 		int nRet = SHFileOperation(&sFileOp);
+
 		if (nRet == 0 && sFileOp.fAnyOperationsAborted == FALSE)
 			Return(1);
 		else if (sFileOp.fAnyOperationsAborted)
@@ -220,6 +331,121 @@ void _fastcall SHRenameFiles(ParamBlkEx& parm)
 	catch (int nErrorNo)
 	{
 		RaiseError(nErrorNo);
+	}
+}
+
+void _fastcall SHCreateFileListCursor(FoxString& pSource, FoxString& pFileList)
+{
+	FoxCursor pCursor;
+	FoxString pFile;
+	DWORD nPos = pSource.At('.');
+	if (nPos > 0)
+	{
+		CStringView pCursorname(pSource.Ptr<char*>(), nPos - 1);
+		CStringView pFieldname(pSource.Ptr<char*>() + nPos, pSource.Len() - nPos);
+		pCursor.Attach(pCursorname, pFieldname);
+	}
+	else
+	{
+		pCursor.Attach(pSource, "filename");
+	}
+	if (pCursor.Bof() && pCursor.Eof())
+	{
+		SaveCustomError("SHCreateFileList", "Cursor is empty.");
+		throw E_APIERROR;
+	}
+	AutoRecNoRestore pRecNoRestore(pCursor.WorkArea(), true, true);
+	DWORD nBufferSize = pCursor.RecCountEx() * MAX_PATH;
+	pFileList.Size(nBufferSize);
+	pFileList.Len(0);
+	pFile = pCursor(0);
+	if (pFile.Vartype() == 'C')
+	{
+		do
+		{
+			pFile = pCursor(0);
+			pFileList += pFile;
+			pFileList += '\0';
+			pCursor.Skip();
+		} while (!pCursor.Eof());
+	}
+	else if (pFile.Vartype() == 'M')
+	{
+		do
+		{
+			pFile = pCursor(0);
+			FoxMemo pMemo(pFile);
+			if (pFileList.Len() + pMemo.Size() > pFileList.Size())
+			{
+				pFileList.Size(pFileList.Len() + pMemo.Size() + 1);
+			}
+			pMemo.ReadTo(pFileList.Ptr<char*>() + pFileList.Len(), pMemo.Size());
+			pFileList.Len(pFileList.Len() + pMemo.Size());
+			pFileList += '\0';
+			pCursor.Skip();
+		} while (!pCursor.Eof());
+	}
+	else
+	{
+		SaveCustomError("SHCreateFileList", "Cursor field has invalid datatype.");
+		throw E_APIERROR;
+	}
+
+	pFileList += '\0';
+}
+
+void _fastcall SHCreateFileListArray(FoxParameterEx& pSource, FoxString& pFileList)
+{
+	FoxArray pArray(pSource, true);
+	FoxString pFile;
+	UINT nRows = pArray.ARows();
+	DWORD nBufferSize = nRows * MAX_PATH;
+	pFileList.Size(nBufferSize);
+	pFileList.Len(0);
+	for(UINT xj = 1; xj <= nRows; xj++)
+	{
+		pFile = pArray(xj,1);
+		pFileList += pFile;
+		pFileList += '\0';
+	}
+	pFileList += '\0';
+}
+
+void _fastcall SHSaveFileMapping(SHFILEOPSTRUCT& sFileOp, FoxString& pParm, bool bMapToArray)
+{
+	FoxString pTmp;
+	if ((sFileOp.fFlags & FOF_WANTMAPPINGHANDLE) && sFileOp.hNameMappings)
+	{
+		LPSHNAMEMAPPINGS lpMappings = (LPSHNAMEMAPPINGS)sFileOp.hNameMappings;
+		LPSHNAMEMAPPINGW lpMap = lpMappings->lpSHNameMapping;
+		if (bMapToArray)
+		{
+			FoxArray pArray;
+			pArray.Dimension(pParm, lpMappings->uNumberOfMappings, 2);
+			for (UINT xj = 1; xj <= lpMappings->uNumberOfMappings; xj++)
+			{
+				CWideStringView pOld(lpMap->pszOldPath, lpMap->cchOldPath);
+				CWideStringView pNew(lpMap->pszNewPath, lpMap->cchNewPath);
+				pArray(xj, 1) = pTmp = pOld;
+				pArray(xj, 2) = pTmp = pNew;
+				lpMap++;
+			}
+		}
+		else
+		{
+			FoxCursor pCursor;
+			pCursor.Create(pParm, "old_name M, new_name M", false);
+			for (UINT xj = 1; xj <= lpMappings->uNumberOfMappings; xj++)
+			{
+				pCursor.AppendBlank();
+				CWideStringView pOld(lpMap->pszOldPath, lpMap->cchOldPath);
+				CWideStringView pNew(lpMap->pszNewPath, lpMap->cchNewPath);
+				pCursor(0) = pTmp = pOld;
+				pCursor(1) = pTmp = pNew;
+				lpMap++;
+			}
+		}
+		SHFreeNameMappings(sFileOp.hNameMappings);
 	}
 }
 
@@ -366,7 +592,7 @@ STDMETHODIMP CPropertyDescription::GetIDsOfNames(REFIID riid, LPOLESTR* rgszName
 STDMETHODIMP CPropertyDescription::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
 	DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
-	HRESULT hr;
+	HRESULT hr = DISP_E_MEMBERNOTFOUND;
 	switch (dispidMember)
 	{
 	case DISPID_GetCanonicalName:
@@ -439,7 +665,7 @@ STDMETHODIMP CPropertyDescriptionList::GetIDsOfNames(REFIID riid, LPOLESTR* rgsz
 STDMETHODIMP CPropertyDescriptionList::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
 	DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
-	HRESULT hr;
+	HRESULT hr = DISP_E_MEMBERNOTFOUND;
 	switch (dispidMember)
 	{
 	case DISPID_GetAt:
@@ -616,7 +842,7 @@ STDMETHODIMP CPropertyStore::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UIN
 STDMETHODIMP CPropertyStore::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
 	DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
-	HRESULT hr;
+	HRESULT hr = DISP_E_MEMBERNOTFOUND;
 	switch (dispidMember)
 	{
 	case DISPID_GetValue:
@@ -702,7 +928,7 @@ STDMETHODIMP CShellItem::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cN
 STDMETHODIMP CShellItem::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
 	DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
-	HRESULT hr;
+	HRESULT hr = DISP_E_MEMBERNOTFOUND;
 	PROPERTYKEY pKey;
 	switch (dispidMember)
 	{

@@ -8,6 +8,8 @@ ELSE
 SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
+_SCREEN.Cls()
+
 && ---------------
 && ADIREX examples
 && ---------------

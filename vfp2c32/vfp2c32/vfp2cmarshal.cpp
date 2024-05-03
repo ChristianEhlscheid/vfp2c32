@@ -224,7 +224,7 @@ catch(int nErrorNo)
 void _fastcall TrackMem(ParamBlkEx& parm)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
-	tls.TrackAlloc = static_cast<BOOL>(parm(1)->ev_length);
+	tls.TrackAlloc = parm(1)->ev_length > 0;
 	if (parm.PCount() == 2 && parm(2)->ev_length)
 		FreeDebugAlloc();
 }
@@ -500,7 +500,7 @@ void _fastcall AMemBlocks(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(parm(1) ,1,3);
+	FoxArray pArray(parm(1), 1, 3);
 	PROCESS_HEAP_ENTRY pEntry;
 	DWORD nLastError;
 	HANDLE hHeap = VFP2CTls::Heap;

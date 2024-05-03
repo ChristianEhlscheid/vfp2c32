@@ -429,7 +429,7 @@ public:
 		m_AutoGrow = nAutoGrow;
 	}
 
-	int Reserve(int nMaxElements)
+	int Reserve(int nMaxElements, bool bZeroMemory = false, bool bSetMaxIndex = false)
 	{
 		if (nMaxElements <= m_MaxElements)
 			return m_MaxElements;
@@ -440,10 +440,18 @@ public:
 		if (m_Array != 0)
 		{
 			memcpy(newArray, m_Array, sizeof(T) * m_MaxElements);
+			if (bZeroMemory)
+				memset(newArray + m_MaxElements, 0, sizeof(T) * (nMaxElements - m_MaxElements));
 			free(m_Array);
+		}
+		else if (bZeroMemory)
+		{
+			memset(newArray, 0, sizeof(T) * nMaxElements);
 		}
 		m_Array = newArray;
 		m_MaxElements = nMaxElements;
+		if (bSetMaxIndex)
+			m_Index = nMaxElements - 1;
 		return m_MaxElements;
 	}
 
@@ -579,6 +587,152 @@ public:
 
 private:
 	T m_Array[nSize];
+};
+
+template<typename T>
+class CPtrArray
+{
+public:
+	CPtrArray() : m_Array(0), m_Count(0) {}
+	~CPtrArray()
+	{
+		if (m_Array)
+			delete[] m_Array;
+	}
+
+	void Free()
+	{
+		if (m_Array)
+		{
+			delete[] m_Array;
+			m_Array = 0;
+		}
+	}
+
+	void Allocate(int nCount)
+	{
+		assert(m_Array == 0);
+		m_Array = new T[nCount];
+		if (m_Array == 0)
+			throw E_INSUFMEMORY;
+		m_Count = nCount;
+	}
+
+	T* operator[](int nIndex)
+	{
+		assert(nIndex >= 0 && nIndex < m_Count);
+		return &m_Array[nIndex];
+	}
+
+	int GetCount() const
+	{
+		return m_Count;
+	}
+
+private:
+	T* m_Array;
+	int m_Count;
+};
+
+template<typename T>
+class CDynamicPtrArray
+{
+public:
+	CDynamicPtrArray() : m_Array(0), m_Size(0), m_Elements(0), m_GrowBy(4)  {}
+	~CDynamicPtrArray()
+	{
+		for (int xj = 0; xj < m_Elements; xj++)
+			delete m_Array[xj];
+		delete[] m_Array;
+	}
+
+	void Free()
+	{
+		assert(m_Array == 0);
+		for (int xj = 0; xj < m_Elements; xj++)
+			delete m_Array[xj];
+		delete[] m_Array;
+		m_Array = 0;
+		m_Size = 0;
+		m_Elements = 0;
+	}
+
+	void SetCount(int nCount)
+	{
+		assert(m_Array == 0);
+		int xj;
+		m_Array = new T*[nCount];
+		if (m_Array == 0)
+			throw E_INSUFMEMORY;
+		m_Size = nCount;
+		for (xj = 0; xj < m_Size; xj++)
+			m_Array[xj] = 0;
+		for (xj = 0; xj < m_Size; xj++)
+		{
+			T *newobj = new T();
+			if (newobj == 0)
+				throw E_INSUFMEMORY;
+			m_Array[xj] = newobj;
+			m_Elements++;
+		}
+	}
+
+	T* Add()
+	{
+		int xj;
+		int nextIndex = m_Elements;
+		if (nextIndex >= m_Size)
+		{
+			T** newarray = new T*[m_Size + m_GrowBy];
+			if (newarray == 0)
+				throw E_INSUFMEMORY;
+			for (xj = 0; xj < m_Elements; xj++)
+			{
+				newarray[xj] = m_Array[xj];
+				m_Array[xj] = 0;
+			}
+			for (xj = m_Elements; xj < m_Size + m_GrowBy; xj++)
+			{
+				newarray[xj] = 0;
+			}
+			delete[] m_Array;
+			m_Array = newarray;
+			m_Size = m_Size + m_GrowBy;
+		}
+		T* newobj = new T();
+		if (newobj == 0)
+			throw E_INSUFMEMORY;
+		m_Array[nextIndex] = newobj;
+		m_Elements = nextIndex + 1;
+		return newobj;
+	}
+
+	T* operator[](int nIndex)
+	{
+		assert(nIndex >= 0 && nIndex < m_Size);
+		return m_Array[nIndex];
+	}
+
+	bool IsEmpty()
+	{
+		return m_Elements == 0;
+	}
+
+	int GetCount()
+	{
+		return m_Elements;
+	}
+
+	int GetSize()
+	{
+		return m_Size;
+	}
+
+private:
+	T** m_Array;
+	int m_Elements;
+	int m_Size;
+	int m_GrowBy;
 };
 
 #endif // _VFP2CDATASTRUCTURE_H__

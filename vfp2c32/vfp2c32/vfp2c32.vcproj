@@ -1066,6 +1066,9 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\vfp2codbcclasses.cpp">
+			</File>
+			<File
 				RelativePath=".\vfp2cprint.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -1503,6 +1506,12 @@ copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\vfp2c32examples\$(TargetFi
 			</File>
 			<File
 				RelativePath=".\vfp2codbc.h">
+			</File>
+			<File
+				RelativePath=".\vfp2codbcclasses.h">
+			</File>
+			<File
+				RelativePath=".\vfp2codbcconstants.h">
 			</File>
 			<File
 				RelativePath=".\vfp2cprint.h">

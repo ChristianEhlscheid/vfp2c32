@@ -20,7 +20,7 @@ laServiceStatus[5] = 'CONTINUE PENDING'
 laServiceStatus[6] = 'PAUSE PENDING'
 laServiceStatus[7] = 'PAUSED'
 
-lnServiceHandle = OpenService('Dhcp')
+lnServiceHandle = OpenServiceEx('Dhcp')
 IF AServiceStatus('laStatus',lnServiceHandle)
 	? "Service is in : " + laServiceStatus[laStatus[3]] + " state"
 ELSE
@@ -28,7 +28,7 @@ ELSE
 	DISPLAY MEMORY LIKE laError
 ENDIF
 
-CloseServiceHandle(lnServiceHandle)
+CloseServiceHandleEx(lnServiceHandle)
 
 lnCount = ASERVICES("laServs")
 IF lnCount > 0
@@ -58,16 +58,16 @@ lnCount = ASERVICES("laServs","","",SERVICE_INACTIVE)
 
 
 && starting a service & wait up to default seconds specified by the service for complete initialization
-*!*	lnRet = STARTSERVICE('MSSQLSERVER')
+*!*	lnRet = STARTSERVICEEX('MSSQLSERVER')
 
 && starting a service and passing arguments to it
 *!*	LOCAL laArgs[2]
 *!*	laArgs[1] = 'service parameter 1'
 *!*	laArgs[2] = 'service parameter 2'
-*!*	lnRet = STARTSERVICE('MSSQLSERVER',@laArgs)
+*!*	lnRet = STARTSERVICEEX('MSSQLSERVER',@laArgs)
 
 && starting a service with no parameters & wait up to 5 seconds for complete initialization
-*!*	lnRet = STARTSERVICE("MSSQLSERVER",NULL,5)
+*!*	lnRet = STARTSERVICEEX("MSSQLSERVER",NULL,5)
 *!*	DO CASE
 *!*		CASE lnRet = 1
 *!*			? "Service started & running"
@@ -76,10 +76,10 @@ lnCount = ASERVICES("laServs","","",SERVICE_INACTIVE)
 *!*	ENDCASE
 
 && by using a timeout of 0 you can start a service and don't care about initialization state
-*!*	lnRet = STARTSERVICE("MSSQLSERVER",NULL,0)
+*!*	lnRet = STARTSERVICEEX("MSSQLSERVER",NULL,0)
 
 && stopping a service, basic
-*!*	lnRet = STOPSERVICE("MSSQLSERVER")
+*!*	lnRet = STOPSERVICEEX("MSSQLSERVER")
 *!*	DO CASE
 *!*		CASE lnRet = 1
 *!*			? "Service completly stopped"
@@ -88,10 +88,10 @@ lnCount = ASERVICES("laServs","","",SERVICE_INACTIVE)
 *!*	ENDCASE
 
 && stop a service which has dependant services running .. (shuts down dependant services first)
-*!*	lnRet = STOPSERVICE('MSSQLSERVER',NULL,.T.)
+*!*	lnRet = STOPSERVICEEX('MSSQLSERVER',NULL,.T.)
 
 && stopping the service on another machine
-*!*	lnRet = STOPSERVICE('MSSQLSERVER',NULL,.F.,'yourServer')
+*!*	lnRet = STOPSERVICEEX('MSSQLSERVER',NULL,.F.,'yourServer')
 
 DEFINE CLASS oService AS Custom
 	
@@ -101,29 +101,29 @@ DEFINE CLASS oService AS Custom
 	nHandle = 0
 	
 	FUNCTION Init
-		THIS.nHandle = OpenService(THIS.cServiceName,0,THIS.cServer,THIS.cDatabase)
+		THIS.nHandle = OpenServiceEx(THIS.cServiceName,0,THIS.cServer,THIS.cDatabase)
 	ENDFUNC
 
 	FUNCTION Destroy
 		IF THIS.nHandle != 0
-			CloseServiceHandle(THIS.nHandle)	
+			CloseServiceHandleEx(THIS.nHandle)	
 		ENDIF
 	ENDFUNC
 	
 	FUNCTION Start(laArgs)
 		EXTERNAL ARRAY laArgs
 		IF PCOUNT() = 1
-			RETURN STARTSERVICE(THIS.nHandle,@laArgs)		
+			RETURN STARTSERVICEEX(THIS.nHandle,@laArgs)		
 		ELSE
-			RETURN STARTSERVICE(THIS.nHandle)
+			RETURN STARTSERVICEEX(THIS.nHandle)
 		ENDIF
 	ENDFUNC
 
 	FUNCTION Stop(nTimeout)
 		IF PCOUNT() == 1
-			RETURN STOPSERVICE(THIS.nHandle,nTimeout)
+			RETURN STOPSERVICEEX(THIS.nHandle,nTimeout)
 		ELSE
-			RETURN STOPSERVICE(THIS.nHandle)
+			RETURN STOPSERVICEEX(THIS.nHandle)
 		ENDIF
 	ENDFUNC
 

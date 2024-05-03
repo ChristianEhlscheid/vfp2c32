@@ -19,7 +19,12 @@
 <dl class="parm"><dt><a id="p1">cFiles</a></dt>
 <dd><p>One or more file names. These names should be fully-qualified paths to prevent unexpected results.<br />
 Standard MS-DOS wildcard characters, such as "*", are permitted only in the file-name position. Using a wildcard character elsewhere in the string will lead to unpredictable results.<br />
-Each file name should be terminated by a single <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).</p>
+Each file name should be terminated by a single <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).<br />
+<br />
+If the nFlags parameter is contains FOF_SOURCE_CURSOR or FOF_SOURCE_ARRAY, the string is treated as a cursor or array name.<br />
+<br />
+FOF_SOURCE_CURSOR by default uses the "filename" field of the cursor, but passing a full name is also possible e.g. "mycursor.file".<br />
+FOF_SOURCE_ARRAY always uses the first column of the array.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">nFlags (additive)</a></dt>
 <dd><p>default is none of the below:</p>

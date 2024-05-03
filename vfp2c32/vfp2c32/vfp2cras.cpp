@@ -402,10 +402,8 @@ DWORD RasDialCallback::Callback(DWORD dwSubEntry, HRASCONN hrasconn,
 	vRetVal = 0;
 	if (m_Callback.Evaluate(vRetVal, dwSubEntry, hrasconn, unMsg, rascs, dwError, dwExtendedError) == 0)
 	{
-		if (vRetVal.Vartype() == 'I')
-			return vRetVal.ev_long;
-		else if (vRetVal.Vartype() == 'N')
-			return static_cast<DWORD>(vRetVal.ev_real);
+		if (vRetVal.Numeric())
+			return vRetVal.NumericCast<DWORD>();
 		else if (vRetVal.Vartype() == 'L')
 			return vRetVal.ev_length;
 		else

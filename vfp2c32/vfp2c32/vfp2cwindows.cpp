@@ -164,7 +164,7 @@ void _fastcall ADesktopArea(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pCoords(parm(1),4,1);
+	FoxArray pCoords(parm(1), 4, 1);
 	RECT sRect;
 	
 	if (!SystemParametersInfo(SPI_GETWORKAREA,0,(PVOID)&sRect,0))
@@ -207,7 +207,7 @@ try
 
 	if (parm.PCount() >= 4)
 	{
-		if (parm(4)->Vartype() == 'I' || parm(4)->Vartype() == 'N')
+		if (parm(4)->Numeric())
 			sParms.hwndOwner = parm(4)->DynamicPtr<HWND>();
 		else if (parm(4)->Vartype() == '0')
 			sParms.hwndOwner = WTopHwnd();
@@ -243,7 +243,7 @@ try
 
 	if (parm.PCount() >= 6)
 	{	
-		if (parm(6)->Vartype() == 'I' || parm(6)->Vartype() == 'N')
+		if (parm(6)->Numeric())
 			sParms.hInstance = parm(6)->DynamicPtr<HINSTANCE>();
 		else if (parm(6)->Vartype() == '0')
 		{

@@ -12,12 +12,19 @@
 <div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
 </div>
 <div id="content">
-<p class="description">Changes the attributes of a set of files/directories specified by a wildcard search.</p>
+<p class="description">Changes the attributes of the specified file or a set of files/directories specified by a wildcard search.</p>
 
-<div class="block"><pre>SetFileAttributesEx(<a href="#p1">cFileSkeleton</a>, <a href="#p2">ncAttributes</a>[, <a href="#p3">nMaxRecursion</a>]])</pre></div>
+<div class="block"><pre>SetFileAttributesEx(<a href="#p1">cFileName | cFileSkeleton</a>, <a href="#p2">ncAttributes</a>[, <a href="#p3">nAttributesRemove</a>[, <a href="#p4">nMaxRecursion</a>]]])</pre></div>
 <h3>Parameters</h3>
-<dl class="parm"><dt><a id="p1">cFileSkeleton</a></dt>
-<dd><p>Fully qualified (drive:\path\wildcard) search string e.g. "C:\Winnt\*.dll"</p>
+<dl class="parm"><dt><a id="p1">cFileName | cFileSkeleton</a></dt>
+<dd><p>The name of the file or a wildcard for which to set the attributes.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>This can be a relative path or only a filename, the VFP function <a href="its:dv_foxhelp.chm::/html/a3944489-2eaa-4f99-8dd7-98d7a355426a.htm">FULLPATH</a> is used to retrieve the fully qualified filename. <br />
+The usual VFP search path (<a href="its:dv_foxhelp.chm::/html/047f2e74-3552-43b7-a18d-ee2c7dd2db6e.htm">SET PATH</a>) is used.
+</p></div>
+<p><br />
+Fully qualified (drive:\path\wildcard) search string e.g. "C:\Winnt\*.dll"</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">ncAttributes (additional)</a></dt>
 <dd><table>
@@ -35,7 +42,12 @@ When passing a numeric value, the file attributes are overwritten with the new v
 <tr><td>FILE_ATTRIBUTE_SYSTEM</td><td>S</td><td>A file or directory that the operating system uses a part of, or uses exclusively.</td></tr>
 <tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>T</td><td>A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.</td></tr>
 </table></dd></dl>
-<dl class="parm"><dt><a id="p3">nMaxRecursion (optional)</a></dt>
+<dl class="parm"><dt><a id="p3">nAttributesRemove (optional)</a></dt>
+<dd><p>When passed the parameter "ncAttributes" has to be a numeric value and these attributes are<br />
+added to the current file attributes.<br />
+The attributes supplied in this parameter are removed from the file attributes.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nMaxRecursion (optional)</a></dt>
 <dd><p>default = -1<br />
 <br />
 -1 = no recursion<br />
@@ -54,18 +66,17 @@ When passing a numeric value, the file attributes are overwritten with the new v
 <a href="/pages/afileattributesex.html">AFileAttributesEx</a><br />
 <a href="/pages/cancelfilechange.html">CancelFileChange</a><br />
 <a href="/pages/comparefiletimes.html">CompareFileTimes</a><br />
-<a href="/pages/copyfileex.html">CopyFileEx</a><br />
+<a href="/pages/copyfileex2.html">CopyFileEx2</a><br />
 <a href="/pages/deletedirectory.html">DeleteDirectory</a><br />
 <a href="/pages/deletefileex.html">DeleteFileEx</a><br />
 <a href="/pages/findfilechange.html">FindFileChange</a><br />
-<a href="/pages/getfileattributes.html">GetFileAttributes</a><br />
+<a href="/pages/getfileattributesex2.html">GetFileAttributesEx2</a><br />
 <a href="/pages/getfileowner.html">GetFileOwner</a><br />
-<a href="/pages/getfilesize.html">GetFileSize</a><br />
+<a href="/pages/getfilesizeex2.html">GetFileSizeEx2</a><br />
 <a href="/pages/getfiletimes.html">GetFileTimes</a><br />
-<a href="/pages/getlongpathname.html">GetLongPathName</a><br />
-<a href="/pages/getshortpathname.html">GetShortPathName</a><br />
+<a href="/pages/getlongpathnameex.html">GetLongPathNameEx</a><br />
+<a href="/pages/getshortpathnameex.html">GetShortPathNameEx</a><br />
 <a href="/pages/movefileex.html">MoveFileEx</a><br />
-<a href="/pages/setfileattributes.html">SetFileAttributes</a><br />
 <a href="/pages/setfiletimes.html">SetFileTimes</a><br />
 </p>
 <h4>Used WinApi functions</h4>

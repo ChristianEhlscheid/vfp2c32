@@ -3,34 +3,29 @@
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
-<title>GetFileAttributes</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<title>GetFileSizeEx2</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
 <script src="/scripts/jscript.js" type="text/javascript"></script>
 </head><body>
 <div id="header">
 <p id="vfp2c32version"></p>
-<h1 class="function">GetFileAttributes</h1>
+<h1 class="function">GetFileSizeEx2</h1>
 <div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
 </div>
 <div id="content">
-<p class="description">Retrieves the attributes of a file or directory.</p>
+<p class="description">Retrieves the size of a file.</p>
 
-<div class="block"><pre>GetFileAttributes(<a href="#p1">cFileName</a>[, <a href="#p2">bStringAttributes</a>])</pre></div>
+<div class="block"><pre>GetFileSizeEx2(<a href="#p1">cFileName</a>)</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cFileName</a></dt>
-<dd><p>The name of the file for which to retrieve the attributes.<br />
+<dd><p>The name of the file for which to retrieve the size.<br />
 </p>
 <div class="blockheader"><p class="note">Note</p></div>
 <div class="block"><p>This can be a relative path or only a filename, the VFP function <a href="its:dv_foxhelp.chm::/html/a3944489-2eaa-4f99-8dd7-98d7a355426a.htm">FULLPATH</a> is used to retrieve the fully qualified filename. <br />
 The usual VFP search path (<a href="its:dv_foxhelp.chm::/html/047f2e74-3552-43b7-a18d-ee2c7dd2db6e.htm">SET PATH</a>) is used.
 </p></div>
 </dd></dl>
-<dl class="parm"><dt><a id="p2">bStringAttributes (optional)</a></dt>
-<dd><p>default = .F.<br />
-<br />
-If .T. the file attributes are returned in string form.</p>
-</dd></dl>
 <h2>Return Value</h2>
-<p>A numeric value representing the file attributes.</p>
+<p>The size of the file.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
@@ -41,22 +36,24 @@ If .T. the file attributes are returned in string form.</p>
 <a href="/pages/afileattributesex.html">AFileAttributesEx</a><br />
 <a href="/pages/cancelfilechange.html">CancelFileChange</a><br />
 <a href="/pages/comparefiletimes.html">CompareFileTimes</a><br />
-<a href="/pages/copyfileex.html">CopyFileEx</a><br />
+<a href="/pages/copyfileex2.html">CopyFileEx2</a><br />
 <a href="/pages/deletedirectory.html">DeleteDirectory</a><br />
 <a href="/pages/deletefileex.html">DeleteFileEx</a><br />
 <a href="/pages/findfilechange.html">FindFileChange</a><br />
+<a href="/pages/getfileattributesex2.html">GetFileAttributesEx2</a><br />
 <a href="/pages/getfileowner.html">GetFileOwner</a><br />
-<a href="/pages/getfilesize.html">GetFileSize</a><br />
 <a href="/pages/getfiletimes.html">GetFileTimes</a><br />
-<a href="/pages/getlongpathname.html">GetLongPathName</a><br />
-<a href="/pages/getshortpathname.html">GetShortPathName</a><br />
+<a href="/pages/getlongpathnameex.html">GetLongPathNameEx</a><br />
+<a href="/pages/getshortpathnameex.html">GetShortPathNameEx</a><br />
 <a href="/pages/movefileex.html">MoveFileEx</a><br />
-<a href="/pages/setfileattributes.html">SetFileAttributes</a><br />
 <a href="/pages/setfileattributesex.html">SetFileAttributesEx</a><br />
 <a href="/pages/setfiletimes.html">SetFileTimes</a><br />
 </p>
 <h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa364944(VS.85).aspx">GetFileAttributes</a></p>
+<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/aa364957(VS.85).aspx">GetFileSizeEx</a> or<br />
+<a href="http://msdn.microsoft.com/en-us/library/aa364955(VS.85).aspx">GetFileSize</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms724211(VS.85).aspx">CloseHandle</a></p>
 
 
 </div>

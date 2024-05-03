@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>SQLVariantToValue</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">SQLVariantToValue</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Converts a field of type SQL_SS_VARIANT retrieved from SQL Server via <a href="/pages/sqlexecex.html">SQLExecEx</a> into it's equivalent FoxPro type.</p>
+
+<div class="block"><pre>SQLVariantToValue(<a href="#p1">cValue</a> [, <a href="#p2">@nType</a> [, <a href="#p3">@nSize</a> [, <a href="#p4">@nScale</a>]]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">cValue</a></dt>
+<dd><p>The value retrieved from SQL Server.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>Blob fields of a cursor have to be passed by reference.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">@nType (optional)</a></dt>
+<dd><p>stores the ODBC numeric data.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">@nSize (optional)</a></dt>
+<dd><p>stores the size in bytes.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">@nScale (optional)</a></dt>
+<dd><p>stores the fractional digits.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>Return the converted value.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/asqldatasources.html">ASQLDataSources</a><br />
+<a href="/pages/asqldrivers.html">ASQLDrivers</a><br />
+<a href="/pages/changesqldatasource.html">ChangeSQLDataSource</a><br />
+<a href="/pages/createsqldatasource.html">CreateSQLDataSource</a><br />
+<a href="/pages/deletesqldatasource.html">DeleteSQLDataSource</a><br />
+<a href="/pages/sqlcancelex.html">SQLCancelEx</a><br />
+<a href="/pages/sqlexecex.html">SQLExecEx</a><br />
+<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
+<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
+<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
+<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
+<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
+<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
+<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
+<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
+<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
+<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
+<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
+<a href="/pages/sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a><br />
+<a href="/pages/sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a><br />
+<a href="/pages/valuetosqlvariant.html">ValueToSQLVariant</a><br />
+</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

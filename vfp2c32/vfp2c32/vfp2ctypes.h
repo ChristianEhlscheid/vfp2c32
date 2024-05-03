@@ -47,7 +47,8 @@ typedef struct ValueEx : public Value
 	void SetCurrency(CCY nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue.QuadPart; }
 	void SetCurrency(__int64 nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue; }
 	void SetNumeric(int nWidth, unsigned int nPrecision) { ev_type = 'N'; ev_width = nWidth; ev_length = nPrecision; }
-	void SetString(unsigned int nLen = 0) { ev_type = 'C'; ev_handle = 0; ev_length = nLen; }
+	void SetString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 0; ev_handle = 0; ev_length = nLen; }
+	void SetBinaryString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 1; ev_handle = 0; ev_length = nLen; }
 	void SetLogical() { ev_type = 'L'; ev_length = 0; }
 	void SetLogical(bool bValue) { ev_type = 'L'; ev_length = bValue; }
 	void SetLogical(unsigned int bValue) { ev_type = 'L'; ev_length = bValue; }
@@ -75,14 +76,18 @@ typedef struct ValueEx : public Value
 	void* Ptr() { return reinterpret_cast<void*>(ev_long > -1 ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
 #endif
 	template<typename T>
-	T DynamicPtr() { return reinterpret_cast<T>(ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
+	T DynamicPtr() const { return reinterpret_cast<T>(ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
 	template<>
-	UINT_PTR DynamicPtr<UINT_PTR>() { return ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real); }
+	UINT_PTR DynamicPtr<UINT_PTR>() const { return ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real); }
 
 	void SetNull() { ev_type = '0'; }
-	char Vartype() { return ev_type; }
-	
-	unsigned int Len() { return ev_length; }
+	char Vartype() const { return ev_type; }
+	bool Binary() const { return ev_width > 0; }
+	bool Numeric() const { return ev_type == 'I' || ev_type == 'N'; }
+	template<typename T>
+	T NumericCast() const { return ev_type == 'I' ? static_cast<T>(ev_long) : static_cast<T>(ev_real); }
+
+	unsigned int Len() const { return ev_length; }
 
 	bool AllocHandle(int nBytes)
 	{
@@ -95,8 +100,9 @@ typedef struct ValueEx : public Value
 		return ev_handle != 0;
 	}
 
-	void FreeHandle() { 
-		assert(ev_type == 'C');  
+	void FreeHandle()
+	{ 
+		assert(ev_type == 'C');
 		if (ev_handle)
 		{
 #if defined(_DEBUGALLOCATIONS)
@@ -106,14 +112,31 @@ typedef struct ValueEx : public Value
 			ev_handle = 0;
 		}
 	}
+
+	void FreeObject()
+	{
+		assert(ev_type == 'O');
+		if (ev_object > 0)
+		{
+			_FreeObject(*this);
+			ev_object = 0;
+		}
+	}
 	
-	char* HandleToPtr() 
-	{ 
+	char* HandleToPtr()
+	{
 		assert(ev_type == 'C' && ev_handle != 0);
 		return reinterpret_cast<char*>(_HandToPtr(ev_handle));
 	}
 
-	bool ValidHandle() 
+	template<typename T>
+	T HandleToPtr() 
+	{ 
+		assert(ev_type == 'C' && ev_handle != 0);
+		return reinterpret_cast<T>(_HandToPtr(ev_handle));
+	}
+
+	bool ValidHandle() const
 	{ 
 		assert(ev_type == 'C'); 
 		return ev_handle > 0;
@@ -131,7 +154,7 @@ typedef struct ValueEx : public Value
 		_HUnLock(ev_handle);
 	}
 
-	unsigned long GetHandleSize() 
+	unsigned long GetHandleSize() const
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0);
 		return _GetHandSize(ev_handle);
@@ -166,8 +189,13 @@ typedef struct ValueEx : public Value
 			ev_handle = 0;
 		}
 		else if (ev_type == 'O' && ev_object > 0)
+		{
 			_FreeObject(*this);
+			ev_object = 0;
+		}
 	}
+
+
 
 	void Return() {
 		assert(ev_type != 'R');
@@ -226,8 +254,8 @@ typedef struct ValueEx : public Value
 
 typedef struct LocatorEx : public Locator
 {
-	bool IsVariableRef() { return l_type == 'R' && l_where == -1; }
-	bool IsMemoRef() { return l_type == 'R' && l_where != -1; }
+	bool IsVariable() { return l_type == 'R' && l_where == -1; }
+	bool IsField() { return l_type == 'R' && l_where != -1; }
 
 	NTI NewVar(char* pVarname, bool bPublic)
 	{
@@ -832,7 +860,6 @@ typedef struct _ParamBlkEx
 	FoxParameterEx	p[1];		/* pCount Parameters.					*/
 	FoxParameterEx& operator()(int nIndex) { return p[nIndex - 1]; }
 	short PCount() { return pCount; }
-	bool CheckOptionalParameterLen(int nParmNo) { return pCount >= nParmNo && (*this)(nParmNo)->ev_length; }
 } ParamBlkEx;
 
 #endif // _VFP2CTYPES_H__

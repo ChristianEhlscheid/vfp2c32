@@ -8,7 +8,7 @@ int CFoxVersion::m_Version = 0;
 int CFoxVersion::m_MajorVersion = 0;
 int CFoxVersion::m_MinorVersion = 0;
 
-void _stdcall ReturnIDispatch(void* pObject)
+void _fastcall ReturnIDispatch(void* pObject)
 {
 	Value vObject = { '0' };
 	CStrBuilder<32> pCommand;
@@ -66,6 +66,478 @@ IDispatch* FoxValue::GetIDispatch()
 	return pObject;
 }
 
+long _fastcall RecCountEx(int nWorkarea, bool bCountFromCurrentRecord)
+{
+	CStrBuilder<64> pFunc;
+	ValueEx vExpr;
+	int nOldWorkArea = 0, nErrorNo;
+	long nRecCount;
+	bool bDeleted = false;
+	vExpr.SetNull();
+	if (!bCountFromCurrentRecord)
+	{
+		nErrorNo = _Evaluate(vExpr, "SET('DELETED')");
+		if (nErrorNo)
+			throw nErrorNo;
+		vExpr.FreeHandle();
+		bDeleted = vExpr.ev_length == 2;  // ON - string len = 2
+	}
+
+	if (bCountFromCurrentRecord || bDeleted)
+	{
+		AutoWorkAreaRestore pWorkAreaRestore(nWorkarea, 0, true);
+		AutoRecNoRestore pRecNoRestore(nWorkarea);
+		FoxVariable pCount;
+		if (bCountFromCurrentRecord)
+			nErrorNo = _Execute("COUNT REST TO m.__VFP2C_COUNT_INTERNAL");
+		else
+			nErrorNo = _Execute("COUNT TO m.__VFP2C_COUNT_INTERNAL");
+		if (nErrorNo)
+			throw nErrorNo;
+		pCount.Attach("__VFP2C_COUNT_INTERNAL");
+		vExpr = pCount();
+		nRecCount = vExpr.ev_long;
+	}
+	else
+	{
+		nRecCount = RecCount(nWorkarea);
+	}
+	return nRecCount;
+}
+
+int _fastcall Dimension(char* pArrayName, unsigned long nRows, unsigned long nDims)
+{
+	CStrBuilder<256> pExeBuffer;
+	if (nDims > 1)
+		pExeBuffer.Format("DIMENSION %S[%U,%U]", pArrayName, nRows, nDims);
+	else
+		pExeBuffer.Format("DIMENSION %S[%U]", &pArrayName, nRows);
+	return _Execute(pExeBuffer);
+}
+
+int _fastcall Dimension(char* pArrayName, Locator* lArrayLoc, unsigned long nRows, unsigned long nDims)
+{
+	int nErrorNo;
+	nErrorNo = FindFoxVar(pArrayName, lArrayLoc);
+	if (nErrorNo == E_VARIABLENOTFOUND)
+	{
+		// create array
+		nErrorNo = Dimension(pArrayName, nRows, nDims);
+		if (nErrorNo)
+			return nErrorNo;
+
+		if (nErrorNo = FindFoxVar(pArrayName, lArrayLoc))
+			return nErrorNo;
+	}
+	else if (nErrorNo == 0)
+	{
+		// redimension array to passed size
+		nErrorNo = Dimension(pArrayName, nRows, nDims);
+		if (nErrorNo)
+			return nErrorNo;
+
+		// initialize all elements to .F.
+		Value vFalse;
+		vFalse.ev_type = 'L';
+		vFalse.ev_width = 0;
+		lArrayLoc->l_subs = 0;
+		if (nErrorNo = _Store(lArrayLoc, &vFalse))
+			return nErrorNo;
+
+		lArrayLoc->l_subs = nDims > 1 ? 2 : 1;
+	}
+	else
+		return nErrorNo;
+
+	lArrayLoc->l_sub1 = 0;
+	lArrayLoc->l_sub2 = 0;
+	return 0;
+}
+
+int _fastcall ASubscripts(Locator* pLoc, int* nRows, int* nDims)
+{
+	if ((*nRows = _ALen(pLoc->l_NTI, AL_SUBSCRIPT1)) == -1)
+		return E_NOTANARRAY;
+	*nDims = _ALen(pLoc->l_NTI, AL_SUBSCRIPT2);
+	return 0;
+}
+
+// fill a Locator with a reference to a FoxPro variable
+int _fastcall FindFoxVar(char* pName, Locator* pLoc)
+{
+	NTI nVarNti;
+	nVarNti = _NameTableIndex(pName);
+	if (nVarNti == -1)
+	{
+		SaveCustomErrorEx("_NameTableIndex", "Variable '%S' not found.", E_VARIABLENOTFOUND, pName);
+		return E_APIERROR;
+	}
+
+	if (_FindVar(nVarNti, -1, pLoc))
+		return 0;
+	else
+	{
+		SaveCustomErrorEx("_FindVar", "Variable '%S' not found.", E_VARIABLENOTFOUND, pName);
+		return E_APIERROR;
+	}
+}
+
+// fill a Locator with a reference to a FoxPro field
+int _fastcall FindFoxField(char* pName, Locator* pLoc, int nWorkarea)
+{
+	NTI nVarNti;
+	nVarNti = _NameTableIndex(pName);
+	if (nVarNti == -1)
+	{
+		SaveCustomErrorEx("_NameTableIndex", "Field '%S' not found in workarea %I.", E_FIELDNOTFOUND, pName, nWorkarea);
+		return E_APIERROR;
+	}
+
+	if (_FindVar(nVarNti, nWorkarea, pLoc))
+		return 0;
+	else
+	{
+		SaveCustomErrorEx("_FindVar", "Field '%S' not found in workarea %I.", E_FIELDNOTFOUND, pName, nWorkarea);
+		return E_APIERROR;
+	}
+}
+
+// like the above .. but instead of the workarea number the cursor/tablename can be passed
+int _fastcall FindFoxField(char* pName, Locator* pLoc, char* pCursor)
+{
+	NTI nVarNti;
+	int nErrorNo;
+	Value vWorkarea = { '0' };
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+
+	nVarNti = _NameTableIndex(pName);
+	if (nVarNti == -1)
+	{
+		SaveCustomErrorEx("_NameTableIndex", "Field '%S' not found.", E_FIELDNOTFOUND, pName);
+		return E_APIERROR;
+	}
+
+	pExeBuffer.Format("SELECT('%S')", pCursor);
+	if (nErrorNo = _Evaluate(&vWorkarea, pExeBuffer))
+		return nErrorNo;
+
+	if (_FindVar(nVarNti, vWorkarea.ev_long, pLoc))
+		return 0;
+	else
+	{
+		SaveCustomErrorEx("_FindVar", "Field '%S' not found in workarea %I.", E_FIELDNOTFOUND, pName, vWorkarea.ev_long);
+		return E_APIERROR;
+	}
+}
+
+// fill a Locator with a reference to a FoxPro field, instead of passing the name one passes the field offset (1st field, 2nd field ..)
+int _fastcall FindFoxField(int nFieldNo, Locator* pLoc, int nWorkarea)
+{
+	ValueEx vFieldName;
+	vFieldName = 0;
+	char* pFieldName;
+	NTI nVarNti;
+	int nErrorNo;
+	CStrBuilder<64> pExeBuffer;
+
+	pExeBuffer.Format("FIELD(%I,%I)+CHR(0)", nFieldNo, nWorkarea);
+	if (nErrorNo = _Evaluate(vFieldName, pExeBuffer))
+		return nErrorNo;
+
+	pFieldName = vFieldName.HandleToPtr();
+	nVarNti = _NameTableIndex(pFieldName);
+	vFieldName.FreeHandle();
+
+	if (nVarNti == -1)
+	{
+		SaveCustomErrorEx("_NameTableIndex", "Field '%S' not found.", E_FIELDNOTFOUND, pFieldName);
+		return E_APIERROR;
+	}
+
+	if (_FindVar(nVarNti, nWorkarea, pLoc))
+		return 0;
+	else
+	{
+		SaveCustomErrorEx("_FindVar", "Field '%S' not found in workarea %I.", E_FIELDNOTFOUND, pFieldName, nWorkarea);
+		return E_APIERROR;
+	}
+}
+
+int _fastcall FindFoxVarOrField(char* pName, Locator* pLoc)
+{
+	NTI nVarNti;
+	nVarNti = _NameTableIndex(pName);
+	if (nVarNti == -1)
+	{
+		SaveCustomError("_NameTableIndex", "Variable or field '%S' not found.", pName);
+		return E_APIERROR;
+	}
+
+	if (_FindVar(nVarNti, 0, pLoc))
+		return 0;
+	else
+	{
+		SaveCustomError("_FindVar", "Variable or field '%S' not found.", pName);
+		return E_APIERROR;
+	}
+}
+
+int _fastcall FindFoxVarOrFieldEx(char* pFullName, Locator* pLoc)
+{
+	CStringMatcher pMatcher(pFullName);
+	char aTableOrVar[VFP2C_VFP_MAX_CURSOR_NAME];
+	char aColumn[VFP2C_VFP_MAX_COLUMN_NAME];
+	if (pMatcher.MatchIdentifier(aTableOrVar, VFP2C_VFP_MAX_CURSOR_NAME))
+	{
+		if (pMatcher.MatchChar('.') && pMatcher.MatchIdentifier(aColumn, VFP2C_VFP_MAX_COLUMN_NAME))
+			return FindFoxField(aColumn, pLoc, aTableOrVar);
+		else
+			return FindFoxVarOrField(aTableOrVar, pLoc);
+	}
+	else
+	{
+		SaveCustomErrorEx("FindFoxVarOrFieldEx", "Variable or field '%S' not found, invalid identifier.", E_VARIABLENOTFOUND, pFullName);
+		return E_APIERROR;
+	}
+}
+
+int _fastcall StoreEx(Locator* pLoc, Value* pValue)
+{
+	if (pLoc->l_where == -1)
+		return _Store(pLoc, pValue);
+	else
+		return _DBReplace(pLoc, pValue);
+}
+
+int _fastcall AllocMemo(Locator* pLoc, int nSize, long* nLoc)
+{
+	*nLoc = _AllocMemo(pLoc, nSize);
+	if (*nLoc == -1)
+	{
+		SaveCustomError("_AllocMemo", "Function failed.");
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall MemoChan(int nWorkarea, FCHAN* nChan)
+{
+	*nChan = _MemoChan(nWorkarea);
+	if (*nChan == -1)
+	{
+		SaveCustomError("_MemoChan", "Function failed.");
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall GetMemoContent(Value* pValue, char* pData)
+{
+	FCHAN hFile = pValue->ev_width;
+	int mLoc = (int)pValue->ev_real;
+	if (_FSeek(hFile, mLoc, FS_FROMBOF) != mLoc)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+	if (_FRead(hFile, pData, pValue->ev_long) != pValue->ev_long)
+	{
+		SaveCustomErrorEx("_FRead", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	else
+		return 0;
+}
+
+int _fastcall GetMemoContent(Value* pValue, char* pData, int nLen, int nOffset)
+{
+	FCHAN hFile = pValue->ev_width;
+	int mLoc = ((int)pValue->ev_real) + nOffset;
+	if (_FSeek(hFile, mLoc, FS_FROMBOF) != mLoc)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+	if (_FRead(hFile, pData, nLen) != nLen)
+	{
+		SaveCustomErrorEx("_FRead", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	else
+		return 0;
+}
+
+int _fastcall GetMemoContent(Locator* pLoc, char** pData, int* nErrorNo)
+{
+	FCHAN hFile;
+	int mLoc, mLen;
+
+	mLoc = _FindMemo(pLoc);
+	if (mLoc < 0)
+	{
+		*nErrorNo = E_INVALIDPARAMS;
+		return -1;
+	}
+
+	hFile = _MemoChan(pLoc->l_where);
+	if (hFile == -1)
+	{
+		SaveCustomError("_MemoChan", "Function failed for workarea %I.", pLoc->l_where);
+		return -1;
+	}
+
+	mLen = _MemoSize(pLoc);
+	if (mLen <= 0)
+	{
+		if (mLen == 0)
+			return 0;
+		else
+		{
+			*nErrorNo = mLen;
+			return -1;
+		}
+	}
+
+	*pData = (char*)malloc(mLen);
+	if (!*pData)
+	{
+		*nErrorNo = E_INSUFMEMORY;
+		return -1;
+	}
+
+	if (_FSeek(hFile, mLoc, FS_FROMBOF) != mLoc)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		*nErrorNo = E_APIERROR;
+		return -1;
+	}
+	mLen = _FRead(hFile, *pData, mLen);
+	return mLen;
+}
+
+int _fastcall ReplaceMemo(Locator* pLoc, char* pData, int nLen)
+{
+	FCHAN hFile;
+	long nLoc;
+
+	hFile = _MemoChan(pLoc->l_where);
+	if (hFile == -1)
+		return E_FIELDNOTFOUND;
+
+	nLoc = _AllocMemo(pLoc, nLen);
+	if (nLoc == -1)
+		return E_INSUFMEMORY;
+
+	if (_FSeek(hFile, nLoc, FS_FROMBOF) != nLoc)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+	if (_FWrite(hFile, pData, nLen) != nLen)
+	{
+		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall ReplaceMemo(Locator* pLoc, char* pData, int nLen, FCHAN hFile)
+{
+	long nLoc;
+	nLoc = _AllocMemo(pLoc, nLen);
+	if (nLoc == -1)
+		return E_INSUFMEMORY;
+
+	if (_FSeek(hFile, nLoc, FS_FROMBOF) != nLoc)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+	if (_FWrite(hFile, pData, nLen) != nLen)
+	{
+		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall AppendMemo(char* pData, int nLen, FCHAN hFile, long* nLocation)
+{
+	if (nLocation)
+	{
+		if (_FSeek(hFile, *nLocation, FS_FROMBOF) != *nLocation)
+		{
+			SaveCustomError("_FSeek", "Function failed.");
+			return E_APIERROR;
+		}
+	}
+	if (_FWrite(hFile, pData, nLen) != nLen)
+	{
+		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	if (nLocation)
+		*nLocation += nLen;
+	return 0;
+}
+
+int _fastcall Zap(int nWorkArea)
+{
+	CStrBuilder<64> pExeBuffer;
+	pExeBuffer.Format("ZAP IN %U", nWorkArea);
+	return _Execute(pExeBuffer);
+}
+
+int _fastcall Zap(CStringView pCursor)
+{
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	pExeBuffer.Format("ZAP IN %V", &pCursor);
+	return _Execute(pExeBuffer);
+}
+
+bool _fastcall Used(CStringView pCursor)
+{
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	Value vValue;
+	pExeBuffer.Format("USED('%V')", &pCursor);
+	vValue.ev_type = '0';
+	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
+	if (nErrorNo)
+		throw nErrorNo;
+	return vValue.ev_length > 0;
+}
+
+int _fastcall Select(int nWorkarea)
+{
+	CStrBuilder<64> pExeBuffer;
+	Value vValue;
+	pExeBuffer.Format("SELECT(%U)", nWorkarea);
+	vValue.ev_type = '0';
+	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
+	if (nErrorNo)
+		throw nErrorNo;
+	return vValue.ev_long;
+}
+
+int _fastcall Select(CStringView pCursor)
+{
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	Value vValue;
+	pExeBuffer.Format("SELECT('%V')", &pCursor);
+	vValue.ev_type = '0';
+	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
+	if (nErrorNo)
+		throw nErrorNo;
+	return vValue.ev_long;
+}
+
+int _fastcall SelectCmd(int nWorkarea)
+{
+	CStrBuilder<64> pExeBuffer;
+	pExeBuffer.Format("SELECT %U", nWorkarea);
+	return _Execute(pExeBuffer);
+}
+
 /* FoxString */
 FoxString::FoxString() : FoxValue('C')
 {
@@ -115,7 +587,7 @@ FoxString::FoxString(ParamBlkEx& parm, int nParmNo, unsigned int nExpand) : FoxV
 	Attach(parm, nParmNo, nExpand);
 }
 
-FoxString::FoxString(ParamBlkEx& parm, int nParmNo, FoxStringInitialization eInit)
+FoxString::FoxString(ParamBlkEx& parm, int nParmNo, FoxStringInitialization eInit) : FoxValue('C')
 {
 	Attach(parm, nParmNo, eInit);
 }
@@ -637,18 +1109,22 @@ FoxString& FoxString::RTrim(char cParseChar)
 FoxString& FoxString::Lower()
 {
 	if (m_String)
+	{
 #pragma warning(disable : 4996)
 		_strlwr(m_String);
 #pragma warning(default : 4996)
+	}
 	return *this;
 }
 
 FoxString& FoxString::Upper()
 {
 	if (m_String)
+	{
 #pragma warning(disable : 4996)
 		_strupr(m_String);
 #pragma warning(default : 4996)
+	}
 	return *this;
 }
 
@@ -795,7 +1271,8 @@ unsigned int FoxString::At(char cSearchFor, unsigned int nOccurence, unsigned in
 {
 	assert(m_String);
 	char *pSearch = m_String;
-	nMax = min(nMax, Len());
+	if (nMax == 0)
+		nMax = Len();
 
 	for (unsigned int nPos = 1; nPos <= nMax; nPos++)
 	{
@@ -929,8 +1406,12 @@ FoxString& FoxString::Fullpath()
 	assert(m_String);
 	ValueEx vFullpath;
 	vFullpath = 0;
-	CStrBuilder<VFP2C_MAX_CALLBACKFUNCTION> pExeBuffer;
-	pExeBuffer.Format("FULLPATH(\"%S\")+CHR(0)", m_String);
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pVarName;
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
+	pVarName.Format("_VFP2C32_FULLPATH_%U", this);
+	FoxVariable pVar(pVarName, false);
+	pVar() = m_Value;
+	pExeBuffer.Format("FULLPATH(m.%V)+CHR(0)", &pVarName.StringView());
 	::Evaluate(vFullpath, pExeBuffer);
 	return Attach(vFullpath);
 }
@@ -1149,6 +1630,8 @@ FoxString& FoxString::operator=(LocatorEx &pLoc)
 	int nErrorNo;
 	if (nErrorNo = _Load(pLoc, &m_Value))
 		throw nErrorNo;
+	m_String = (char*)_HandToPtr(m_Value.ev_handle);
+	m_BufferSize = m_Value.ev_length;
 #if defined(_DEBUGALLOCATIONS)
 	if (m_Value.ev_type == 'C')
 		VfpAllocationCount++;
@@ -1162,14 +1645,13 @@ FoxString& FoxString::operator=(FoxValue &pValue)
 		throw E_TYPECONFLICT;
 
 	unsigned int nSize = pValue.GetHandleSize(); 
-	if (Size() < nSize)
-		Size(nSize);
-
+	Size(nSize);
 	Len(pValue.Len());
 	Binary(pValue->ev_width == 1);
-	LockHandle();
-    m_String = HandleToPtr();
-	memcpy(m_String, pValue.HandleToPtr(), Len());
+	if (Len())
+		memcpy(m_String, pValue.HandleToPtr(), Len());
+	if (pValue->ev_width != 1)
+		m_String[Len()] = '\0';
 	return *this;
 }
 
@@ -1245,12 +1727,12 @@ FoxString& FoxString::operator=(const CWideStringView pWString)
 
 FoxString& FoxString::operator+=(const CStringView pString)
 {
-	unsigned int nLen = pString.Len + 1;
+	unsigned int nLen = pString.Len;
 	int nDiff = m_BufferSize - (Len() + nLen);
 	if (nDiff < 0)
 		Expand(m_BufferSize + (-nDiff));
 	memcpy(m_String + Len(), pString.Data, nLen);
-	Len(nLen - 1);
+	Len(Len() + nLen);
 	return *this;
 }
 
@@ -1275,11 +1757,6 @@ bool FoxString::operator==(const CStringView pString) const
 			return memcmp(m_String, pString.Data, pString.Len) == 0;
 	}
 	return false;
-}
-
-FoxString::operator CStringView()
-{ 
-	return CStringView(m_String, m_Value.ev_length);
 }
 
 /* FoxDate */
@@ -1738,22 +2215,7 @@ FoxMemo::FoxMemo(ParamBlkEx& parm, int nParmNo) : m_pContent(0)
 {
 	if (parm.pCount >= nParmNo && parm(nParmNo).IsMemoRef())
 	{
-		m_Loc.Init(parm(nParmNo));
-
-		m_Location = _FindMemo(m_Loc);
-		if (m_Location < 0)
-			throw E_FIELDNOTFOUND;
-
-		m_File = _MemoChan(m_Loc.l_where);
-		if (m_File == -1)
-		{
-			SaveCustomError("_MemoChan", "Function failed for workarea %I.", m_Loc.l_where);
-			throw E_APIERROR;
-		}
-
-		m_Size = _MemoSize(m_Loc);
-		if (m_Size < 0)
-			throw m_Size;
+		Attach(parm(nParmNo));
 	}
 	else
 	{
@@ -1765,6 +2227,24 @@ FoxMemo::FoxMemo(ParamBlkEx& parm, int nParmNo) : m_pContent(0)
 }
 
 FoxMemo::FoxMemo(LocatorEx &pLoc) : m_pContent(0)
+{
+	Attach(pLoc);
+}
+
+FoxMemo::FoxMemo(Value& pValue) : m_pContent(0)
+{
+	m_Location = (long)pValue.ev_real; // _FindMemo(pValue.ev_long);
+	m_File = pValue.ev_width; // _MemoChan(m_Loc.l_where);
+	m_Size = pValue.ev_long; // _MemoSize(m_Loc);
+}
+
+FoxMemo::~FoxMemo()
+{
+	if (m_pContent)
+		delete[] m_pContent;
+}
+
+void FoxMemo::Attach(LocatorEx& pLoc)
 {
 	m_Loc.Init(pLoc);
 
@@ -1779,15 +2259,14 @@ FoxMemo::FoxMemo(LocatorEx &pLoc) : m_pContent(0)
 		throw E_APIERROR;
 	}
 
-	m_Size = _MemoSize(m_Loc);
-	if (m_Size < 0)
-		throw m_Size;
-}
-
-FoxMemo::~FoxMemo()
-{
-	if (m_pContent)
-		delete[] m_pContent;
+	if (m_Location != 0)
+	{
+		m_Size = _MemoSize(m_Loc);
+		if (m_Size < 0)
+			throw m_Size;
+	}
+	else
+		m_Size = 0;
 }
 
 void FoxMemo::Alloc(unsigned int nSize)
@@ -1810,6 +2289,32 @@ void FoxMemo::Append(char *pData, unsigned int nLen)
 	if (_FWrite(m_File,pData,nLen) != nLen)
 		throw _FError();
 	m_Location += nLen;
+}
+
+void FoxMemo::ReadTo(char* pDestination, unsigned int nBytes)
+{
+	if (_FSeek(m_File, m_Location, FS_FROMBOF) != m_Location)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		throw E_APIERROR;
+	}
+	unsigned int nBytesRead = _FRead(m_File, pDestination, nBytes);
+	if (nBytesRead != nBytes)
+	{
+		SaveCustomError("_FRead", "Function failed.");
+		throw E_APIERROR;
+	}
+}
+
+void FoxMemo::ReadTo(FoxString& pDestination, unsigned int nBytes, bool bNullTerminate)
+{
+	if (nBytes == 0)
+		nBytes = m_Size;
+	pDestination.ExtendBuffer(nBytes + (bNullTerminate ? 1 : 0));
+	ReadTo(pDestination.Ptr<char*>(), nBytes);
+	pDestination.Len(nBytes);
+	if (bNullTerminate)
+		pDestination.NullTerminate();
 }
 
 char* FoxMemo::Read(unsigned int &nLen)
@@ -1880,6 +2385,19 @@ FoxArray::FoxArray(FoxParameterEx& pVal, unsigned int nRows, unsigned int nDims)
 	}
 }
 
+FoxArray::FoxArray(FoxParameterEx& pVal, bool bRaiseErrorIfNotExists)
+{
+	if (pVal->Vartype() == 'C' && pVal->Len() > 0)
+	{
+		Init(pVal.val, bRaiseErrorIfNotExists);
+	}
+	else
+	{
+		SaveCustomErrorEx("FoxArray:Constructor", "Invalid parameter type '%s' to initialize array.", 0, pVal->Vartype());
+		throw E_INVALIDPARAMS;
+	}
+}
+
 FoxArray::FoxArray(LocatorEx &pLoc)
 {
 	Init(pLoc);
@@ -1887,7 +2405,7 @@ FoxArray::FoxArray(LocatorEx &pLoc)
 
 FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo)
 { 
-	if (parm.pCount >= nParmNo)
+	if (parm.PCount() >= nParmNo)
 	{
 		FoxParameterEx& pParameter = parm(nParmNo);
 		if (pParameter->Vartype() == 'C')
@@ -1903,13 +2421,12 @@ FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo)
 
 FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo, char cTypeCheck)
 {
-	if (parm.pCount >= nParmNo)
+	if (parm.PCount() >= nParmNo)
 	{
 		FoxParameterEx& pVal = parm(nParmNo);
 		if (pVal->Vartype() == 'C')
 		{
 			Init(pVal.val);
-			return;
 		}
 		else if (pVal->Vartype() != cTypeCheck)
 		{
@@ -1917,7 +2434,8 @@ FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo, char cTypeCheck)
 			throw E_INVALIDPARAMS;
 		}
 	}
-	Init();
+	else
+		Init();
 }
 
 void FoxArray::Init()
@@ -1957,7 +2475,7 @@ void FoxArray::Init(ValueEx &pVal, unsigned int nRows, unsigned int nDims)
 	m_Loc.l_NTI = 0;
 	m_AutoGrow = 0;
 	m_AutoOverflow = 0;
-	if (nRows)
+	if (nRows > 0)
 		Dimension(nRows, nDims);
 	else
 	{
@@ -1967,6 +2485,36 @@ void FoxArray::Init(ValueEx &pVal, unsigned int nRows, unsigned int nDims)
 		m_Rows = 0;
 		m_Dims = 0;
 	}
+}
+
+void FoxArray::Init(ValueEx &pVal, bool bRaiseErrorIfNotExists)
+{
+	if (pVal.Vartype() != 'C' || pVal.ev_handle == 0 || pVal.ev_length == 0 || pVal.ev_length > VFP_MAX_VARIABLE_NAME)
+	{
+		SaveCustomError("FoxArray:Init", "Invalid parameter to initialize array: the parameter has to be the variable name as a string no longer than 128 characters");
+		throw E_INVALIDPARAMS;
+	}
+	m_Name.Append(pVal);
+	m_Name.SetFormatBase();
+	m_Loc.l_NTI = 0;
+	m_AutoGrow = 0;
+	m_AutoOverflow = 0;
+	if (bRaiseErrorIfNotExists)
+	{
+		if (!FindArray())
+			throw E_NOTANARRAY;
+		m_Loc.l_subs = m_Loc.l_sub2 > 1 ? 2 : 1;
+		m_Rows = m_Loc.l_sub1;
+		m_Dims = m_Loc.l_sub2;
+	}
+	else
+	{
+		m_Loc.l_subs = 0;
+		m_Rows = 0;
+		m_Dims = 0;
+	}
+	m_Loc.l_sub1 = 0;
+	m_Loc.l_sub2 = 0;
 }
 
 FoxArray& FoxArray::Dimension(unsigned int nRows, unsigned int nDims)
@@ -2157,6 +2705,11 @@ unsigned int FoxArray::CompactOverflow()
 	return m_Loc.l_sub1;
 }
 
+CStringView FoxArray::Name()
+{
+	return m_Name;
+}
+
 FoxCursor::~FoxCursor()
 {
 	if (m_AutoFLocked)
@@ -2317,7 +2870,7 @@ FoxCursor& FoxCursor::Attach(int nWorkArea, CStringView pFields)
 		if (!_FindVar(nVarNti, m_WorkArea, *(m_pFieldLocs + nFieldNo)))
 			throw E_FIELDNOTFOUND;
 
-		pFields = pFields + pField.Len;
+		pFields = pFields + (pField.Len + 1);
 	}
 	return *this;
 }

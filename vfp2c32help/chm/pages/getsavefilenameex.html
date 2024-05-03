@@ -3,22 +3,22 @@
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
-<title>GetOpenFileName</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<title>GetSaveFileNameEx</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
 <script src="/scripts/jscript.js" type="text/javascript"></script>
 </head><body>
 <div id="header">
 <p id="vfp2c32version"></p>
-<h1 class="function">GetOpenFileName</h1>
+<h1 class="function">GetSaveFileNameEx</h1>
 <div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
 </div>
 <div id="content">
-<p class="description">Creates an Open dialog box that lets the user specify the drive, directory, and the name of a file or set of files to be opened.</p>
+<p class="description">Creates a Save dialog box that lets the user specify the drive, directory, and name of a file to save.</p>
 
-<div class="block"><pre>GetOpenFileName([<a href="#p1">nFlags</a> [, <a href="#p2">cFileFilters</a> [, <a href="#p3">cFileName</a> [, <a href="#p4">cInitialDirectory</a> [, <a href="#p5">cDialogTitle</a> [, <a href="#p6">nFlagsEx</a> [, <a href="#p7">cArrayName</a> [, <a href="#p8">cCallbackFunc</a>]]]]]]]])</pre></div>
+<div class="block"><pre>GetSaveFileNameEx([<a href="#p1">nFlags</a> [, <a href="#p2">cFileFilters</a> [, <a href="#p3">cFileName</a> [, <a href="#p4">cInitialDirectory</a> [, <a href="#p5">cDialogTitle</a> [, <a href="#p6">nFlagsEx</a> [, <a href="#p7">cCallbackFunc</a>]]]]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">nFlags (optional, additive)</a></dt>
-<dd><p>if you omit nFlags parameter or pass 0 these flags are used:<br />
-OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_NODEREFERENCELINKS | OFN_FILEMUSTEXIST | OFN_DONTADDTORECENT<br />
+<dd><p>If you omit nFlags parameter or pass 0 these flags are used:<br />
+OFN_EXPLORER | OFN_NOCHANGEDIR<br />
 <br />
 Valid flags:</p>
 <table>
@@ -29,8 +29,7 @@ Valid flags:</p>
 <tr><td>OFN_FILEMUSTEXIST</td><td>Specifies that the user can type only names of existing files in the File Name entry field. If this flag is specified and the user enters an invalid name, the dialog box procedure displays a warning in a message box. If this flag is specified, the OFN_PATHMUSTEXIST flag is also used. This flag can be used in an Open dialog box. It cannot be used with a Save As dialog box.</td></tr>
 <tr><td>OFN_FORCESHOWHIDDEN</td><td>Windows 2000/XP: Forces the showing of system and hidden files, thus overriding the user setting to show or not show hidden files. However, a file that is marked both system and hidden is not shown.</td></tr>
 <tr><td>OFN_LONGNAMES</td><td>For old-style dialog boxes, this flag causes the dialog box to use long file names. If this flag is not specified, or if the OFN_ALLOWMULTISELECT flag is also set, old-style dialog boxes use short file names (8.3 format) for file names with spaces. Explorer-style dialog boxes ignore this flag and always display long file names.</td></tr>
-<tr><td>OFN_NOCHANGEDIR</td><td> Restores the current directory to its original value if the user changed the directory while searching for files.<br />
-Windows NT 4.0/2000/XP: This flag is ineffective for GetOpenFileName.</td></tr>
+<tr><td>OFN_NOCHANGEDIR</td><td> Restores the current directory to its original value if the user changed the directory while searching for files.</td></tr>
 <tr><td>OFN_NODEREFERENCELINKS</td><td>Directs the dialog box to return the path and file name of the selected shortcut (.LNK) file. If this value is not specified, the dialog box returns the path and file name of the file referenced by the shortcut.</td></tr>
 <tr><td>OFN_NOLONGNAMES</td><td>For old-style dialog boxes, this flag causes the dialog box to use short file names (8.3 format). Explorer-style dialog boxes ignore this flag and always display long file names.</td></tr>
 <tr><td>OFN_NONETWORKBUTTON</td><td>Hides and disables the Network button.</td></tr>
@@ -44,12 +43,12 @@ Windows NT 4.0/2000/XP: This flag is ineffective for GetOpenFileName.</td></tr>
 <dd><p>default = 'All' + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + '*.*'<br />
 <br />
 <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) seperated string of filters e.g.: "Tables" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "*.dbf" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "Databases" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "*.dbc"<br />
-You can also pass an empty string to omit the filter values.</p>
+you can also pass "" (empty string) to omit the filter values.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">cFileName (optional)</a></dt>
 <dd><p>default = empty<br />
 <br />
-Filename that is initially displayed in the dialog box.</p>
+The filename that is initially displayed in the dialog box.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">cInitialDirectory (optional)</a></dt>
 <dd><p>default = empty<br />
@@ -82,12 +81,7 @@ A string to be placed in the title bar of the dialog box. If this parameter is e
 <br />
 if you pass OFN_EX_NOPLACESBAR (1) as nFlagsEx paramter the dialog doesn't show the places bar (the button's on the left for common used directories).</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p7">cArrayName (optional)</a></dt>
-<dd><p>If you pass an arrayname the dialog will allow multiple file selection.<br />
-Instead of the filename the number of selected files will be returned by the function.<br />
-The first element in the array will contain the path to the selected files, each successive element will contain a filename (without path).</p>
-</dd></dl>
-<dl class="parm"><dt><a id="p8">cCallbackfunction (optional)</a></dt>
+<dl class="parm"><dt><a id="p7">cCallbackfunction (optional)</a></dt>
 <dd><p>If you pass a VFP function name the function will be called when events in the dialog occur. <br />
 <br />
 The function must have to following prototype.</p>
@@ -100,16 +94,16 @@ ENDFUNC
 <h2>Return Value</h2>
 <p>-1 if an error occured.<br />
 0 if the dialog was aborted.<br />
-The selected filename for single selection dialog or the number of files selected if an array name was passed for multiselection.</p>
+The entered filename.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
-<p><a href="/pages/getsavefilename.html">GetSaveFileName</a><br />
+<p><a href="/pages/getopenfilenameex.html">GetOpenFileNameEx</a><br />
 <a href="/pages/messageboxex.html">MessageBoxEx</a><br />
 <a href="/pages/shbrowsefolder.html">SHBrowseFolder</a><br />
 </p>
 <h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms646927(VS.85).aspx">GetOpenFileName</a><br />
+<p><a href="http://msdn.microsoft.com/en-us/library/ms646928(VS.85).aspx">GetSaveFileName</a><br />
 <a href="http://msdn.microsoft.com/en-us/library/ms646916(VS.85).aspx">CommDlgExtendedError</a></p>
 
 

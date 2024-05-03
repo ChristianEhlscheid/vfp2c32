@@ -24,6 +24,15 @@ const unsigned long VFP2C_VFP_MAX_CHARCOLUMN		= 254;
 const unsigned long VFP2C_VFP_MAX_COLUMNS			= 255;
 const unsigned long VFP2C_VFP_MAX_FIELDNAME			= VFP2C_VFP_MAX_CURSOR_NAME + 1 + VFP2C_VFP_MAX_COLUMN_NAME;
 
+template<class T>
+inline T AdvancePtr(T ptr, int nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
+
+template<class T>
+inline T AdvancePtr(T ptr, __int64 nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
+
+template<class T>
+inline T* IndexPtr(void* ptr, int nIndex) { return &reinterpret_cast<T*>(ptr)[nIndex]; }
+
 inline bool StrEqual(char *pString, char *pString2) { return strcmp(pString, pString2) == 0; }
 inline bool StrIEqual(char *pString, char *pString2) { return _stricmp(pString, pString2) == 0; }
 
@@ -57,38 +66,14 @@ inline unsigned __int64 SwapEndian(unsigned __int64 nValue)
 }
 
 // misc VFP related helper/conversion functions
-int _stdcall Dimension(char *pArrayName, unsigned long nRows, unsigned long nDims);
-int _stdcall DimensionEx(char *pArrayName, Locator *lArrayLoc, unsigned long nRows, unsigned long nDims);
-int _stdcall ASubscripts(Locator *pLoc, int *nRows, int *nDims);
-int _stdcall CreateFoxVar(char *pName, Locator *pLoc, int nScope);
-int _stdcall FindFoxVar(char *pName, Locator *pLoc);
-int _stdcall FindFoxField(char *pName, Locator *pLoc, int nWorkarea);
-int _stdcall FindFoxFieldEx(int nFieldNo, Locator *pLoc, int nWorkarea);
-int _stdcall FindFoxFieldC(char *pName, Locator *pLoc, char *pCursor);
-int _stdcall FindFoxVarOrField(char *pName, Locator *pLoc);
-int _stdcall FindFoxVarOrFieldEx(char *pName, Locator *pLoc);
-int _stdcall StoreEx(Locator *pLoc, Value *pValue);
-int _stdcall AllocMemo(Locator *pLoc, int nSize, long *nLoc);
-int _stdcall GetMemoContent(Value *pValue, char *pData);
-int _stdcall GetMemoContentN(Value *pValue, char *pData, int nLen, int nOffset);
-int _stdcall GetMemoContentEx(Locator *pLoc, char **pData, int *nErrorNo);
-int _stdcall ReplaceMemo(Locator *pLoc, char *pData, int nLen);
-int _stdcall ReplaceMemoEx(Locator *pLoc, char *pData, int nLen, FCHAN hFile);
-int _stdcall AppendMemo(char *pData, int nLen, FCHAN hFile, long *nLoc);
-int _stdcall MemoChan(int nWorkarea, FCHAN *nChan);
-int _stdcall DBAppendRecords(int nWorkArea, unsigned int nRecords);
-int _stdcall Zap(CStringView pCursor);
-bool _stdcall Used(CStringView pCursor);
-int _stdcall Select(CStringView pCursor);
-
 void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime);
 void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime);
-BOOL _stdcall FileTimeToDateTimeEx(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL bToLocal);
-BOOL _stdcall DateTimeToFileTimeEx(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL bToUTC);
+BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL bToLocal);
+BOOL _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL bToUTC);
 BOOL _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime, BOOL bToLocal);
-void _stdcall SystemTimeToDateTimeEx(LPSYSTEMTIME pSysTime, ValueEx& pDateTime);
+void _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime);
 BOOL _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime, BOOL bToLocal);
-void _stdcall DateTimeToSystemTimeEx(ValueEx& pDateTime, LPSYSTEMTIME pSysTime);
+void _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime);
 void _stdcall DateTimeToLocalDateTime(ValueEx& pDateTime);
 void _stdcall LocalDateTimeToDateTime(ValueEx& pDateTime);
 

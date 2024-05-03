@@ -429,7 +429,8 @@ FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD
 	m_Directory = pSearchPath;
 	m_StrBuilder = m_Directory;
 	m_StrBuilder.PathStripPath();
-	m_Wildcard = (CStringView)m_StrBuilder;
+	CStringView pWildcard = m_StrBuilder;
+	m_Wildcard = pWildcard;
 	if (m_Directory.Len() == m_Wildcard.Len())
 	{
 		m_Directory.Len(GetCurrentDirectory(m_Directory.Size(), m_Directory));
@@ -1428,11 +1429,21 @@ void _fastcall ADirectoryInfo(ParamBlkEx& parm)
 try
 {
 	FoxArray pArray(parm(1),3,1);
-	FoxString pDirectory(parm(2));
+	FoxString pDirectory;
 	FoxInt64 pFileSize;
 	int nDirectoryCount = 0;
 	int nFileCount = 0;
 	double nDirectorySize = 0.0;
+
+	if (parm(2)->Vartype() == 'C')
+		pDirectory.Attach(parm(2), 1);
+	else if (parm(2).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(2));
+		pMemo.ReadTo(pDirectory, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	pDirectory.AddBsWildcard();
 	if (pDirectory.Len() >= MAX_PATH)
@@ -1475,13 +1486,23 @@ void _fastcall AFileAttributes(ParamBlkEx& parm)
 try
 {
 	FoxArray pArray(parm(1),5,1);
-	FoxString pFileName(parm(2));
+	FoxString pFileName;
 	bool bToLocal = parm.PCount() == 2 || !parm(3)->ev_length;
 	bool bStringFileAttributes = parm.PCount() == 4 && parm(4)->ev_length;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
 	WIN32_FILE_ATTRIBUTE_DATA sFileAttribs;
 	BOOL bRet;
+
+	if (parm(2)->Vartype() == 'C')
+		pFileName.Attach(parm(2), 1);
+	else if (parm(2).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(2));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
@@ -1536,13 +1557,23 @@ void _fastcall AFileAttributesEx(ParamBlkEx& parm)
 try
 {
 	FoxArray pArray(parm(1),9,1);
-	FoxString pFileName(parm(2));
+	FoxString pFileName;
 	bool bToLocal = parm.PCount() == 2 || !parm(3)->ev_length;
 	bool bStringFileAttributes = parm.PCount() == 4 && parm(4)->ev_length;
 	FoxDateTime pFileTime;
 	FoxInt64 pFileSize;
 	ApiHandle hFile;
 	BY_HANDLE_FILE_INFORMATION sFileAttribs;
+
+	if (parm(2)->Vartype() == 'C')
+		pFileName.Attach(parm(2), 1);
+	else if (parm(2).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(2));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
@@ -1607,6 +1638,22 @@ void _fastcall GetFileTimes(ParamBlkEx& parm)
 {
 try
 {
+	FoxString pFileName;
+	bool bToLocal = parm.PCount() < 5 || !parm(5)->ev_length;
+	FoxDateTime pFileTime;
+	ApiHandle hFile;
+	FILETIME sCreationTime, sAccessTime, sWriteTime;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
 	if (parm(2)->Vartype() != 'R' && parm(2)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
@@ -1616,13 +1663,6 @@ try
 	if (parm.PCount() >= 4 && parm(4)->Vartype() != 'R' && parm(4)->Vartype() != '0')
 		throw E_INVALIDPARAMS;
 
-	FoxString pFileName(parm(1));
-	bool bToLocal = parm.PCount() < 5 || !parm(5)->ev_length;
-	FoxDateTime pFileTime;
-	ApiHandle hFile;
-
-	FILETIME sCreationTime, sAccessTime, sWriteTime;
-	
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
 
@@ -1686,11 +1726,21 @@ void _fastcall SetFileTimes(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	ApiHandle hFile;
 	FoxDateTime pTime;
 	bool bCreation, bAccess, bWrite;
 	bool bToUTC = parm.PCount() < 5 || parm(5)->ev_length;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (parm(2)->Vartype() == 'T')
 		bCreation = parm(2)->ev_real != 0.0;
@@ -1784,14 +1834,24 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetFileSizeLib(ParamBlkEx& parm)
+void _fastcall GetFileSizeExLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	FoxInt64 pFileSize;
 	ApiHandle hFile;
 	LARGE_INTEGER sSize;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
@@ -1828,14 +1888,24 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetFileAttributesLib(ParamBlkEx& parm)
+void _fastcall GetFileAttributesEx2(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	bool bStringFileAttributes = parm.PCount() == 2 && parm(2)->ev_length;
 	DWORD nAttribs;
     
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
 
@@ -1864,83 +1934,6 @@ try
 	}
 	else
 		Return(nAttribs);
-}
-catch(int nErrorNo)
-{
-	RaiseError(nErrorNo);
-}
-}
-
-void _fastcall SetFileAttributesLib(ParamBlkEx& parm)
-{
-try
-{
-	FoxString pFileName(parm(1));
-	FoxWString<MAX_PATH * 2> pWideFilename;
-	DWORD dwFileAttributes, dwFileAttributesSet, dwFileAttributesClear;
-	bool bClearOrSet;
-	if (parm.PCount() == 2)
-	{
-		if (parm(2)->Vartype() == 'I')
-		{
-			dwFileAttributes = parm(2)->ev_long;
-			bClearOrSet = false;
-		}
-		else if (parm(2)->Vartype() == 'C')
-		{
-			FoxString pAttributes(parm(2), 0);
-			bClearOrSet = pAttributes.StringToFileAttributes(dwFileAttributesSet, dwFileAttributesClear);
-			if (!bClearOrSet)
-				dwFileAttributes = dwFileAttributesSet;
-		}
-		else
-			throw E_INVALIDPARAMS;
-	}
-	else if (parm.PCount() == 3)
-	{
-		bClearOrSet = true;
-		if (parm(2)->Vartype() == 'I')
-		{
-			dwFileAttributesSet = parm(2)->ev_long;
-			dwFileAttributesClear = parm(3)->ev_long;
-		}
-		else
-			throw E_INVALIDPARAMS;
-	}
-
-	BOOL bRet;
-	if (pFileName.Len() < MAX_PATH)
-		pFileName.Fullpath();
-
-	if (pFileName.Len() >= MAX_PATH)
-		pWideFilename = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-	
-	if (bClearOrSet)
-	{
-		if (pFileName.Len() < MAX_PATH)
-			dwFileAttributes = GetFileAttributes(pFileName);
-		else
-			dwFileAttributes = GetFileAttributesW(pWideFilename);
-		if (dwFileAttributes == INVALID_FILE_ATTRIBUTES)
-		{
-			SaveWin32Error("GetFileAttributes", GetLastError());
-			throw E_APIERROR;
-		}
-
-		dwFileAttributes |= dwFileAttributesSet;
-		dwFileAttributes &= ~dwFileAttributesClear;
-	}
-
-	if (pFileName.Len() < MAX_PATH)
-		bRet = SetFileAttributes(pFileName, dwFileAttributes);
-	else
-		bRet = SetFileAttributesW(pWideFilename, dwFileAttributes);
-	
-	if (!bRet)
-	{
-		SaveWin32Error("SetFileAttributes", GetLastError());
-		throw E_APIERROR;
-	}
 }
 catch(int nErrorNo)
 {
@@ -1978,36 +1971,120 @@ void _stdcall SetFileAttributesExCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWO
 	}
 }
 
-void _fastcall SetFileAttributesLibEx(ParamBlkEx& parm)
+void _fastcall SetFileAttributesEx(ParamBlkEx& parm)
 {
-FileSearch* pFileSearch = 0;
+	FileSearch* pFileSearch = 0;
 try
 {
-	FoxString pWildcard(parm(1));
-	SETFILEATTRIBUTEPARAM pCallbackParam;
-	if (parm(2)->Vartype() == 'I')
+	FoxString pFileName;
+	FoxWString<MAX_PATH * 2> pWideFilename;
+	DWORD dwFileAttributes, dwFileAttributesSet, dwFileAttributesClear;
+	bool bClearOrSet;
+	BOOL bRet;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
 	{
-		pCallbackParam.bClearOrSet = false;
-		pCallbackParam.nFileAttributesSet = parm(2)->ev_long;
-	}
-	else if (parm(2)->Vartype() == 'C')
-	{
-		FoxString pAttributes(parm(2), 0);
-		pCallbackParam.bClearOrSet = pAttributes.StringToFileAttributes(pCallbackParam.nFileAttributesSet, pCallbackParam.nFileAttributesClear);
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
 	}
 	else
 		throw E_INVALIDPARAMS;
-	
-	int nMaxRecursion = parm.PCount() < 3 ? -1 : parm(3)->ev_long;
-	bool bRecurse = nMaxRecursion >= 0;
-	pFileSearch = new FileSearch(bRecurse, pWildcard, 0, 0, 0, ADIREX_FULLPATH, false, false, nMaxRecursion);
-	if (pFileSearch == 0)
-		throw E_INSUFMEMORY;
 
-	unsigned int nFileCount = pFileSearch->ExecuteSearchCallback(SetFileAttributesExCallback, (LPVOID)&pCallbackParam);
-	Return(nFileCount);
+	if (parm.PCount() == 2)
+	{
+		if (parm(2)->Vartype() == 'I')
+		{
+			dwFileAttributes = parm(2)->ev_long;
+			bClearOrSet = false;
+		}
+		else if (parm(2)->Vartype() == 'C')
+		{
+			FoxString pAttributes(parm(2), 0);
+			bClearOrSet = pAttributes.StringToFileAttributes(dwFileAttributesSet, dwFileAttributesClear);
+			if (!bClearOrSet)
+				dwFileAttributes = dwFileAttributesSet;
+		}
+		else
+			throw E_INVALIDPARAMS;
+	}
+	else if (parm.PCount() == 3)
+	{
+		bClearOrSet = true;
+		if (parm(2)->Vartype() == 'I')
+		{
+			dwFileAttributesSet = parm(2)->ev_long;
+			dwFileAttributesClear = parm(3)->ev_long;
+		}
+		else
+			throw E_INVALIDPARAMS;
+	}
+
+	if (parm.PCount() < 4 || !parm(4)->ev_length)
+	{
+		if (pFileName.Len() < MAX_PATH)
+			pFileName.Fullpath();
+
+		if (pFileName.Len() >= MAX_PATH)
+			pWideFilename = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+
+		if (bClearOrSet)
+		{
+			if (pFileName.Len() < MAX_PATH)
+				dwFileAttributes = GetFileAttributes(pFileName);
+			else
+				dwFileAttributes = GetFileAttributesW(pWideFilename);
+			if (dwFileAttributes == INVALID_FILE_ATTRIBUTES)
+			{
+				SaveWin32Error("GetFileAttributes", GetLastError());
+				throw E_APIERROR;
+			}
+
+			dwFileAttributes |= dwFileAttributesSet;
+			dwFileAttributes &= ~dwFileAttributesClear;
+		}
+
+		if (pFileName.Len() < MAX_PATH)
+			bRet = SetFileAttributes(pFileName, dwFileAttributes);
+		else
+			bRet = SetFileAttributesW(pWideFilename, dwFileAttributes);
+
+		if (!bRet)
+		{
+			SaveWin32Error("SetFileAttributes", GetLastError());
+			throw E_APIERROR;
+		}
+	}
+	else
+	{
+		SETFILEATTRIBUTEPARAM pCallbackParam;
+
+		if (parm(2)->Vartype() == 'I')
+		{
+			pCallbackParam.bClearOrSet = false;
+			pCallbackParam.nFileAttributesSet = parm(2)->ev_long;
+		}
+		else if (parm(2)->Vartype() == 'C')
+		{
+			FoxString pAttributes(parm(2), 0);
+			pCallbackParam.bClearOrSet = pAttributes.StringToFileAttributes(pCallbackParam.nFileAttributesSet, pCallbackParam.nFileAttributesClear);
+		}
+		else
+			throw E_INVALIDPARAMS;
+
+		int nMaxRecursion = parm.PCount() < 3 ? -1 : parm(3)->ev_long;
+		bool bRecurse = nMaxRecursion >= 0;
+		pFileSearch = new FileSearch(bRecurse, pFileName, 0, 0, 0, ADIREX_FULLPATH, false, false, nMaxRecursion);
+		if (pFileSearch == 0)
+			throw E_INSUFMEMORY;
+
+		unsigned int nFileCount = pFileSearch->ExecuteSearchCallback(SetFileAttributesExCallback, (LPVOID)&pCallbackParam);
+		Return(nFileCount);
+	}
+
 }
-catch (int nErrorNo)
+catch(int nErrorNo)
 {
 	RaiseError(nErrorNo);
 }
@@ -2019,7 +2096,7 @@ void _fastcall GetFileOwner(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	FoxString pOwner(MAX_PATH);
 	FoxString pDomain(MAX_PATH);
 	CBuffer pDescBuffer;
@@ -2030,6 +2107,16 @@ try
 	BOOL bOwnerDefaulted;
 	PSECURITY_DESCRIPTOR pSecDesc;
 	PSID pOwnerId;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
@@ -2107,13 +2194,23 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetLongPathNameLib(ParamBlkEx& parm)
+void _fastcall GetLongPathNameEx(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	FoxString pPathName(MAX_PATH);
 	DWORD nLen = 0;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
@@ -2153,13 +2250,23 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetShortPathNameLib(ParamBlkEx& parm)
+void _fastcall GetShortPathNameEx(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	FoxString pPathName(MAX_PATH);
 	DWORD nLen;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 		pFileName.Fullpath();
@@ -2203,13 +2310,33 @@ void _fastcall CopyFileExLib(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pSource(parm(1));
-	FoxString pDest(parm(2));
+	FoxString pSource;
+	FoxString pDest;
 	FoxString pCallback(parm,3);
 	DWORD dwCopyFlags = parm.PCount() >= 4 ? parm(4)->ev_long : (COPY_FILE_NO_BUFFERING);
 	DWORD dwCallbackLimiter = parm.PCount() == 5 ? parm(5)->ev_long : 100;
 	BOOL bRetVal, bCanceled = 0;
 	FILEPROGRESSPARAM sProgress;
+
+	if (parm(1)->Vartype() == 'C')
+		pSource.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pSource, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
+	if (parm(2)->Vartype() == 'C')
+		pDest.Attach(parm(2), 1);
+	else if (parm(2).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(2));
+		pMemo.ReadTo(pDest, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 	{
@@ -2224,12 +2351,6 @@ try
 		sProgress.nCallbackLimiter.QuadPart = dwCallbackLimiter;
 	}
 
-	if (pSource.Len() >= MAX_PATH)
-		pSource.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-
-	if (pDest.Len() >= MAX_PATH)
-		pDest.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-
 	if (pSource.Len() < MAX_PATH && pDest.Len() < MAX_PATH)
 	{
 		bRetVal = CopyFileEx(pSource, pDest, bCallback ? FileProgressCallback : 0, bCallback ? &sProgress : 0, &bCanceled, dwCopyFlags);
@@ -2238,8 +2359,8 @@ try
 	{
 		FoxWString<MAX_PATH * 2> pWideSource;
 		FoxWString<MAX_PATH * 2> pWideDest;
-		pWideSource = pSource;
-		pWideDest = pDest;
+		pWideSource = pSource.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+		pWideDest = pDest.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		bRetVal = CopyFileExW(pWideSource, pWideDest, bCallback ? FileProgressCallback : 0, bCallback ? &sProgress : 0, &bCanceled, dwCopyFlags);
 	}
 
@@ -2265,13 +2386,33 @@ void _fastcall MoveFileExLib(ParamBlkEx& parm)
 {
 try
 {
- 	FoxString pSource(parm(1));
- 	FoxString pDest(parm(2));
+ 	FoxString pSource;
+ 	FoxString pDest;
 	FoxString pCallback(parm,3);
 	DWORD dwMoveFlags = parm.PCount() >= 4 ? parm(4)->ev_long : (MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH);
 	DWORD dwCallbackLimiter = parm.PCount() == 5 ? parm(5)->ev_long : 100;
 	BOOL bRetVal;
 	FILEPROGRESSPARAM sProgress;
+
+	if (parm(1)->Vartype() == 'C')
+		pSource.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pSource, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
+	if (parm(2)->Vartype() == 'C')
+		pDest.Attach(parm(2), 1);
+	else if (parm(2).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(2));
+		pMemo.ReadTo(pDest, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 	{
@@ -2288,12 +2429,6 @@ try
 		sProgress.nCallbackLimiter.QuadPart = dwCallbackLimiter;
 	}
 
-	if (pSource.Len() >= MAX_PATH)
-		pSource.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-	
-	if (pDest.Len() >= MAX_PATH)
-		pDest.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-
 	if (pSource.Len() < MAX_PATH && pDest.Len() < MAX_PATH)
 	{
 		bRetVal = MoveFileWithProgress(pSource, pDest, bCallback ? FileProgressCallback : 0, bCallback ? &sProgress : 0, dwMoveFlags);
@@ -2302,8 +2437,8 @@ try
 	{
 		FoxWString<MAX_PATH * 2> pWideSource;
 		FoxWString<MAX_PATH * 2> pWideDest;
-		pWideSource = pSource;
-		pWideDest = pDest;
+		pWideSource = pSource.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
+		pWideDest = pDest.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		bRetVal = MoveFileWithProgressW(pWideSource, pWideDest, bCallback ? FileProgressCallback : 0, bCallback ? &sProgress : 0, dwMoveFlags);
 	}
 
@@ -2329,10 +2464,8 @@ void FILEPROGRESSPARAM::ConvertRetVal()
 {
 	if (vRetVal.Vartype() == 'L')
 		nStatus = vRetVal.ev_length ? PROGRESS_CONTINUE : PROGRESS_CANCEL;
-	else if (vRetVal.Vartype() == 'I')
-		nStatus = vRetVal.ev_long;
-	else if (vRetVal.Vartype() == 'N')
-		nStatus = static_cast<DWORD>(vRetVal.ev_real);
+	else if (vRetVal.Numeric())
+		nStatus = vRetVal.NumericCast<DWORD>();
 	else
 	{
 		vRetVal.Release();
@@ -2376,11 +2509,32 @@ void _fastcall CompareFileTimes(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFile1(parm(1));
-	FoxString pFile2(parm(2));
+	FoxString pFile1;
+	FoxString pFile2;
 	ApiHandle hSource, hDest;
+	int nTimeType = parm.PCount() >= 3 ? parm(3)->ev_long : 0;
 	LARGE_INTEGER sSourceTime, sDestTime;
 	FoxWString<MAX_PATH> pWideFile;
+
+	if (parm(1)->Vartype() == 'C')
+		pFile1.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFile1, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
+	if (parm(2)->Vartype() == 'C')
+		pFile2.Attach(parm(2), 1);
+	else if (parm(2).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(2));
+		pMemo.ReadTo(pFile2, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	pFile1.Fullpath();
 	pFile2.Fullpath();
@@ -2389,8 +2543,7 @@ try
 		hSource = CreateFile(pFile1, 0, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	else
 	{
-		pFile1.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		pWideFile = pFile1;
+		pWideFile = pFile1.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		hSource = CreateFileW(pWideFile, 0, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	}
 
@@ -2404,8 +2557,7 @@ try
 		hDest = CreateFile(pFile2, 0, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	else
 	{
-		pFile2.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		pWideFile = pFile2;
+		pWideFile = pFile2.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		hDest = CreateFileW(pWideFile, 0, 0, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	}
 
@@ -2415,16 +2567,52 @@ try
 		throw E_APIERROR;
 	}
 
-	if (!GetFileTime(hSource, 0, 0, (LPFILETIME)&sSourceTime))
+	switch (nTimeType)
 	{
-		SaveWin32Error("GetFileTime", GetLastError());
-		throw E_APIERROR;
-	}
+		case 0:
+			if (!GetFileTime(hSource, 0, 0, (LPFILETIME)&sSourceTime))
+			{
+				SaveWin32Error("GetFileTime", GetLastError());
+				throw E_APIERROR;
+			}
 
-	if (!GetFileTime(hDest, 0, 0, (LPFILETIME)&sDestTime))
-	{
-		SaveWin32Error("GetFileTime", GetLastError());
-		throw E_APIERROR;
+			if (!GetFileTime(hDest, 0, 0, (LPFILETIME)&sDestTime))
+			{
+				SaveWin32Error("GetFileTime", GetLastError());
+				throw E_APIERROR;
+			}
+			break;
+
+		case 1:
+			if (!GetFileTime(hSource, 0, (LPFILETIME)&sSourceTime, 0))
+			{
+				SaveWin32Error("GetFileTime", GetLastError());
+				throw E_APIERROR;
+			}
+
+			if (!GetFileTime(hDest, 0, (LPFILETIME)&sDestTime, 0))
+			{
+				SaveWin32Error("GetFileTime", GetLastError());
+				throw E_APIERROR;
+			}
+			break;
+
+		case 2:
+			if (!GetFileTime(hSource, (LPFILETIME)&sSourceTime, 0, 0))
+			{
+				SaveWin32Error("GetFileTime", GetLastError());
+				throw E_APIERROR;
+			}
+
+			if (!GetFileTime(hDest, (LPFILETIME)&sDestTime, 0, 0))
+			{
+				SaveWin32Error("GetFileTime", GetLastError());
+				throw E_APIERROR;
+			}
+			break;
+
+		default:
+			throw E_INVALIDPARAMS;
 	}
 
 	if (sSourceTime.QuadPart == sDestTime.QuadPart)
@@ -2444,7 +2632,17 @@ void _fastcall DeleteFileEx(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	if (pFileName.Len() < MAX_PATH)
 	{
@@ -2453,15 +2651,32 @@ try
 	}
 	else
 	{
-		pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		FoxWString<MAX_PATH*2> pWideFileName;
-		pWideFileName = pFileName;
+		pWideFileName = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		DeleteFileExImpl(pWideFileName, INVALID_FILE_ATTRIBUTES);
 	}
+	if (parm.PCount() < 2 || parm(2)->ev_long == 1)
+		Return(true);
+	else if (parm(2)->ev_long == 2)
+		Return(0);
+	else
+		Return("");
 }
-catch(int nErrorNo)
+catch (int nErrorNo)
 {
-	RaiseError(nErrorNo);
+	if (parm.PCount() < 2)
+		RaiseError(nErrorNo);
+	else if (parm(2)->ev_long == 1)
+		Return(false);
+	else
+	{
+		VFP2CTls& tls = VFP2CTls::Tls();
+		LPVFP2CERROR pError = &tls.ErrorInfo[tls.ErrorCount];
+		if (parm(2)->ev_long == 2)
+			Return(pError->nErrorNo);
+		else
+			Return(pError->aErrorMessage);
+	}
 }
 }
 
@@ -2500,7 +2715,17 @@ void _fastcall DeleteDirectory(ParamBlkEx& parm)
 	FileSearch* pFileSearch = 0;
 try
 {
-	FoxString pDirectory(parm(1));
+	FoxString pDirectory;
+	if (parm(1)->Vartype() == 'C')
+		pDirectory.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pDirectory, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
 	FoxString pSearch(pDirectory);
 	pSearch.AddBsWildcard();
 	pFileSearch = new FileSearch(true, pSearch, 0, 0, 0, ADIREX_FULLPATH);
@@ -2526,7 +2751,7 @@ if (pFileSearch)
 	delete pFileSearch;
 }
 
-void _fastcall GetOpenFileNameLib(ParamBlkEx& parm)
+void _fastcall GetOpenFileNameEx(ParamBlkEx& parm)
 {
 try
 {
@@ -2534,7 +2759,7 @@ try
 	FoxString pFileName(parm,3);
 	FoxString pInitialDir(parm,4);
 	FoxString pTitle(parm,5);
-	FoxArray pArray(parm,7);
+	FoxArray pArray(parm, 7, 1);
 	FoxString pCallback(parm,8);
 	FoxString pFiles(MAX_OPENFILENAME_BUFFER);
 	FoxString pFileBuffer;
@@ -2662,7 +2887,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetSaveFileNameLib(ParamBlkEx& parm)
+void _fastcall GetSaveFileNameEx(ParamBlkEx& parm)
 {
 try
 {
@@ -2784,10 +3009,8 @@ UINT_PTR _stdcall GetFileNameCallback(HWND hDlg, UINT uMsg, WPARAM wParam, LPARA
 			lpCallback->nErrorNo = lpCallback->pCallback.Evaluate(lpCallback->vRetVal, lpHdr->hwndFrom, lpHdr->idFrom, lpHdr->code);
 			if (lpCallback->nErrorNo == 0)
 			{
-				if (lpCallback->vRetVal.Vartype() == 'I')
-					return lpCallback->vRetVal.ev_long;
-				else if (lpCallback->vRetVal.Vartype() == 'N')
-					return static_cast<UINT_PTR>(lpCallback->vRetVal.ev_real);
+				if (lpCallback->vRetVal.Numeric())
+					return lpCallback->vRetVal.NumericCast<UINT_PTR>();
 				else if (lpCallback->vRetVal.Vartype() == 'L')
 					return lpCallback->vRetVal.ev_length;
 				else
@@ -2873,7 +3096,7 @@ void _fastcall AVolumes(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(parm(1), 1);
+	FoxArray pArray(parm(1), 1, 1);
 	VolumeSearch pSearch;
 
 	if (pSearch.FindFirst())
@@ -2898,7 +3121,7 @@ void _fastcall AVolumeMountPoints(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(parm(1), 1);
+	FoxArray pArray(parm(1), 1, 1);
 	FoxString pVolume(parm(2));
 	VolumeMountPointSearch pSearch;
 
@@ -2996,7 +3219,7 @@ void _fastcall AVolumeInformation(ParamBlkEx& parm)
 {
 try
 {
-	FoxArray pArray(parm(1), 5);
+	FoxArray pArray(parm(1), 5, 1);
 	FoxString pRootPath(parm(2), 2);
 	FoxString pVolumeName(MAX_PATH);
 	FoxString pFileSystemName(MAX_PATH);
@@ -3024,7 +3247,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetWindowsDirectoryLib(ParamBlkEx& parm)
+void _fastcall GetWindowsDirectoryEx(ParamBlkEx& parm)
 {
 try
 {
@@ -3045,7 +3268,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall GetSystemDirectoryLib(ParamBlkEx& parm)
+void _fastcall GetSystemDirectoryEx(ParamBlkEx& parm)
 {
 try
 {
@@ -3066,7 +3289,7 @@ catch(int nErrorNo)
 }
 }
 
-void _fastcall ExpandEnvironmentStringsLib(ParamBlkEx& parm)
+void _fastcall ExpandEnvironmentStringsEx(ParamBlkEx& parm)
 {
 try
 {
@@ -3188,7 +3411,17 @@ void _fastcall FCreateEx(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
+
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
 
 	HANDLE hFile;
 	DWORD dwAccess, dwShare, dwFlags;
@@ -3199,9 +3432,8 @@ try
 		hFile = CreateFile(pFileName, dwAccess, dwShare, 0, CREATE_ALWAYS, dwFlags, 0);
 	else
 	{
-		pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		FoxWString<MAX_PATH*2> pWideFileName;
-		pWideFileName = pFileName;
+		pWideFileName = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		hFile = CreateFileW(pWideFileName,dwAccess,dwShare,0,CREATE_ALWAYS,dwFlags,0);
 	}
 
@@ -3227,11 +3459,20 @@ void _fastcall FOpenEx(ParamBlkEx& parm)
 {
 try
 {
-	FoxString pFileName(parm(1));
+	FoxString pFileName;
 	HANDLE hFile;
 	DWORD dwAccess, dwShare, dwFlags;
 
-	// get a free entry in our file handle array
+	if (parm(1)->Vartype() == 'C')
+		pFileName.Attach(parm(1), 1);
+	else if (parm(1).IsMemoRef())
+	{
+		FoxMemo pMemo(parm(1));
+		pMemo.ReadTo(pFileName, 0, true);
+	}
+	else
+		throw E_INVALIDPARAMS;
+
 	if (pFileName.Len() <= MAX_PATH)
 		pFileName.Fullpath();
 
@@ -3241,9 +3482,8 @@ try
         hFile = CreateFile(pFileName,dwAccess,dwShare,0,OPEN_EXISTING,dwFlags,0);
 	else
 	{
-		pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		FoxWString<MAX_PATH * 2> pWideFileName;
-		pWideFileName = pFileName;
+		pWideFileName = pFileName.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 		hFile = CreateFileW(pWideFileName,dwAccess,dwShare,0,OPEN_EXISTING,dwFlags,0);
 	}
 
@@ -3642,17 +3882,13 @@ try
 	HANDLE hFile = parm(1)->Ptr<HANDLE>();
 	LARGE_INTEGER nOffset, nLen;
 
-	if (parm(2)->Vartype() == 'I')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_long);
-	else if (parm(2)->Vartype() == 'N')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_real);
+	if (parm(2)->Numeric())
+		nOffset.QuadPart = parm(2)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 
-	if (parm(3)->Vartype() == 'I')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_long);
-	else if (parm(3)->Vartype() == 'N')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_real);
+	if (parm(3)->Numeric())
+		nLen.QuadPart = parm(3)->NumericCast<__int64>(); 
 	else
 		throw E_INVALIDPARAMS;
 
@@ -3676,17 +3912,13 @@ try
 	HANDLE hFile = parm(1)->Ptr<HANDLE>();
 	LARGE_INTEGER nOffset, nLen;
 
-	if (parm(2)->Vartype() == 'I')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_long);
-	else if (parm(2)->Vartype() == 'N')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_real);
+	if (parm(2)->Numeric())
+		nOffset.QuadPart = parm(2)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 
-	if (parm(3)->Vartype() == 'I')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_long);
-	else if (parm(3)->Vartype() == 'N')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_real);
+	if (parm(3)->Numeric())
+		nLen.QuadPart = parm(3)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 
@@ -3712,17 +3944,13 @@ try
 	LARGE_INTEGER nOffset, nLen;
 	OVERLAPPED sOverlap;
 
-	if (parm(2)->Vartype() == 'I')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_long);
-	else if (parm(2)->Vartype() == 'N')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_real);
+	if (parm(2)->Numeric())
+		nOffset.QuadPart = parm(2)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 
-	if (parm(3)->Vartype() == 'I')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_long);
-	else if (parm(3)->Vartype() == 'N')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_real);
+	if (parm(3)->Numeric())
+		nLen.QuadPart = parm(3)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 
@@ -3752,17 +3980,13 @@ try
 	LARGE_INTEGER nOffset, nLen;
 	OVERLAPPED sOverlap;
 
-	if (parm(2)->Vartype() == 'I')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_long);
-	else if (parm(2)->Vartype() == 'N')
-		nOffset.QuadPart = static_cast<__int64>(parm(2)->ev_real);
+	if (parm(2)->Numeric())
+		nOffset.QuadPart = parm(2)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 
-	if (parm(3)->Vartype() == 'I')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_long);
-	else if (parm(3)->Vartype() == 'N')
-		nLen.QuadPart = static_cast<__int64>(parm(3)->ev_real);
+	if (parm(3)->Numeric())
+		nLen.QuadPart = parm(3)->NumericCast<__int64>();
 	else
 		throw E_INVALIDPARAMS;
 

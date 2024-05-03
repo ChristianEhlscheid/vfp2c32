@@ -80,20 +80,40 @@ void _fastcall Alltrim(char* pString);
 char* _fastcall AtEx(char* pString, char pSearch, int nOccurence);
 char* _fastcall ReplicateEx(char* pBuffer, char pExpr, int nCount);
 
-// misc string parsing functions
-void _fastcall skip_ws(char** pString);
-BOOL _fastcall match_identifier(char** pString, char* pBuffer, int nMaxLen);
-BOOL _fastcall match_dotted_identifier(char** pString, char* pBuffer, int nMaxLen);
-BOOL _fastcall match_quoted_identifier(char** pString, char* pBuffer, int nMaxLen);
-BOOL _fastcall match_quoted_identifier_ex(char** pString, char* pBuffer, int nMaxLen);
-BOOL _fastcall match_str(char** pString, char* pSearch);
-BOOL _fastcall match_istr(char** pString, char* pSearch);
-BOOL _fastcall match_chr(char** pString, char pChar);
-BOOL _fastcall match_one_chr(char** pString, char* pChars, char* pFound);
-BOOL _fastcall match_int(char** pString, int* nInt);
-BOOL _fastcall match_short(char** pString, short* nShort);
-
 char* _fastcall str_append(char* pBuffer, char* pString);
 int _fastcall str_charcount(char* pString, char pChar);
+
+class CStringMatcher
+{
+public:
+	CStringMatcher(CStringView pString);
+	bool MatchIdentifier(char* pBuffer, int nMaxLen);
+	bool MatchIdentifier(CStringView& pMatch, int nMaxLen = 2^31);
+	bool MatchDottedIdentifier(char* pBuffer, int nMaxLen);
+	bool MatchDottedIdentifier(CStringView& pMatch, int nMaxLen = 2^31);
+	bool MatchQuotedIdentifier(char* pBuffer, int nMaxLen);
+	bool MatchQuotedIdentifier(CStringView& pMatch, int nMaxLen = 2^31);
+	bool MatchString(const char* pSearch);
+	bool MatchStringCaseInsensitive(const char* pSearch);
+	bool MatchChar(char pSearch);
+	bool MatchChars(const char* pChars, char* pFound);
+	bool MatchInteger(int* nInt);
+	bool MatchUInteger(unsigned int* nUInt);
+	bool MatchULong(unsigned long* nULong);
+	bool MatchULong(unsigned long* nULong, int* nLen);
+	bool MatchShort(short* nShort);
+	bool MatchUShort(unsigned short* nShort);
+	CStringView CurrentView();
+	bool End();
+
+private:
+	void SkipWhitespace();
+	unsigned int MatchIdentifier(int nMaxLen);
+	unsigned int MatchDottedIdentifier(int nMaxLen);
+	unsigned int MatchQuotedIdentifier(int nMaxLen);
+	char* m_String;
+	unsigned int m_Length;
+	unsigned int m_CurrentPos;
+};
 
 #endif // _VFP2CSTRING_H__

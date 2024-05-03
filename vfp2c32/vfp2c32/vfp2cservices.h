@@ -61,20 +61,20 @@ private:
 extern "C" {
 #endif
 
-void _fastcall OpenServiceLib(ParamBlkEx& parm);
-void _fastcall CloseServiceHandleLib(ParamBlkEx& parm);
-void _fastcall StartServiceLib(ParamBlkEx& parm);
-void _fastcall StopServiceLib(ParamBlkEx& parm);
+void _fastcall OpenServiceEx(ParamBlkEx& parm);
+void _fastcall CloseServiceHandleEx(ParamBlkEx& parm);
+void _fastcall StartServiceEx(ParamBlkEx& parm);
+void _fastcall StopServiceEx(ParamBlkEx& parm);
 void _fastcall PauseService(ParamBlkEx& parm);
 void _fastcall ContinueService(ParamBlkEx& parm);
-void _fastcall ControlServiceLib(ParamBlkEx& parm);
+void _fastcall ControlServiceEx2(ParamBlkEx& parm);
 void _fastcall AServices(ParamBlkEx& parm);
 void _fastcall AServiceStatus(ParamBlkEx& parm);
 void _fastcall AServiceConfig(ParamBlkEx& parm);
 void _fastcall ADependentServices(ParamBlkEx& parm);
 void _fastcall WaitForServiceStatus(ParamBlkEx& parm);
-void _fastcall CreateServiceLib(ParamBlkEx& parm);
-void _fastcall DeleteServiceLib(ParamBlkEx& parm);
+void _fastcall CreateServiceEx(ParamBlkEx& parm);
+void _fastcall DeleteServiceEx(ParamBlkEx& parm);
 
 #ifdef __cplusplus
 }

@@ -28,6 +28,7 @@ extern "C" {
 void _fastcall OnLoad();
 void _fastcall OnUnload();
 
+void _fastcall VFP2C32(ParamBlk& parm);
 void _fastcall VFP2CSys(ParamBlkEx& parm);
 void _fastcall AErrorEx(ParamBlkEx& parm);
 void _fastcall FormatMessageEx(ParamBlkEx& parm);
@@ -68,8 +69,8 @@ inline void SaveWin32Error(char *pFunction, unsigned long nErrorNo) { Win32Error
 inline void AddWin32Error(char *pFunction, unsigned long nErrorNo) { Win32ErrorHandler(pFunction, nErrorNo, true, false); }
 inline void RaiseWin32Error(char *pFunction, unsigned long nErrorNo) { Win32ErrorHandler(pFunction, nErrorNo, false, true); }
 
-#include "vfp2cstring.h"
 #include "vfp2ctemplates.h"
+#include "vfp2cstring.h"
 #include "vfp2ccppapi.h"
 #include "vfp2cdatastructure.h"
 #include "vfp2cutil.h"

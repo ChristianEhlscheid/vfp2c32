@@ -49,7 +49,7 @@ int _stdcall VFP2C_Init_Winsock()
 	WSADATA wsaData;
 	int nError;
 
-	if (tls.WinsockInited == FALSE)
+	if (!tls.WinsockInited)
 	{
 		wWinsockVer = MAKEWORD(2,2);
  		nError = WSAStartup(wWinsockVer,&wsaData);
@@ -58,7 +58,7 @@ int _stdcall VFP2C_Init_Winsock()
 			SaveWin32Error("WSAStartup", nError);
 			return E_APIERROR;
 		}
-		tls.WinsockInited = TRUE;
+		tls.WinsockInited = true;
 	}
 	if (!fpInetPton)
 	{
@@ -143,7 +143,6 @@ try
 		throw nErrorNo;
 
 	FoxString pIp(parm(1));
-	FoxArray pArray;
 	FoxString pBuffer(VFP2C_MAX_IP_LEN);
 	LPHOSTENT lpHost = 0;
 	struct in_addr sInetAdr;
@@ -170,9 +169,8 @@ try
 	{
 		unsigned int nCount;
 		for (nCount = 0; (lpHost->h_addr_list[nCount]); nCount++);
-
-		pArray.Dimension(parm(2),nCount);
-
+		
+		FoxArray pArray(parm(2), nCount);
 		unsigned int nRow = 1;
 		for (unsigned int xj = 0; xj < nCount; xj++)
 		{

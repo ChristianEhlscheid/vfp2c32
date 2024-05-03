@@ -40,14 +40,15 @@ VFP2CTls::VFP2CTls()
 {
 	ErrorCount = -1; 
 	ZeroMemory(ErrorInfo, sizeof(ErrorInfo));
-	InitStatus = 0;
 	ConvCP = CP_ACP; 
-	SqlUnicodeConversion = TRUE;
+	SqlUnicodeConversion = true;
+	SqlStoreInfoAsError = false;
+	SqlMapBinaryToGeneral = true;
 #ifdef _DEBUG
 	DbgInfo = 0;
-	TrackAlloc = FALSE;
+	TrackAlloc = false;
 #endif
-	WinsockInited = FALSE;
+	WinsockInited = false;
 	DefaultWinsockTimeout = 5000;
 	JitHeap = 0;
 #if defined(_WIN64)

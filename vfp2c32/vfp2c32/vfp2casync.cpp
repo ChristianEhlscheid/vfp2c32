@@ -217,7 +217,7 @@ try
 
 	if (goFindFileChangeExThread)
 	{
-		if (parm(1)->Vartype() == 'N' || parm(1)->Vartype() == 'I')
+		if (parm(1)->Numeric())
 		{
 			FindFileChangeExEntry* pFFC = parm(1)->DynamicPtr<FindFileChangeExEntry*>();
 			if (pFFC)
@@ -398,10 +398,8 @@ LRESULT _stdcall FindChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPAR
 				delete[] pCommand;
 				if (nErrorNo == 0)
 				{
-					if (vRetVal.Vartype() == 'I')
-						retval = vRetVal.ev_long;
-					else if (vRetVal.Vartype() == 'N')
-						retval = static_cast<LRESULT>(vRetVal.ev_real);
+					if (vRetVal.Numeric())
+						retval = vRetVal.NumericCast<LRESULT>();
 					else if (vRetVal.Vartype() == 'L')
 						retval = vRetVal.ev_width;
 					else
@@ -522,6 +520,7 @@ DWORD FindFileChangeThread::Run()
 	bool bLoop = true;
 	DWORD nRetVal;
 	char *pCallback;
+	CStringView pPath;
 
 	HANDLE hEvents[2];
 	hEvents[0] = m_FileEvent;
@@ -533,7 +532,8 @@ DWORD FindFileChangeThread::Run()
 		switch (nRetVal)
 		{
 			case WAIT_OBJECT_0:
-				m_Callback.AppendFormatBase("(%U,\"%V\",%U)", this, &(CStringView)m_Path, 0);
+				pPath = m_Path;
+				m_Callback.AppendFormatBase("(%U,\"%V\",%U)", this, &pPath, 0);
 				pCallback = m_Callback.Strdup();
 				if (pCallback)
 					PostMessage(ghAsyncHwnd, WM_CALLBACK, reinterpret_cast<WPARAM>(pCallback), 0);
@@ -700,7 +700,8 @@ void FindFileChangeExEntry::Callback(PFILE_NOTIFY_INFORMATION pInfo)
 			}
 			if (m_ComCallback)
 			{
-				m_ComCallback.Call((void*)this, pInfo->Action, (CStringView)m_Path);
+				CStringView pPath = m_Path;
+				m_ComCallback.Call((void*)this, pInfo->Action, pPath);
 			} 
 			else
 			{
@@ -722,7 +723,8 @@ void FindFileChangeExEntry::Callback(PFILE_NOTIFY_INFORMATION pInfo)
 			m_Path2.AppendFormatBase("%W", &pFilename);
 			if (m_ComCallback)
 			{
-				m_ComCallback.Call((void*)this, FILE_ACTION_RENAMED_OLD_NAME, (CStringView)m_Path, (CStringView)m_Path2);
+				CStringView pPath = m_Path, pPath2 = m_Path2;
+				m_ComCallback.Call((void*)this, FILE_ACTION_RENAMED_OLD_NAME, pPath, pPath2);
 			} 
 			else
 			{

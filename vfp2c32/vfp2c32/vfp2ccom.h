@@ -10,9 +10,6 @@ const int CREATE_GUID_ANSI		= 0;
 const int CREATE_GUID_UNICODE	= 1;
 const int CREATE_GUID_BINARY	= 2;
 
-void _stdcall VFP2C_Init_Com();
-void _stdcall VFP2C_Destroy_Com(VFP2CTls& tls);
-
 void _fastcall CLSIDFromProgIDLib(ParamBlkEx& parm);
 void _fastcall ProgIDFromCLSIDLib(ParamBlkEx& parm);
 void _fastcall CLSIDFromStringLib(ParamBlkEx& parm);

@@ -132,6 +132,8 @@
     <TargetExt>.fll</TargetExt>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IncludePath>C:\Program Files (x86)\Visual Leak Detector\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -212,7 +214,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level2</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_THREADSAFE;WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallingConvention>FastCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -375,10 +377,11 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <ClCompile>
-      <CallingConvention>StdCall</CallingConvention>
+      <CallingConvention>FastCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
       <WarningLevel>Level2</WarningLevel>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <PreprocessorDefinitions>_THREADSAFE;WIN32;NDEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -403,6 +406,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     <ClInclude Include="vfp2cmarshal.h" />
     <ClInclude Include="vfp2cnetapi.h" />
     <ClInclude Include="vfp2codbc.h" />
+    <ClInclude Include="vfp2codbcclasses.h" />
+    <ClInclude Include="vfp2codbcconstants.h" />
     <ClInclude Include="vfp2cprint.h" />
     <ClInclude Include="vfp2cras.h" />
     <ClInclude Include="vfp2cregistry.h" />
@@ -437,6 +442,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     <ClCompile Include="vfp2cmarshal.cpp" />
     <ClCompile Include="vfp2cnetapi.cpp" />
     <ClCompile Include="vfp2codbc.cpp" />
+    <ClCompile Include="vfp2codbcclasses.cpp" />
     <ClCompile Include="vfp2cprint.cpp" />
     <ClCompile Include="vfp2cras.cpp" />
     <ClCompile Include="vfp2cregistry.cpp" />

@@ -23,6 +23,8 @@
 <tr><td>2</td><td>HANDLE to library internal heap used for marshaling</td></tr>
 <tr><td>3</td><td>default codepage used for Ansi - Unicode conversion - defaults to CP_ACP</td></tr>
 <tr><td>4</td><td>automatic Unicode to Ansi conversion in SqlExecEx - defaults to .T.</td></tr>
+<tr><td>5</td><td>store information from ODBC functions that return SQL_SUCCESS_WITH_INFO inside <a href="/pages/sqlexecex.html">SQLExecEx</a> in error structure - defaults to .F. - this is intended for debugging purposes</td></tr>
+<tr><td>6</td><td>map binary fields inside <a href="/pages/sqlexecex.html">SQLExecEx</a> to general (G datatype) fields - defaults to .F.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p2">nNewValue (optional)</a></dt>
 <dd><p>The following options can be altered.</p>
@@ -30,6 +32,8 @@
 <tr><th>Option</th><th>Description</th></tr>
 <tr><td>3</td><td>nNewValue should be a new codepage value which is used in all Ansi to Unicode string conversions</td></tr>
 <tr><td>4</td><td>nNewValue should be .T. or .F.</td></tr>
+<tr><td>5</td><td>nNewValue should be .T. or .F.</td></tr>
+<tr><td>6</td><td>nNewValue should be .T. or .F.</td></tr>
 </table></dd></dl>
 <h2>Return Value</h2>
 <p>The return value depends on the passed in value.</p>

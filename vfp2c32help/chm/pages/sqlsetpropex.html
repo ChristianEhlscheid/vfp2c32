@@ -14,10 +14,10 @@
 <div id="content">
 <p class="description">Extended <a href="its:dv_foxhelp.chm::/html/2b537f41-5c04-41a7-9e8c-eb3513e2c626.htm">SQLSETPROP</a>, sets ODBC connection attributes.</p>
 
-<div class="block"><pre>SQLSetPropEx(<a href="#p1">nConnectionHandle | cCursorName</a>, <a href="#p2">cAttribute</a>, <a href="#p3">vValue</a>)</pre></div>
+<div class="block"><pre>SQLSetPropEx(<a href="#p1">nConnection | cCursorName</a>, <a href="#p2">cAttribute</a>, <a href="#p3">vValue</a>)</pre></div>
 <h3>Parameters</h3>
-<dl class="parm"><dt><a id="p1">nConnectionHandle | cCursorName</a></dt>
-<dd><p>A valid connection handle returned from <a href="its:dv_foxhelp.chm::/html/55b8c0e7-d39b-476f-a5cc-980719b36d4e.htm">SQLCONNECT</a> / <a href="its:dv_foxhelp.chm::/html/9a4d380b-b3a4-450a-b414-5a7724e7fec0.htm">SQLSTRINGCONNECT</a> or the name of a<br />
+<dl class="parm"><dt><a id="p1">nConnection | cCursorName</a></dt>
+<dd><p>A valid connection returned from <a href="its:dv_foxhelp.chm::/html/55b8c0e7-d39b-476f-a5cc-980719b36d4e.htm">SQLCONNECT</a> / <a href="its:dv_foxhelp.chm::/html/9a4d380b-b3a4-450a-b414-5a7724e7fec0.htm">SQLSTRINGCONNECT</a> or the name of a<br />
 cursor which was created by a remote connection - <a href="its:dv_foxhelp.chm::/html/4b2168d1-6e9f-4dc4-aaec-ab25b49383ce.htm">CURSORGETPROP</a>("ConnectHandle", <em>cCursorName</em>) must return a valid connection handle.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cAttribute</a></dt>
@@ -54,6 +54,19 @@ cursor which was created by a remote connection - <a href="its:dv_foxhelp.chm::/
 <a href="/pages/sqlexecex.html">SQLExecEx</a><br />
 <a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
 <a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
+<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
+<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
+<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
+<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
+<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
+<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
+<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
+<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
+<a href="/pages/sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a><br />
+<a href="/pages/sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a><br />
+<a href="/pages/sqlvarianttovalue.html">SQLVariantToValue</a><br />
+<a href="/pages/valuetosqlvariant.html">ValueToSQLVariant</a><br />
 </p>
 <h4>Used WinApi functions</h4>
 <p><a href="http://msdn.microsoft.com/en-us/library/ms713605(VS.85).aspx">SQLSetConnectAttr</a></p>

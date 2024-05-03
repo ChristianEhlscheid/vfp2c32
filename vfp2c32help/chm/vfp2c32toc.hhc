@@ -340,8 +340,8 @@
 			<param name="Local" value="pages\closeregistrykey.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="CloseServiceHandle">
-			<param name="Local" value="pages\closeservicehandle.html">
+			<param name="Name" value="CloseServiceHandleEx">
+			<param name="Local" value="pages\closeservicehandleex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="CLSIDFromProgID">
@@ -368,12 +368,12 @@
 			<param name="Local" value="pages\continueservice.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ControlService">
-			<param name="Local" value="pages\controlservice.html">
+			<param name="Name" value="ControlServiceEx">
+			<param name="Local" value="pages\controlserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="CopyFileEx">
-			<param name="Local" value="pages\copyfileex.html">
+			<param name="Name" value="CopyFileEx2">
+			<param name="Local" value="pages\copyfileex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="CreateCallbackFunc">
@@ -392,8 +392,8 @@
 			<param name="Local" value="pages\createregistrykey.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="CreateService">
-			<param name="Local" value="pages\createservice.html">
+			<param name="Name" value="CreateServiceEx">
+			<param name="Local" value="pages\createserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="CreateSQLDataSource">
@@ -456,8 +456,8 @@
 			<param name="Local" value="pages\dt2utc.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ExpandEnvironmentStrings">
-			<param name="Local" value="pages\expandenvironmentstrings.html">
+			<param name="Name" value="ExpandEnvironmentStringsEx">
+			<param name="Local" value="pages\expandenvironmentstringsex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="FChSizeEx">
@@ -564,16 +564,16 @@
 			<param name="Local" value="pages\getcursorposex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetFileAttributes">
-			<param name="Local" value="pages\getfileattributes.html">
+			<param name="Name" value="GetFileAttributesEx2">
+			<param name="Local" value="pages\getfileattributesex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetFileOwner">
 			<param name="Local" value="pages\getfileowner.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetFileSize">
-			<param name="Local" value="pages\getfilesize.html">
+			<param name="Name" value="GetFileSizeEx2">
+			<param name="Local" value="pages\getfilesizeex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetFileTimes">
@@ -588,40 +588,40 @@
 			<param name="Local" value="pages\getlocaleinfoex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetLongPathName">
-			<param name="Local" value="pages\getlongpathname.html">
+			<param name="Name" value="GetLongPathNameEx">
+			<param name="Local" value="pages\getlongpathnameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetOpenFileName">
-			<param name="Local" value="pages\getopenfilename.html">
+			<param name="Name" value="GetOpenFileNameEx">
+			<param name="Local" value="pages\getopenfilenameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetSaveFileName">
-			<param name="Local" value="pages\getsavefilename.html">
+			<param name="Name" value="GetSaveFileNameEx">
+			<param name="Local" value="pages\getsavefilenameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetServerTime">
 			<param name="Local" value="pages\getservertime.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetShortPathName">
-			<param name="Local" value="pages\getshortpathname.html">
+			<param name="Name" value="GetShortPathNameEx">
+			<param name="Local" value="pages\getshortpathnameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetSystemDirectory">
-			<param name="Local" value="pages\getsystemdirectory.html">
+			<param name="Name" value="GetSystemDirectoryEx">
+			<param name="Local" value="pages\getsystemdirectoryex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetSystemTime">
-			<param name="Local" value="pages\getsystemtime.html">
+			<param name="Name" value="GetSystemTimeEx">
+			<param name="Local" value="pages\getsystemtimeex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetWindowRectEx">
 			<param name="Local" value="pages\getwindowrectex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetWindowsDirectory">
-			<param name="Local" value="pages\getwindowsdirectory.html">
+			<param name="Name" value="GetWindowsDirectoryEx">
+			<param name="Local" value="pages\getwindowsdirectoryex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetWindowTextEx">
@@ -704,8 +704,8 @@
 			<param name="Local" value="pages\openregistrykey.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="OpenService">
-			<param name="Local" value="pages\openservice.html">
+			<param name="Name" value="OpenServiceEx">
+			<param name="Local" value="pages\openserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="OsEx">
@@ -936,10 +936,6 @@
 			<param name="Local" value="pages\rgb2colors.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="SetFileAttributes">
-			<param name="Local" value="pages\setfileattributes.html">
-			</OBJECT>
-		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SetFileAttributesEx">
 			<param name="Local" value="pages\setfileattributesex.html">
 			</OBJECT>
@@ -948,8 +944,8 @@
 			<param name="Local" value="pages\setfiletimes.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="SetSystemTime">
-			<param name="Local" value="pages\setsystemtime.html">
+			<param name="Name" value="SetSystemTimeEx">
+			<param name="Local" value="pages\setsystemtimeex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SHBrowseFolder">
@@ -992,32 +988,88 @@
 			<param name="Local" value="pages\sqlcancelex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLColumnPrivilegesEx">
+			<param name="Local" value="pages\sqlcolumnprivilegesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLColumnsEx">
+			<param name="Local" value="pages\sqlcolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLCreateTableTypeCursor">
+			<param name="Local" value="pages\sqlcreatetabletypecursor.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLExecEx">
 			<param name="Local" value="pages\sqlexecex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLForeignKeysEx">
+			<param name="Local" value="pages\sqlforeignkeysex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLGetPropEx">
 			<param name="Local" value="pages\sqlgetpropex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLGetTypeInfoEx">
+			<param name="Local" value="pages\sqlgettypeinfoex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLPrepareEx">
 			<param name="Local" value="pages\sqlprepareex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLPrimaryKeysEx">
+			<param name="Local" value="pages\sqlprimarykeysex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLProcedureColumnsEx">
+			<param name="Local" value="pages\sqlprocedurecolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLProceduresEx">
+			<param name="Local" value="pages\sqlproceduresex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLRegisterTableType">
+			<param name="Local" value="pages\sqlregistertabletype.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLSetPropEx">
 			<param name="Local" value="pages\sqlsetpropex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLSpecialColumnsEx">
+			<param name="Local" value="pages\sqlspecialcolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLStatisticsEx">
+			<param name="Local" value="pages\sqlstatisticsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLTablePrivilegesEx">
+			<param name="Local" value="pages\sqltableprivilegesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLTablesEx">
+			<param name="Local" value="pages\sqltablesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLVariantToValue">
+			<param name="Local" value="pages\sqlvarianttovalue.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="ST2DT">
 			<param name="Local" value="pages\st2dt.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="StartService">
-			<param name="Local" value="pages\startservice.html">
+			<param name="Name" value="StartServiceEx">
+			<param name="Local" value="pages\startserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="StopService">
-			<param name="Local" value="pages\stopservice.html">
+			<param name="Name" value="StopServiceEx">
+			<param name="Local" value="pages\stopserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="Str2Double">
@@ -1100,8 +1152,16 @@
 			<param name="Local" value="pages\value2variant.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="ValueToSQLVariant">
+			<param name="Local" value="pages\valuetosqlvariant.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="Variant2Value">
 			<param name="Local" value="pages\variant2value.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="VFP2C32">
+			<param name="Local" value="pages\vfp2c32.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="VFP2CSys">
@@ -1690,12 +1750,12 @@
 		</OBJECT>
 	<UL>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetOpenFileName">
-			<param name="Local" value="pages\getopenfilename.html">
+			<param name="Name" value="GetOpenFileNameEx">
+			<param name="Local" value="pages\getopenfilenameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetSaveFileName">
-			<param name="Local" value="pages\getsavefilename.html">
+			<param name="Name" value="GetSaveFileNameEx">
+			<param name="Local" value="pages\getsavefilenameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="MessageBoxEx">
@@ -1842,12 +1902,12 @@
 			<param name="Local" value="pages\ft2dt.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetSystemTime">
-			<param name="Local" value="pages\getsystemtime.html">
+			<param name="Name" value="GetSystemTimeEx">
+			<param name="Local" value="pages\getsystemtimeex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="SetSystemTime">
-			<param name="Local" value="pages\setsystemtime.html">
+			<param name="Name" value="SetSystemTimeEx">
+			<param name="Local" value="pages\setsystemtimeex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="ST2DT">
@@ -1896,8 +1956,8 @@
 			<param name="Local" value="pages\comparefiletimes.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="CopyFileEx">
-			<param name="Local" value="pages\copyfileex.html">
+			<param name="Name" value="CopyFileEx2">
+			<param name="Local" value="pages\copyfileex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="DeleteDirectory">
@@ -1912,36 +1972,32 @@
 			<param name="Local" value="pages\findfilechange.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetFileAttributes">
-			<param name="Local" value="pages\getfileattributes.html">
+			<param name="Name" value="GetFileAttributesEx2">
+			<param name="Local" value="pages\getfileattributesex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetFileOwner">
 			<param name="Local" value="pages\getfileowner.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetFileSize">
-			<param name="Local" value="pages\getfilesize.html">
+			<param name="Name" value="GetFileSizeEx2">
+			<param name="Local" value="pages\getfilesizeex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetFileTimes">
 			<param name="Local" value="pages\getfiletimes.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetLongPathName">
-			<param name="Local" value="pages\getlongpathname.html">
+			<param name="Name" value="GetLongPathNameEx">
+			<param name="Local" value="pages\getlongpathnameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetShortPathName">
-			<param name="Local" value="pages\getshortpathname.html">
+			<param name="Name" value="GetShortPathNameEx">
+			<param name="Local" value="pages\getshortpathnameex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="MoveFileEx">
 			<param name="Local" value="pages\movefileex.html">
-			</OBJECT>
-		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="SetFileAttributes">
-			<param name="Local" value="pages\setfileattributes.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SetFileAttributesEx">
@@ -2224,8 +2280,24 @@
 			<param name="Local" value="pages\sqlcancelex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLColumnPrivilegesEx">
+			<param name="Local" value="pages\sqlcolumnprivilegesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLColumnsEx">
+			<param name="Local" value="pages\sqlcolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLCreateTableTypeCursor">
+			<param name="Local" value="pages\sqlcreatetabletypecursor.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLExecEx">
 			<param name="Local" value="pages\sqlexecex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLForeignKeysEx">
+			<param name="Local" value="pages\sqlforeignkeysex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLGetPropEx">
@@ -2236,8 +2308,44 @@
 			<param name="Local" value="pages\sqlprepareex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLPrimaryKeysEx">
+			<param name="Local" value="pages\sqlprimarykeysex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLProcedureColumnsEx">
+			<param name="Local" value="pages\sqlprocedurecolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLProceduresEx">
+			<param name="Local" value="pages\sqlproceduresex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLRegisterTableType">
+			<param name="Local" value="pages\sqlregistertabletype.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLSetPropEx">
 			<param name="Local" value="pages\sqlsetpropex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLSpecialColumnsEx">
+			<param name="Local" value="pages\sqlspecialcolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLTablePrivilegesEx">
+			<param name="Local" value="pages\sqltableprivilegesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLTablesEx">
+			<param name="Local" value="pages\sqltablesex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLVariantToValue">
+			<param name="Local" value="pages\sqlvarianttovalue.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="ValueToSQLVariant">
+			<param name="Local" value="pages\valuetosqlvariant.html">
 			</OBJECT>
 		</UL>
 	<LI> <OBJECT type="text/sitemap">
@@ -2436,36 +2544,36 @@
 			<param name="Local" value="pages\aservicestatus.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="CloseServiceHandle">
-			<param name="Local" value="pages\closeservicehandle.html">
+			<param name="Name" value="CloseServiceHandleEx">
+			<param name="Local" value="pages\closeservicehandleex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="ContinueService">
 			<param name="Local" value="pages\continueservice.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ControlService">
-			<param name="Local" value="pages\controlservice.html">
+			<param name="Name" value="ControlServiceEx">
+			<param name="Local" value="pages\controlserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="CreateService">
-			<param name="Local" value="pages\createservice.html">
+			<param name="Name" value="CreateServiceEx">
+			<param name="Local" value="pages\createserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="OpenService">
-			<param name="Local" value="pages\openservice.html">
+			<param name="Name" value="OpenServiceEx">
+			<param name="Local" value="pages\openserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="PauseService">
 			<param name="Local" value="pages\pauseservice.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="StartService">
-			<param name="Local" value="pages\startservice.html">
+			<param name="Name" value="StartServiceEx">
+			<param name="Local" value="pages\startserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="StopService">
-			<param name="Local" value="pages\stopservice.html">
+			<param name="Name" value="StopServiceEx">
+			<param name="Local" value="pages\stopserviceex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="WaitForServiceStatus">
@@ -2528,20 +2636,20 @@
 			<param name="Local" value="pages\awindowstations.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ExpandEnvironmentStrings">
-			<param name="Local" value="pages\expandenvironmentstrings.html">
+			<param name="Name" value="ExpandEnvironmentStringsEx">
+			<param name="Local" value="pages\expandenvironmentstringsex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="GetLocaleInfoEx">
 			<param name="Local" value="pages\getlocaleinfoex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetSystemDirectory">
-			<param name="Local" value="pages\getsystemdirectory.html">
+			<param name="Name" value="GetSystemDirectoryEx">
+			<param name="Local" value="pages\getsystemdirectoryex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="GetWindowsDirectory">
-			<param name="Local" value="pages\getwindowsdirectory.html">
+			<param name="Name" value="GetWindowsDirectoryEx">
+			<param name="Local" value="pages\getwindowsdirectoryex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="OsEx">

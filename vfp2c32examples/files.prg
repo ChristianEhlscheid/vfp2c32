@@ -100,17 +100,17 @@ ltWrite = ltWrite + 60
 && SETFILETIMES(FULLPATH("vfp2c32.fll"),NULL,NULL,ltWrite)
 
 LOCAL lnAttribs
-lnAttribs = GETFILEATTRIBUTES("vfp2c32.fll")
+lnAttribs = GETFILEATTRIBUTESEX2("vfp2c32.fll")
 ? "File is " + IIF(BITAND(lnAttribs,FILE_ATTRIBUTE_READONLY)>0,"read only","not read only")
 ? "File is " + IIF(BITAND(lnAttribs,FILE_ATTRIBUTE_SYSTEM)>0,"system","not system")
 ? "File is " + IIF(BITAND(lnAttribs,FILE_ATTRIBUTE_ARCHIVE)>0,"archive","not archive")
 
 && set archive attribute
 lnAttribs = BITOR(lnAttribs,FILE_ATTRIBUTE_ARCHIVE)
-&& ?SETFILEATTRIBUTES("vfp2c32.fll",lnAttribs)
+&& ?SETFILEATTRIBUTESEX("vfp2c32.fll",lnAttribs)
 
 LOCAL lnFileSize
-lnFileSize = GETFILESIZE("vfp2c32.fll")
+lnFileSize = GETFILESIZEEX2("vfp2c32.fll")
 ? "File is ", lnFileSize, "bytes big"
 
 LOCAL lcOwner,lcDomain,lnSidType
@@ -121,7 +121,7 @@ LOCAL lcOwner,lcDomain,lnSidType
 && deleting a file even if it is marked readonly
 TRY
 	STRTOFILE('DummyFile','dummy.txt')
-	SETFILEATTRIBUTES('dummy.txt',FILE_ATTRIBUTE_READONLY)
+	SETFILEATTRIBUTESEX('dummy.txt',FILE_ATTRIBUTE_READONLY)
 	DELETE FILE "dummy.txt" && triggers error since file is read only
 CATCH TO loError
 	?loError.ErrorNo, loError.Message

@@ -11,7 +11,7 @@
 #include "vfp2cdatastructure.h"
 #include "vfp2ctls.h"
 
-const int VFP2C_MAX_ERRORS					= 8;
+const int VFP2C_MAX_ERRORS					= 32;
 const unsigned int VFP2C_ERROR_MESSAGE_LEN	= 1024;
 const unsigned int VFP2C_ERROR_FUNCTION_LEN	= 64;
 const int VFP2C_ODBC_STATE_LEN				= 8;
@@ -25,6 +25,8 @@ typedef struct _VFP2CERROR {
 	char aErrorFunction[VFP2C_ERROR_FUNCTION_LEN];
 	char aErrorMessage[VFP2C_ERROR_MESSAGE_LEN];
 	char aSqlState[VFP2C_ODBC_STATE_LEN];
+	INT_PTR nRowNumber;
+	long nColumnNumber;
 } VFP2CERROR, *LPVFP2CERROR;
 
 #ifdef _DEBUG
@@ -49,21 +51,23 @@ public:
 	VFP2CERROR ErrorInfo[VFP2C_MAX_ERRORS];
 	/* No. of error messages in gaErrorInfo */
 	int ErrorCount; 
-	/* Initialization status */
-	DWORD InitStatus;
 	/* codepage for Unicode character conversion */
 	UINT ConvCP; 
 	/* convert Unicode data to ANSI in SQLExecEx */
-	BOOL SqlUnicodeConversion;
+	bool SqlUnicodeConversion;
+	/* store error information for all ODBC api calls that return SQL_SUCCESS_WITH_INFO */
+	bool SqlStoreInfoAsError;
+	/* store SQL_VARBINARY(0) and SQL_LONGVARBINARY into general (G) fields */
+	bool SqlMapBinaryToGeneral;
 
 #ifdef _DEBUG
 	LPDBGALLOCINFO DbgInfo;
-	BOOL TrackAlloc;
+	bool TrackAlloc;
 #endif
 	/* handle to process api library */
 	
 	/* flag is winsock was initialized with WSAStartup */
-	BOOL WinsockInited;
+	bool WinsockInited;
 	/* default timeout for winsock calls */
 	DWORD DefaultWinsockTimeout;
 

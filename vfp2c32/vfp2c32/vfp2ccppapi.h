@@ -69,17 +69,17 @@ inline void _stdcall Return(float nValue) { _RetFloat(nValue, 20, 7); }
 inline void _stdcall Return(float nValue, int nDecimals) { _RetFloat(nValue, 20, nDecimals); }
 #endif
 
-void _stdcall ReturnIDispatch(void* pObject);
+void _fastcall ReturnIDispatch(void* pObject);
 
 /* unsigned & signed __int64 helper functions */
-inline __int64 _stdcall Value2Int64(ValueEx &pVal)
+inline __int64 Value2Int64(ValueEx &pVal)
 {
 	if (pVal.Vartype() == 'Y')
 		return pVal.ev_currency.QuadPart;
 	else if (pVal.Vartype() == 'C')
 	{
 		if (pVal.ev_width == 1 && pVal.Len() == 8)
-			return *reinterpret_cast<__int64*>(pVal.HandleToPtr());
+			return *(pVal.HandleToPtr<__int64*>());
 		else
 			return StringToInt64(pVal.HandleToPtr(), pVal.Len());
 	}
@@ -91,14 +91,14 @@ inline __int64 _stdcall Value2Int64(ValueEx &pVal)
 		throw E_INVALIDPARAMS;
 }
 
-inline unsigned __int64 _stdcall Value2UInt64(ValueEx &pVal)
+inline unsigned __int64 Value2UInt64(ValueEx &pVal)
 {
 	if (pVal.Vartype() == 'Y')
 		return static_cast<unsigned __int64>(pVal.ev_currency.QuadPart);
 	else if (pVal.Vartype() == 'C')
 	{
 		if (pVal.ev_width == 1 && pVal.Len() == 8)
-			return *reinterpret_cast<unsigned __int64*>(pVal.HandleToPtr());
+			return *(pVal.HandleToPtr<unsigned __int64*>());
 		else
 			return StringToUInt64(pVal.HandleToPtr(), pVal.Len());
 	}
@@ -110,60 +110,60 @@ inline unsigned __int64 _stdcall Value2UInt64(ValueEx &pVal)
 		throw E_INVALIDPARAMS;
 }
 
-inline void _stdcall ReturnInt64AsCurrency(__int64 nValue)
+inline void ReturnInt64AsCurrency(__int64 nValue)
 {
 	CCY nRetval;
 	nRetval.QuadPart = nValue;
 	Return(nRetval);
 }
 
-inline void _stdcall ReturnInt64AsCurrency(unsigned __int64 nValue)
+inline void ReturnInt64AsCurrency(unsigned __int64 nValue)
 {
 	CCY nRetval;
 	nRetval.QuadPart = static_cast<__int64>(nValue);
 	Return(nRetval);
 }
 
-inline void _stdcall ReturnInt64AsBinary(__int64 nValue)
+inline void ReturnInt64AsBinary(__int64 nValue)
 {
 	ValueEx vRetval;
 	vRetval.SetString(sizeof(__int64));
 	if (!vRetval.AllocHandle(sizeof(__int64)))
 		throw E_INSUFMEMORY;
-	*reinterpret_cast<__int64*>(vRetval.HandleToPtr()) = nValue;
+	*(vRetval.HandleToPtr<__int64*>()) = nValue;
 	Return(vRetval);
 }
 
-inline void _stdcall ReturnInt64AsBinary(unsigned __int64 nValue)
+inline void ReturnInt64AsBinary(unsigned __int64 nValue)
 {
 	ValueEx vRetval;
 	vRetval.SetString(sizeof(unsigned __int64));
 	if (!vRetval.AllocHandle(sizeof(unsigned __int64)))
 		throw E_INSUFMEMORY;
-	*reinterpret_cast<unsigned __int64*>(vRetval.HandleToPtr()) = nValue;
+	*(vRetval.HandleToPtr<unsigned __int64*>()) = nValue;
 	Return(vRetval);
 }
 
-inline void _stdcall ReturnInt64AsString(__int64 nValue)
+inline void ReturnInt64AsString(__int64 nValue)
 {
 	char aRetval[VFP2C_MAX_BIGINT_LITERAL+1];
 	Int64ToStrBuffer(aRetval, nValue);
 	Return(aRetval);
 }
 
-inline void _stdcall ReturnInt64AsString(unsigned __int64 nValue)
+inline void ReturnInt64AsString(unsigned __int64 nValue)
 {
 	char aRetval[VFP2C_MAX_BIGINT_LITERAL+1];
 	UInt64ToStrBuffer(aRetval, nValue);
 	Return(aRetval);
 }
 
-inline void _stdcall ReturnInt64AsDouble(__int64 nValue)
+inline void ReturnInt64AsDouble(__int64 nValue)
 {
 	_RetFloat(static_cast<double>(nValue), 20, 0);
 }
 
-inline void _stdcall ReturnInt64AsDouble(unsigned __int64 nValue)
+inline void ReturnInt64AsDouble(unsigned __int64 nValue)
 {
 	_RetFloat(static_cast<double>(nValue), 20, 0);
 }
@@ -207,6 +207,11 @@ inline bool Readonly(int nWorkarea = -1) { return (_DBStatus(nWorkarea) & DB_REA
 inline bool Readonly(Locator &pLoc) { return (_DBStatus(pLoc.l_where) & DB_READONLY) > 0; }
 inline int DBStatus(int nWorkarea = -1) { return _DBStatus(nWorkarea); }
 inline int DBStatus(Locator &pLoc) { return _DBStatus(pLoc.l_where); }
+long _fastcall RecCountEx(int nWorkarea, bool bCountFromCurrentRecord = false);
+inline long RecCountEx(Locator& pLoc, bool bCountFromCurrentRecord)
+{
+	return RecCountEx(pLoc.l_where, bCountFromCurrentRecord);
+}
 
 inline int AppendRecords(unsigned int nRecords, int nWorkArea = -1)
 {
@@ -236,6 +241,32 @@ inline HWND WHwndByTitle(char *lcWindow) { return _WhToHwnd(_WFindTitle(lcWindow
 // transform 2 integers (a 64 Bit Integer) to a double 
 inline double Ints2Double(int nLowInt, int nHighInt) { return ((double)nHighInt) * 4294967296.0 + nLowInt; }
 inline __int64 Ints2Int64(int nLowInt, int nHighInt) { return ((__int64)nHighInt) * 4294967296 + nLowInt; }
+
+int _fastcall Dimension(char* pArrayName, unsigned long nRows, unsigned long nDims);
+int _fastcall DimensionEx(char* pArrayName, Locator* lArrayLoc, unsigned long nRows, unsigned long nDims);
+int _fastcall ASubscripts(Locator* pLoc, int* nRows, int* nDims);
+int _fastcall CreateFoxVar(char* pName, Locator* pLoc, int nScope);
+int _fastcall FindFoxVar(char* pName, Locator* pLoc);
+int _fastcall FindFoxField(char* pName, Locator* pLoc, int nWorkarea);
+int _fastcall FindFoxField(char* pName, Locator* pLoc, char* pCursor);
+int _fastcall FindFoxField(int nFieldNo, Locator* pLoc, int nWorkarea);
+int _fastcall FindFoxVarOrField(char* pName, Locator* pLoc);
+int _fastcall FindFoxVarOrFieldEx(char* pName, Locator* pLoc);
+int _fastcall StoreEx(Locator* pLoc, Value* pValue);
+int _fastcall AllocMemo(Locator* pLoc, int nSize, long* nLoc);
+int _fastcall GetMemoContent(Value* pValue, char* pData);
+int _fastcall GetMemoContent(Value* pValue, char* pData, int nLen, int nOffset);
+int _fastcall GetMemoContent(Locator* pLoc, char** pData, int* nErrorNo);
+int _fastcall ReplaceMemo(Locator* pLoc, char* pData, int nLen);
+int _fastcall ReplaceMemo(Locator* pLoc, char* pData, int nLen, FCHAN hFile);
+int _fastcall AppendMemo(char* pData, int nLen, FCHAN hFile, long* nLoc);
+int _fastcall MemoChan(int nWorkarea, FCHAN* nChan);
+int _fastcall Zap(int nWorkArea);
+int _fastcall Zap(CStringView pCursor);
+bool _fastcall Used(CStringView pCursor);
+int _fastcall Select(int nWorkarea);
+int _fastcall Select(CStringView pCursor);
+int _fastcall SelectCmd(int nWorkarea);
 
 // forward declaration 
 class FoxValue;
@@ -276,6 +307,82 @@ public:
 	}
 private:
 	Value m_Value;
+};
+
+class AutoRecNoRestore
+{
+public:
+	AutoRecNoRestore() : m_WorkArea(0), m_RecNo(0), m_GoTop(false), m_Sealed(false) {}
+	AutoRecNoRestore(int nWorkArea, bool bSave = true, bool bGoTop = false, bool bSeal = false)
+	{
+		m_GoTop = bGoTop;
+		m_WorkArea = nWorkArea;
+		m_RecNo = (bSave && !Eof(nWorkArea)) ? RecNo(nWorkArea) : 0;
+		m_Sealed = bSeal;
+	}
+
+	~AutoRecNoRestore()
+	{
+		if (m_RecNo != 0)
+			Go(m_RecNo, m_WorkArea);
+		else if (m_GoTop)
+			GoTop(m_WorkArea);
+	}
+
+	void SaveRecNo(int nWorkArea, bool bSave = true, bool bGoTop = false, bool bSeal = false)
+	{
+		if (m_Sealed == false)
+		{
+			m_GoTop = bGoTop;
+			m_WorkArea = nWorkArea;
+			m_RecNo = (bSave && !Eof(nWorkArea)) ? RecNo(nWorkArea) : 0;
+			m_Sealed = bSeal;
+		}
+	}
+
+private:
+	bool m_GoTop;
+	bool m_Sealed;
+	int m_WorkArea;
+	int m_RecNo;
+};
+
+class AutoWorkAreaRestore
+{
+public:
+	AutoWorkAreaRestore(int nWorkarea, int nCurrentWorkArea = 0, bool bSelect = false)
+	{
+		if (nCurrentWorkArea == 0)
+		{
+			ValueEx vExpr;
+			vExpr.SetNull();
+			_Evaluate(vExpr, "SELECT(0)");
+			nCurrentWorkArea = vExpr.ev_long;
+		}
+
+		if (nWorkarea != nCurrentWorkArea)
+		{
+			m_Workarea = nCurrentWorkArea;
+			if (bSelect)
+				SelectCmd(nWorkarea);
+		}
+		else
+		{
+			m_Workarea = 0;
+		}
+	}
+
+	~AutoWorkAreaRestore()
+	{
+		if (m_Workarea != 0)
+			SelectCmd(m_Workarea);
+	}
+	int WorkArea() const
+	{
+		return m_Workarea;
+	}
+private:
+	int m_Workarea;
 };
 
 class AutoOnOffSetting
@@ -537,7 +644,8 @@ public:
 	FoxString& ExtendBuffer(unsigned int nNewMinBufferSize);
 	BSTR ToBSTR() const ;
 	SAFEARRAY* ToU1SafeArray() const;
-
+	CStringView StringView() const { return CStringView(m_String, m_Value.ev_length); }
+	
 	void DetachParameter();
 	void Return();
 	void Release();
@@ -566,7 +674,7 @@ public:
 	operator unsigned char*() const { return reinterpret_cast<unsigned char*>(m_String); }
 	operator const unsigned char*() const { return reinterpret_cast<const unsigned char*>(m_String); }
 	operator const Value&() { return m_Value; }
-	operator CStringView();
+	operator CStringView() const { return CStringView(m_String, m_Value.ev_length); }
 
 private:
 	char *m_String;
@@ -945,7 +1053,7 @@ class FoxVariable
 public:
 	FoxVariable() { m_Loc.l_subs = 0;  m_Loc.l_NTI = 0; }
 	explicit FoxVariable(char* pName) { m_Loc.l_subs = 0;  m_Loc.l_NTI = 0; Attach(pName); }
-	explicit FoxVariable(char* pName, bool bPublic) { m_Loc.l_subs; m_Loc.l_NTI = 0; New(pName, bPublic); }
+	explicit FoxVariable(char* pName, bool bPublic) { m_Loc.l_subs = 0; m_Loc.l_NTI = 0; New(pName, bPublic); }
 	~FoxVariable() { Release(); }
 
 	FoxVariable& New(char *pName, bool bPublic);
@@ -967,11 +1075,15 @@ public:
 	FoxMemo();
 	explicit FoxMemo(ParamBlkEx& parm, int nParmNo);
 	explicit FoxMemo(LocatorEx &pLoc);
+	explicit FoxMemo(Value& pVal);
 	~FoxMemo();
 
+	void Attach(LocatorEx& pLoc);
 	void Alloc(unsigned int nSize);
 	void Append(char *pData, unsigned int nLen);
 	char* Read(unsigned int &nLen);
+	void ReadTo(char* pDestination, unsigned int nBytes);
+	void ReadTo(FoxString& pDestination, unsigned int nBytes, bool bNullTerminate);
 	FoxMemo& operator=(FoxString &pString);
 
 	long Size() const { return m_Size; }
@@ -991,6 +1103,7 @@ public:
 	FoxArray();
 	explicit FoxArray(ValueEx &pVal, unsigned int nRows = 0, unsigned int nDims = 0);
 	explicit FoxArray(FoxParameterEx& pVal, unsigned int nRows = 0, unsigned int nDims = 0);
+	explicit FoxArray(FoxParameterEx& pVal, bool bRaiseErrorIfNotExists);
 	explicit FoxArray(LocatorEx &pLoc);
 	explicit FoxArray(ParamBlkEx& parm, int nParmNo);
 	explicit FoxArray(ParamBlkEx& parm, int nParmNo, char cTypeCheck);
@@ -1013,6 +1126,7 @@ public:
 	unsigned short& CurrentDim();
 	void ReturnRows();
 	void Release();
+	CStringView Name();
 
 	VarLocatorEx& operator()();
 	VarLocatorEx& operator()(unsigned int nRow);
@@ -1025,6 +1139,7 @@ private:
 	void Init();
 	void Init(LocatorEx &pLoc);
 	void Init(ValueEx &pVal, unsigned int nRows = 0, unsigned int nDims = 0);
+	void Init(ValueEx &pVal, bool bRaiseErrorIfNotExists);
 	void InitArray();
 	void ReDimension(unsigned int nRows, unsigned int nDims = 0);
 	void OverflowArray();
@@ -1058,6 +1173,7 @@ public:
 	bool Deleted();
 	int RecNo();
 	int RecCount();
+	inline int RecCountEx(bool bCountFromCurrentRecord = false);
 	unsigned int FCount() { return m_FieldCnt; }
 	FoxCursor& Go(long nRecord);
 	bool RLock();
@@ -1071,6 +1187,7 @@ public:
 	bool Exclusiv();
 	bool Readonly();
 	int DBStatus();
+	int WorkArea() const { return m_WorkArea; }
 
 	FieldLocatorEx& operator()(unsigned int nFieldNo);
 
@@ -2169,9 +2286,10 @@ private:
 /* CFoxVersion */
 inline void CFoxVersion::Init()
 {
-	FoxValue vFoxVer;
+	ValueEx vFoxVer;
+	vFoxVer = 0;
 	vFoxVer.Evaluate("INT(VERSION(5))");
-	m_Version = vFoxVer->ev_long;
+	m_Version = vFoxVer.ev_long;
 	m_MajorVersion = m_Version / 100;
 	m_MinorVersion = m_Version % 100;
 }
@@ -2726,7 +2844,7 @@ inline unsigned short& FoxArray::CurrentDim()
 
 inline bool FoxArray::operator!()
 {
-	return m_Name.Len() > 0;
+	return m_Name.Len() == 0;
 }
 
 inline FoxArray::operator bool()
@@ -2814,6 +2932,11 @@ inline int FoxCursor::RecCount()
 	if (reccount < 0)
 		throw - reccount;
 	return reccount;
+}
+
+inline int FoxCursor::RecCountEx(bool bCountFromCurrentRecord)
+{
+	return ::RecCountEx(m_WorkArea, bCountFromCurrentRecord);
 }
 
 inline FoxCursor& FoxCursor::Go(long nRecord)

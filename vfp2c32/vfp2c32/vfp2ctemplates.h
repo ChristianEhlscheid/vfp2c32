@@ -237,7 +237,6 @@ typedef struct CWideStringView
 	wchar_t* Data;
 } CWideStringView;
 
-
 template<unsigned int nBufferSize>
 class CStrBuilder
 {
@@ -256,6 +255,8 @@ public:
 	}
 
 	unsigned int Size() const { return nBufferSize; }
+
+	CStringView StringView() const { CStringView pView(const_cast<char*>(reinterpret_cast<const char*>(m_String)), m_Length); return pView; }
 
 	CStrBuilder& SetFormatBase(int nLen = -1)
 	{
@@ -1206,7 +1207,7 @@ public:
 	template<typename T>
 	T Ptr() const
 	{
-		return reinterpret_cast<T>(m_String);
+		return reinterpret_cast<T>(const_cast<char*>(reinterpret_cast<const char*>(m_String)));
 	}
 
 	char& operator[](int nIndex) { return m_String[nIndex]; }

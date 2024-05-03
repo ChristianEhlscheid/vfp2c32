@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>SQLRegisterTableType</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">SQLRegisterTableType</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Registers a SQL Server table type in the library for use in <a href="/pages/sqlexecex.html">SQLExecEx</a>.</p>
+
+<div class="block"><pre>SQLRegisterTableType(<a href="#p1">nConnection</a>, <a href="#p2">cCatalog</a>, <a href="#p3">cSchema</a>, <a href="#p4">cType</a>[, <a href="#p5">nFlags</a>])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nConnection</a></dt>
+<dd><p>A valid ODBC connection.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">cCatalog</a></dt>
+<dd><p>Pass a catalog name or an empty string for the current database of the type to be registered.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">cSchema</a></dt>
+<dd><p>Pass the schema name of the type to be registered.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cType</a></dt>
+<dd><p>The name of the table type to be registered.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">nFlags (optional)</a></dt>
+<dd><p>default: SQLREGISTERTABLETYPE_CATALOG | SQLREGISTERTABLETYPE_SCHEMA<br />
+<br />
+SQLREGISTERTABLETYPE_CATALOG<br />
+SQLREGISTERTABLETYPE_SCHEMA<br />
+<br />
+Controls under which name the type is to be registered.<br />
+<br />
+e.g.<br />
+<br />
+SQLREGISTERTABLETYPE_CATALOG | SQLREGISTERTABLETYPE_SCHEMA results in<br />
+catalogname.schemaname.typename<br />
+<br />
+SQLREGISTERTABLETYPE_CATALOG results in<br />
+catalogname..typename<br />
+<br />
+SQLREGISTERTABLETYPE_SCHEMA results in<br />
+.schemaname.typename</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>1 if the function succeeded or -1 if the function failed.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/asqldatasources.html">ASQLDataSources</a><br />
+<a href="/pages/asqldrivers.html">ASQLDrivers</a><br />
+<a href="/pages/changesqldatasource.html">ChangeSQLDataSource</a><br />
+<a href="/pages/createsqldatasource.html">CreateSQLDataSource</a><br />
+<a href="/pages/deletesqldatasource.html">DeleteSQLDataSource</a><br />
+<a href="/pages/sqlcancelex.html">SQLCancelEx</a><br />
+<a href="/pages/sqlexecex.html">SQLExecEx</a><br />
+<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
+<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
+<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
+<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
+<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
+<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
+<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
+<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
+<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
+<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
+<a href="/pages/sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a><br />
+<a href="/pages/sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a><br />
+<a href="/pages/sqlvarianttovalue.html">SQLVariantToValue</a><br />
+<a href="/pages/valuetosqlvariant.html">ValueToSQLVariant</a><br />
+</p>
+<h4>Used WinApi functions</h4>
+<p><a href="http://msdn.microsoft.com/en-us/library/ms712455(VS.85).aspx">SQLAllocHandle</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms711010(VS.85).aspx">SQLBindCol</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms712424(VS.85).aspx">SQLFetch</a><br />
+<a href="http://msdn.microsoft.com/en-us/library/ms710123(VS.85).aspx">SQLFreeHandle</a></p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

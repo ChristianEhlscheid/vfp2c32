@@ -4,6 +4,8 @@ LOCAL lcPath
 m.lcPath = FULLPATH(JUSTPATH(SYS(16)))
 CD (m.lcPath)
 
+_SCREEN.Cls()
+
 IF TYPE('_WIN64') = 'L' AND _WIN64
 SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE

@@ -336,10 +336,6 @@ bool WindowSubclass::RemoveMessageCallback(UINT uMsg)
 
 WindowMessageCallback* _stdcall WindowSubclass::FindMessageCallback(WindowSubclass* pSubclass, UINT uMsg)
 {
-/*	CStrBuilder<128> mString;
-	mString.Format("%U,%U\n", (UINT_PTR)pSubclass, uMsg);
-	OutputDebugString(mString);
-*/
 	int nCount = pSubclass->m_BoundMessages.GetCount();
 	for (int xj = 0; xj < nCount; xj++)
 	{

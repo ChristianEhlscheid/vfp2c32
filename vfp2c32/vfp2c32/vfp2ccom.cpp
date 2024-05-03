@@ -7,30 +7,6 @@
 #include "vfp2ccom.h"
 #include "vfp2ccomcall.h"
 
-void _stdcall VFP2C_Init_Com()
-{
-try
-{
-	FoxVariable pTempVar("__VFP2C_FLL_FILENAME", false);
-	FoxString pFllFileName(MAX_PATH);
-
-	pFllFileName.Len(GetModuleFileName(ghModule, pFllFileName, pFllFileName.Size()));
-	if (!pFllFileName.Len())
-	{
-		AddWin32Error("GetModuleFileName", GetLastError());
-		return;
-	}
-
-	pTempVar() = pFllFileName;
-	// declare additional functions not nativly exported by the FLL
-	Execute("DECLARE LONG GetIDispatch IN (m.__VFP2C_FLL_FILENAME) AS GetIDispatch OBJECT");
-}
-catch(int nErrorNo)
-{
-	AddCustomErrorEx("_Execute", "Failed to DECLARE function.", nErrorNo);
-}
-}
-
 IDispatch* _stdcall GetIDispatch(IDispatch *pObject)
 {
 	return pObject;
@@ -90,7 +66,7 @@ try
 			pGuid = &sGuid;
 		}
 	}
-	else if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+	else if (parm(1)->Numeric())
 		pGuid = parm(1)->DynamicPtr<LPGUID>();
 	else
 	{
@@ -152,7 +128,7 @@ try
 
 	if (parm(1)->Vartype() == 'C' && parm(1)->Len() == sizeof(GUID))
 		pGuid = pClsId.Ptr<LPGUID>();
-	else if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+	else if (parm(1)->Numeric())
 		pGuid = parm(1)->DynamicPtr<LPGUID>();
 	else
 	{
@@ -200,7 +176,7 @@ try
 			pGuid1 = &sGuid1;
 		}
 	}
-	else if (parm(1)->Vartype() == 'I' || parm(1)->Vartype() == 'N')
+	else if (parm(1)->Numeric())
 		pGuid1 = parm(1)->DynamicPtr<LPGUID>();
 	else
 	{
@@ -227,7 +203,7 @@ try
 			pGuid2 = &sGuid2;
 		}
 	}
-	else if (parm(2)->Vartype() == 'I' || parm(2)->Vartype() == 'N')
+	else if (parm(2)->Numeric())
 		pGuid2 = parm(2)->DynamicPtr<LPGUID>();
 	else
 	{

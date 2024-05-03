@@ -24,11 +24,28 @@ Extended ODBC functions.</p>
 <tr class="even"><td><a href="createsqldatasource.html">CreateSQLDataSource</a></td><td>Creates a ODBC data source.</td></tr>
 <tr class="uneven"><td><a href="deletesqldatasource.html">DeleteSQLDataSource</a></td><td>Deletes a ODBC data source.</td></tr>
 <tr class="even"><td><a href="sqlcancelex.html">SQLCancelEx</a></td><td>Releases a prepared SQL statement.</td></tr>
-<tr class="uneven"><td><a href="sqlexecex.html">SQLExecEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/8dd6491b-da44-401f-b972-0d51f12f1a07.htm">SQLEXEC</a>, sends a SQL statement to the data source, where the statement is processed.</td></tr>
+<tr class="uneven"><td><a href="sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a></td><td>Creates a cursor of columns and associated privileges for the specified table.</td></tr>
+<tr class="even"><td><a href="sqlcolumnsex.html">SQLColumnsEx</a></td><td>Creates a cursor of column names in specified tables.</td></tr>
+<tr class="uneven"><td><a href="sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a></td><td>Creates an empty cursor of the specified registered SQL Server table type.<br />
+<br />
+You can fill this cursor and then pass it a <a href="/pages/sqlexecex.html">SQLExecEx</a> call for TVP (table valued parameters) parameters.</td></tr>
+<tr class="even"><td><a href="sqlexecex.html">SQLExecEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/8dd6491b-da44-401f-b972-0d51f12f1a07.htm">SQLEXEC</a>, sends a SQL statement to the data source, where the statement is processed.</td></tr>
+<tr class="uneven"><td><a href="sqlforeignkeysex.html">SQLForeignKeysEx</a></td><td>Creates a cursor of foreign keys in the specified table (columns in the specified table that refer to primary keys in other tables) or a cusor of foreign keys in other tables that refer to the primary key in the specified table.</td></tr>
 <tr class="even"><td><a href="sqlgetpropex.html">SQLGetPropEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/92c91971-57fb-4ca5-9712-b00dc0457a4b.htm">SQLGETPROP</a>, retrieves ODBC connection attributes.</td></tr>
 <tr class="uneven"><td><a href="sqlprepareex.html">SQLPrepareEx</a></td><td>Extended SQLPREPARE.<br />
 Prepares a SQL statement for remote execution by <a href="/pages/sqlexecex.html">SQLExecEx</a>( ).</td></tr>
+<tr class="even"><td><a href="sqlprimarykeysex.html">SQLPrimaryKeysEx</a></td><td>Creates a cursor with the column names that make up the primary key for a table.</td></tr>
+<tr class="uneven"><td><a href="sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a></td><td>Creates a cursor of input and output parameters, as well as the columns that make up the result set for the specified procedures.</td></tr>
+<tr class="even"><td><a href="sqlproceduresex.html">SQLProceduresEx</a></td><td>Create a cursor of procedure names stored in a specific data source.</td></tr>
+<tr class="uneven"><td><a href="sqlregistertabletype.html">SQLRegisterTableType</a></td><td>Registers a SQL Server table type in the library for use in <a href="/pages/sqlexecex.html">SQLExecEx</a>.</td></tr>
 <tr class="even"><td><a href="sqlsetpropex.html">SQLSetPropEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/2b537f41-5c04-41a7-9e8c-eb3513e2c626.htm">SQLSETPROP</a>, sets ODBC connection attributes.</td></tr>
+<tr class="uneven"><td><a href="sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a></td><td>Creates a cursor with the following information about columns within a table:<br />
+- the optimal set of columns that uniquely identifies a row in the table.<br />
+- columns that are automatically updated when any value in the row is updated by a transaction.</td></tr>
+<tr class="even"><td><a href="sqltableprivilegesex.html">SQLTablePrivilegesEx</a></td><td>Creates a cursor of tables and the privileges associated with each table.</td></tr>
+<tr class="uneven"><td><a href="sqltablesex.html">SQLTablesEx</a></td><td>Creates a cursor with table, catalog, or schema names, and table types, stored in a specific data source.</td></tr>
+<tr class="even"><td><a href="sqlvarianttovalue.html">SQLVariantToValue</a></td><td>Converts a field of type SQL_SS_VARIANT retrieved from SQL Server via <a href="/pages/sqlexecex.html">SQLExecEx</a> into it's equivalent FoxPro type.</td></tr>
+<tr class="uneven"><td><a href="valuetosqlvariant.html">ValueToSQLVariant</a></td><td>Converts a FoxPro value into binary value for storage into a SQL_SS_VARIANT binary value for storage inside SQL Server.</td></tr>
 </table>
 
 </div>

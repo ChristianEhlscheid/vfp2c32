@@ -9,7 +9,7 @@ ENDIF
 
 LOCAL lcSourceFile, lcDestFile
 
-lcSourceFile = GETOPENFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Choose a file to copy/move",OFN_EX_NOPLACESBAR)
+lcSourceFile = GETOPENFILENAMEEX(0,"All Files" + CHR(0) + "*.*","","C:","Choose a file to copy/move",OFN_EX_NOPLACESBAR)
 IF VARTYPE(lcSourceFile) = 'N'
 	IF lcSourceFile = -1
 		? "Dialog box aborted."	
@@ -19,7 +19,7 @@ IF VARTYPE(lcSourceFile) = 'N'
 	RETURN
 ENDIF
 
-lcDestFile = GETSAVEFILENAME(0,"All Files" + CHR(0) + "*.*","","C:","Choose a destination",OFN_EX_NOPLACESBAR)
+lcDestFile = GETSAVEFILENAMEEX(0,"All Files" + CHR(0) + "*.*","","C:","Choose a destination",OFN_EX_NOPLACESBAR)
 IF VARTYPE(lcSourceFile) = 'N'
 	IF lcSourceFile = -1
 		? "Dialog box aborted."	
@@ -34,7 +34,7 @@ DO FORM frmfileprogress NAME loForm LINKED
 SET ESCAPE ON
 ON ESCAPE loForm.Abort()
 
-? CopyFileEx(lcSourceFile,lcDestFile,'loForm.Progress')
+? CopyFileEx2(lcSourceFile,lcDestFile,'loForm.Progress')
 && MoveFileEx(lcSourceFile ,lcDestFile,'loForm.Progress')
 
 SET ESCAPE OFF

@@ -14,12 +14,17 @@
 <div id="content">
 <p class="description">Moves one or several files.</p>
 
-<div class="block"><pre>SHMoveFiles(<a href="#p1">cSource</a>, <a href="#p2">cTarget</a>, <a href="#p3">nFlags</a> [, <a href="#p4">cTitle</a>])</pre></div>
+<div class="block"><pre>SHMoveFiles(<a href="#p1">cSource</a>, <a href="#p2">cTarget</a>, <a href="#p3">nFlags</a> [, <a href="#p4">cTitle</a>, [<a href="#p5">cRenamedFiles</a>]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cSource</a></dt>
 <dd><p>One or more file names. These names should be fully-qualified paths to prevent unexpected results.<br />
 Standard MS-DOS wildcard characters, such as "*", are permitted only in the file-name position. Using a wildcard character elsewhere in the string will lead to unpredictable results.<br />
-Each file name should be terminated by a single <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).</p>
+Each file name should be terminated by a single <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).<br />
+<br />
+If the nFlags parameter is contains FOF_SOURCE_CURSOR or FOF_SOURCE_ARRAY, the string is treated as a cursor or array name.<br />
+<br />
+FOF_SOURCE_CURSOR by default uses the "filename" field of the cursor, but passing a full name is also possible e.g. "mycursor.file".<br />
+FOF_SOURCE_ARRAY always uses the first column of the array.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cTarget</a></dt>
 <dd><p>The destination file or directory name. Wildcard characters are not allowed. Their use will lead to unpredictable results.<br />
@@ -28,7 +33,9 @@ Each file name should be terminated by a single <a href="its:dv_foxhelp.chm::/ht
 Wildcard characters are not supported. <br />
 It can specify destination directories that do not exist. In those cases, the system attempts to create them and normally displays a dialog box to ask the user if they want to create the new directory. To suppress this dialog box and have the directories created silently, set the FOF_NOCONFIRMMKDIR flag in <em>nFlags</em>. <br />
 It can contain multiple destination file names if the <em>nFlags</em> parameter specifies FOF_MULTIDESTFILES. <br />
-Use fully-qualified paths. Using relative paths is not prohibited, but can have unpredictable results.</p>
+Use fully-qualified paths. Using relative paths is not prohibited, but can have unpredictable results. <br />
+<br />
+If the nFlags parameter is contains FOF_SOURCE_CURSOR or FOF_SOURCE_ARRAY, the string is treated as a cursor or array name.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">nFlags (additive)</a></dt>
 <dd><p>default is none of the below:</p>
@@ -48,9 +55,18 @@ If pFrom does not contain fully qualified path and file names, this flag is igno
 <tr><td>FOF_RENAMEONCOLLISION</td><td>Give the file being operated on a new name in a move, copy, or rename operation if a file with the target name already exists.</td></tr>
 <tr><td>FOF_SILENT</td><td>Do not display a progress dialog box.</td></tr>
 <tr><td>FOF_SIMPLEPROGRESS</td><td>Display a progress dialog box but do not show the file names. If you pass the cTitle parameter, FOF_SIMPLEPROGRESS is automatically set.</td></tr>
+<tr><td>FOF_SOURCE_CURSOR</td><td>The cSource parameter is a cursor name.</td></tr>
+<tr><td>FOF_SOURCE_ARRAY</td><td>The cSource parameter is an array name.</td></tr>
+<tr><td>FOF_DEST_CURSOR</td><td>The cTarget parameter is a cursor name.</td></tr>
+<tr><td>FOF_DEST_ARRAY</td><td>The cTarget parameter is an array name.</td></tr>
+<tr><td>FOF_MAPPING_ARRAY</td><td>The cRenamedFiles parameter is an array name, by default a cursor is created.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p4"></a></dt>
 <dd><p></p>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cRenamedFiles (optional)</a></dt>
+<dd><p>Only applicable when FOF_RENAMEONCOLLISION is passed in the nFlags parameter.<br />
+A cursor or array name into which the old and new filenames will be stored.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>1 if all files were moved successfull, 0 if the operation was aborted, otherwise the errorcode from the <a href="http://msdn.microsoft.com/en-us/library/bb762164(VS.85).aspx">SHFileOperation</a> API.</p>
