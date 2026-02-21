@@ -25,15 +25,15 @@
 If you pass 0 as the timeout the function doesn't wait until the service is initiazed, instead it returns immediately after the start request has been sent.<br />
 <br />
 If you omit this parameter or pass NULL the timeout is set to the default timeout reported by the service.<br />
-See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms685992(VS.85).aspx">SERVICE_STATUS_PROCESS</a> structure's "dwWaitHint" member.</p>
+See MSDN help for SERVICE_STATUS_PROCESS structure's "dwWaitHint" member.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">cServer (optional)</a></dt>
 <dd><p>The server name on which the service is running.<br />
-See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+See MSDN help for OpenSCManager.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">cDatabase (optional)</a></dt>
 <dd><p>The database under which the service is registered.<br />
-See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+See MSDN help for OpenSCManager.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>If the service is already in the running state or continued within the specified timeout period 1 is returned, if the timeout expired 0 is returned.</p>
@@ -45,7 +45,7 @@ See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.8
 <a href="/pages/aservices.html">AServices</a><br />
 <a href="/pages/aservicestatus.html">AServiceStatus</a><br />
 <a href="/pages/closeservicehandleex.html">CloseServiceHandleEx</a><br />
-<a href="/pages/controlserviceex.html">ControlServiceEx</a><br />
+<a href="/pages/controlserviceex2.html">ControlServiceEx2</a><br />
 <a href="/pages/createserviceex.html">CreateServiceEx</a><br />
 <a href="/pages/openserviceex.html">OpenServiceEx</a><br />
 <a href="/pages/pauseservice.html">PauseService</a><br />
@@ -53,12 +53,6 @@ See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.8
 <a href="/pages/stopserviceex.html">StopServiceEx</a><br />
 <a href="/pages/waitforservicestatus.html">WaitForServiceStatus</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms682108(VS.85).aspx">ControlService</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms684939(VS.85).aspx">QueryServiceStatus</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms684330(VS.85).aspx">OpenService</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682028(VS.85).aspx">CloseServiceHandle</a></p>
 
 
 </div>

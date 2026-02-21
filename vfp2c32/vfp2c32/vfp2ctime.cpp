@@ -12,6 +12,12 @@
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
 
+
+static PGETDYNAMICTIMEZONEINFORMATION fpGetDynamicTimeZoneInformation = 0;
+static PGETTIMEZONEINFORMATIONFORYEAR fpGetTimeZoneInformationForYear = 0;
+static PTZSPECIFICLLOCALTIMETOSYSTEMTIMEEX fpTzSpecificLocalTimeToSystemTimeEx = 0;
+static PSYSTEMTIMETOTZSPECIFICLOCALTIMEEX fpSystemTimeToTzSpecificLocalTimeEx = 0;
+
 // Datetime to FILETIME
 void _fastcall DT2FT(ParamBlkEx& parm)
 {
@@ -20,7 +26,7 @@ void _fastcall DT2FT(ParamBlkEx& parm)
 
 	if (parm.PCount() == 2 || !parm(3)->ev_length)
 	{
-		DateTimeToFileTime(parm(1),&sFileTime);
+		DateTimeToFileTime(parm(1), &sFileTime);
 		if (!LocalFileTimeToFileTime(&sFileTime,pFileTime))
 			RaiseWin32Error("LocalFileTimeToFileTime", GetLastError());
 	}
@@ -307,4 +313,153 @@ catch(int nErrorNo)
 {
 	RaiseError(nErrorNo);
 }
+}
+
+TimeZoneInfo& TimeZoneInfo::GetTsi()
+{
+	static TimeZoneInfo tsi;
+	return tsi;
+}
+
+/* TimeZoneInfo class */
+TimeZoneInfo::TimeZoneInfo() : m_Hwnd(0), m_Atom(0)
+{
+	WNDCLASSEX wndClass = { 0 };
+	char* lpClass = "__VFP2C_TZWC";
+
+	m_Atom = (ATOM)GetClassInfoEx(ghModule, lpClass, &wndClass);
+	if (!m_Atom)
+	{
+		wndClass.cbSize = sizeof(WNDCLASSEX);
+		wndClass.hInstance = ghModule;
+		wndClass.lpfnWndProc = TimeChangeWindowProc;
+		wndClass.lpszClassName = lpClass;
+		m_Atom = RegisterClassEx(&wndClass);
+	}
+
+	if (m_Atom)
+	{
+		m_Hwnd = CreateWindowEx(0, (LPCSTR)m_Atom, 0, WS_POPUP, 0, 0, 0, 0, 0, 0, ghModule, 0);
+		if (!m_Hwnd)
+			AddWin32Error("CreateWindowEx", GetLastError());
+	}
+	else
+		AddWin32Error("RegisterClassEx", GetLastError());
+
+	HMODULE hMod = GetModuleHandle("kernel32.dll");
+	fpGetDynamicTimeZoneInformation = (PGETDYNAMICTIMEZONEINFORMATION)GetProcAddress(hMod, "GetDynamicTimeZoneInformation");
+	fpGetTimeZoneInformationForYear = (PGETTIMEZONEINFORMATIONFORYEAR)GetProcAddress(hMod, "GetTimeZoneInformationForYear");
+	fpTzSpecificLocalTimeToSystemTimeEx = (PTZSPECIFICLLOCALTIMETOSYSTEMTIMEEX)GetProcAddress(hMod, "TzSpecificLocalTimeToSystemTimeEx");
+	fpSystemTimeToTzSpecificLocalTimeEx = (PSYSTEMTIMETOTZSPECIFICLOCALTIMEEX)GetProcAddress(hMod, "SystemTimeToTzSpecificLocalTimeEx");
+
+	Refresh();
+}
+
+TimeZoneInfo::~TimeZoneInfo()
+{
+	if (m_Hwnd)
+		DestroyWindow(m_Hwnd);
+	if (m_Atom)
+		UnregisterClass((LPCSTR)m_Atom, ghModule);
+}
+
+void TimeZoneInfo::Refresh()
+{
+	if (fpGetDynamicTimeZoneInformation)
+		m_CurrentZone = fpGetDynamicTimeZoneInformation(&m_DynamicZoneInfo);
+	else
+	{
+		m_CurrentZone = GetTimeZoneInformation(&m_ZoneInfo);
+	}
+
+	/*
+	DWORD result;
+	int xj = 0;
+	do
+	{
+		result = fpEnumDynamicTimeZoneInformation(xj++, &dynzoneinfo);
+		if (result == ERROR_SUCCESS)
+			m_DynamicZones.Add(dynzoneinfo);
+	} while (result != ERROR_NO_MORE_ITEMS);
+	*/
+	/*
+	*/
+}
+
+void TimeZoneInfo::ToUTC(double& pDateTime)
+{
+	SYSTEMTIME pLocalTime, pUTCTime;
+	if (fpGetDynamicTimeZoneInformation)
+	{
+		DateTimeToSystemTime(pDateTime, &pLocalTime);
+		/*
+		if (!fpGetTimeZoneInformationForYear(pLocalTime.wYear, &m_DynamicZoneInfo, &pZoneInfo))
+		{
+			SaveWin32Error("GetTimeZoneInformationForYear", GetLastError());
+			throw E_APIERROR;
+		}
+		*/
+		if (!fpTzSpecificLocalTimeToSystemTimeEx(&m_DynamicZoneInfo, &pLocalTime, &pUTCTime))
+		{
+			SaveWin32Error("TzSpecificLocalTimeToSystemTimeEx", GetLastError());
+			throw E_APIERROR;
+		}
+
+		SystemTimeToDateTime(&pUTCTime, pDateTime);
+	}
+	else
+	{
+		DateTimeToSystemTime(pDateTime, &pLocalTime);
+		if (!TzSpecificLocalTimeToSystemTime(&m_ZoneInfo, &pLocalTime, &pUTCTime))
+		{
+			SaveWin32Error("SystemTimeToTzSpecificLocalTime", GetLastError());
+			throw E_APIERROR;
+		}
+
+		SystemTimeToDateTime(&pUTCTime, pDateTime);
+	}
+}
+
+void TimeZoneInfo::ToLocal(double& pDateTime)
+{
+	SYSTEMTIME pLocalTime, pUTCTime;
+	if (fpGetDynamicTimeZoneInformation)
+	{
+		DateTimeToSystemTime(pDateTime, &pUTCTime);
+		/*
+		if (!fpGetTimeZoneInformationForYear(pLocalTime.wYear, &m_DynamicZoneInfo, &pZoneInfo))
+		{
+			SaveWin32Error("GetTimeZoneInformationForYear", GetLastError());
+			throw E_APIERROR;
+		}
+		*/
+		if (!fpSystemTimeToTzSpecificLocalTimeEx(&m_DynamicZoneInfo, &pUTCTime, &pLocalTime))
+		{
+			SaveWin32Error("SystemTimeToTzSpecificLocalTimeEx", GetLastError());
+			throw E_APIERROR;
+		}
+
+		SystemTimeToDateTime(&pLocalTime, pDateTime);
+	}
+	else
+	{
+		DateTimeToSystemTime(pDateTime, &pUTCTime);
+		if (!SystemTimeToTzSpecificLocalTime(&m_ZoneInfo, &pUTCTime, &pLocalTime))
+		{
+			SaveWin32Error("SystemTimeToTzSpecificLocalTime", GetLastError());
+			throw E_APIERROR;
+		}
+
+		SystemTimeToDateTime(&pLocalTime, pDateTime);
+	}
+}
+
+LRESULT _stdcall TimeZoneInfo::TimeChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	if (uMsg == WM_TIMECHANGE)
+	{
+		TimeZoneInfo& tsi = TimeZoneInfo::GetTsi();
+		tsi.Refresh();
+	}
+	return DefWindowProc(nHwnd, uMsg, wParam, lParam);
 }

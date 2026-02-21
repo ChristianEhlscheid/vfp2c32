@@ -149,6 +149,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.fll</TargetExt>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>vfp2c64d</TargetName>
@@ -160,6 +161,8 @@
     <TargetExt>.fll</TargetExt>
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
+    <IncludePath>C:\Program Files (x86)\Visual Leak Detector\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files (x86)\Visual Leak Detector\lib\Win64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|x64'">
     <TargetExt>.fll</TargetExt>
@@ -177,23 +180,29 @@
     <TargetExt>.fll</TargetExt>
     <TargetName>vfp2c64t</TargetName>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallingConvention>FastCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <StringPooling>true</StringPooling>
-      <MinimalRebuild>false</MinimalRebuild>
+      <MinimalRebuild>true</MinimalRebuild>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
+      <CreateHotpatchableImage>true</CreateHotpatchableImage>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -212,19 +221,24 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_THREADSAFE;WIN32;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_THREADSAFE;WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallingConvention>FastCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <StringPooling>true</StringPooling>
-      <MinimalRebuild>false</MinimalRebuild>
+      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
+      <CreateHotpatchableImage>true</CreateHotpatchableImage>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -232,8 +246,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <TargetMachine>MachineX86</TargetMachine>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
-      <IgnoreSpecificDefaultLibraries>msvcrt; msvcprtd</IgnoreSpecificDefaultLibraries>
+      <ModuleDefinitionFile>vfp2c32t.def</ModuleDefinitionFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt;</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
@@ -242,24 +256,32 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <CallingConvention>StdCall</CallingConvention>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CallingConvention>FastCall</CallingConvention>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <CompileAs>CompileAsCpp</CompileAs>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <StringPooling>true</StringPooling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <OpenMPSupport>false</OpenMPSupport>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <MinimalRebuild>true</MinimalRebuild>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -267,13 +289,18 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <LargeAddressAware>false</LargeAddressAware>
       <TargetMachine>MachineX86</TargetMachine>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
+      <SetChecksum>false</SetChecksum>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32examples\$(TargetName).pdb"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <CallingConvention>FastCall</CallingConvention>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>_WIN64;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
@@ -284,8 +311,13 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
-      <WarningLevel>Level1</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <MinimalRebuild>true</MinimalRebuild>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -303,17 +335,23 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     <ClCompile>
       <CallingConvention>FastCall</CallingConvention>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>_THREADSAFE;_WIN64;_DEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_THREADSAFE;_WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
-      <CompileAs>Default</CompileAs>
+      <CompileAs>CompileAsCpp</CompileAs>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <WarningLevel>Level4</WarningLevel>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <MinimalRebuild>true</MinimalRebuild>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -329,36 +367,57 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <CallingConvention>FastCall</CallingConvention>
-      <PreprocessorDefinitions>_WIN64;NDEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN64;NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
-      <CompileAs>Default</CompileAs>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <WarningLevel>Level4</WarningLevel>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <MinimalRebuild>true</MinimalRebuild>
+      <OpenMPSupport>false</OpenMPSupport>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SetChecksum>false</SetChecksum>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32examples\$(TargetName).pdb"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|x64'">
     <ClCompile>
-      <PreprocessorDefinitions>_THREADSAFE;_WIN64;NDEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_THREADSAFE;_WIN64;NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallingConvention>FastCall</CallingConvention>
-      <CompileAs>Default</CompileAs>
+      <CompileAs>CompileAsCpp</CompileAs>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <WarningLevel>Level4</WarningLevel>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <OpenMPSupport>false</OpenMPSupport>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MinimalRebuild>true</MinimalRebuild>
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>msvcprtd</IgnoreSpecificDefaultLibraries>
@@ -373,16 +432,35 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">
     <Link>
       <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>vfp2c32t.def</ModuleDefinitionFile>
       <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <ClCompile>
       <CallingConvention>FastCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
-      <PreprocessorDefinitions>_THREADSAFE;WIN32;NDEBUG;_WINDOWS;_USRDLL;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_THREADSAFE;WIN32;NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
+      <StringPooling>true</StringPooling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <OpenMPSupport>false</OpenMPSupport>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <MinimalRebuild>true</MinimalRebuild>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
+copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionDir)..\vfp2c32examples\$(TargetName).pdb"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="pro_ext64.h" />
@@ -486,6 +564,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <Outputs Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">$(OutDir)%(Filename).obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">ml /Fo $(TargetDir)%(Filename).obj /c /Cx %(FullPath)</Command>
     </CustomBuild>
+    <None Include="vfp2c32t.def" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="vfp2c32.rc" />

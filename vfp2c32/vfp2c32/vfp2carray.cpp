@@ -49,14 +49,16 @@ catch (int nErrorNo)
 }
 }
 
+#pragma warning( disable : 4189)
 void _fastcall ASum(ParamBlkEx& parm)
 {
 try
 {
 	FoxArray vArray(parm(1));
 	FoxValue vValue;
-	double Sum;
+	double Sum = 0;
 	CCY SumCur;
+	SumCur.QuadPart = 0;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim;
 	char Type = '0';
 	bool Overflow = false;
@@ -140,6 +142,7 @@ catch(int nErrorNo)
 	RaiseError(nErrorNo);
 }
 }
+#pragma warning( default : 4189)
 
 union __AAverageValues
 {
@@ -263,8 +266,9 @@ try
 {
 	FoxArray vArray(parm(1));
 	FoxValue vValue;
-	double Max;
+	double Max = 0;
 	CCY MaxCur;
+	MaxCur.QuadPart = 0;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim;
 	char Type = '0';
 
@@ -361,8 +365,9 @@ try
 {
 	FoxArray vArray(parm(1));
 	FoxValue vValue;
-	double Min;
+	double Min = 0;
 	CCY MinCur;
+	MinCur.QuadPart = 0;
 	unsigned int Rows, Dims, TargetDim, StartDim, StopDim;
 	char Type = '0';
 

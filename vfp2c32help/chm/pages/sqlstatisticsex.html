@@ -31,14 +31,18 @@ Either a valid schema name, an empty string or .NULL..</p>
 <dd><p>The table, table type or view name in the remote database, acts as a filter.<br />
 Either a valid schema name, an empty string or .NULL..</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p5"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p5">cColumn</a></dt>
+<dd><p>The column name.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p6"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p6">nUnique</a></dt>
+<dd><p>Either SQL_INDEX_UNIQUE (0) or SQL_INDEX_ALL (1) to filter the returned indices.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p7"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p7">bReserved</a></dt>
+<dd><p>Indicates the importance of the CARDINALITY and PAGES columns in the result set. The following options affect the return of the CARDINALITY and PAGES columns only; index information is returned even if CARDINALITY and PAGES are not returned.<br />
+<br />
+SQL_ENSURE (.T.) requests that the driver unconditionally retrieve the statistics. (Drivers that conform only to the Open Group standard and do not support ODBC extensions will not be able to support SQL_ENSURE.)<br />
+<br />
+SQL_QUICK (.F.) requests that the driver retrieve the CARDINALITY and PAGES only if they are readily available from the server. In this case, the driver does not ensure that the values are current. (Applications that are written to the Open Group standard will always get SQL_QUICK behavior from ODBC 3.x-compliant drivers.)</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p8">cCusor</a></dt>
 <dd><p>The name of the cursor to be created.</p>
@@ -50,6 +54,33 @@ When passing SQL_ATTR_METADATA_ID this will affect how the cCatalog, cSchema, an
 <h2>Return Value</h2>
 <p></p>
 
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/asqldatasources.html">ASQLDataSources</a><br />
+<a href="/pages/asqldrivers.html">ASQLDrivers</a><br />
+<a href="/pages/changesqldatasource.html">ChangeSQLDataSource</a><br />
+<a href="/pages/createsqldatasource.html">CreateSQLDataSource</a><br />
+<a href="/pages/deletesqldatasource.html">DeleteSQLDataSource</a><br />
+<a href="/pages/sqlcancelex.html">SQLCancelEx</a><br />
+<a href="/pages/sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a><br />
+<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
+<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
+<a href="/pages/sqlexecex.html">SQLExecEx</a><br />
+<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
+<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
+<a href="/pages/sqlgettypeinfoex.html">SQLGetTypeInfoEx</a><br />
+<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
+<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
+<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
+<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
+<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
+<a href="/pages/sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a><br />
+<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
+<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
+<a href="/pages/sqlvarianttovalue.html">SQLVariantToValue</a><br />
+<a href="/pages/valuetosqlvariant.html">ValueToSQLVariant</a><br />
+</p>
 
 
 </div>

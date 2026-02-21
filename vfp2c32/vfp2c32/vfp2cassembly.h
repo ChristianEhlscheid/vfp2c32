@@ -9,7 +9,7 @@ this code implements a runtime assembly code emitter:
 - it can automatically produce prolog and epilog code, based on the calling convention and on the instructions generated, by keeping track of the used registers and parameter count
 - additionally it automatically produces the neccessary unwind information on x64 
 */
-// msvcprtd
+
 // #pragma comment(lib, "old_initcode.obj")
 
 #pragma warning(disable : 4482)
@@ -597,7 +597,7 @@ typedef struct _AsmDisplacement
 
 	AsmByte DataDisplacement(size_t nIndex)
 	{
-		Disp32 = nIndex;
+		Disp32 = (int)nIndex;
 		ByteLen = -1; // special size for Data displacement
 		return MODRM_MOD_RELATIVE;
 	}
@@ -1673,7 +1673,6 @@ public:
 #if !defined(_WIN64)
 		if (m_SubCallConv == fastcall && nParmNo <= 1)
 		{
-			int nSize = sizeof(T);
 			int nLastParmNo = nParmNo;
 			AsmRegister nReg = GetParameterRegister(parm, nParmNo);
 			if (nLastParmNo != nParmNo)
@@ -1692,20 +1691,23 @@ public:
 #else
 		if (nParmNo <= 3)
 		{
-			int nSize = sizeof(T);
 			AsmRegister nReg = GetParameterRegister(parm, nParmNo);
-			assert(nSize <= 8);
+			assert(sizeof(T) <= 8);
 			Mov(nReg, parm);
 		}
 		else
 		{
 			if (m_UseFramePointer)
 			{
-				Mov(AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar;
+				pVar = AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			else
 			{
-				Mov(AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar;
+				pVar = AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			nParmNo++;
 			m_SubFunctionParameterSize = nParmNo * 8;
@@ -1729,11 +1731,13 @@ public:
 		{
 			if (m_UseFramePointer)
 			{
-				Mov(AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			else
 			{
-				Mov(AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			nParmNo++;
 			m_SubFunctionParameterSize = nParmNo * 8;
@@ -1757,11 +1761,13 @@ public:
 		{
 			if (m_UseFramePointer)
 			{
-				Mov(AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			else
 			{
-				Mov(AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			nParmNo++;
 			m_SubFunctionParameterSize = nParmNo * 8;
@@ -1815,11 +1821,13 @@ public:
 		{
 			if (m_UseFramePointer)
 			{
-				Mov(AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			else
 			{
-				Mov(AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true), parm);
+				AsmVariable pVar(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
+				Mov(pVar, parm);
 			}
 			nParmNo++;
 			m_SubFunctionParameterSize = nParmNo * 8;
@@ -2111,7 +2119,6 @@ private:
 	{
 		rIns.ModRM._Used = 1;
 		rIns.ModRM.Reg = nOpcode;
-		AsmRegister nFrameReg = StackFrameRegister();
 		if (pSource.Location == Memory)
 		{
 			rIns.ModRM.Rm = pSource.Register;

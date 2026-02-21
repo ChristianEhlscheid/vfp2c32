@@ -17,8 +17,8 @@
 <div class="block"><pre>ChangeSQLDataSource(<a href="#p1">cDataSource</a>, <a href="#p2">cDriver</a>, <a href="#p3">nDataSourceType</a>)</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cDataSource</a></dt>
-<dd><p>A list of attributes in the form of keyword-value pairs seperated by <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).<br />
-E.g. "DSN=Personnel Data" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "UID=Smith"  + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "PWD=Sesame" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "DATABASE=Personnel"</p>
+<dd><p>A list of attributes in the form of keyword-value pairs seperated by CHR(0).<br />
+E.g. "DSN=Personnel Data" + CHR(0) + "UID=Smith"  + CHR(0) + "PWD=Sesame" + CHR(0) + "DATABASE=Personnel"</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cDriver</a></dt>
 <dd><p>Driver name, a list of drivers can be retrieved with the <a href="/pages/asqldrivers.html">ASQLDrivers</a> function.</p>
@@ -31,7 +31,7 @@ E.g. "DSN=Personnel Data" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a
 <tr><td>ODBC_SYSTEM_DSN</td><td>Changes a system data sources.</td></tr>
 </table></dd></dl>
 <h2>Return Value</h2>
-<p>.T. if the API call to <a href="http://msdn.microsoft.com/en-us/library/ms716476(VS.85).aspx">SQLConfigDataSource</a> succeeded, .F. otherwise.</p>
+<p>.T. if the API call to SQLConfigDataSource succeeded, .F. otherwise.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
@@ -40,26 +40,26 @@ E.g. "DSN=Personnel Data" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a
 <a href="/pages/createsqldatasource.html">CreateSQLDataSource</a><br />
 <a href="/pages/deletesqldatasource.html">DeleteSQLDataSource</a><br />
 <a href="/pages/sqlcancelex.html">SQLCancelEx</a><br />
-<a href="/pages/sqlexecex.html">SQLExecEx</a><br />
-<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
-<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
-<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
-<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
-<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
-<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
-<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
-<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
-<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
-<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
-<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
-<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
 <a href="/pages/sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a><br />
+<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
+<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
+<a href="/pages/sqlexecex.html">SQLExecEx</a><br />
+<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
+<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
+<a href="/pages/sqlgettypeinfoex.html">SQLGetTypeInfoEx</a><br />
+<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
+<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
+<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
+<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
+<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
 <a href="/pages/sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a><br />
+<a href="/pages/sqlstatisticsex.html">SQLStatisticsEx</a><br />
+<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
+<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
 <a href="/pages/sqlvarianttovalue.html">SQLVariantToValue</a><br />
 <a href="/pages/valuetosqlvariant.html">ValueToSQLVariant</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms716476(VS.85).aspx">SQLConfigDataSource</a></p>
 
 
 </div>

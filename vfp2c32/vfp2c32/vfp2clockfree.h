@@ -2,6 +2,7 @@
 #define _VFP2CLOCKFREE_H__
 
 #include <malloc.h>
+// #include <syncapi.h>
 
 extern "C" void _ReadWriteBarrier(void);
 #pragma intrinsic(_ReadWriteBarrier)
@@ -39,6 +40,7 @@ public:
 	inline T Add(T val) { return (T)InterlockedExchangeAdd(&m_Val, val); }
 	inline T Subtract(T val) { return (T)InterlockedExchangeAdd(&m_Val, -val); }
 	inline T Exchange(T val) { return (T)InterlockedExchange(&m_Val, val); }
+	inline T CompareExchange(T val, T compare) { return (T)InterlockedCompareExchange(&m_Val, val, compare); }
 
 protected:
 	volatile T m_Val;
@@ -206,7 +208,6 @@ private:
 	CACHELINE_ALIGN Atomic<Node*> m_Tail;
 };
 
-
 template<class T, int nBlockSize>
 class CUnboundBlockSPSCQueue
 {
@@ -295,5 +296,132 @@ private:
 	CACHELINE_ALIGN Atomic<Node*> m_Head;
 	CACHELINE_ALIGN Atomic<Node*> m_Tail;
 };
+
+
+template<int nSize>
+class CMultiEvent
+{
+public:
+	CMultiEvent() { memset(m_Events, 0, sizeof(m_Events)); }
+	~CMultiEvent() { Close(); }
+
+	bool Create(bool bManualReset = true, bool bInitalState = false, char* pName = 0, LPSECURITY_ATTRIBUTES pSecurityAttributes = 0)
+	{
+		for (unsigned int xj = 0; xj < countof(m_Events); xj++)
+		{
+			m_Events[xj] = ::CreateEvent(pSecurityAttributes, bManualReset ? TRUE : FALSE, bInitalState ? TRUE : FALSE, pName);
+			if (m_Events[xj] == 0)
+			{
+				SaveWin32Error("CreateEvent", GetLastError());
+				return false;
+			}
+		}
+		return true;
+	}
+
+	inline BOOL Signal(unsigned int nIndex) { return ::SetEvent(m_Events[nIndex]); }
+	inline BOOL Reset(unsigned int nIndex) { return ::ResetEvent(m_Events[nIndex]); }
+	inline DWORD Wait(DWORD dwTimeout) { return ::WaitForMultipleObjects(countof(m_Events), m_Events, FALSE, dwTimeout); }
+
+	void Close()
+	{
+		for (unsigned int xj = 0; xj < countof(m_Events); xj++)
+		{
+			if (m_Events[xj])
+			{
+				::CloseHandle(m_Events[xj]);
+				m_Events[xj] = 0;
+			}
+		}
+	}
+
+private:
+	HANDLE m_Events[nSize];
+};
+
+template<class T, unsigned int nCount>
+class CBoundSPMCQueue
+{
+public:
+	CBoundSPMCQueue()
+	{
+		InitializeCriticalSection(&m_CriticalSection);
+		InitializeConditionVariable(&m_ConditionVar);
+	}
+
+	~CBoundSPMCQueue()
+	{
+		
+	}
+
+	void Push(T item)
+	{
+		m_Queue.Push(item);
+		WakeConditionVariable(&m_ConditionVar);
+	}
+
+	T Pop()
+	{
+		T item;
+		EnterCriticalSection(&m_CriticalSection);
+		while (!m_Queue.Pop(item))
+		{
+			SleepConditionVariableCS(&m_ConditionVar, &m_CriticalSection, INFINITE);
+		}
+		LeaveCriticalSection(&m_CriticalSection);
+		return item;
+	}
+
+private:
+	CRITICAL_SECTION m_CriticalSection;
+	CONDITION_VARIABLE m_ConditionVar;
+	CBoundSPSCQueue<T, nCount> m_Queue;
+};
+
+
+template<class T, unsigned int nCount>
+class CBoundMPSCQueue
+{
+public:
+	CBoundMPSCQueue()
+	{
+		InitializeCriticalSection(&m_CriticalSectionRead);
+		InitializeCriticalSection(&m_CriticalSectionWrite);
+		InitializeConditionVariable(&m_ConditionVar);
+	}
+
+	~CBoundMPSCQueue()
+	{
+
+	}
+
+	void Push(T item)
+	{
+		EnterCriticalSection(&m_CriticalSectionWrite);
+		m_Queue.Push(item);
+		LeaveCriticalSection(&m_CriticalSectionWrite);
+		WakeConditionVariable(&m_ConditionVar);
+	}
+
+	T Pop()
+	{
+		T item;
+		EnterCriticalSection(&m_CriticalSectionRead);
+		while (!m_Queue.Pop(item))
+		{
+			SleepConditionVariableCS(&m_ConditionVar, &m_CriticalSectionRead, INFINITE);
+		}
+		LeaveCriticalSection(&m_CriticalSectionRead);
+		return item;
+	}
+
+private:
+	CRITICAL_SECTION m_CriticalSectionRead;
+	CRITICAL_SECTION m_CriticalSectionWrite;
+	CONDITION_VARIABLE m_ConditionVar;
+	CBoundSPSCQueue<T, nCount> m_Queue;
+};
+
+
 
 #endif // _VFP2CLOCKFREE_H__

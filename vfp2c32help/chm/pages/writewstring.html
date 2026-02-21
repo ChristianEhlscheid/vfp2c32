@@ -18,11 +18,11 @@
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">nAddress</a></dt>
 <dd><p>Either 0 or a previously allocated pointer.<br />
-If 0 a new memory area large enough to contain the string in <strong>cValue</strong> + 1 for the nullterminator gets allocated and the string is copied.<br />
+If 0 a new memory area large enough to contain the converted string in <strong>cValue</strong> + 2 bytes for the nullterminator gets allocated and the string is converted to unicode at the newly allocated memory.<br />
 If nAddress is not 0 it's assumed to be a pointer to a memory area previously allocated by WriteWString or <a href="/pages/allocmem.html">AllocMem</a>.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p2"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p2">cValue</a></dt>
+<dd><p>A string to convert to unicode and write at the specified address.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">nCodePage (optional)</a></dt>
 <dd><p>default = the codepage set with <a href="/pages/vfp2csys.html">VFP2CSys</a>(4, <em>nCodePage</em>) which defaults to CP_ACP<br />
@@ -108,8 +108,6 @@ This parameter can be set to the value of any code page that is installed or ava
 <a href="/pages/writewchar.html">WriteWChar</a><br />
 <a href="/pages/writewchararray.html">WriteWCharArray</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/dd319072(VS.85).aspx">MultiByteToWideChar</a></p>
 
 
 </div>

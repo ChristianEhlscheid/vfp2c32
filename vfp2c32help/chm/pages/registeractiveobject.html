@@ -21,7 +21,7 @@ Registration causes the object to be listed in the running object table (ROT) of
 <dd><p>A reference to the COM object you want to register in the ROT (running object table).</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cProgID</a></dt>
-<dd><p>The ProgID of your COM object - the same string you used in <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>.</p>
+<dd><p>The ProgID of your COM object - the same string you used in CREATEOBJECT.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>A numeric handle representing the registered object.</p>
@@ -29,7 +29,7 @@ Registration causes the object to be listed in the running object table (ROT) of
 <h2>Example</h2>
 <div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
 <div class="block"><pre id="code_1">LOCAL yourObject, nObjectHandle
-yourObject = <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>('some.ComObject')
+yourObject = CREATEOBJECT('some.ComObject')
 nObjectHandle = RegisterActiveObject(m.yourObject, 'some.ComObject')
 
 &amp;&amp; the object can now be obtained from any program with 
@@ -49,9 +49,6 @@ m.loComObjectRef = GETOBJECT(, 'some.ComObject')
 <a href="/pages/revokeactiveobject.html">RevokeActiveObject</a><br />
 <a href="/pages/stringfromclsid.html">StringFromCLSID</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms221551.aspx">RegisterActiveObject</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms688386(VS.85).aspx">CLSIDFromProgID</a></p>
 
 
 </div>

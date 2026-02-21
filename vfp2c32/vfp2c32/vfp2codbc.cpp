@@ -1052,7 +1052,7 @@ void _fastcall SQLCreateTableTypeCursor(ParamBlkEx& parm)
 
 		vStringValue.Size(VFP2C_ODBC_MAX_COLUMN_NAME + 1);
 
-		for (int nRow = 1; nRow <= pFoundType->pColumns.GetCount(); nRow++)
+		for (unsigned int nRow = 1; nRow <= pFoundType->pColumns.GetCount(); nRow++)
 		{
 			SqlTableTypeColumn* lpSC = pFoundType->pColumns[nRow - 1];
 
@@ -1144,7 +1144,6 @@ void _fastcall SQLCatalogFetch(SqlStatement* pStmt, FoxString& pCursor, VFP2CTls
 	// 8
 	pResultSet->BindColumns();
 
-	int nRecNo = 0;
 	if (pResultSet->nWorkArea && (pStmt->nFlags & SQLEXECEX_REUSE_CURSOR))
 	{
 		if ((pStmt->nFlags & SQLEXECEX_APPEND_CURSOR) == 0)
@@ -1686,7 +1685,7 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 		tls.ErrorCount = 0;
 		SQLRETURN nApiRet;
 		SQLSMALLINT nNoOfCols;
-		SqlResultSet* pResultSet;
+		SqlResultSet* pResultSet = 0;
 		ValueEx vRowCount;
 		ValueEx vNoCountStatus;
 		int nErrorNo;
@@ -1851,7 +1850,6 @@ SQLParameterArrayMergeOutput:
 			// 8
 			pResultSet->BindColumns();
 
-			int nRecNo = 0;
 			if (pResultSet->nWorkArea && (pStmt->nFlags & (SQLEXECEX_REUSE_CURSOR | SQLEXECEX_PARAMETER_ARRAY)))
 			{
 				if ((pStmt->nFlags & (SQLEXECEX_APPEND_CURSOR | SQLEXECEX_PARAMETER_ARRAY)) == 0)
@@ -2059,7 +2057,6 @@ void _fastcall SQLPrepareEx(ParamBlkEx& parm)
 void _fastcall SQLCancelEx(ParamBlkEx& parm)
 {
 	SqlStatement* pStmt = parm(1)->Ptr<SqlStatement*>();
-	int retval = 1;
 	try
 	{
 		if (pStmt)
@@ -3237,7 +3234,7 @@ int _fastcall SQLStoreMemoBinaryByBindingSet(SqlColumn* lpSC, int nRow)
 
 int _fastcall SQLStoreSqlVariantByGetData(SqlColumn* lpSC)
 {
-	SQLLEN nLen = 0, nCType = 0, nSQLType = 0;
+	SQLLEN nLen = 0, nCType = 0;
 	char* pData = lpSC->pStmt->pGetDataBuffer.Ptr<char*>();
 	SqlVariant* pVariant = (SqlVariant*)pData;
 	pVariant->nSize = 0;
@@ -3314,7 +3311,7 @@ int _fastcall SQLStoreSqlVariantByGetData(SqlColumn* lpSC)
 				pData + sizeof(SqlVariant), lpSC->pStmt->pGetDataBuffer.Size() - sizeof(SqlVariant), &lpSC->nIndicator);
 			if (SQL_SUCCEEDED(nApiRet))
 			{
-				lpSC->pStmt->pGetDataBuffer.Len(lpSC->nIndicator + sizeof(SqlVariant));
+				lpSC->pStmt->pGetDataBuffer.Len((unsigned int)lpSC->nIndicator + sizeof(SqlVariant));
 				if (lpSC->lField.IsField())
 					return _DBReplace(lpSC->lField, lpSC->pStmt->pGetDataBuffer);
 				else
@@ -3408,27 +3405,27 @@ void _fastcall StringToDate_Struct(char* lpString, SQLLEN nLen, SQL_DATE_STRUCT*
 	CStringMatcher pMatcher(pView);
 	if (!pMatcher.MatchShort(&pTime->year))
 	{
-		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected year, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected year, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar('-'))
 	{
-		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected '-', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected '-', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->month))
 	{
-		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected month, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected month, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar('-'))
 	{
-		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected '-', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected '-', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->day))
 	{
-		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected day, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToDate_Struct", "Invalid data parsing date string, exptected day, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 }
@@ -3440,27 +3437,27 @@ void _fastcall StringToTime_Struct(char* lpString, SQLLEN nLen, SQL_TIME_STRUCT*
 	CStringMatcher pMatcher(pView);
 	if (!pMatcher.MatchUShort(&pTime->hour))
 	{
-		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected hour, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected hour, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->minute))
 	{
-		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected minute, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected minute, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->second))
 	{
-		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected seconds, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime_Struct", "Invalid data parsing time string, exptected seconds, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 }
@@ -3473,57 +3470,57 @@ void _fastcall StringToTimestamp_Struct(char* lpString, SQLLEN nLen, SQLSMALLINT
 	CStringMatcher pMatcher(pView);
 	if (!pMatcher.MatchShort(&pTime->year))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected year, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected year, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar('-'))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->month))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected month, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected month, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar('-'))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->day))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected day, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected day, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(' '))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected space, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected space, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->hour))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected hour, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected hour, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->minute))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected minute, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected minute, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->second))
 	{
-		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected seconds, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestamp_Struct", "Invalid data parsing datetime string, exptected seconds, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (pMatcher.MatchChar('.'))
@@ -3551,57 +3548,57 @@ void _fastcall StringToTimestampOffset_Struct(char* lpString, SQLLEN nLen, SQLSM
 	CStringMatcher pMatcher(pView);
 	if (!pMatcher.MatchShort(&pTime->year))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected year, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected year, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar('-'))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->month))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected month, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected month, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar('-'))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected '-', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->day))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected day, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected day, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(' '))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected space, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected space, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->hour))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected hour, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected hour, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->minute))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected minute, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected minute, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->second))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected seconds, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected seconds, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (pMatcher.MatchChar('.'))
@@ -3625,23 +3622,23 @@ void _fastcall StringToTimestampOffset_Struct(char* lpString, SQLLEN nLen, SQLSM
 		bPositive = true;
 	else
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected timezone sign, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected timezone sign, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 
 	if (!pMatcher.MatchShort(&pTime->timezone_hour))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected timezone hour, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected timezone hour, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchShort(&pTime->timezone_minute))
 	{
-		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected timezone minutes, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTimestampOffset_Struct", "Invalid data parsing datetime string, exptected timezone minutes, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!bPositive)
@@ -3659,27 +3656,27 @@ void _fastcall StringToTime2_Struct(char* lpString, SQLLEN nLen, SQLSMALLINT nDe
 	CStringMatcher pMatcher(pView);
 	if (!pMatcher.MatchUShort(&pTime->hour))
 	{
-		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected hour, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected hour, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->minute))
 	{
-		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected minute, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected minute, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchChar(':'))
 	{
-		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected ':', near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (!pMatcher.MatchUShort(&pTime->second))
 	{
-		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected seconds, near '%20V'", &pMatcher.CurrentView());
+		SaveCustomError("StringToTime2_Struct", "Invalid data parsing time string, exptected seconds, near '%20V'", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 	if (pMatcher.MatchChar('.'))
@@ -3730,7 +3727,7 @@ void _fastcall SQLVariantToValue(ParamBlkEx& parm)
 	try
 	{
 		ValueEx vValue;
-		SqlVariant* pVariant;
+		SqlVariant* pVariant = 0;
 		FoxMemo vMemo;
 		unsigned int nLength = 0;
 		char cType = parm(1)->Vartype();
@@ -3897,7 +3894,7 @@ void _fastcall ValueToSQLVariant(ParamBlkEx& parm)
 	SqlVariant* pSqlVariant;
 	ValueEx vVariant;
 	vVariant.SetString();
-	int nLength;
+	int nLength = 0;
 
 	switch (parm(1)->Vartype())
 	{

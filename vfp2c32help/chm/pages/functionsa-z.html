@@ -21,7 +21,7 @@
 <tr class="uneven"><td class="w20"><a href="adesktoparea.html">ADesktopArea</a></td><td>Stores the dimension of the visible desktop (not including the system taskbar or any application desktop toolbars) area into an array.</td></tr>
 <tr class="even"><td class="w20"><a href="adesktops.html">ADesktops</a></td><td>Stores all desktops associated with the specified window station of the calling process into an array.</td></tr>
 <tr class="uneven"><td class="w20"><a href="adirectoryinfo.html">ADirectoryInfo</a></td><td>Stores information about a directory into an array.</td></tr>
-<tr class="even"><td class="w20"><a href="adirex.html">ADirEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/77958569-651d-46c5-86e3-935dc7ec6486.htm">ADIR</a> function. Stores information about files into an array, cursor or calls a callback function for each file.</td></tr>
+<tr class="even"><td class="w20"><a href="adirex.html">ADirEx</a></td><td>Extended ADIR function. Stores information about files into an array, cursor or calls a callback function for each file.</td></tr>
 <tr class="uneven"><td class="w20"><a href="adisplaydevices.html">ADisplayDevices</a></td><td>Stores information about the display devices in the current session into an array.</td></tr>
 <tr class="even"><td class="w20"><a href="adriveinfo.html">ADriveInfo</a></td><td>Stores information about the currently available disk drives into an array.</td></tr>
 <tr class="uneven"><td class="w20"><a href="aerrorex.html">AErrorEx</a></td><td>Stores information about the last error occured in the library into an array.</td></tr>
@@ -94,7 +94,7 @@
 <tr class="uneven"><td class="w20"><a href="compactmem.html">CompactMem</a></td><td>Returns the size of the largest committed free block in the library specific heap.</td></tr>
 <tr class="even"><td class="w20"><a href="comparefiletimes.html">CompareFileTimes</a></td><td>Compares the last write times of two files.</td></tr>
 <tr class="uneven"><td class="w20"><a href="continueservice.html">ContinueService</a></td><td>Sends a continue request to the specified windows service.</td></tr>
-<tr class="even"><td class="w20"><a href="controlserviceex.html">ControlServiceEx</a></td><td>Sends a custom control request to the specified windows service.</td></tr>
+<tr class="even"><td class="w20"><a href="controlserviceex2.html">ControlServiceEx2</a></td><td>Sends a custom control request to the specified windows service.</td></tr>
 <tr class="uneven"><td class="w20"><a href="copyfileex2.html">CopyFileEx2</a></td><td>Copies a file, an optional callback function can be passed which receives status while the copy operation is in progress.</td></tr>
 <tr class="even"><td class="w20"><a href="createcallbackfunc.html">CreateCallbackFunc</a></td><td>Creates an assembly thunk which emulates a C callback function.</td></tr>
 <tr class="uneven"><td class="w20"><a href="createguid.html">CreateGuid</a></td><td>Creates a new GUID (globally unique identifier).</td></tr>
@@ -115,8 +115,8 @@
 <tr class="uneven"><td class="w20"><a href="double2dt.html">Double2DT</a></td><td>Converts a double (numeric) value into a datetime.</td></tr>
 <tr class="even"><td class="w20"><a href="double2str.html">Double2Str</a></td><td>Converts a double (64bit numeric value) value into a binary string.</td></tr>
 <tr class="uneven"><td class="w20"><a href="dt2double.html">DT2Double</a></td><td>Converts a datetime value into a double (numeric) value.</td></tr>
-<tr class="even"><td class="w20"><a href="dt2ft.html">DT2FT</a></td><td>Converts a datetime value into a <a href="http://msdn.microsoft.com/en-us/library/ms724284(VS.85).aspx">FILETIME</a> struct.</td></tr>
-<tr class="uneven"><td class="w20"><a href="dt2st.html">DT2ST</a></td><td>Converts a datetime value into a <a href="http://msdn.microsoft.com/en-us/library/ms724950(VS.85).aspx">SYSTEMTIME</a> struct.</td></tr>
+<tr class="even"><td class="w20"><a href="dt2ft.html">DT2FT</a></td><td>Converts a datetime value into a FILETIME struct.</td></tr>
+<tr class="uneven"><td class="w20"><a href="dt2st.html">DT2ST</a></td><td>Converts a datetime value into a SYSTEMTIME struct.</td></tr>
 <tr class="even"><td class="w20"><a href="dt2timet.html">DT2Timet</a></td><td>Converts a datetime value into a Time_t (Unix) timestamp.</td></tr>
 <tr class="uneven"><td class="w20"><a href="dt2utc.html">DT2UTC</a></td><td>Converts a datetime value of the current active timezone into a UTC datetime.</td></tr>
 </table>
@@ -153,9 +153,14 @@
 <tr class="uneven"><td class="w20"><a href="freehglobal.html">FreeHGlobal</a></td><td>Frees memory allocated with <a href="/pages/allochglobal.html">AllocHGlobal</a>.</td></tr>
 <tr class="even"><td class="w20"><a href="freemem.html">FreeMem</a></td><td>Frees a memory block allocated from the library internal heap by the <a href="/pages/allocmem.html">AllocMem</a> or <a href="/pages/reallocmem.html">ReAllocMem</a> function.</td></tr>
 <tr class="uneven"><td class="w20"><a href="freepmem.html">FreePMem</a></td><td>Frees the memory block the passed in pointer points to from the library internal heap.</td></tr>
-<tr class="even"><td class="w20"><a href="freerefarray.html">FreeRefArray</a></td><td>Frees all memory allocated for the passed in C style array.</td></tr>
+<tr class="even"><td class="w20"><a href="freerefarray.html">FreeRefArray</a></td><td>Frees all memory allocated for the passed in C style array.
+
+This is meant to be only used for C style arrays that contain
+pointers to their respective data.
+
+The function loops over the elements from index position nStartElement to nElements and calls HeapFree if a valid pointer is stored at the indexed position to free the memory and the setting the pointer to 0, effectivly cleaning up the array properly without creating memory leaks.</td></tr>
 <tr class="uneven"><td class="w20"><a href="fseekex.html">FSeekEx</a></td><td>Moves the file pointer in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
-<tr class="even"><td class="w20"><a href="ft2dt.html">FT2DT</a></td><td>Converts a <a href="http://msdn.microsoft.com/en-us/library/ms724284(VS.85).aspx">FILETIME</a> struct to a datetime value.</td></tr>
+<tr class="even"><td class="w20"><a href="ft2dt.html">FT2DT</a></td><td>Converts a FILETIME struct to a datetime value.</td></tr>
 <tr class="uneven"><td class="w20"><a href="funlockfile.html">FUnlockFile</a></td><td>Unlocks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
 <tr class="even"><td class="w20"><a href="funlockfileex.html">FUnlockFileEx</a></td><td>Unlocks a region of bytes in a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
 <tr class="uneven"><td class="w20"><a href="fwriteex.html">FWriteEx</a></td><td>Writes a character string to a file opened with <a href="/pages/fcreateex.html">FCreateEx</a> or <a href="/pages/fopenex.html">FOpenEx</a>.</td></tr>
@@ -231,7 +236,7 @@ or in local time.</td></tr>
 <tr class="even"><td class="w20"><a href="rasconnectionnotificationex.html">RasConnectionNotificationEx</a></td><td>Starts a new thread which monitors the system for RAS connections, whenever a connection is created or terminated the specified callback procedure is called.
 </td></tr>
 <tr class="uneven"><td class="w20"><a href="rasdialdlgex.html">RasDialDlgEx</a></td><td>Establishes a RAS connection using a specified phone-book entry and the credentials of the logged-on user.</td></tr>
-<tr class="even"><td class="w20"><a href="rasdialex.html">RasDialEx</a></td><td>The <a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a> function establishes a RAS connection between a RAS client and a RAS server.</td></tr>
+<tr class="even"><td class="w20"><a href="rasdialex.html">RasDialEx</a></td><td>The RasDial function establishes a RAS connection between a RAS client and a RAS server.</td></tr>
 <tr class="uneven"><td class="w20"><a href="rasgetconnectstatusex.html">RasGetConnectStatusEx</a></td><td>Retrieves information on the current status of the specified remote access connection into an array.</td></tr>
 <tr class="even"><td class="w20"><a href="rashangupex.html">RasHangUpEx</a></td><td>Terminates a remote access connection.</td></tr>
 <tr class="uneven"><td class="w20"><a href="rasphonebookdlgex.html">RasPhonebookDlgEx</a></td><td>Displays the main Dial-Up Networking dialog box.
@@ -305,11 +310,11 @@ Registration causes the object to be listed in the running object table (ROT) of
 <tr class="even"><td class="w20"><a href="sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a></td><td>Creates an empty cursor of the specified registered SQL Server table type.
 
 You can fill this cursor and then pass it a <a href="/pages/sqlexecex.html">SQLExecEx</a> call for TVP (table valued parameters) parameters.</td></tr>
-<tr class="uneven"><td class="w20"><a href="sqlexecex.html">SQLExecEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/8dd6491b-da44-401f-b972-0d51f12f1a07.htm">SQLEXEC</a>, sends a SQL statement to the data source, where the statement is processed.
+<tr class="uneven"><td class="w20"><a href="sqlexecex.html">SQLExecEx</a></td><td>Extended SQLEXEC, sends a SQL statement to the data source, where the statement is processed.
 
 </td></tr>
 <tr class="even"><td class="w20"><a href="sqlforeignkeysex.html">SQLForeignKeysEx</a></td><td>Creates a cursor of foreign keys in the specified table (columns in the specified table that refer to primary keys in other tables) or a cusor of foreign keys in other tables that refer to the primary key in the specified table.</td></tr>
-<tr class="uneven"><td class="w20"><a href="sqlgetpropex.html">SQLGetPropEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/92c91971-57fb-4ca5-9712-b00dc0457a4b.htm">SQLGETPROP</a>, retrieves ODBC connection attributes.
+<tr class="uneven"><td class="w20"><a href="sqlgetpropex.html">SQLGetPropEx</a></td><td>Extended SQLGETPROP, retrieves ODBC connection attributes.
 
 </td></tr>
 <tr class="even"><td class="w20"><a href="sqlgettypeinfoex.html">SQLGetTypeInfoEx</a></td><td></td></tr>
@@ -322,7 +327,7 @@ Prepares a SQL statement for remote execution by <a href="/pages/sqlexecex.html"
 <tr class="uneven"><td class="w20"><a href="sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a></td><td>Creates a cursor of input and output parameters, as well as the columns that make up the result set for the specified procedures.</td></tr>
 <tr class="even"><td class="w20"><a href="sqlproceduresex.html">SQLProceduresEx</a></td><td>Create a cursor of procedure names stored in a specific data source.</td></tr>
 <tr class="uneven"><td class="w20"><a href="sqlregistertabletype.html">SQLRegisterTableType</a></td><td>Registers a SQL Server table type in the library for use in <a href="/pages/sqlexecex.html">SQLExecEx</a>.</td></tr>
-<tr class="even"><td class="w20"><a href="sqlsetpropex.html">SQLSetPropEx</a></td><td>Extended <a href="its:dv_foxhelp.chm::/html/2b537f41-5c04-41a7-9e8c-eb3513e2c626.htm">SQLSETPROP</a>, sets ODBC connection attributes.</td></tr>
+<tr class="even"><td class="w20"><a href="sqlsetpropex.html">SQLSetPropEx</a></td><td>Extended SQLSETPROP, sets ODBC connection attributes.</td></tr>
 <tr class="uneven"><td class="w20"><a href="sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a></td><td>Creates a cursor with the following information about columns within a table:
 - the optimal set of columns that uniquely identifies a row in the table.
 - columns that are automatically updated when any value in the row is updated by a transaction.</td></tr>
@@ -330,7 +335,7 @@ Prepares a SQL statement for remote execution by <a href="/pages/sqlexecex.html"
 <tr class="uneven"><td class="w20"><a href="sqltableprivilegesex.html">SQLTablePrivilegesEx</a></td><td>Creates a cursor of tables and the privileges associated with each table.</td></tr>
 <tr class="even"><td class="w20"><a href="sqltablesex.html">SQLTablesEx</a></td><td>Creates a cursor with table, catalog, or schema names, and table types, stored in a specific data source.</td></tr>
 <tr class="uneven"><td class="w20"><a href="sqlvarianttovalue.html">SQLVariantToValue</a></td><td>Converts a field of type SQL_SS_VARIANT retrieved from SQL Server via <a href="/pages/sqlexecex.html">SQLExecEx</a> into it's equivalent FoxPro type.</td></tr>
-<tr class="even"><td class="w20"><a href="st2dt.html">ST2DT</a></td><td>Converts a <a href="http://msdn.microsoft.com/en-us/library/ms724950(VS.85).aspx">SYSTEMTIME</a> struct to a datetime value.</td></tr>
+<tr class="even"><td class="w20"><a href="st2dt.html">ST2DT</a></td><td>Converts a SYSTEMTIME struct to a datetime value.</td></tr>
 <tr class="uneven"><td class="w20"><a href="startserviceex.html">StartServiceEx</a></td><td>Starts a windows service.</td></tr>
 <tr class="even"><td class="w20"><a href="stopserviceex.html">StopServiceEx</a></td><td>Sends a stop request to the specified service.</td></tr>
 <tr class="uneven"><td class="w20"><a href="str2double.html">Str2Double</a></td><td>Converts a binary string into a double (64bit numeric value) .</td></tr>

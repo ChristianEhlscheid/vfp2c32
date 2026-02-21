@@ -61,6 +61,11 @@ void _fastcall OnLoad()
 	/* get OS information */
 	COs::Init();
 
+	VFP2CTls& tls = VFP2CTls::Tls();
+	VFP2C_Init_File(tls);
+
+	TimeZoneInfo::GetTsi();
+
 	try
 	{
 		FoxVariable pTempVar("__VFP2C_FLL_FILENAME", false);
@@ -74,6 +79,7 @@ void _fastcall OnLoad()
 		}
 
 		pTempVar() = pFllFileName;
+
 		// declare additional functions not nativly exported by the FLL
 		Execute("DECLARE LONG GetIDispatch IN (m.__VFP2C_FLL_FILENAME) AS GetIDispatch OBJECT");
 	}
@@ -103,7 +109,9 @@ void _fastcall OnUnload()
 	VFP2CTls::OnUnload();
 
 #if defined(_DEBUGALLOCATIONS)
-	int nCount = VfpAllocationCount;
+	CStrBuilder<128> pDebug;
+	pDebug.Format("VFP Allocation Count: %I\n", VfpAllocationCount);
+	OutputDebugString(pDebug);
 #endif
 }
 
@@ -114,7 +122,7 @@ void _fastcall VFP2C32(ParamBlk& parm)
 
 /* error handling routine to store the last error occurred in a Win32 API call 
  called through the macros SAVEWIN32ERROR, ADDWIN32ERROR or RAISEWIN32ERROR */
-void _stdcall Win32ErrorHandler(char *pFunction, DWORD nErrorNo, bool bAddError, bool bRaise)
+void _stdcall Win32ErrorHandler(const char *pFunction, DWORD nErrorNo, bool bAddError, bool bRaise)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (bAddError)
@@ -130,12 +138,12 @@ void _stdcall Win32ErrorHandler(char *pFunction, DWORD nErrorNo, bool bAddError,
 	pError->nErrorType = VFP2C_ERRORTYPE_WIN32;
 	pError->nErrorNo = nErrorNo;
 	strncpyex(pError->aErrorFunction,pFunction,VFP2C_ERROR_FUNCTION_LEN);
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, nErrorNo, 0, pError->aErrorMessage,VFP2C_ERROR_MESSAGE_LEN,0);
+	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, nErrorNo, 0, pError->aErrorMessage, sizeof(pError->aErrorMessage),0);
 	if (bRaise)
 		_UserError(pError->aErrorMessage);
 }
 
-void _stdcall CustomErrorHandler(char *pFunction, char* pErrorMessage, bool bAddError, bool bRaise, va_list lpArgs)
+void _stdcall CustomErrorHandler(const char *pFunction, const char* pErrorMessage, bool bAddError, bool bRaise, va_list lpArgs)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (bAddError)
@@ -156,7 +164,7 @@ void _stdcall CustomErrorHandler(char *pFunction, char* pErrorMessage, bool bAdd
 		_UserError(pError->aErrorMessage);
 }
 
-void _stdcall CustomErrorHandlerEx(char *pFunction, char *pErrorMessage, int nErrorNo, bool bAddError, bool bRaise, va_list lpArgs)
+void _stdcall CustomErrorHandlerEx(const char *pFunction, const char *pErrorMessage, int nErrorNo, bool bAddError, bool bRaise, va_list lpArgs)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (bAddError)
@@ -172,12 +180,12 @@ void _stdcall CustomErrorHandlerEx(char *pFunction, char *pErrorMessage, int nEr
 	pError->nErrorType = VFP2C_ERRORTYPE_WIN32;
 	pError->nErrorNo = nErrorNo;
 	strncpyex(pError->aErrorFunction, pFunction,VFP2C_ERROR_FUNCTION_LEN);
-	nprintfex(pError->aErrorMessage, pErrorMessage, sizeof(pError->aErrorFunction), lpArgs);
+	nprintfex(pError->aErrorMessage, pErrorMessage, sizeof(pError->aErrorMessage), lpArgs);
 	if (bRaise)
 		_UserError(pError->aErrorMessage);
 }
 
-void _cdecl SaveCustomError(char *pFunction, char *pMessage, ...)
+void _cdecl SaveCustomError(const char *pFunction, const char *pMessage, ...)
 { 
 	va_list lpArgs;
 	va_start(lpArgs, pMessage);
@@ -185,7 +193,7 @@ void _cdecl SaveCustomError(char *pFunction, char *pMessage, ...)
 	va_end(lpArgs);
 }
 
-void _cdecl AddCustomError(char *pFunction, char *pMessage, ...)
+void _cdecl AddCustomError(const char *pFunction, const char *pMessage, ...)
 {
 	va_list lpArgs;
 	va_start(lpArgs, pMessage);
@@ -193,7 +201,7 @@ void _cdecl AddCustomError(char *pFunction, char *pMessage, ...)
 	va_end(lpArgs);
 }
 
-void _cdecl RaiseCustomError(char *pFunction, char *pMessage, ...)
+void _cdecl RaiseCustomError(const char *pFunction, const char *pMessage, ...)
 {
 	va_list lpArgs;
 	va_start(lpArgs, pMessage);
@@ -201,7 +209,7 @@ void _cdecl RaiseCustomError(char *pFunction, char *pMessage, ...)
 	va_end(lpArgs);
 }
 
-void _cdecl SaveCustomErrorEx(char *pFunction, char *pMessage, int nErrorNo, ...)
+void _cdecl SaveCustomErrorEx(const char *pFunction, const char *pMessage, int nErrorNo, ...)
 {
 	va_list lpArgs;
 	va_start(lpArgs, nErrorNo);
@@ -209,7 +217,7 @@ void _cdecl SaveCustomErrorEx(char *pFunction, char *pMessage, int nErrorNo, ...
 	va_end(lpArgs);
 }
 
-void _cdecl AddCustomErrorEx(char *pFunction, char *pMessage, int nErrorNo, ...)
+void _cdecl AddCustomErrorEx(const char *pFunction, const char *pMessage, int nErrorNo, ...)
 { 
 	va_list lpArgs;
 	va_start(lpArgs, nErrorNo);
@@ -217,7 +225,7 @@ void _cdecl AddCustomErrorEx(char *pFunction, char *pMessage, int nErrorNo, ...)
 	va_end(lpArgs);
 }
 
-void _cdecl RaiseCustomErrorEx(char *pFunction, char *pMessage, int nErrorNo, ...)
+void _cdecl RaiseCustomErrorEx(const char *pFunction, const char *pMessage, int nErrorNo, ...)
 { 
 	va_list lpArgs;
 	va_start(lpArgs, nErrorNo);
@@ -614,7 +622,7 @@ FoxInfo VFP2CFuncs[] =
 	{"ReadRegistryKey", (FPFI) ReadRegistryKey, 4, "I.C.C.C"},
 	{"WriteRegistryKey", (FPFI) WriteRegistryKey, 5, "I?.C.C.I"},
 	{"ARegistryKeys", (FPFI) ARegistryKeys, 4, "CIC.I"},
-	{"ARegistryValues", (FPFI) ARegistryValues, 4, "CIC.I"},
+	{"ARegistryValues", (FPFI) ARegistryValues, 4, "CI.C.I"},
 	{"RegistryValuesToObject", (FPFI) RegistryValuesToObject, 3, "ICO"},
 	{"RegistryHiveToObject", (FPFI) RegistryHiveToObject, 3, "ICO"},
 
@@ -665,6 +673,8 @@ FoxInfo VFP2CFuncs[] =
 	{"FUnlockFileEx", (FPFI) FUnlockFileEx, 3, "I??"},
 	{"AFHandlesEx", (FPFI) AFHandlesEx, 1, "C"},
 
+	{"MemoFieldInfo", (FPFI) MemoFieldInfo, 2, "R.R" },
+
 	/* some shell32.dll wrappers */
 	{"SHSpecialFolder", (FPFI) SHSpecialFolder, 3, "IR.L"},
 	{"SHMoveFiles", (FPFI) SHMoveFiles, 5, "CC.I.C.C"},
@@ -672,7 +682,7 @@ FoxInfo VFP2CFuncs[] =
 	{"SHDeleteFiles", (FPFI) SHDeleteFiles, 3, "C.I.C"},
 	{"SHRenameFiles", (FPFI) SHRenameFiles, 4, "CC.I.C"},
 	{"SHBrowseFolder", (FPFI) SHBrowseFolder, 5, "CIR.C.C"},
-	{"SHGetShellItem", (FPFI)SHGetShellItem, 1, "C"},
+	{"SHGetShellItem", (FPFI) SHGetShellItem, 1, "C"},
 
 	/* windows message hooks */
 #ifndef _THREADSAFE
@@ -747,7 +757,7 @@ FoxInfo VFP2CFuncs[] =
 	{"ResolveHostToIp", (FPFI) ResolveHostToIp, 2, "C.C"},
 	/* IP Helper */
 	{"Ip2MacAddress", (FPFI) Ip2MacAddress, 1, "C"},
-	{"IcmpPing", (FPFI)IcmpPing, 8, "CC.I.I.I.I.L.I"},
+	{"IcmpPing", (FPFI) IcmpPing, 8, "CC.I.I.I.I.L.I"},
 
 	/* service functions */
 	{"OpenServiceEx", (FPFI) OpenServiceEx, 4, "C.I.C.C"},

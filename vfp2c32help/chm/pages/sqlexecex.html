@@ -12,7 +12,7 @@
 <div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
 </div>
 <div id="content">
-<p class="description">Extended <a href="its:dv_foxhelp.chm::/html/8dd6491b-da44-401f-b972-0d51f12f1a07.htm">SQLEXEC</a>, sends a SQL statement to the data source, where the statement is processed.</p>
+<p class="description">Extended SQLEXEC, sends a SQL statement to the data source, where the statement is processed.</p>
 
 <div class="block"><pre>SQLExecEx(<a href="#p1">nConnection | nStatement</a>, <a href="#p2">cSQL</a> [, <a href="#p3">cCursors | cVariables</a> [, <a href="#p4">cArrayName</a> [, <a href="#p5">nFlags</a> [, <a href="#p6">cCursorSchema</a> [, <a href="#p7">cParamSchema</a> [, <a href="#p8">cCallback</a> [, <a href="#p9">nCallbackinterval</a> [, <a href="#p10">cStatusCursor</a> [, <a href="#p11">nBatchSize</a>, <a href="#p12">nRowFetchSize</a>]]]]]]]]])</pre></div>
 <h3>Parameters</h3>
@@ -37,7 +37,7 @@ Any strings enclosed in single or double quotes will be passed on as is.</p>
 <dl class="parm"><dt><a id="p3">cCursors | cVariables (optional)</a></dt>
 <dd><p>Specifies one or more cursornames seperated by a comma e.g. "yourCursor1, yourCursor2"<br />
 <br />
-If you omit this parameter or pass an empty string, the names are automatically created like in <a href="its:dv_foxhelp.chm::/html/8dd6491b-da44-401f-b972-0d51f12f1a07.htm">SQLEXEC</a>,<br />
+If you omit this parameter or pass an empty string, the names are automatically created like in SQLEXEC,<br />
 the first cursor is named "sqlresult" and for each additional cursor the resultset number is appended (sqlresult2, sqlresult3 ....).<br />
 <br />
 If you pass SQLEXECEX_DEST_VARIABLE in the <em>nFlags</em> parameter, the value is interpreted as a comma seperated list<br />
@@ -91,9 +91,9 @@ If you convert a unicode column to types 'W' or 'Q' the data will also be in Uni
 <div class="blockheader"><p class="note">Note</p></div>
 <div class="block"><p>If you omit the schema for a field or altogether, the same datatype mapping rules as in SQLExec are applied.<br />
 Furthermore be aware that the below settings are evaluated on each SQLExecEx call and will affect the mapping:<br />
-<a href="its:dv_foxhelp.chm::/html/4b2168d1-6e9f-4dc4-aaec-ab25b49383ce.htm">CURSORGETPROP</a>('UseMemoSize',0) - changes the size limit of character/binary types - anything bigger will be mapped to memo/blob fields<br />
-<a href="its:dv_foxhelp.chm::/html/4b2168d1-6e9f-4dc4-aaec-ab25b49383ce.htm">CURSORGETPROP</a>('MapVarchar',0) - map varchar to C or V<br />
-<a href="its:dv_foxhelp.chm::/html/4b2168d1-6e9f-4dc4-aaec-ab25b49383ce.htm">CURSORGETPROP</a>('MapBinary',0) - map varbinary to C NOCPTRANS or Q
+CURSORGETPROP('UseMemoSize',0) - changes the size limit of character/binary types - anything bigger will be mapped to memo/blob fields<br />
+CURSORGETPROP('MapVarchar',0) - map varchar to C or V<br />
+CURSORGETPROP('MapBinary',0) - map varbinary to C NOCPTRANS or Q
 </p></div>
 </dd></dl>
 <dl class="parm"><dt><a id="p7">cParameterSchema (optional)</a></dt>
@@ -176,7 +176,7 @@ Be aware that the resultset may not contain any long data type columns e.g. TEXT
 
 lcSQL = "SELECT * FROM someTable WHERE someCol = ?{someVar}"
 IF SQLEXECEX(yourConnection, lcSQL, 'yourResult', 'laInfo')
-	? "Cursor " + laInfo[1,1] + " contains " + <a href="its:dv_foxhelp.chm::/html/767f9fa5-5271-4fe2-baf8-332cf8d15fb5.htm">ALLTRIM</a>(<a href="its:dv_foxhelp.chm::/html/970442f9-ac4f-401f-a027-03aa9f978054.htm">STR</a>(laInfo[1,2])) + " rows"
+	? "Cursor " + laInfo[1,1] + " contains " + ALLTRIM(STR(laInfo[1,2])) + " rows"
 ELSE
 	AERROREX('laError')
 	DISPLAY MEMORY LIKE laError
@@ -227,43 +227,25 @@ lcSQL = "{ CALL teststoredproc(?@{lcMessage},?{lcMessage2}) }"
 <a href="/pages/createsqldatasource.html">CreateSQLDataSource</a><br />
 <a href="/pages/deletesqldatasource.html">DeleteSQLDataSource</a><br />
 <a href="/pages/sqlcancelex.html">SQLCancelEx</a><br />
-<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
-<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
-<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
-<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
-<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
-<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
-<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
-<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
-<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
-<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
-<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
-<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
 <a href="/pages/sqlcolumnprivilegesex.html">SQLColumnPrivilegesEx</a><br />
+<a href="/pages/sqlcolumnsex.html">SQLColumnsEx</a><br />
+<a href="/pages/sqlcreatetabletypecursor.html">SQLCreateTableTypeCursor</a><br />
+<a href="/pages/sqlforeignkeysex.html">SQLForeignKeysEx</a><br />
+<a href="/pages/sqlgetpropex.html">SQLGetPropEx</a><br />
+<a href="/pages/sqlgettypeinfoex.html">SQLGetTypeInfoEx</a><br />
+<a href="/pages/sqlprepareex.html">SQLPrepareEx</a><br />
+<a href="/pages/sqlprimarykeysex.html">SQLPrimaryKeysEx</a><br />
+<a href="/pages/sqlprocedurecolumnsex.html">SQLProcedureColumnsEx</a><br />
+<a href="/pages/sqlproceduresex.html">SQLProceduresEx</a><br />
+<a href="/pages/sqlregistertabletype.html">SQLRegisterTableType</a><br />
+<a href="/pages/sqlsetpropex.html">SQLSetPropEx</a><br />
 <a href="/pages/sqlspecialcolumnsex.html">SQLSpecialColumnsEx</a><br />
+<a href="/pages/sqlstatisticsex.html">SQLStatisticsEx</a><br />
+<a href="/pages/sqltableprivilegesex.html">SQLTablePrivilegesEx</a><br />
+<a href="/pages/sqltablesex.html">SQLTablesEx</a><br />
 <a href="/pages/sqlvarianttovalue.html">SQLVariantToValue</a><br />
 <a href="/pages/valuetosqlvariant.html">ValueToSQLVariant</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms712455(VS.85).aspx">SQLAllocHandle</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms710963(VS.85).aspx">SQLBindParameter</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms715438(VS.85).aspx">SQLGetStmtAttr</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms714675(VS.85).aspx">SQLSetDescRec</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms713560(VS.85).aspx">SQLSetDescField</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms713611(VS.85).aspx">SQLExecDirect</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms712366(VS.85).aspx">SQLParamData</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms713824(VS.85).aspx">SQLPutData</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms716256(VS.85).aspx">SQLGetDiagRec</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms715393(VS.85).aspx">SQLNumResultCols</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms711835(VS.85).aspx">SQLRowCount</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms716289(VS.85).aspx">SQLDescribeCol</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms713558(VS.85).aspx">SQLColAttribute</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms711681(VS.85).aspx">SQLGetInfo</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms711010(VS.85).aspx">SQLBindCol</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms712424(VS.85).aspx">SQLFetch</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms709284(VS.85).aspx">SQLFreeStmt</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms714673(VS.85).aspx">SQLMoreResults</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms710123(VS.85).aspx">SQLFreeHandle</a></p>
 
 
 </div>

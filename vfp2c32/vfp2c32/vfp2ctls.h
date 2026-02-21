@@ -2,7 +2,6 @@
 #define _VFP2CTLS_H__
 
 #include <windows.h>
-#include <atlcoll.h>
 #if !defined(_WIN64)
 #include "pro_ext.h"
 #else

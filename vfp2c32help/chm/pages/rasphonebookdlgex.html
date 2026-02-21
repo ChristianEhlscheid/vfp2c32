@@ -62,7 +62,7 @@ ENDFUNC
 <table>
 <caption>One or a combition of the following values (defined in rasapi32.h).</caption>
 <tr><th>Constant</th><th>Description</th></tr>
-<tr><td>RASPBDFLAG_PositionDlg</td><td>Causes <a href="http://msdn.microsoft.com/en-us/library/aa377612(VS.85).aspx">RasPhonebookDlg</a> to use the values specified by the xDlg and yDlg members to position the dialog box. If this flag is not set, the dialog box is centered on the owner window, unless hwndOwner is NULL, in which case, the dialog box is centered on the screen.</td></tr>
+<tr><td>RASPBDFLAG_PositionDlg</td><td>Causes RasPhonebookDlg to use the values specified by the xDlg and yDlg members to position the dialog box. If this flag is not set, the dialog box is centered on the owner window, unless hwndOwner is NULL, in which case, the dialog box is centered on the screen.</td></tr>
 <tr><td>RASPBDFLAG_ForceCloseOnDial</td><td>Turns on the close-on-dial option, overriding the user's preference. This option is appropriate with features such as RAS AutoDial where the user's goal is to make a connection immediately.</td></tr>
 <tr><td>RASPBDFLAG_NoUser</td><td>Causes the RasPBDlgFunc callback function specified by the pCallback member to receive a RASPBDEVENT_NoUser notification when the dialog box is starting up. This flag is for use in situations in which there is no logged-on user, as in the WinLogon application. Typically, applications should not use this flag.</td></tr>
 <tr><td>RASPBDFLAG_UpdateDefaults</td><td>Causes the default window position to be saved on exit. This flag is used primarily by RASPHONE.EXE and should not be used by typical applications.</td></tr>
@@ -83,8 +83,6 @@ ENDFUNC
 <a href="/pages/rasgetconnectstatusex.html">RasGetConnectStatusEx</a><br />
 <a href="/pages/rashangupex.html">RasHangUpEx</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa377612(VS.85).aspx">RasPhonebookDlg</a></p>
 
 
 </div>

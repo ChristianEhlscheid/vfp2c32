@@ -46,7 +46,7 @@ typedef struct ValueEx : public Value
 	void SetCurrency() { ev_type = 'Y'; ev_currency.QuadPart = 0; }
 	void SetCurrency(CCY nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue.QuadPart; }
 	void SetCurrency(__int64 nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue; }
-	void SetNumeric(int nWidth, unsigned int nPrecision) { ev_type = 'N'; ev_width = nWidth; ev_length = nPrecision; }
+	void SetNumeric(int nWidth, unsigned int nPrecision) { ev_type = 'N'; ev_width = (short)nWidth; ev_length = nPrecision; }
 	void SetString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 0; ev_handle = 0; ev_length = nLen; }
 	void SetBinaryString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 1; ev_handle = 0; ev_length = nLen; }
 	void SetLogical() { ev_type = 'L'; ev_length = 0; }
@@ -195,11 +195,32 @@ typedef struct ValueEx : public Value
 		}
 	}
 
-
+	void UnlockAndFree()
+	{
+		if (ev_type == 'C' && ev_handle > 0)
+		{
+#if defined(_DEBUGALLOCATIONS)
+			VfpAllocationCount--;
+#endif
+			_HUnLock(ev_handle);
+			_FreeHand(ev_handle);
+			ev_handle = 0;
+		}
+	}
 
 	void Return() {
 		assert(ev_type != 'R');
 		_RetVal(*this);
+	}
+
+	int Evaluate(const char* pExpression)
+	{
+		int retval = _Evaluate(*this, (char*)pExpression);
+#if defined(_DEBUGALLOCATIONS)
+		if (ev_type == 'C')
+			VfpAllocationCount++;
+#endif
+		return retval;
 	}
 
 	int Evaluate(char* pExpression)
@@ -388,8 +409,8 @@ typedef struct LocatorEx : public Locator
 
 	operator Locator& () { return static_cast<Locator&>(*this); }
 	operator Locator* () { return static_cast<Locator*>(this); }
-	LocatorEx& operator()(int nRow) { l_sub1 = nRow; return *this; }
-	LocatorEx& operator()(int nRow, int nDim) { l_sub1 = nRow; l_sub2 = nDim; return *this; }
+	LocatorEx& operator()(int nRow) { l_sub1 = (short)nRow; return *this; }
+	LocatorEx& operator()(int nRow, int nDim) { l_sub1 = (short)nRow; l_sub2 = (short)nDim; return *this; }
 
 	LocatorEx& operator<<(FoxObject& pObject);
 	LocatorEx& operator=(FoxValue& pValue);

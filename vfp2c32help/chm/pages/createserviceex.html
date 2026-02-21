@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Installs a windows service.</p>
 
-<div class="block"><pre>CreateServiceEx(<a href="#p1">cServiceName</a>, <a href="#p2">cDisplayName</a>, <a href="#p3">cExecutable</a> [, <a href="#p4">nServiceType</a> [, <a href="#p5">nStartType</a> [, <a href="#p6">nErrorControl</a> [, <a href="#p7">cLoadOrderGroup</a> [, <a href="#p8">cDependencies</a> [, <a href="#p9">cServiceAccount</a> [, <a href="#p10">cAccountPassword</a> [, <a href="#p11">cMachine</a> [, <a href="#p12">cDatabase</a>]]]]]]]]])</pre></div>
+<div class="block"><pre>CreateServiceEx(<a href="#p1">cServiceName</a>, <a href="#p2">cDisplayName</a>, <a href="#p3">cExecutable</a> [, <a href="#p4">nServiceType</a> [, <a href="#p5">nStartType</a> [, <a href="#p6">nErrorControl</a> [, <a href="#p7">cLoadOrderGroup</a> [, <a href="#p8">cDependencies</a> [, <a href="#p9">cServiceAccount</a> [, <a href="#p10">cAccountPassword</a> [, <a href="#p11">cServer</a> [, <a href="#p12">cDatabase</a>]]]]]]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cServiceName</a></dt>
 <dd><p>The short name of the service.</p>
@@ -47,7 +47,7 @@ The service start options.</p>
 <tr><th style="width: 20%;">Start type</th><th>Description</th></tr>
 <tr><td>SERVICE_AUTO_START</td><td>A service started automatically by the service control manager during system startup.</td></tr>
 <tr><td>SERVICE_BOOT_START</td><td>A device driver started by the system loader. This value is valid only for driver services.</td></tr>
-<tr><td>SERVICE_DEMAND_START</td><td>A service started by the service control manager when a process calls the <a href="http://msdn.microsoft.com/en-us/library/ms686321(VS.85).aspx">StartService</a> function.</td></tr>
+<tr><td>SERVICE_DEMAND_START</td><td>A service started by the service control manager when a process calls the StartService function.</td></tr>
 <tr><td>SERVICE_DISABLED</td><td>A service that cannot be started. Attempts to start the service result in the error code ERROR_SERVICE_DISABLED.</td></tr>
 <tr><td>SERVICE_SYSTEM_START</td><td>A device driver started by the IoInitSystem function. This value is valid only for driver services.</td></tr>
 </table></dd></dl>
@@ -64,22 +64,46 @@ The severity of the error, and action taken, if this service fails to start.</p>
 <tr><td>SERVICE_ERROR_SEVERE</td><td>The startup program logs the error in the event log. If the last-known-good configuration is being started, the startup operation continues. Otherwise, the system is restarted with the last-known-good configuration.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p7">cLoadOrderGroup (optional)</a></dt>
-<dd><p>default = NULL</p>
+<dd><p>default = NULL<br />
+<br />
+A list of names seperated by CHR(0) of the load ordering group of which this service is a member. Specify NULL or an empty string if the service does not belong to a group.<br />
+<br />
+The startup program uses load ordering groups to load groups of services in a specified order with respect to the other groups. The list of load ordering groups is contained in the following registry value: HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\ServiceGroupOrder</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p8">cDependencies (optional)</a></dt>
-<dd><p></p>
+<dd><p>default = NULL<br />
+<br />
+A list of names of services or load ordering groups seperated by CHR(0) that the system must start before this service. Specify NULL or an empty string if the service has no dependencies. Dependency on a group means that this service can run if at least one member of the group is running after an attempt to start all members of the group.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p9">cServiceAccount (optional)</a></dt>
-<dd><p></p>
+<dd><p>default = NULL<br />
+<br />
+The name of the account under which the service should run. If the service type is SERVICE_WIN32_OWN_PROCESS, use an account name in the form DomainName\UserName. The service process will be logged on as this user. If the account belongs to the built-in domain, you can specify .\UserName.<br />
+<br />
+If this parameter is NULL, CreateService uses the LocalSystem account. If the service type specifies SERVICE_INTERACTIVE_PROCESS, the service must run in the LocalSystem account.<br />
+<br />
+If this parameter is NT AUTHORITY\LocalService, CreateService uses the LocalService account. If the parameter is NT AUTHORITY\NetworkService, CreateService uses the NetworkService account.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p10">cAccountPassword (optional)</a></dt>
-<dd><p></p>
+<dd><p>default = Empty string<br />
+<br />
+The password to the account name specified by the lpServiceStartName parameter. Specify an empty string if the account has no password or if the service runs in the LocalService, NetworkService, or LocalSystem account. For more information, see Service Record List.<br />
+<br />
+If the account name specified by the lpServiceStartName parameter is the name of a managed service account or virtual account name, the lpPassword parameter must be NULL.<br />
+<br />
+Passwords are ignored for driver services.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p11">cMachine (optional)</a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p11">cServer (optional)</a></dt>
+<dd><p>default = NULL<br />
+<br />
+The server name on which the service is running.<br />
+See MSDN help for OpenSCManager.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p12">cDatabase (optional)</a></dt>
-<dd><p></p>
+<dd><p>default = NULL<br />
+<br />
+The server name on which the service is running.<br />
+See MSDN help for OpenSCManager.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>Always .T.</p>
@@ -92,17 +116,13 @@ The severity of the error, and action taken, if this service fails to start.</p>
 <a href="/pages/aservicestatus.html">AServiceStatus</a><br />
 <a href="/pages/closeservicehandleex.html">CloseServiceHandleEx</a><br />
 <a href="/pages/continueservice.html">ContinueService</a><br />
-<a href="/pages/controlserviceex.html">ControlServiceEx</a><br />
+<a href="/pages/controlserviceex2.html">ControlServiceEx2</a><br />
 <a href="/pages/openserviceex.html">OpenServiceEx</a><br />
 <a href="/pages/pauseservice.html">PauseService</a><br />
 <a href="/pages/startserviceex.html">StartServiceEx</a><br />
 <a href="/pages/stopserviceex.html">StopServiceEx</a><br />
 <a href="/pages/waitforservicestatus.html">WaitForServiceStatus</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682450(v=vs.85).aspx">CreateService</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682028(VS.85).aspx">CloseServiceHandle</a></p>
 
 
 </div>

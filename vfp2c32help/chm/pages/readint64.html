@@ -42,7 +42,7 @@ Specifies the format of the return value.</p>
 <p>The currency value the function returns should only be used with the following functions:<br />
 <a href="/pages/int64_add.html">Int64_Add</a>, <a href="/pages/int64_sub.html">Int64_Sub</a>, <a href="/pages/int64_mul.html">Int64_Mul</a>, <a href="/pages/int64_div.html">Int64_Div</a>, <a href="/pages/int64_mod.html">Int64_Mod</a>, <a href="/pages/int642str.html">Int642Str</a>, <a href="/pages/writeint64.html">WriteInt64</a>, <a href="/pages/writepint64.html">WritePInt64</a> and <a href="/pages/writeregistrykey.html">WriteRegistryKey</a>.<br />
 <br />
-The VFP currency datatype has an implied decimal point. When you convert a currency value returned from ReadInt64 or <a href="/pages/readpint64.html">ReadPInt64</a> with <a href="its:dv_foxhelp.chm::/html/f4b0f5d2-03b5-44f8-9359-d1bef45bc246.htm">MTON</a>() the returned numeric value is not what you might expect, additionally every VFP function will raise error 1988 if the value is –9,223,372,036,854,775,808.<br />
+The VFP currency datatype has an implied decimal point. When you convert a currency value returned from ReadInt64 or <a href="/pages/readpint64.html">ReadPInt64</a> with MTON() the returned numeric value is not what you might expect, additionally every VFP function will raise error 1988 if the value is –9,223,372,036,854,775,808.<br />
 <br />
 If you plan to store 64bit integers in a table use the Q(8) datatype instead of Y.</p>
 

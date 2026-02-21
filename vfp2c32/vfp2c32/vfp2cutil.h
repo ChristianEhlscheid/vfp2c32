@@ -28,7 +28,19 @@ template<class T>
 inline T AdvancePtr(T ptr, int nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
 
 template<class T>
+inline T AdvancePtr(T ptr, unsigned int nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
+
+template<class T>
+inline T AdvancePtr(T ptr, long nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
+
+template<class T>
+inline T AdvancePtr(T ptr, unsigned long nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
+
+template<class T>
 inline T AdvancePtr(T ptr, __int64 nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
+
+template<class T>
+inline T AdvancePtr(T ptr, unsigned __int64 nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
 
 template<class T>
 inline T* IndexPtr(void* ptr, int nIndex) { return &reinterpret_cast<T*>(ptr)[nIndex]; }
@@ -66,16 +78,21 @@ inline unsigned __int64 SwapEndian(unsigned __int64 nValue)
 }
 
 // misc VFP related helper/conversion functions
-void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime);
-void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime);
-BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL bToLocal);
-BOOL _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL bToUTC);
-BOOL _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime, BOOL bToLocal);
-void _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime);
-BOOL _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime, BOOL bToLocal);
-void _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime);
-void _stdcall DateTimeToLocalDateTime(ValueEx& pDateTime);
-void _stdcall LocalDateTimeToDateTime(ValueEx& pDateTime);
+void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, double& pDateTime);
+BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, double& pDateTime, BOOL bToLocal);
+
+void _stdcall DateTimeToFileTime(double pDateTime, LPFILETIME pFileTime);
+BOOL _stdcall DateTimeToFileTime(double pDateTime, LPFILETIME pFileTime, BOOL bToUTC);
+inline void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime)
+{
+    DateTimeToFileTime(pDateTime.ev_real, pFileTime);
+}
+
+void _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, double& pDateTime);
+BOOL _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, double& pDateTime, BOOL bToLocal);
+
+void _stdcall DateTimeToSystemTime(double pDateTime, LPSYSTEMTIME pSysTime);
+BOOL _stdcall DateTimeToSystemTime(double pDateTime, LPSYSTEMTIME pSysTime, BOOL bToLocal);
 
 BOOL _stdcall FileTimeToDateLiteral(LPFILETIME pFileTime, char *pBuffer, BOOL bToLocal);
 BOOL _stdcall SystemTimeToDateLiteral(LPSYSTEMTIME pSysTime, char *pBuffer, BOOL bToLocal);

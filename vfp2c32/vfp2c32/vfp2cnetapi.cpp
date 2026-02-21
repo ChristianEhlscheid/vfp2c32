@@ -9,6 +9,7 @@
 #include "vfp2cnetapi.h"
 #include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
+#include "vfp2ctime.h"
 
 static PNETAPIBUFFERALLOCATE fpNetApiBufferAllocate = 0;
 static PNETAPIBUFFERFREE fpNetApiBufferFree = 0;
@@ -24,8 +25,10 @@ NetApiBuffer::~NetApiBuffer()
 		fpNetApiBufferFree(m_Buffer);
 }
 
+#pragma warning( disable : 4189)
 int _stdcall VFP2C_Init_Netapi()
 {
+
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (tls.NetApi32)
 		return 0;
@@ -46,6 +49,7 @@ int _stdcall VFP2C_Init_Netapi()
 	fpNetServerEnum = (PNETSERVERENUM)GetProcAddress(tls.NetApi32,"NetServerEnum");
 	return 0;
 }
+#pragma warning( default : 4189)
 
 void _fastcall ANetFiles(ParamBlkEx& parm)
 {
@@ -252,6 +256,7 @@ double _stdcall TimeOfDayInfoToDateTime(LPTIME_OF_DAY_INFO pTimeOfDay, TimeZone 
 	lnJDay = pTimeOfDay->tod_day + (153 * lnM + 2) / 5 + lnY * 365 + lnY / 4 - lnY / 100 + lnY / 400 - 32045;
 	lnSeconds = pTimeOfDay->tod_hours * 3600 + pTimeOfDay->tod_mins * 60 + pTimeOfDay->tod_secs;
 	dDateTime = ((double)lnJDay) + ((double)lnSeconds / SECONDSPERDAY);
+
 	if (eTargetTimeZone == UTC)
 	{
 		if (pTimeOfDay->tod_timezone != -1)
@@ -261,7 +266,8 @@ double _stdcall TimeOfDayInfoToDateTime(LPTIME_OF_DAY_INFO pTimeOfDay, TimeZone 
 	{
 		if (pTimeOfDay->tod_timezone != -1)
 			dDateTime -= (((double)pTimeOfDay->tod_timezone * 60) / SECONDSPERDAY);
-		dDateTime -= TimeZoneInfo::GetTsi().Bias;
+
+		TimeZoneInfo::GetTsi().ToLocal(dDateTime);
 	}
 	return dDateTime;
 }

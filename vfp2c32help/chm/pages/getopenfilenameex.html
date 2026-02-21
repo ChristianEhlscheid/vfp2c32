@@ -30,7 +30,7 @@ Valid flags:</p>
 <tr><td>OFN_FORCESHOWHIDDEN</td><td>Windows 2000/XP: Forces the showing of system and hidden files, thus overriding the user setting to show or not show hidden files. However, a file that is marked both system and hidden is not shown.</td></tr>
 <tr><td>OFN_LONGNAMES</td><td>For old-style dialog boxes, this flag causes the dialog box to use long file names. If this flag is not specified, or if the OFN_ALLOWMULTISELECT flag is also set, old-style dialog boxes use short file names (8.3 format) for file names with spaces. Explorer-style dialog boxes ignore this flag and always display long file names.</td></tr>
 <tr><td>OFN_NOCHANGEDIR</td><td> Restores the current directory to its original value if the user changed the directory while searching for files.<br />
-Windows NT 4.0/2000/XP: This flag is ineffective for <a href="http://msdn.microsoft.com/en-us/library/ms646927(VS.85).aspx">GetOpenFileName</a>.</td></tr>
+Windows NT 4.0/2000/XP: This flag is ineffective for GetOpenFileName.</td></tr>
 <tr><td>OFN_NODEREFERENCELINKS</td><td>Directs the dialog box to return the path and file name of the selected shortcut (.LNK) file. If this value is not specified, the dialog box returns the path and file name of the file referenced by the shortcut.</td></tr>
 <tr><td>OFN_NOLONGNAMES</td><td>For old-style dialog boxes, this flag causes the dialog box to use short file names (8.3 format). Explorer-style dialog boxes ignore this flag and always display long file names.</td></tr>
 <tr><td>OFN_NONETWORKBUTTON</td><td>Hides and disables the Network button.</td></tr>
@@ -41,9 +41,9 @@ Windows NT 4.0/2000/XP: This flag is ineffective for <a href="http://msdn.micros
 <tr><td>OFN_READONLY</td><td>Causes the Read Only check box to be selected initially when the dialog box is created. This flag indicates the state of the Read Only check box when the dialog box is closed.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p2">cFileFilters (optional)</a></dt>
-<dd><p>default = 'All' + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + '*.*'<br />
+<dd><p>default = 'All' + CHR(0) + '*.*'<br />
 <br />
-<a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) seperated string of filters e.g.: "Tables" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "*.dbf" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "Databases" + <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0) + "*.dbc"<br />
+CHR(0) seperated string of filters e.g.: "Tables" + CHR(0) + "*.dbf" + CHR(0) + "Databases" + CHR(0) + "*.dbc"<br />
 You can also pass an empty string to omit the filter values.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">cFileName (optional)</a></dt>
@@ -108,9 +108,6 @@ The selected filename for single selection dialog or the number of files selecte
 <a href="/pages/messageboxex.html">MessageBoxEx</a><br />
 <a href="/pages/shbrowsefolder.html">SHBrowseFolder</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms646927(VS.85).aspx">GetOpenFileName</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms646916(VS.85).aspx">CommDlgExtendedError</a></p>
 
 
 </div>

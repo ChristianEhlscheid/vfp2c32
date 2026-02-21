@@ -235,6 +235,9 @@
     <None Include="vfp2c32.ico">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="vfp2c32t.def">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="vfp2casmtest.asm">

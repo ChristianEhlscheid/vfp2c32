@@ -580,6 +580,19 @@ HKEY RegistryKey::OpenSubKey(LPCSTR lpSubKey, REGSAM samDesired, DWORD ulOptions
 	return hSubKey;
 }
 
+HKEY RegistryKey::OpenSubKey(LPWSTR lpSubKey, REGSAM samDesired, DWORD ulOptions)
+{
+	LONG nApiRet; HKEY hSubKey;
+	nApiRet = RegOpenKeyExW(m_Handle, lpSubKey, ulOptions, samDesired, &hSubKey);
+	if (nApiRet != ERROR_SUCCESS)
+	{
+		SaveWin32Error("RegOpenKeyEx", nApiRet);
+		throw E_APIERROR;
+	}
+	return hSubKey;
+}
+
+
 bool RegistryKey::Delete(HKEY hKey, LPCSTR lpKeyName, bool bShellVersion)
 {
 	LONG nApiRet;

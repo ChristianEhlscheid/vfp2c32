@@ -479,7 +479,7 @@ try
 
 	DWORD nSubKeys, nSubKeyMaxLen, nClassMaxLen, dwKeyLen, dwClassLen;;
 	FILETIME sLastWrite;
-	int nDimensions = 1, nWriteTimeDim;
+	int nDimensions = 1, nWriteTimeDim = 2;
 	bool bEnumClassName, bEnumWriteTime, bRet;
 
 	bEnumClassName = (dwFlags & REG_ENUMCLASSNAME) > 0;
@@ -548,7 +548,7 @@ try
 {
 	FoxArray pArray(parm(1));
 	HKEY hRoot = parm(2)->Ptr<HKEY>();
-	FoxString pKeyName(parm(3));
+	FoxString pKeyName(parm, 3);
 	DWORD dwFlags = parm.PCount() == 4 ? parm(4)->ev_long : 0;
 
 	RegistryKey hKey;
@@ -821,7 +821,7 @@ void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject)
 
 	pName.Size(max(nSubKeyLen, nValueNameLen));
 	if (nSubKeys > 0)
-		pSubKey.Size(nSubKeyLen + strlen(pKey) + 1);
+		pSubKey.Size(nSubKeyLen + (unsigned int)strlen(pKey) + 1);
 	
 	pProperty.Size(pName.Size());
 	

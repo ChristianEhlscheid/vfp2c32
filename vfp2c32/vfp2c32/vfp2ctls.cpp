@@ -70,6 +70,7 @@ VFP2CTls::~VFP2CTls()
 		HeapDestroy(JitHeap);
 }
 
+#pragma warning( disable : 4189)
 void VFP2CTls::OnLoad()
 {
 #ifdef _THREADSAFE
@@ -87,7 +88,7 @@ void VFP2CTls::OnLoad()
 	VFP2CTls *tls = new VFP2CTls();
 	if (!tls)
 	{
-		SaveWin32Error("VFP2CTls::OnLoad", E_OUTOFMEMORY);
+		SaveWin32Error("VFP2CTls::OnLoad", E_INSUFMEMORY);
 		return;
 	}
 
@@ -98,9 +99,11 @@ void VFP2CTls::OnLoad()
 	}
 #else
 	// this call will initialize the static version for nonthreadsafe usage
+
 	VFP2CTls& tls = VFP2CTls::Tls();
 #endif
 }
+#pragma warning( default : 4189)
 
 void VFP2CTls::OnUnload()
 {

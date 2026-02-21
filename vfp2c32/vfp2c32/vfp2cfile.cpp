@@ -12,20 +12,318 @@
 static PGETVOLUMEPATHNAMESFORVOLUMENAME fpGetVolumePathNamesForVolumeName = 0;
 static PWOW64FSREDIRECTION fpWow64DisableWow64FsRedirection = 0;
 static PWOW64FSREDIRECTION fpWow64RevertWow64FsRedirection = 0;
+static PNTQUERYDIRECTORYFILE fpNtQueryDirectoryFile = 0;
+static PNTQUERYDIRECTORYFILEEX fpNtQueryDirectoryFileEx = 0;
+static PRTLINITUNICODESTRING fpRtlInitUnicodeString = 0;
+static PRTLNTSTATUSTODOSERROR fpRtlNtStatusToDosError = 0;
+static PGETFILEINFORMATIONBYHANDLEEX fpGetFileInformationByHandleEx = 0;
 
-void FileSearchStorage::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
+/*
+static PCREATETHREADPOOL fpCreateThreadpool = 0;
+static PCLOSETHREADPOOL fpCloseThreadpool = 0;
+static PSETTHREADPOOLTHREADMAXIMUM fpSetThreadpoolThreadMaximum = 0;
+static PSETTHREADPOOLTHREADMINIMUM fpSetThreadpoolThreadMinimum = 0;
+
+static PCREATETHREADPOOLCLEANUPGROUP fpCreateThreadpoolCleanupGroup = 0;
+static PCLOSETHREADPOOLCLEANUPGROUP fpCloseThreadpoolCleanupGroup = 0;
+static PCLOSETHREADPOOLCLEANUPGROUPMEMBERS fpCloseThreadpoolCleanupGroupMembers = 0;
+
+static PCREATETHREADPOOLIO fpCreateThreadpoolIo = 0;
+static PSTARTTHREADPOOLIO fpStartThreadpoolIo = 0;
+static PCANCELTHREADPOOLIO fpCancelThreadpoolIo = 0;
+static PCLOSETHREADPOOLIO fpCloseThreadpoolIo = 0;
+static PWAITFORTHREADPOOLIOCALLBACKS fpWaitForThreadpoolIoCallbacks = 0;
+
+static PCREATETHREADPOOLWORK fpCreateThreadpoolWork = 0;
+static PCLOSETHREADPOOLWORK fpCloseThreadpoolWork = 0;
+static PSUBMITTHREADPOOLWORK fpSubmitThreadpoolWork = 0;
+static PTRYSUBMITTHREADPOOLCALLBACK fpTrySubmitThreadpoolCallback = 0;
+static PWAITFORTHREADPOOLWORKCALLBACKS fpWaitForThreadpoolWorkCallbacks = 0;
+*/
+
+// Initialization
+void _stdcall VFP2C_Init_File(VFP2CTls& tls)
 {
-	m_FileName.Size(MAX_PATH);
-	m_ToLocalTime = bToLocalTime;
+	HMODULE hDll;
+	hDll = GetModuleHandle("kernel32.dll");
+	if (hDll)
+	{
+		fpGetVolumePathNamesForVolumeName = (PGETVOLUMEPATHNAMESFORVOLUMENAME)GetProcAddress(hDll, "GetVolumePathNamesForVolumeNameA");
+		fpWow64DisableWow64FsRedirection = (PWOW64FSREDIRECTION)GetProcAddress(hDll, "Wow64DisableWow64FsRedirection");
+		fpWow64RevertWow64FsRedirection = (PWOW64FSREDIRECTION)GetProcAddress(hDll, "Wow64RevertWow64FsRedirection");
+		fpGetFileInformationByHandleEx = (PGETFILEINFORMATIONBYHANDLEEX)GetProcAddress(hDll, "GetFileInformationByHandleEx");
+
+		/*
+		fpCreateThreadpool = (PCREATETHREADPOOL)GetProcAddress(hDll, "CreateThreadpool");
+		fpCloseThreadpool = (PCLOSETHREADPOOL)GetProcAddress(hDll, "CloseThreadpool");
+		fpSetThreadpoolThreadMaximum = (PSETTHREADPOOLTHREADMAXIMUM)GetProcAddress(hDll, "SetThreadpoolThreadMaximum");
+		fpSetThreadpoolThreadMinimum = (PSETTHREADPOOLTHREADMINIMUM)GetProcAddress(hDll, "SetThreadpoolThreadMinimum");
+
+		fpCreateThreadpoolCleanupGroup = (PCREATETHREADPOOLCLEANUPGROUP)GetProcAddress(hDll, "CreateThreadpoolCleanupGroup");
+		fpCloseThreadpoolCleanupGroup = (PCLOSETHREADPOOLCLEANUPGROUP)GetProcAddress(hDll, "CloseThreadpoolCleanupGroup");
+		fpCloseThreadpoolCleanupGroupMembers = (PCLOSETHREADPOOLCLEANUPGROUPMEMBERS)GetProcAddress(hDll, "CloseThreadpoolCleanupGroupMembers");
+
+		fpCreateThreadpoolIo = (PCREATETHREADPOOLIO)GetProcAddress(hDll, "CreateThreadpoolIo");
+		fpStartThreadpoolIo = (PSTARTTHREADPOOLIO)GetProcAddress(hDll, "StartThreadpoolIo");
+		fpCancelThreadpoolIo = (PCANCELTHREADPOOLIO)GetProcAddress(hDll, "CancelThreadpoolIo");
+		fpCloseThreadpoolIo = (PCLOSETHREADPOOLIO)GetProcAddress(hDll, "CloseThreadpoolIo");
+		fpWaitForThreadpoolIoCallbacks = (PWAITFORTHREADPOOLIOCALLBACKS)GetProcAddress(hDll, "WaitForThreadpoolIoCallbacks");
+
+		fpCreateThreadpoolWork = (PCREATETHREADPOOLWORK)GetProcAddress(hDll, "CreateThreadpoolWork");
+		fpCloseThreadpoolWork = (PCLOSETHREADPOOLWORK)GetProcAddress(hDll, "CloseThreadpoolWork");
+		fpSubmitThreadpoolWork = (PSUBMITTHREADPOOLWORK)GetProcAddress(hDll, "SubmitThreadpoolWork");
+		fpTrySubmitThreadpoolCallback = (PTRYSUBMITTHREADPOOLCALLBACK)GetProcAddress(hDll, "TrySubmitThreadpoolCallback");
+		fpWaitForThreadpoolWorkCallbacks = (PWAITFORTHREADPOOLWORKCALLBACKS)GetProcAddress(hDll, "WaitForThreadpoolWorkCallbacks");
+		*/
+	}
+	else
+	{
+		AddWin32Error("GetModuleHandle", GetLastError());
+	}
+
+	hDll = GetModuleHandle("ntdll.dll");
+	if (hDll)
+	{
+		fpNtQueryDirectoryFile = (PNTQUERYDIRECTORYFILE)GetProcAddress(hDll, "NtQueryDirectoryFile");
+		fpNtQueryDirectoryFileEx = (PNTQUERYDIRECTORYFILEEX)GetProcAddress(hDll, "NtQueryDirectoryFileEx");
+		fpRtlInitUnicodeString = (PRTLINITUNICODESTRING)GetProcAddress(hDll, "RtlInitUnicodeString");
+		fpRtlNtStatusToDosError = (PRTLNTSTATUSTODOSERROR)GetProcAddress(hDll, "RtlNtStatusToDosError");
+	}
+	else
+	{
+		AddWin32Error("GetModuleHandle", GetLastError());
+	}
 }
 
-void FileSearchStorageArray::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
+// cleanup
+void _stdcall VFP2C_Destroy_File(VFP2CTls& tls)
 {
-	FileSearchStorage::Initialize(pDestination, bToLocalTime, bStringFileAttribs, pFields);
+	int nCount = tls.FileHandles.GetCount();
+	for (int xj = 0; xj < nCount; xj++)
+	{
+		// release all file handles
+		CloseHandle(tls.FileHandles[xj]);
+	}
+	tls.FileHandles.SetIndex(-1);
+}
+
+bool Win32FileSearchData::IsFakePathName() const
+{
+	if (m_FileData.cFileName[0] == L'.')
+		return (m_FileData.cFileName[1] == L'\0' || (m_FileData.cFileName[1] == L'.' && m_FileData.cFileName[2] == L'\0'));
+	return false;
+}
+
+bool Win32FileSearchData::IsRealPath() const
+{
+	return (m_FileData.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | ((m_Flags & ADIREX_INCLUDE_REPARSE_POINT) ? 0 : FILE_ATTRIBUTE_REPARSE_POINT))) == FILE_ATTRIBUTE_DIRECTORY && !IsFakePathName();
+}
+
+// a fake directry ("." & "..")
+bool Win32FileSearchData::IsFakePath() const
+{
+	return (m_FileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY && IsFakePathName();
+}
+
+FoxString& Win32FileSearchData::Filename()
+{
+	if ((m_Flags & ADIREX_JUSTFNAME) == 0)
+	{
+		SyncPath((m_Flags & ADIREX_FULLPATH) ? 0 : 1, -1, true);
+		if (m_FileData.cFileName[0] != L'\0')
+			m_Filename += m_FileData.cFileName;
+		else
+			m_Filename += m_FileData.cAlternateFileName;
+
+		return m_Filename;
+	}
+	else
+	{
+		if (m_FileData.cFileName[0] != L'\0')
+			m_JustFName = m_FileData.cFileName;
+		else
+			m_JustFName = m_FileData.cAlternateFileName;
+
+		return m_JustFName;
+	}
+}
+
+FoxString& Win32FileSearchData::AlternateFilename()
+{
+	m_AlternateName = m_FileData.cAlternateFileName;
+	return m_AlternateName;
+}
+
+CWideStringView Win32FileSearchData::WideAlternateFilename() const
+{
+	return m_FileData.cAlternateFileName;
+}
+
+unsigned __int64 Win32FileSearchData::FileSize() const
+{
+	ULARGE_INTEGER nSize;
+	nSize.HighPart = m_FileData.nFileSizeHigh;
+	nSize.LowPart = m_FileData.nFileSizeLow;
+	return nSize.QuadPart;
+}
+
+DWORD Win32FileSearchData::FileAttributes() const
+{
+	return m_FileData.dwFileAttributes;
+}
+
+FILETIME Win32FileSearchData::CreationTime() const
+{
+	return m_FileData.ftCreationTime;
+}
+
+FILETIME Win32FileSearchData::LastAccessTime() const
+{
+	return m_FileData.ftLastAccessTime;
+}
+
+FILETIME Win32FileSearchData::LastWriteTime() const
+{
+	return m_FileData.ftLastWriteTime;
+}
+
+bool Win32FileSearchData::MatchFile() const
+{
+	return PathMatchSpecW(m_FileData.cFileName, m_Wildcard) || PathMatchSpecW(m_FileData.cAlternateFileName, m_Wildcard);
+}
+
+bool NtFileSearchData::IsRealPath() const
+{
+	return (m_FileInfo->FileAttributes & (FILE_ATTRIBUTE_DIRECTORY | ((m_Flags & ADIREX_INCLUDE_REPARSE_POINT) ? 0 : FILE_ATTRIBUTE_REPARSE_POINT))) == FILE_ATTRIBUTE_DIRECTORY && !IsFakePathName();
+}
+
+// a fake directry ("." & "..")
+bool NtFileSearchData::IsFakePath() const
+{
+	return (m_FileInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY && IsFakePathName();
+}
+
+bool NtFileSearchData::IsFakePathName() const
+{
+	WCHAR* filename = FileNamePtr();
+	return (m_FileInfo->FileNameLength == 2 && filename[0] == L'.') ||
+		(m_FileInfo->FileNameLength == 4 && filename[0] == L'.' && filename[1] == L'.');
+}
+
+FoxString& NtFileSearchData::Filename()
+{
+	WCHAR* filename = FileNamePtr();
+	if ((m_Flags & ADIREX_JUSTFNAME) == 0)
+	{
+		SyncPath((m_Flags & ADIREX_FULLPATH) ? 0 : 1, -1, true);
+		if (m_FileInfo->FileNameLength > 0)
+			m_Filename += CWideStringView(filename, m_FileInfo->FileNameLength / 2);
+		else if (m_FileInfoClass == FileBothDirectoryInformationEx && m_FileInfo->ShortNameLength > 0)
+			m_Filename += CWideStringView(m_FileInfo->ShortName, m_FileInfo->ShortNameLength / 2);
+
+		return m_Filename;
+	}
+	else
+	{
+		if (m_FileInfo->FileNameLength > 0)
+			m_JustFName = CWideStringView(filename, m_FileInfo->FileNameLength / 2);
+		else if (m_FileInfoClass == FileBothDirectoryInformationEx && m_FileInfo->ShortNameLength > 0)
+			m_JustFName = CWideStringView(m_FileInfo->ShortName, m_FileInfo->ShortNameLength / 2);
+		else
+			m_JustFName.Len(0);
+
+		return m_JustFName;
+	}
+}
+
+FoxString& NtFileSearchData::AlternateFilename()
+{
+	if (m_FileInfoClass == FileBothDirectoryInformationEx)
+	{
+		if (m_FileInfo->ShortNameLength > 0)
+			m_AlternateName = CWideStringView(m_FileInfo->ShortName, m_FileInfo->ShortNameLength / 2);
+		else
+			m_AlternateName.Len(0);
+	}
+	return m_AlternateName;
+}
+
+CWideStringView NtFileSearchData::WideAlternateFilename() const
+{
+	if (m_FileInfoClass == FileBothDirectoryInformationEx && m_FileInfo->ShortNameLength > 0)
+		return CWideStringView(&m_FileInfo->ShortName[0], m_FileInfo->ShortNameLength / 2);
+
+	return 0;
+}
+
+bool NtFileSearchData::MatchFile() const
+{
+	WCHAR* filename = FileNamePtr();
+	// the filenames are not nullterminated, to avoid a costly copy we nullterminate them inline, and restore the previous bytes afterwards
+	wchar_t* pEnd = &filename[m_FileInfo->FileNameLength / 2];
+	wchar_t pPrev = *pEnd;
+	*pEnd = L'\0';
+	bool ret = (PathMatchSpecW(filename, m_Wildcard) == TRUE);
+	*pEnd = pPrev;
+	if (!ret && m_FileInfoClass == FileBothDirectoryInformationEx && m_FileInfo->ShortNameLength)
+	{
+		pEnd = &m_FileInfo->ShortName[m_FileInfo->ShortNameLength / 2];
+		pPrev = *pEnd;
+		*pEnd = L'\0';
+		ret = (PathMatchSpecW(&m_FileInfo->ShortName[0], m_Wildcard) == TRUE);
+		*pEnd = pPrev;
+	}
+	return ret;
+}
+
+unsigned __int64 NtFileSearchData::FileSize() const
+{
+	return m_FileInfo->EndOfFile.QuadPart;
+}
+
+DWORD NtFileSearchData::FileAttributes() const
+{
+	return m_FileInfo->FileAttributes;
+}
+
+FILETIME NtFileSearchData::CreationTime() const
+{
+	FILETIME time;
+	time.dwLowDateTime = m_FileInfo->CreationTime.LowPart;
+	time.dwHighDateTime = m_FileInfo->CreationTime.HighPart;
+	return time;
+}
+
+FILETIME NtFileSearchData::LastAccessTime() const
+{
+	FILETIME time;
+	time.dwLowDateTime = m_FileInfo->LastAccessTime.LowPart;
+	time.dwHighDateTime = m_FileInfo->LastAccessTime.HighPart;
+	return time;
+}
+
+FILETIME NtFileSearchData::LastWriteTime() const
+{
+	FILETIME time;
+	time.dwLowDateTime = m_FileInfo->LastWriteTime.LowPart;
+	time.dwHighDateTime = m_FileInfo->LastWriteTime.HighPart;
+	return time;
+}
+
+void FileSearchStorage<>::Initialize(CStringView pDestination, DWORD& nFlags, CStringView pFields)
+{
+	m_FileName.Size(MAX_PATH);
+	m_Flags = nFlags;
+}
+
+template<class TData>
+void FileSearchStorageArray<TData>::Initialize(CStringView pDestination, DWORD& nFlags, CStringView pFields)
+{
+	FileSearchStorage<>::Initialize(pDestination, nFlags, pFields);
 	unsigned int nFieldCount = 7;
 	if (pFields)
 	{
-		m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
+		m_Index_FileId = m_Index_ParentId = m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
 			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = m_Index_StringFileattribs = -1;
 		pFields = pFields.Alltrim();
 		CStringView pFieldName = pFields.GetWordNum(1, ',');
@@ -65,6 +363,14 @@ void FileSearchStorageArray::Initialize(CStringView pDestination, bool bToLocalT
 			{
 				m_Index_StringFileattribs = nFieldNo;
 			}
+			else if (pField.ICompare("fileid"))
+			{
+				m_Index_FileId = nFieldNo;
+			}
+			else if (pField.ICompare("parentid"))
+			{
+				m_Index_ParentId = nFieldNo;
+			}
 			else
 			{
 				SaveCustomError("AdirEx", "Invalid parameter name '%V' in field list", &pField);
@@ -79,81 +385,186 @@ void FileSearchStorageArray::Initialize(CStringView pDestination, bool bToLocalT
 	}
 	else
 	{
-		m_Index_Fileattribs = bStringFileAttribs ? -1 : 7;
-		m_Index_StringFileattribs = bStringFileAttribs ? 7 : -1;
+		int nIndex = 1;
+		m_Index_Filename = nIndex++;
+
+		if ((nFlags & ADIREX_NODOSNAME))
+			m_Index_Dosfilename = -1;
+		else
+			m_Index_Dosfilename = nIndex++;
+
+		m_Index_Creationtime = nIndex++;
+		m_Index_Accesstime = nIndex++;
+		m_Index_Writetime = nIndex++;
+		m_Index_Filesize = nIndex++;
+
+		m_Index_Fileattribs = (nFlags & ADIREX_STRING_FILEATTRIBUTES) ? -1 : nIndex;
+		m_Index_StringFileattribs = (nFlags & ADIREX_STRING_FILEATTRIBUTES) ? nIndex : -1;
+		nIndex++;
+
+		if (nFlags & ADIREX_FILEID)
+			m_Index_FileId = nIndex++;
+		else
+			m_Index_FileId = -1;
+
+		if (nFlags & ADIREX_PARENTID)
+			m_Index_ParentId = nIndex++;
+		else
+			m_Index_ParentId = -1;
+
+		nFieldCount = nIndex;
 	}
+
+	nFlags |= m_Index_Dosfilename == -1 ? ADIREX_NODOSNAME : 0;
+	nFlags |= m_Index_ParentId >= 0 ? ADIREX_PARENTID : 0;
 
 	m_Array.AutoGrow(256);
 	m_Array.Dimension(pDestination, m_Array.AutoGrow(), nFieldCount);
 	m_Array.AutoOverflow(CFoxVersion::MajorVersion() >= 9);
 }
 
-void FileSearchStorageArray::Finalize()
+template<class TData>
+void FileSearchStorageArray<TData>::Finalize()
 {
 	m_Array.CompactOverflow();
 }
 
-bool FileSearchStorageArray::Store(FileSearch* pFileSearch)
+template<class TData>
+bool FileSearchStorageArray<TData>::Store(void* pFileSearch, int nFileId)
 {
+	TData* pFS = (TData*)pFileSearch;
 	int nRow = m_Array.Grow();
+
 	if (m_Index_Filename >= 1)
-		m_Array(nRow, m_Index_Filename) = m_FileName = pFileSearch->FileName();
+		m_Array(nRow, m_Index_Filename) = pFS->Filename();
 
 	if (m_Index_Dosfilename >= 1)
-		m_Array(nRow, m_Index_Dosfilename) = m_FileName = pFileSearch->AlternateFileName();
+		m_Array(nRow, m_Index_Dosfilename) = pFS->AlternateFilename();
 
 	if (m_Index_Creationtime >= 1)
 	{
-		m_FileTime = pFileSearch->CreationTime();
-		if (m_ToLocalTime)
+		m_FileTime = pFS->CreationTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 			m_FileTime.ToLocal();
 		m_Array(nRow, m_Index_Creationtime) = m_FileTime;
 	}
 
 	if (m_Index_Accesstime >= 1)
 	{
-		m_FileTime = pFileSearch->LastAccessTime();
-		if (m_ToLocalTime)
+		m_FileTime = pFS->LastAccessTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 			m_FileTime.ToLocal();
 		m_Array(nRow, m_Index_Accesstime) = m_FileTime;
 	}
 
 	if (m_Index_Writetime >= 1)
 	{
-		m_FileTime = pFileSearch->LastWriteTime();
-		if (m_ToLocalTime)
+		m_FileTime = pFS->LastWriteTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 			m_FileTime.ToLocal();
 		m_Array(nRow, m_Index_Writetime) = m_FileTime;
 	}
 
 	if (m_Index_Filesize >= 1)
-		m_Array(nRow, m_Index_Filesize) = m_FileSize = pFileSearch->FileSize();
+		m_Array(nRow, m_Index_Filesize) = m_FileSize = pFS->FileSize();
 
 	if (m_Index_Fileattribs >= 1)
-		m_Array(nRow, m_Index_Fileattribs) = pFileSearch->FileAttributes();
+		m_Array(nRow, m_Index_Fileattribs) = pFS->FileAttributes();
 	
 	if (m_Index_StringFileattribs >= 1)
-		m_Array(nRow, m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pFileSearch->FileAttributes());
+		m_Array(nRow, m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pFS->FileAttributes());
 
-	return true;
+	if (m_Index_FileId >= 1)
+		m_Array(nRow, m_Index_FileId) = nFileId;
+
+	if (m_Index_ParentId >= 1)
+		m_Array(nRow, m_Index_ParentId) = pFS->PathId();
+
+	return false;
 }
 
-void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
+template<class TData>
+bool FileSearchStorageArray<TData>::StorePath(PathSearchEntry* pPath, void* pFileSearch, int nLevel)
 {
-	FileSearchStorage::Initialize(pDestination, bToLocalTime, bStringFileAttribs, pFields);
-	bool created;
-	CStrBuilder<256> pCursorDefinition;
+	int nRow = m_Array.Grow();
+	TData* pData = (TData*)pFileSearch;
 
+	if (m_Index_Filename >= 1)
+	{
+		if (m_Flags & ADIREX_PARENT_JUSTFNAME)
+			m_Array(nRow, m_Index_Filename) = pPath->Filename();
+		else
+			m_Array(nRow, m_Index_Filename) = m_FileName = pData->GetPath((m_Flags & ADIREX_PARENT_FULLPATH) ? 0 : 1, nLevel);
+	}
+
+	if (m_Index_Dosfilename >= 1)
+		m_Array(nRow, m_Index_Dosfilename) = pPath->AlternateFilename();
+
+	if (m_Index_Creationtime >= 1)
+	{
+		m_FileTime = pPath->CreationTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+			m_FileTime.ToLocal();
+		m_Array(nRow, m_Index_Creationtime) = m_FileTime;
+	}
+
+	if (m_Index_Accesstime >= 1)
+	{
+		m_FileTime = pPath->LastAccessTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+			m_FileTime.ToLocal();
+		m_Array(nRow, m_Index_Accesstime) = m_FileTime;
+	}
+
+	if (m_Index_Writetime >= 1)
+	{
+		m_FileTime = pPath->LastWriteTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+			m_FileTime.ToLocal();
+		m_Array(nRow, m_Index_Writetime) = m_FileTime;
+	}
+
+	if (m_Index_Filesize >= 1)
+		m_Array(nRow, m_Index_Filesize) = m_FileSize = pPath->FileSize();
+
+	if (m_Index_Fileattribs >= 1)
+		m_Array(nRow, m_Index_Fileattribs) = pPath->FileAttributes();
+
+	if (m_Index_StringFileattribs >= 1)
+		m_Array(nRow, m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pPath->FileAttributes());
+
+	if (m_Index_FileId >= 1)
+		m_Array(nRow, m_Index_FileId) = pPath->PathId();
+
+	if (m_Index_ParentId >= 1)
+	{
+		if (m_Flags & ADIREX_PARENT_JUSTFNAME)
+			m_Array(nRow, m_Index_ParentId) = pPath->ParentId();
+		else
+			m_Array(nRow, m_Index_ParentId) = 0;
+	}
+
+	return false;
+}
+
+template<class TData>
+void FileSearchStorageCursor<TData>::Initialize(CStringView pDestination, DWORD& nFlags, CStringView pFields)
+{
+	FileSearchStorage<>::Initialize(pDestination, nFlags, pFields);
+	bool created;
+	CStringView pField;
+	CStrBuilder<256> pCursorDefinition;
+	
 	if (pFields)
 	{
-		m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
+		m_Index_FileId = m_Index_ParentId = m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
 			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = m_Index_StringFileattribs = -1;
 		pFields = pFields.Alltrim();
 		CStringView pFieldName = pFields.GetWordNum(1, ',');
 		unsigned int nFieldNo = 0;
 		while (pFieldName)
 		{
-			CStringView pField = pFieldName.Alltrim();
+			pField = pFieldName.Alltrim();
 
 			if (pCursorDefinition.Len() > 0)
 				pCursorDefinition.Append(",");
@@ -161,45 +572,55 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 			if (pField.ICompare("filename"))
 			{
 				m_Index_Filename = nFieldNo;
-				pCursorDefinition.Append("filename M");
+				pCursorDefinition.Append("filename M NOT NULL");
 			}
 			else if (pField.ICompare("dosfilename"))
 			{
 				m_Index_Dosfilename = nFieldNo;
-				pCursorDefinition.Append("dosfilename C(13)");
+				pCursorDefinition.Append("dosfilename C(13) NOT NULL");
 			}
 			else if (pField.ICompare("creationtime"))
 			{
 				m_Index_Creationtime = nFieldNo;
-				pCursorDefinition.Append("creationtime T");
+				pCursorDefinition.Append("creationtime T NOT NULL");
 			}
 			else if (pField.ICompare("accesstime"))
 			{
 				m_Index_Accesstime = nFieldNo;
-				pCursorDefinition.Append("accesstime T");
+				pCursorDefinition.Append("accesstime T NOT NULL");
 			}
 			else if (pField.ICompare("writetime"))
 			{
 				m_Index_Writetime = nFieldNo;
-				pCursorDefinition.Append("writetime T");
+				pCursorDefinition.Append("writetime T NOT NULL");
 			}
 			else if (pField.ICompare("filesize"))
 			{
 				m_Index_Filesize = nFieldNo;
-				pCursorDefinition.Append("filesize N(20,0)");
+				pCursorDefinition.Append("filesize N(20,0) NOT NULL");
 			}
 			else if (pField.ICompare("fileattribs"))
 			{
 				m_Index_Fileattribs = nFieldNo;
-				pCursorDefinition.Append("fileattribs I");
+				pCursorDefinition.Append("fileattribs I NOT NULL");
 			}
 			else if (pField.ICompare("cfileattribs"))
 			{
 				m_Index_StringFileattribs = nFieldNo;
 				if (CFoxVersion::MajorVersion() >= 9)
-					pCursorDefinition.Append("cfileattribs V(10)");
+					pCursorDefinition.Append("cfileattribs V(10) NOT NULL");
 				else
-					pCursorDefinition.Append("cfileattribs C(10)");
+					pCursorDefinition.Append("cfileattribs C(10) NOT NULL");
+			}
+			else if (pField.ICompare("fileid"))
+			{
+				m_Index_FileId = nFieldNo;
+				pCursorDefinition.Append("fileid I NOT NULL");
+			}
+			else if (pField.ICompare("parentid"))
+			{
+				m_Index_ParentId = nFieldNo;
+				pCursorDefinition.Append("parentid I NOT NULL");
 			}
 			else
 			{
@@ -212,97 +633,202 @@ void FileSearchStorageCursor::Initialize(CStringView pDestination, bool bToLocal
 			nFieldNo++;
 		}
 		created = m_Cursor.Create(pDestination, pCursorDefinition);
+		nFlags |= m_Index_Dosfilename == -1 ? ADIREX_NODOSNAME : 0;
+		nFlags |= m_Index_ParentId >= 0 ? ADIREX_PARENTID : 0;
 	}
 	else
 	{
-		pCursorDefinition = "filename M, dosfilename C(13), creationtime T, accesstime T, writetime T, filesize N(20, 0), ";
-		if (bStringFileAttribs)
+		if (nFlags & ADIREX_FILEID)
+			pCursorDefinition = "fileid I NOT NULL,";
+		if (nFlags & ADIREX_PARENTID)
+			pCursorDefinition.Append("parentid I NOT NULL,");
+		pCursorDefinition.Append("filename M NOT NULL,");
+		if (!(nFlags & ADIREX_NODOSNAME))
+			pCursorDefinition.Append("dosfilename C(13) NOT NULL,");
+		pCursorDefinition.Append("creationtime T NOT NULL,accesstime T NOT NULL,writetime T NOT NULL,filesize N(20, 0) NOT NULL,");
+		if (nFlags & ADIREX_STRING_FILEATTRIBUTES)
 		{
 			if (CFoxVersion::MajorVersion() >= 9)
-				pCursorDefinition.Append("cfileattribs V(10)");
+				pCursorDefinition.Append("cfileattribs V(10) NOT NULL");
 			else
-				pCursorDefinition.Append("cfileattribs C(10)");
+				pCursorDefinition.Append("cfileattribs C(10) NOT NULL");
 		}
 		else
-			pCursorDefinition.Append("fileattribs I");
+			pCursorDefinition.Append("fileattribs I NOT NULL");
 
 		created = m_Cursor.Create(pDestination, pCursorDefinition);
 		if (created == false)
 		{
+			m_Index_FileId = m_Cursor.GetFieldNumber("fileid");
+			m_Index_ParentId = m_Cursor.GetFieldNumber("parentid");
 			m_Index_Filename = m_Cursor.GetFieldNumber("filename");
 			m_Index_Dosfilename = m_Cursor.GetFieldNumber("dosfilename");
 			m_Index_Creationtime = m_Cursor.GetFieldNumber("creationtime");
 			m_Index_Accesstime = m_Cursor.GetFieldNumber("accesstime");
 			m_Index_Writetime = m_Cursor.GetFieldNumber("writetime");
 			m_Index_Filesize = m_Cursor.GetFieldNumber("filesize");
-			if (bStringFileAttribs)
-			{
-				m_Index_StringFileattribs = m_Cursor.GetFieldNumber("cfileattribs");
-				m_Index_Fileattribs = -1;
-			}
-			else
-			{
-				m_Index_Fileattribs = m_Cursor.GetFieldNumber("fileattribs");
-				m_Index_StringFileattribs = -1;
-			}
+			m_Index_Fileattribs = m_Cursor.GetFieldNumber("fileattribs");
+			m_Index_StringFileattribs = m_Cursor.GetFieldNumber("cfileattribs");
+
+			nFlags |= m_Index_Dosfilename == -1 ? ADIREX_NODOSNAME : 0;
+			nFlags |= m_Index_ParentId >= 0 ? ADIREX_PARENTID : 0;
 		}
 		else
 		{
-			m_Index_Fileattribs = bStringFileAttribs ? -1 : 6;
-			m_Index_StringFileattribs = bStringFileAttribs ? 6 : -1;
+			int nIndex = 0;
+			if (nFlags & ADIREX_FILEID)
+				m_Index_FileId = nIndex++;
+			else
+				m_Index_FileId = -1;
+
+			if (nFlags & ADIREX_PARENTID)
+				m_Index_ParentId = nIndex++;
+			else
+				m_Index_ParentId = -1;
+
+			m_Index_Filename = nIndex++;
+
+			if (nFlags & ADIREX_NODOSNAME)
+				m_Index_Dosfilename = -1;
+			else
+				m_Index_Dosfilename = nIndex++;
+
+			m_Index_Creationtime = nIndex++;
+			m_Index_Accesstime = nIndex++;
+			m_Index_Writetime = nIndex++;
+			m_Index_Filesize = nIndex++;
+			m_Index_Fileattribs = (nFlags & ADIREX_STRING_FILEATTRIBUTES) ? -1 : nIndex;
+			m_Index_StringFileattribs = (nFlags & ADIREX_STRING_FILEATTRIBUTES) ? nIndex : -1;
 		}
 	}
+
 	m_Cursor.AutoFLock();
 }
 
-bool FileSearchStorageCursor::Store(FileSearch* pFileSearch)
+template<class TData>
+bool FileSearchStorageCursor<TData>::Store(void* pFileSearch, int nFileId)
 {
+	TData* pFS = (TData*)pFileSearch;
 	m_Cursor.AppendBlank();
+
+	if (m_Index_FileId >= 0)
+		m_Cursor(m_Index_FileId) = nFileId;
+
+	if (m_Index_ParentId >= 0)
+		m_Cursor(m_Index_ParentId) = pFS->PathId();
+
 	if (m_Index_Filename >= 0)
-		m_Cursor(m_Index_Filename) = m_FileName = pFileSearch->FileName();
+		m_Cursor(m_Index_Filename) = pFS->Filename();
 
 	if (m_Index_Dosfilename >= 0)
-		m_Cursor(m_Index_Dosfilename) = m_FileName = pFileSearch->AlternateFileName();
+		m_Cursor(m_Index_Dosfilename) = pFS->AlternateFilename();
 
 	if (m_Index_Creationtime >= 0)
 	{
-		m_FileTime = pFileSearch->CreationTime();
-		if (m_ToLocalTime)
+		m_FileTime = pFS->CreationTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 			m_FileTime.ToLocal();
 		m_Cursor(m_Index_Creationtime) = m_FileTime;
 	}
 
 	if (m_Index_Accesstime >= 0)
 	{
-		m_FileTime = pFileSearch->LastAccessTime();
-		if (m_ToLocalTime)
+		m_FileTime = pFS->LastAccessTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 			m_FileTime.ToLocal();
 		m_Cursor(m_Index_Accesstime) = m_FileTime;
 	}
 
 	if (m_Index_Writetime >= 0)
 	{
-		m_FileTime = pFileSearch->LastWriteTime();
-		if (m_ToLocalTime)
+		m_FileTime = pFS->LastWriteTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 			m_FileTime.ToLocal();
 		m_Cursor(m_Index_Writetime) = m_FileTime;
 	}
 
 	if (m_Index_Filesize >= 0)
-		m_Cursor(m_Index_Filesize) = m_FileSize = pFileSearch->FileSize();
+		m_Cursor(m_Index_Filesize) = m_FileSize = pFS->FileSize();
 	
 	if (m_Index_Fileattribs >= 0)
-		m_Cursor(m_Index_Fileattribs) = pFileSearch->FileAttributes();
+		m_Cursor(m_Index_Fileattribs) = pFS->FileAttributes();
 	
 	if (m_Index_StringFileattribs >= 0)
-		m_Cursor(m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pFileSearch->FileAttributes());
+		m_Cursor(m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pFS->FileAttributes());
 
-	return true;
+	return false;
 }
 
-void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLocalTime, bool bStringFileAttribs, CStringView pFields)
+template<class TData>
+bool FileSearchStorageCursor<TData>::StorePath(PathSearchEntry* pPath, void* pFileSearch, int nLevel)
 {
-	FileSearchStorage::Initialize(pDestination, bToLocalTime, bStringFileAttribs, pFields);
+	m_Cursor.AppendBlank();
+	TData* pData = (TData*)pFileSearch;
+
+	if (m_Index_FileId >= 0)
+		m_Cursor(m_Index_FileId) = pPath->PathId();
+
+	if (m_Index_ParentId >= 0)
+	{
+		if (m_Flags & ADIREX_PARENT_JUSTFNAME)
+			m_Cursor(m_Index_ParentId) = pPath->ParentId();
+		else
+			m_Cursor(m_Index_ParentId) = 0;
+	}
+
+	if (m_Index_Filename >= 0)
+	{
+		if (m_Flags & ADIREX_PARENT_JUSTFNAME)
+			m_Cursor(m_Index_Filename) = m_FileName = pPath->Filename();
+		else
+			m_Cursor(m_Index_Filename) = m_FileName = pData->GetPath((m_Flags & ADIREX_PARENT_FULLPATH) ? 0 : 1, nLevel);
+	}
+
+	if (m_Index_Dosfilename >= 0)
+		m_Cursor(m_Index_Dosfilename) = m_FileName = pPath->AlternateFilename();
+
+	if (m_Index_Creationtime >= 0)
+	{
+		m_FileTime = pPath->CreationTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+			m_FileTime.ToLocal();
+		m_Cursor(m_Index_Creationtime) = m_FileTime;
+	}
+
+	if (m_Index_Accesstime >= 0)
+	{
+		m_FileTime = pPath->LastAccessTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+			m_FileTime.ToLocal();
+		m_Cursor(m_Index_Accesstime) = m_FileTime;
+	}
+
+	if (m_Index_Writetime >= 0)
+	{
+		m_FileTime = pPath->LastWriteTime();
+		if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+			m_FileTime.ToLocal();
+		m_Cursor(m_Index_Writetime) = m_FileTime;
+	}
+
+	if (m_Index_Filesize >= 0)
+		m_Cursor(m_Index_Filesize) = m_FileSize = pPath->FileSize();
+
+	if (m_Index_Fileattribs >= 0)
+		m_Cursor(m_Index_Fileattribs) = pPath->FileAttributes();
+
+	if (m_Index_StringFileattribs >= 0)
+		m_Cursor(m_Index_StringFileattribs) = m_FileName.FileAttributesToString(pPath->FileAttributes());
+
+	return false;
+}
+
+template<class TData>
+void FileSearchStorageCallback<TData>::Initialize(CStringView pDestination, DWORD& nFlags, CStringView pFields)
+{
+	FileSearchStorage<>::Initialize(pDestination, nFlags, pFields);
+	CStringView pFieldName;
+	CStringView pField;
 	if (pDestination.Len > 1024 /* VFP2C_MAX_CALLBACKFUNCTION */ || pDestination.Len == 0)
 	{
 		SaveCustomError("AdirEx", "Callback function length is 0 or greater than maximum length of 1024.");
@@ -311,14 +837,14 @@ void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLoc
 	m_Callback.SetCallback(pDestination);
 	if (pFields)
 	{
-		m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
+		m_Index_FileId = m_Index_ParentId = m_Index_Filename = m_Index_Dosfilename = m_Index_Accesstime = m_Index_Creationtime =
 			m_Index_Writetime = m_Index_Filesize = m_Index_Fileattribs = m_Index_StringFileattribs = -1;
 		pFields = pFields.Alltrim();
-		CStringView pFieldName = pFields.GetWordNum(1, ',');
+		pFieldName = pFields.GetWordNum(1, ',');
 		unsigned int nParmPos = 0;
 		while (pFieldName)
 		{
-			CStringView pField = pFieldName.Alltrim();
+			pField = pFieldName.Alltrim();
 			if (pField.ICompare("filename"))
 			{
 				m_Index_Filename = nParmPos;
@@ -351,6 +877,14 @@ void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLoc
 			{
 				m_Index_StringFileattribs = nParmPos;
 			}
+			else if (pField.ICompare("fileid"))
+			{
+				m_Index_FileId = nParmPos;
+			}
+			else if (pField.ICompare("parentid"))
+			{
+				m_Index_ParentId = nParmPos;
+			}
 			else
 			{
 				SaveCustomError("AdirEx", "Invalid parameter name '%V' in callback parameter list", &pField);
@@ -361,296 +895,198 @@ void FileSearchStorageCallback::Initialize(CStringView pDestination, bool bToLoc
 			pFieldName = pFields.GetWordNum(1, ',');
 			nParmPos++;
 		}
-		m_Callback.SetParameterPosition(0, m_Index_Filename);
-		m_Callback.SetParameterPosition(1, m_Index_Dosfilename);
-		m_Callback.SetParameterPosition(2, m_Index_Creationtime);
-		m_Callback.SetParameterPosition(3, m_Index_Accesstime);
-		m_Callback.SetParameterPosition(4, m_Index_Writetime);
-		m_Callback.SetParameterPosition(5, m_Index_Filesize);
-		m_Callback.SetParameterPosition(6, m_Index_Fileattribs);
-		m_Callback.SetParameterPosition(7, m_Index_StringFileattribs);
+
+		nFlags |= m_Index_Dosfilename == -1 ? ADIREX_NODOSNAME : 0;
+		nFlags |= m_Index_ParentId >= 0 ? ADIREX_PARENTID : 0;
 	}
 	else
 	{
-		m_Index_Fileattribs = bStringFileAttribs ? -1 : 6;
-		m_Index_StringFileattribs = bStringFileAttribs ? 6 : -1;
-		m_Callback.SetParameterPosition(6, m_Index_Fileattribs);
-		m_Callback.SetParameterPosition(7, m_Index_StringFileattribs);
-		
+		int nIndex = 1;
+		if (nFlags & ADIREX_FILEID)
+			m_Index_FileId = nIndex++;
+		else
+			m_Index_FileId = -1;
+
+		if (nFlags & ADIREX_PARENTID)
+			m_Index_ParentId = nIndex++;
+		else
+			m_Index_ParentId = -1;
+
+		m_Index_Filename = nIndex++;
+
+		if (nFlags & ADIREX_NODOSNAME)
+			m_Index_Dosfilename = -1;
+		else
+			m_Index_Dosfilename = nIndex++;
+
+		m_Index_Creationtime = nIndex++;
+		m_Index_Accesstime = nIndex++;
+		m_Index_Writetime = nIndex++;
+		m_Index_Filesize = nIndex++;
+		m_Index_Fileattribs = (nFlags & ADIREX_STRING_FILEATTRIBUTES) ? -1 : nIndex;
+		m_Index_StringFileattribs = (nFlags & ADIREX_STRING_FILEATTRIBUTES) ? nIndex : -1;
 	}
+
+	m_Callback.SetParameterPosition(0, m_Index_FileId);
+	m_Callback.SetParameterPosition(1, m_Index_ParentId);
+	m_Callback.SetParameterPosition(2, m_Index_Filename);
+	m_Callback.SetParameterPosition(3, m_Index_Dosfilename);
+	m_Callback.SetParameterPosition(4, m_Index_Creationtime);
+	m_Callback.SetParameterPosition(5, m_Index_Accesstime);
+	m_Callback.SetParameterPosition(6, m_Index_Writetime);
+	m_Callback.SetParameterPosition(7, m_Index_Filesize);
+	m_Callback.SetParameterPosition(8, m_Index_Fileattribs);
+	m_Callback.SetParameterPosition(9, m_Index_StringFileattribs);
 	m_Callback.OptimizeParameterPosition();
 }
 
-bool FileSearchStorageCallback::Store(FileSearch* pFileSearch)
+template<class TData>
+bool FileSearchStorageCallback<TData>::Store(void* pFileSearch, int nFileId)
 {
+	TData* pFS = (TData*)pFileSearch;
 	ValueEx vRetVal;
 	CStringView pStringFileAttributes;
-	CStringView pFileName = pFileSearch->FileName();
-	CStringView pAlternateFileName = pFileSearch->AlternateFileName();
-	m_CreationTime = pFileSearch->CreationTime();
-	m_AccessTime = pFileSearch->LastAccessTime();
-	m_WriteTime = pFileSearch->LastWriteTime();
-	if (m_ToLocalTime)
+	CStringView pFileName = pFS->Filename();
+	CStringView pAlternateFileName = pFS->AlternateFilename();
+	m_CreationTime = pFS->CreationTime();
+	m_AccessTime = pFS->LastAccessTime();
+	m_WriteTime = pFS->LastWriteTime();
+	if ((m_Flags & ADIREX_UTC_TIMES) == 0)
 	{
 		m_CreationTime.ToLocal();
 		m_AccessTime.ToLocal();
 		m_WriteTime.ToLocal();
 	}
-	m_FileSize = pFileSearch->FileSize();
-	int nFileAttributes = pFileSearch->FileAttributes();
+	m_FileSize = pFS->FileSize();
+	DWORD nFileAttributes = pFS->FileAttributes();
 	if (m_Index_StringFileattribs >= 0)
-		pStringFileAttributes = pFileSearch->StringFileAttributes();
-	int nErrorNo = m_Callback.Evaluate(vRetVal, pFileName, pAlternateFileName, &m_CreationTime, &m_AccessTime, &m_WriteTime, &m_FileSize, nFileAttributes, pStringFileAttributes);
+	{
+		m_FileNameAttributes.FileAttributesToString(nFileAttributes);
+		pStringFileAttributes = m_FileNameAttributes;
+	}
+	int nErrorNo = m_Callback.Evaluate(vRetVal, nFileId, pFS->PathId(), pFileName, pAlternateFileName, &m_CreationTime, &m_AccessTime, &m_WriteTime, &m_FileSize, nFileAttributes, pStringFileAttributes);
 	if (nErrorNo)
 		throw nErrorNo;
 	if (vRetVal.Vartype() == 'L')
-		return vRetVal.ev_length == 1;
+		return vRetVal.ev_length == 0;
+	else if (vRetVal.Numeric())
+		return vRetVal.NumericCast<int>() == 0;
 	else
 		vRetVal.Release();
 
+	return false;
+}
+
+template<class TData>
+bool FileSearchStorageCallback<TData>::StorePath(PathSearchEntry* pPath, void* pFilesearch, int nLevel)
+{
+	TData* pData = (TData*)pFilesearch;
+	ValueEx vRetVal;
+	CStringView pStringFileAttributes;
+	CStringView pFileName;
+	int nParentId;
+
+	if (m_Flags & ADIREX_PARENT_JUSTFNAME)
+	{
+		pFileName = m_FileName = pPath->Filename();
+		nParentId = pPath->ParentId();
+	}
+	else
+	{
+		pFileName = m_FileName = pData->GetPath((m_Flags & ADIREX_PARENT_FULLPATH) ? 0 : 1, nLevel);
+		nParentId = 0;
+	}
+
+	CStringView pAlternateFileName = pPath->AlternateFilename();
+	m_CreationTime = pPath->CreationTime();
+	m_AccessTime = pPath->LastAccessTime();
+	m_WriteTime = pPath->LastWriteTime();
+	if ((m_Flags & ADIREX_UTC_TIMES) == 0)
+	{
+		m_CreationTime.ToLocal();
+		m_AccessTime.ToLocal();
+		m_WriteTime.ToLocal();
+	}
+	m_FileSize = pPath->FileSize();
+	DWORD nFileAttributes = pPath->FileAttributes();
+	if (m_Index_StringFileattribs >= 0)
+	{
+		m_FileNameAttributes.FileAttributesToString(pPath->FileAttributes());
+		pStringFileAttributes = m_FileNameAttributes;
+	}
+	int nErrorNo = m_Callback.Evaluate(vRetVal, pPath->PathId(), nParentId, pFileName, pAlternateFileName, &m_CreationTime, &m_AccessTime, &m_WriteTime, &m_FileSize, nFileAttributes, pStringFileAttributes);
+	if (nErrorNo)
+		throw nErrorNo;
+	if (vRetVal.Vartype() == 'L')
+		return vRetVal.ev_length == 0;
+	else if (vRetVal.Numeric())
+		return vRetVal.NumericCast<int>() == 0;
+	else
+		vRetVal.Release();
+
+	return false;
+}
+
+bool FileSearchBase<>::Filter_True(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
+{
 	return true;
 }
 
-DWORD FileSearch::FindFirstFlags = 0xFFFFFFFF;
-
-FileSearch::FileSearch(bool lRecurse = false, CStringView pSearchPath = 0, DWORD nFileFilter = 0, DWORD nFilterMatch = 0, CStringView pDestination = 0,
-	int nDest = 0, bool btoLocalTime = false, bool bStringFileAttributes = false, int nMaxRecursion = 0, bool bDisableFsRedirection = false, CStringView pFields = 0)
+bool FileSearchBase<>::Filter_Match(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
 {
-	m_Recurse = lRecurse;
-	m_FilterAttributes = nFileFilter;
-	m_FilterMatch = nFilterMatch;
-	m_FilterFakeDirectory = (nFileFilter & FILE_ATTRIBUTE_FAKEDIRECTORY) == 0; 
-	m_FileCount = 0;
-	m_Storage = 0;
-	m_MaxRecursion = nMaxRecursion;
-	m_DisableFsRedirection = bDisableFsRedirection;
-	m_WSearch = false;
-	m_Handle = INVALID_HANDLE_VALUE;
-	m_Directory = pSearchPath;
-	m_StrBuilder = m_Directory;
-	m_StrBuilder.PathStripPath();
-	CStringView pWildcard = m_StrBuilder;
-	m_Wildcard = pWildcard;
-	if (m_Directory.Len() == m_Wildcard.Len())
-	{
-		m_Directory.Len(GetCurrentDirectory(m_Directory.Size(), m_Directory));
-		m_Directory.AddBs();
-	}
-	else
-	{
-		m_Directory.Len(m_Directory.Len() - m_Wildcard.Len(), true);
-	}
-
-	if (nDest & ADIREX_DEST_ARRAY)
-	{
-		m_Storage = new FileSearchStorageArray();
-		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
-	}
-	else if (nDest & ADIREX_DEST_CURSOR)
-	{
-		m_Storage = new FileSearchStorageCursor();
-		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
-	}
-	else if (nDest & ADIREX_DEST_CALLBACK)
-	{
-		m_Storage = new FileSearchStorageCallback();
-		m_Storage->Initialize(pDestination, btoLocalTime, bStringFileAttributes, pFields);
-	}
-	
-	m_FilterFunc = FileSearch::Filter_Default;
-	if (nDest & ADIREX_FILTER_ALL)
-	{
-		m_FilterMatch = m_FilterAttributes;
-	}
-	else if (nDest & ADIREX_FILTER_NONE)
-	{
-		m_FilterMatch = 0;
-	}
-	else if (nDest & ADIREX_FILTER_EXACT)
-	{
-		m_FilterFunc = FileSearch::Filter_Exact;
-		m_FilterMatch = m_FilterAttributes;
-	}
-	else
-	{
-		if (m_FilterAttributes != 0 && m_FilterAttributes == m_FilterMatch)
-			m_FilterFunc = FileSearch::Filter_Any;
-	}
-	m_StoreFullPath = (nDest & ADIREX_FULLPATH) > 0;
+	return (nAttributes & nFilter) == nFilterMatch;
 }
 
-FileSearch::~FileSearch()
+bool FileSearchBase<>::Filter_Exact(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
 {
-	if (m_Storage)
-		delete m_Storage;
+	return nAttributes == nFilter;
+}
 
+bool FileSearchBase<>::Filter_Any(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
+{
+	return (nAttributes & nFilter) > 0;
+}
+
+void FileSearchBase<>::DisableFsRedirection()
+{
+	PVOID oldValue;
+	if (fpWow64DisableWow64FsRedirection == 0)
+		return;
+	fpWow64DisableWow64FsRedirection(&oldValue);
+}
+
+void FileSearchBase<>::RevertFsRedirection()
+{
+	PVOID oldValue;
+	if (fpWow64RevertWow64FsRedirection == 0)
+		return;
+	fpWow64RevertWow64FsRedirection(&oldValue);
+}
+
+DWORD Win32FileSearch::FindFirstFlags = 0xFFFFFFFF;
+FINDEX_INFO_LEVELS Win32FileSearch::FindFirstInfoLevel = (FINDEX_INFO_LEVELS)0xFFFFFFFF;
+
+Win32FileSearch::Win32FileSearch(CStringView pSearchPath = 0, DWORD nFileFilter = 0, DWORD nFilterMatch = 0, CStringView pDestination = 0,
+	DWORD nFlags = 0, int nMaxRecursion = 0,  CStringView pFields = 0) : m_Handle(INVALID_HANDLE_VALUE),
+	FileSearch<Win32FileSearch, Win32FileSearchData>(pSearchPath, nFileFilter, nFilterMatch, pDestination, nFlags, nMaxRecursion, pFields)
+{
+
+}
+
+Win32FileSearch::~Win32FileSearch()
+{
 	if (m_Handle != INVALID_HANDLE_VALUE)
 		FindClose(m_Handle);
 }
 
-unsigned int FileSearch::ExecuteSearch()
+bool Win32FileSearch::FindFirstInternal()
 {
-	m_FileCount = 0;
-	if (m_DisableFsRedirection)
-		DisableFsRedirection();
+	m_Path.PrependIfNotPresent(LFILE_UNICODE_EXTENSION);
+	m_FileSearchData.SetRootPath(m_Path.StringView());
+	CWideStringView pSearchPattern = m_FileSearchData.SearchPattern();
 
-	try
-	{
-		if (!FindFirst())
-			return m_FileCount;
-		
-		do
-		{
-			if (m_FilterFunc(FileAttributes(), m_FilterAttributes, m_FilterMatch))
-			{
-				if (m_Recurse && !MatchFile())
-					continue;
-
-				m_FileCount++;
-				if (m_Storage)
-					m_Storage->Store(this);
-			}
-		} while (FindNext());
-	}
-	catch (int nErrorNo)
-	{
-		if (m_DisableFsRedirection)
-			RevertFsRedirection();
-
-		throw nErrorNo;
-	}
-
-	if (m_DisableFsRedirection)
-		RevertFsRedirection();
-
-	if (m_Storage)
-		m_Storage->Finalize();
-
-	return m_FileCount;
-}
-
-unsigned int FileSearch::ExecuteSearchCallback(FileSearchCallbackFunc pCallback, LPVOID pParam)
-{
-	m_FileCount = 0;
-	if (m_DisableFsRedirection)
-		DisableFsRedirection();
-
-	try
-	{
-		if (!FindFirst())
-			return m_FileCount;
-
-		do
-		{
-			if (m_FilterFunc(FileAttributes(), m_FilterAttributes, m_FilterMatch))
-			{
-				if (m_Recurse && !MatchFile())
-					continue;
-
-				m_FileCount++;
-				m_StrBuilder = FileName();
-				(*pCallback)(m_StrBuilder, FileAttributes(), pParam);
-			}
-		} while (FindNext());
-	}
-	catch (int nErrorNo)
-	{
-		if (m_DisableFsRedirection)
-			RevertFsRedirection();
-
-		throw nErrorNo;
-	}
-
-	if (m_DisableFsRedirection)
-		RevertFsRedirection();
-
-	if (m_Storage)
-		m_Storage->Finalize();
-
-	return m_FileCount;
-}
-
-void FileSearch::ExecuteReverse(FileSearchCallbackFunc pCallback, LPVOID pParam)
-{
-	if (m_DisableFsRedirection)
-		DisableFsRedirection();
-
-	CUnboundBlockStack<FileSearchEntry, 1024 * 64>  pDirectories;
-	CUnboundBlockStack<FileSearchEntry, 1024 * 64>  pFiles;
-	FileSearchEntry pSearchEntry;
-
-	try
-	{
-		if (!FindFirstReverse())
-			return;
-
-		do
-		{
-			pSearchEntry.Attributes = FileAttributes();
-			pSearchEntry.Path = FileName();
-			if (IsRealDirectory())
-			{
-				pDirectories.Enqueue(pSearchEntry);
-			}
-			else
-			{
-				pFiles.Enqueue(pSearchEntry);
-			}
-		} while (FindNextReverse());
-
-		while (pFiles.Dequeue(pSearchEntry))
-		{
-			m_StrBuilder = pSearchEntry.Path;
-			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, pParam);
-		}
-
-		while (pDirectories.Dequeue(pSearchEntry))
-		{
-			m_StrBuilder = pSearchEntry.Path;
-			(*pCallback)(m_StrBuilder, pSearchEntry.Attributes, pParam);
-		}
-	}
-	catch (int nErrorNo)
-	{
-		if (m_DisableFsRedirection)
-			RevertFsRedirection();
-		throw nErrorNo;
-	}
-
-	if (m_DisableFsRedirection)
-		RevertFsRedirection();
-}
-
-bool FileSearch::FindFirst()
-{
-	if (m_Recurse)
-		return FindFirstRecurse();
-
-	if (m_StoreFullPath)
-	{
-		m_CompleteFilename = m_Directory;
-		m_CompleteFilename.SetFormatBase();
-	}
-
-	m_SearchPattern = m_Directory;
-	m_SearchPattern += m_Wildcard;
-	if (m_SearchPattern.Len() < MAX_PATH)
-	{
-		m_CurrentFiledata = &m_Filedata;
-		m_WSearch = false;
-	try_again_FindFirstFileEx:
-		m_Handle = FindFirstFileEx(m_SearchPattern, FindExInfoStandard, &m_Filedata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
-	else
-	{
-		if (!m_WideWildcard)
-			m_WideWildcard = m_Wildcard;
-		m_WideSearchPattern = m_SearchPattern.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		m_CurrentFiledata = reinterpret_cast<WIN32_FIND_DATA*>(&m_WideFiledata);
-		m_WSearch = true;
-	try_again_FindFirstFileExW:
-		m_Handle = FindFirstFileExW(m_WideSearchPattern, FindExInfoStandard, &m_WideFiledata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
+try_again_FindFirstFileEx:
+	m_Handle = FindFirstFileExW(pSearchPattern.Data, GetFindFirstInfoLevel(), m_FileSearchData.Ptr(), m_FilterPathOnly ? FindExSearchLimitToDirectories : FindExSearchNameMatch, NULL, GetFindFirstFlags());
 
 	if (m_Handle == INVALID_HANDLE_VALUE)
 	{
@@ -658,10 +1094,7 @@ bool FileSearch::FindFirst()
 		if (nLastError == ERROR_INVALID_PARAMETER && GetFindFirstFlags() == FIND_FIRST_EX_LARGE_FETCH)
 		{
 			SetFindFirstFlags(0);
-			if (m_WSearch == false)
-				goto try_again_FindFirstFileEx;
-			else
-				goto try_again_FindFirstFileExW;
+			goto try_again_FindFirstFileEx;
 		}
 		else if (IgnorableSearchError(nLastError, false))
 			return false;
@@ -672,59 +1105,22 @@ bool FileSearch::FindFirst()
 		}
 	}
 
-	if (m_FilterFakeDirectory && IsFakeDir())
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
 		return FindNext();
 
+	m_FileId++;
 	return true;
 }
 
-bool FileSearch::FindFirstRecurse()
+bool Win32FileSearch::FindFirstRecurse()
 {
-	if (m_SubDirectory.Len() == 0)
-	{
-		if (m_StoreFullPath)
-		{
-			m_CompleteFilename = m_Directory;
-			m_CompleteFilename.SetFormatBase();
-		}
-		else
-		{
-			m_StrBuilder = m_Directory;
-			m_StrBuilder.SetFormatBase();
-		}
-		m_SearchPattern = m_Directory;
-		m_RecursionLevel = 0;
-	}
-	else
-	{
-		m_SearchPattern = m_SubDirectory;
-		CStringView pSubdir = m_SubDirectory;
-		pSubdir = pSubdir + m_Directory.Len();
-		m_RecursionLevel = pSubdir.GetWordCount('\\') - 1;
-		if (m_StoreFullPath)
-			m_CompleteFilename = m_SubDirectory;
-		else
-			m_CompleteFilename = pSubdir;
-		m_CompleteFilename.SetFormatBase();
-	}
-	m_SearchPattern += "*";
-	if (m_SearchPattern.Len() < MAX_PATH)
-	{
-		m_CurrentFiledata = &m_Filedata;
-		m_WSearch = false;
+	m_RecursionLevel = 0;
+	m_Path.PrependIfNotPresent(LFILE_UNICODE_EXTENSION);
+	m_FileSearchData.SetRootPath(m_Path.StringView());
+	CWideStringView pSearchPattern = m_FileSearchData.SearchPattern(L"*");
+
 try_again_FindFirstFileEx:
-		m_Handle = FindFirstFileEx(m_SearchPattern, FindExInfoStandard, &m_Filedata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
-	else
-	{
-		if (!m_WideWildcard)
-			m_WideWildcard = m_Wildcard;
-		m_WideSearchPattern = m_SearchPattern.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		m_CurrentFiledata = reinterpret_cast<WIN32_FIND_DATA*>(&m_WideFiledata);
-		m_WSearch = true;
-try_again_FindFirstFileExW:
-		m_Handle = FindFirstFileExW(m_WideSearchPattern, FindExInfoStandard, &m_WideFiledata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
+	m_Handle = FindFirstFileExW(pSearchPattern.Data, GetFindFirstInfoLevel(), m_FileSearchData.Ptr(), m_FilterPathOnly ? FindExSearchLimitToDirectories : FindExSearchNameMatch, NULL, GetFindFirstFlags());
 
 	if (m_Handle == INVALID_HANDLE_VALUE)
 	{
@@ -732,61 +1128,33 @@ try_again_FindFirstFileExW:
 		if (nLastError == ERROR_INVALID_PARAMETER && GetFindFirstFlags() == FIND_FIRST_EX_LARGE_FETCH)
 		{
 			SetFindFirstFlags(0);
-			if (m_WSearch == false)
-				goto try_again_FindFirstFileEx;
-			else
-				goto try_again_FindFirstFileExW;
+			goto try_again_FindFirstFileEx;
 		}
-
-		if (IgnorableSearchError(nLastError, m_RecursionLevel > 0))
-		{
-			// Did we access something we can't access while recursing?
-			CStringView pSubdir;
-			if (m_Subdirectories.Dequeue(pSubdir))
-			{
-				m_SubDirectory = pSubdir;
-				return FindFirstRecurse();
-			}
+		else if (IgnorableSearchError(nLastError, false))
 			return false;
-		}
-		else
-		{
-			SaveWin32Error("FindFirstFile", nLastError);
-			throw E_APIERROR;
-		}
+
+		SaveWin32Error("FindFirstFile", nLastError);
+		throw E_APIERROR;
 	}
 
-	if (m_FilterFakeDirectory && IsFakeDir())
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
 		return FindNextRecurse();
 
+	m_FileId++;
+
 	// add subdirectory to queue
-	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
-	{
-		if (m_StoreFullPath)
-			m_StrBuilder = FileName();
-		else
-			m_StrBuilder.AppendFromBase(FileName());
-		m_StrBuilder.AddBs();
-		CStringView pSubdir = m_StrBuilder;
-		m_Subdirectories.Enqueue(pSubdir);
-	}
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
 
 	return true;
 }
 
-bool FileSearch::FindNext()
+bool Win32FileSearch::FindNextInternal()
 {
-	if (m_Recurse)
-		return FindNextRecurse();
-
 	BOOL	bNext;
 	while (true)
 	{
-		if (m_WSearch == false)
-			bNext = FindNextFile(m_Handle, &m_Filedata);
-		else
-			bNext = FindNextFileW(m_Handle, &m_WideFiledata);
-		
+		bNext = FindNextFileW(m_Handle, m_FileSearchData.Ptr());
 		if (bNext == FALSE)
 		{
 			DWORD nLastError = GetLastError();
@@ -800,35 +1168,36 @@ bool FileSearch::FindNext()
 				throw E_APIERROR;
 			}
 		}
-		if (m_FilterFakeDirectory && IsFakeDir())
+		if (m_FilterFakePath && m_FileSearchData.IsFakePath())
 			continue;
+
+		m_FileId++;
 		return true;
 	}
 }
 
-bool FileSearch::FindNextRecurse()
+bool Win32FileSearch::FindNextRecurse()
 {
 	BOOL	bNext;
 
 find_next:
-	if (m_WSearch == false)
-		bNext = FindNextFile(m_Handle, &m_Filedata);
-	else
-		bNext = FindNextFileW(m_Handle, &m_WideFiledata);
+	bNext = FindNextFileW(m_Handle, m_FileSearchData.Ptr());
 
 	if (bNext == FALSE)
 	{
 		DWORD nLastError = GetLastError();
 		if (nLastError == ERROR_NO_MORE_FILES)
 		{
-			FindClose(m_Handle);
-			m_Handle = INVALID_HANDLE_VALUE;
-			CStringView pSubdir;
-			if (m_Subdirectories.Dequeue(pSubdir))
+			if (!FindClose(m_Handle))
 			{
-				m_SubDirectory = pSubdir;
-				goto find_first;
+				SaveWin32Error("FindClose", GetLastError());
+				throw E_APIERROR;
 			}
+			m_Handle = INVALID_HANDLE_VALUE;
+
+			if (DequeuePath())
+				goto find_first;
+
 			return false;
 		}
 		else
@@ -838,89 +1207,35 @@ find_next:
 		}
 	}
 
-	if (m_FilterFakeDirectory && IsFakeDir())
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
 		goto find_next;
 
-	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
-	{
-		if (m_StoreFullPath)
-			m_StrBuilder = FileName();
-		else
-			m_StrBuilder.AppendFromBase(FileName());
-		m_StrBuilder.AddBs();
-		CStringView pSubdir = m_StrBuilder;
-		m_Subdirectories.Enqueue(pSubdir);
-	}
+	m_FileId++;
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
 	return true;
 
 find_first:
-	if (m_SubDirectory.Len() == 0)
-	{
-		if (m_StoreFullPath)
-		{
-			m_CompleteFilename = m_Directory;
-			m_CompleteFilename.SetFormatBase();
-		}
-		else
-		{
-			m_StrBuilder = m_Directory;
-			m_StrBuilder.SetFormatBase();
-		}
-		m_SearchPattern = m_Directory;
-		m_RecursionLevel = 0;
-	}
-	else
-	{
-		m_SearchPattern = m_SubDirectory;
-		CStringView pSubdir = m_SubDirectory;
-		pSubdir = pSubdir + m_Directory.Len();
-		m_RecursionLevel = pSubdir.GetWordCount('\\') - 1;
-		if (m_StoreFullPath)
-			m_CompleteFilename = m_SubDirectory;
-		else
-			m_CompleteFilename = pSubdir;
-		m_CompleteFilename.SetFormatBase();
-	}
-	m_SearchPattern += "*";
-	if (m_SearchPattern.Len() < MAX_PATH)
-	{
-		m_CurrentFiledata = &m_Filedata;
-		m_WSearch = false;
-	try_again_FindFirstFileEx:
-		m_Handle = FindFirstFileEx(m_SearchPattern, FindExInfoStandard, &m_Filedata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
-	else
-	{
-		if (!m_WideWildcard)
-			m_WideWildcard = m_Wildcard;
-		m_WideSearchPattern = m_SearchPattern.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		m_CurrentFiledata = reinterpret_cast<WIN32_FIND_DATA*>(&m_WideFiledata);
-		m_WSearch = true;
-	try_again_FindFirstFileExW:
-		m_Handle = FindFirstFileExW(m_WideSearchPattern, FindExInfoStandard, &m_WideFiledata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
+	CWideStringView pSearchPattern = m_FileSearchData.SearchPattern(L"*");
 
+try_again_FindFirstFileEx:
+	m_Handle = FindFirstFileExW(pSearchPattern.Data, GetFindFirstInfoLevel(), m_FileSearchData.Ptr(), m_FilterPathOnly ? FindExSearchLimitToDirectories : FindExSearchNameMatch, NULL, GetFindFirstFlags());
 	if (m_Handle == INVALID_HANDLE_VALUE)
 	{
 		DWORD nLastError = GetLastError();
 		if (nLastError == ERROR_INVALID_PARAMETER && GetFindFirstFlags() == FIND_FIRST_EX_LARGE_FETCH)
 		{
 			SetFindFirstFlags(0);
-			if (m_WSearch == false)
-				goto try_again_FindFirstFileEx;
-			else
-				goto try_again_FindFirstFileExW;
+			goto try_again_FindFirstFileEx;
 		}
 
 		if (IgnorableSearchError(nLastError, m_RecursionLevel > 0))
 		{
 			// Did we access something we can't access while recursing?
-			CStringView pSubdir;
-			if (m_Subdirectories.Dequeue(pSubdir))
-			{
-				m_SubDirectory = pSubdir;
+			if (DequeuePath())
 				goto find_first;
-			}
+
 			return false;
 		}
 		else
@@ -930,72 +1245,27 @@ find_first:
 		}
 	}
 
-	if (m_FilterFakeDirectory && IsFakeDir())
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
 		goto find_next;
 
+	m_FileId++;
 	// add subdirectory to queue
-	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && IsRealDirectory())
-	{
-		if (m_StoreFullPath)
-			m_StrBuilder = FileName();
-		else
-			m_StrBuilder.AppendFromBase(FileName());
-		m_StrBuilder.AddBs();
-		CStringView pSubdir = m_StrBuilder;
-		m_Subdirectories.Enqueue(pSubdir);
-	}
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
 	return true;
 }
 
 /* like FindFirst, but drills through all subdirectories and returns the files in the deepest directories first */
-bool FileSearch::FindFirstReverse()
+bool Win32FileSearch::FindFirstReverse()
 {
-	if (m_SubDirectory.Len() == 0)
-	{
-		if (m_StoreFullPath)
-		{
-			m_CompleteFilename = m_Directory;
-			m_CompleteFilename.SetFormatBase();
-		}
-		else
-		{
-			m_StrBuilder = m_Directory;
-			m_StrBuilder.SetFormatBase();
-		}
-		m_SearchPattern = m_Directory;
-	}
-	else
-	{
-		m_SearchPattern = m_SubDirectory;
-		if (m_StoreFullPath)
-			m_CompleteFilename = m_SubDirectory;
-		else
-		{
-			CStringView pSubdir = m_SubDirectory;
-			pSubdir = pSubdir + m_Directory.Len();
-			m_CompleteFilename = pSubdir;
-		}
-		m_CompleteFilename.SetFormatBase();
-	}
-	m_SearchPattern += "*";
+	m_RecursionLevel = 0;
+	m_Path.PrependIfNotPresent(LFILE_UNICODE_EXTENSION);
+	m_FileSearchData.SetRootPath(m_Path.StringView());
+	CWideStringView pSearchPattern = m_FileSearchData.SearchPattern(L"*");
 
-	if (m_SearchPattern.Len() < MAX_PATH)
-	{
-		m_CurrentFiledata = &m_Filedata;
-		m_WSearch = false;
-	try_again_FindFirstFileEx:
-		m_Handle = FindFirstFileEx(m_SearchPattern, FindExInfoStandard, &m_Filedata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
-	else
-	{
-		if (!m_WideWildcard)
-			m_WideWildcard = m_Wildcard;
-		m_WideSearchPattern = m_SearchPattern.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
-		m_CurrentFiledata = reinterpret_cast<WIN32_FIND_DATA*>(&m_WideFiledata);
-		m_WSearch = true;
-	try_again_FindFirstFileExW:
-		m_Handle = FindFirstFileExW(m_WideSearchPattern, FindExInfoStandard, &m_WideFiledata, FindExSearchNameMatch, NULL, GetFindFirstFlags());
-	}
+find_first:
+	m_Handle = FindFirstFileExW(pSearchPattern.Data, GetFindFirstInfoLevel(), m_FileSearchData.Ptr(), m_FilterPathOnly ? FindExSearchLimitToDirectories : FindExSearchNameMatch, NULL, GetFindFirstFlags());
 
 	if (m_Handle == INVALID_HANDLE_VALUE)
 	{
@@ -1003,142 +1273,108 @@ bool FileSearch::FindFirstReverse()
 		if (nLastError == ERROR_INVALID_PARAMETER && GetFindFirstFlags() == FIND_FIRST_EX_LARGE_FETCH)
 		{
 			SetFindFirstFlags(0);
-			if (m_WSearch == false)
-				goto try_again_FindFirstFileEx;
-			else
-				goto try_again_FindFirstFileExW;
+			goto find_first;
+		}
+		else if (IgnorableSearchError(nLastError, false))
+			return false;
+		
+		SaveWin32Error("FindFirstFile", nLastError);
+		throw E_APIERROR;
+	}
+
+	if (m_FileSearchData.IsFakePath())
+		return FindNextReverse();
+
+	m_FileId++;
+	// add subdirectory to queque
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
+	return true;
+}
+
+bool Win32FileSearch::FindNextReverse()
+{
+	BOOL	bNext;
+find_next:
+	bNext = FindNextFileW(m_Handle, m_FileSearchData.Ptr());
+	if (bNext == FALSE)
+	{
+		DWORD nLastError = GetLastError();
+		if (nLastError == ERROR_NO_MORE_FILES)
+		{
+			if (!FindClose(m_Handle))
+			{
+				SaveWin32Error("FindClose", GetLastError());
+				throw E_APIERROR;
+			}
+
+			m_Handle = INVALID_HANDLE_VALUE;
+			if (DequeuePath())
+				goto find_first;
+
+			return false;
 		}
 		else
 		{
-			SaveWin32Error("FindFirstFile", nLastError);
+			SaveWin32Error("FindNextFile", nLastError);
 			throw E_APIERROR;
 		}
 	}
 
-	if (m_FilterFakeDirectory && IsFakeDir())
-		return FindNextReverse();
+	if (m_FileSearchData.IsFakePath())
+		goto find_next;
 
-	// add subdirectory to queque
-	if (IsRealDirectory())
+	m_FileId++;
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+	
+	return true;
+
+find_first:
+	CWideStringView pSearchPattern = m_FileSearchData.SearchPattern(L"*");
+	m_Handle = FindFirstFileExW(pSearchPattern.Data, GetFindFirstInfoLevel(), m_FileSearchData.Ptr(), m_FilterPathOnly ? FindExSearchLimitToDirectories : FindExSearchNameMatch, NULL, GetFindFirstFlags());
+
+	if (m_Handle == INVALID_HANDLE_VALUE)
 	{
-		if (m_StoreFullPath)
-			m_StrBuilder = FileName();
-		else
-			m_StrBuilder.AppendFromBase(FileName());
-		m_StrBuilder.AddBs();
-		CStringView pSubdir = m_StrBuilder;
-		m_Subdirectories.Enqueue(pSubdir);
+		DWORD nLastError = GetLastError();
+		if (nLastError == ERROR_INVALID_PARAMETER && GetFindFirstFlags() == FIND_FIRST_EX_LARGE_FETCH)
+		{
+			SetFindFirstFlags(0);
+			goto find_first;
+		}
+		else if (IgnorableSearchError(nLastError, false))
+			return false;
+
+		SaveWin32Error("FindFirstFile", nLastError);
+		throw E_APIERROR;
 	}
+
+	if (m_FileSearchData.IsFakePath())
+		goto find_next;
+
+	m_FileId++;
+	// add subdirectory to queque
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
 	return true;
 }
 
-bool FileSearch::FindNextReverse()
+FINDEX_INFO_LEVELS Win32FileSearch::GetFindFirstInfoLevel()
 {
-	BOOL	bNext;
-	while (true)
+	if (FindFirstInfoLevel == 0xFFFFFFFF)
 	{
-		if (m_WSearch == false)
-			bNext = FindNextFile(m_Handle, &m_Filedata);
+		WindowsVersion winver = COs::GetVersion();
+		if (winver == Windows7 || winver == WindowsServer2008R2 || winver == WindowsX)
+			FindFirstInfoLevel = FindExInfoStandard;
 		else
-			bNext = FindNextFileW(m_Handle, &m_WideFiledata);
-
-		if (bNext == FALSE)
-		{
-			DWORD nLastError = GetLastError();
-			if (nLastError == ERROR_NO_MORE_FILES)
-			{
-				FindClose(m_Handle);
-				m_Handle = INVALID_HANDLE_VALUE;
-				CStringView pSubdir;
-				if (m_Subdirectories.Dequeue(pSubdir))
-				{
-					m_SubDirectory = pSubdir;
-					return FindFirstReverse();
-				}
-				return false;
-			}
-			else
-			{
-				SaveWin32Error("FindNextFile", nLastError);
-				throw E_APIERROR;
-			}
-		}
-
-		if (IsFakeDir())
-			return FindNextReverse();
-
-		if (IsRealDirectory())
-		{
-			if (m_StoreFullPath)
-				m_StrBuilder = FileName();
-			else
-				m_StrBuilder.AppendFromBase(FileName());
-
-			m_StrBuilder.AddBs();
-			CStringView pSubdir = m_StrBuilder;
-			m_Subdirectories.Enqueue(pSubdir);
-		}
-		return true;
+			FindFirstInfoLevel = FindExInfoBasic;
 	}
+	return (m_Flags & ADIREX_NODOSNAME) ? FindFirstInfoLevel : FindExInfoStandard;
 }
 
-bool FileSearch::Filter_Default(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
-{
-	return (nAttributes & nFilter) == nFilterMatch;
-}
-
-bool FileSearch::Filter_Exact(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
-{
-	return nAttributes == nFilter;
-}
-
-bool FileSearch::Filter_Any(DWORD nAttributes, DWORD nFilter, DWORD nFilterMatch)
-{
-	return (nAttributes & nFilter) > 0;
-}
-
-void FileSearch::DisableFsRedirection()
-{
-	if (fpWow64DisableWow64FsRedirection == (PWOW64FSREDIRECTION)-1)
-		return;
-
-	if (fpWow64DisableWow64FsRedirection == 0)
-	{
-		HMODULE hDll = GetModuleHandle("kernel32.dll");
-		if (hDll)
-		{
-			fpWow64DisableWow64FsRedirection = (PWOW64FSREDIRECTION)GetProcAddress(hDll, "Wow64DisableWow64FsRedirection");
-			if (fpWow64DisableWow64FsRedirection == 0)
-			{
-				fpWow64DisableWow64FsRedirection = (PWOW64FSREDIRECTION)-1;
-			}
-			else
-			{
-				fpWow64RevertWow64FsRedirection = (PWOW64FSREDIRECTION)GetProcAddress(hDll, "Wow64RevertWow64FsRedirection");
-				if (fpWow64RevertWow64FsRedirection == 0)
-				{
-					fpWow64DisableWow64FsRedirection = (PWOW64FSREDIRECTION)-1;
-					fpWow64RevertWow64FsRedirection = (PWOW64FSREDIRECTION)-1;
-				}
-			}
-		}
-	}
-
-	PVOID oldValue;
-	if (fpWow64DisableWow64FsRedirection != (PWOW64FSREDIRECTION)-1)
-		fpWow64DisableWow64FsRedirection(&oldValue);
-}
-
-void FileSearch::RevertFsRedirection()
-{
-	if (fpWow64RevertWow64FsRedirection == (PWOW64FSREDIRECTION)-1)
-		return;
-
-	PVOID oldValue;
-	fpWow64RevertWow64FsRedirection(&oldValue);
-}
-
-DWORD FileSearch::GetFindFirstFlags()
+DWORD Win32FileSearch::GetFindFirstFlags()
 {
 	if (FindFirstFlags == 0xFFFFFFFF)
 	{
@@ -1151,9 +1387,259 @@ DWORD FileSearch::GetFindFirstFlags()
 	return FindFirstFlags;
 }
 
-void FileSearch::SetFindFirstFlags(DWORD dwFlags)
+void Win32FileSearch::SetFindFirstFlags(DWORD dwFlags)
 {
 	FindFirstFlags = dwFlags;
+}
+
+NtFileSearch::NtFileSearch(CStringView pSearchPath = 0, DWORD nFileFilter = 0, DWORD nFilterMatch = 0, CStringView pDestination = 0,
+	DWORD nFlags = 0, int nMaxRecursion = 0,  CStringView pFields = 0) : m_DirectoryHandle(INVALID_HANDLE_VALUE),
+	FileSearch<NtFileSearch, NtFileSearchData>(pSearchPath, nFileFilter, nFilterMatch, pDestination, nFlags, nMaxRecursion, pFields)
+{
+	m_FileInfoClass = (m_Flags & ADIREX_NODOSNAME) ? FileDirectoryInformationEx : FileBothDirectoryInformationEx;
+	m_FileSearchData.SetFileInfoClass(m_FileInfoClass);
+}
+
+NtFileSearch::~NtFileSearch()
+{
+	if (m_DirectoryHandle != INVALID_HANDLE_VALUE)
+		CloseHandle(m_DirectoryHandle);
+}
+
+bool NtFileSearch::FindFirstInternal()
+{
+	m_Path.PrependIfNotPresent(LFILE_UNICODE_EXTENSION);
+	m_FileSearchData.SetRootPath(m_Path);
+	m_DirectoryHandle = CreateFileW(m_Path, FILE_LIST_DIRECTORY, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+	if (m_DirectoryHandle == INVALID_HANDLE_VALUE)
+	{
+		DWORD nLastError = GetLastError();
+		if (IgnorableSearchError(nLastError, false))
+			return false;
+		else
+		{
+			SaveWin32Error("CreateFileW", nLastError);
+			throw E_APIERROR;
+		}
+	}
+
+	m_FileSearchData.SetFileInfo(m_FileInfoBuffer.Address());
+
+	UNICODE_STRING pWildCard;
+	fpRtlInitUnicodeString(&pWildCard, m_FileSearchData.GetWildCard().Data);
+
+	m_IoStatusBlock.Status = 0;
+	m_IoStatusBlock.Information = 0;
+	if (fpNtQueryDirectoryFileEx)
+		m_IoResult = fpNtQueryDirectoryFileEx(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, SL_RESTART_SCAN, &pWildCard);
+	else
+		m_IoResult = fpNtQueryDirectoryFile(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, FALSE, &pWildCard, TRUE);
+
+	if (m_IoResult == STATUS_NO_MORE_FILES || m_IoResult == STATUS_NO_SUCH_FILE) {
+		// we're done!
+		return false;
+	}
+	else if (m_IoResult != STATUS_SUCCESS)
+	{
+		SaveWin32Error("NtQueryDirectoryFile", fpRtlNtStatusToDosError(m_IoResult));
+		throw E_APIERROR;
+	}
+
+	if (!SkipFakeDirectories())
+		return false;
+
+	m_FileId++;
+	return true;
+}
+
+bool NtFileSearch::FindNextInternal()
+{
+	if (!m_FileSearchData.NextEntry())
+	{
+		m_IoStatusBlock.Status = 0;
+		m_IoStatusBlock.Information = 0;
+		if (fpNtQueryDirectoryFileEx)
+			m_IoResult = fpNtQueryDirectoryFileEx(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, 0, 0);
+		else
+			m_IoResult = fpNtQueryDirectoryFile(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, FALSE, 0, FALSE);
+
+		if (m_IoResult == STATUS_NO_MORE_FILES)
+		{
+			// we're done!
+			return false;
+		}
+		else if (m_IoResult != STATUS_SUCCESS)
+		{
+			SaveWin32Error("NtQueryDirectoryFile", fpRtlNtStatusToDosError(m_IoResult));
+			throw E_APIERROR;
+		}
+		m_FileSearchData.SetFileInfo(m_FileInfoBuffer.Address());
+	}
+	m_FileId++;
+	return true;
+}
+
+bool NtFileSearch::FindFirstRecurse()
+{
+	m_Path.PrependIfNotPresent(LFILE_UNICODE_EXTENSION);
+	m_FileSearchData.SetRootPath(m_Path);
+	m_RecursionLevel = 0;
+
+	m_DirectoryHandle = CreateFileW(m_Path, FILE_LIST_DIRECTORY, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+	if (m_DirectoryHandle == INVALID_HANDLE_VALUE)
+	{
+		DWORD nLastError = GetLastError();
+		if (IgnorableSearchError(nLastError, false))
+			return false;
+		else
+		{
+			SaveWin32Error("CreateFileW", nLastError);
+			throw E_APIERROR;
+		}
+	}
+	m_FileSearchData.SetFileInfo(m_FileInfoBuffer.Address());
+
+	m_IoStatusBlock.Status = 0;
+	m_IoStatusBlock.Information = 0;
+	if (fpNtQueryDirectoryFileEx)
+		m_IoResult = fpNtQueryDirectoryFileEx(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, SL_RESTART_SCAN, 0);
+	else
+		m_IoResult = fpNtQueryDirectoryFile(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, FALSE, 0, TRUE);
+
+	if (m_IoResult == STATUS_NO_MORE_FILES) {
+		// we're done!
+		return false;
+	}
+	else if (m_IoResult != STATUS_SUCCESS)
+	{
+		SaveWin32Error("NtQueryDirectoryFile", fpRtlNtStatusToDosError(m_IoResult));
+		throw E_APIERROR;
+	}
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
+		return FindNextRecurse();
+
+	m_FileId++;
+	// add subdirectory to queue
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
+	return true;
+}
+
+bool NtFileSearch::FindNextRecurse()
+{
+
+find_next:
+	if (!m_FileSearchData.NextEntry())
+	{
+		m_IoStatusBlock.Status = 0;
+		m_IoStatusBlock.Information = 0;
+		if (fpNtQueryDirectoryFileEx)
+			m_IoResult = fpNtQueryDirectoryFileEx(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, 0, 0);
+		else
+			m_IoResult = fpNtQueryDirectoryFile(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, FALSE, 0, FALSE);
+
+		if (m_IoResult == STATUS_NO_MORE_FILES)
+		{
+			if (!CloseHandle(m_DirectoryHandle))
+			{
+				m_DirectoryHandle = INVALID_HANDLE_VALUE;
+				SaveWin32Error("CloseHandle", GetLastError());
+				throw E_APIERROR;
+			}
+			m_DirectoryHandle = INVALID_HANDLE_VALUE;
+
+			if (DequeuePath())
+				goto find_first;
+
+			// we're done!
+			return false;
+		}
+		else if (m_IoResult != STATUS_SUCCESS)
+		{
+			SaveWin32Error("NtQueryDirectoryFile", fpRtlNtStatusToDosError(m_IoResult));
+			throw E_APIERROR;
+		}
+		m_FileSearchData.SetFileInfo(m_FileInfoBuffer.Address());
+	}
+
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
+		goto find_next;
+
+	m_FileId++;
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
+	return true;
+
+find_first:
+	CWideStringView subdir = m_FileSearchData.Path();
+	m_DirectoryHandle = CreateFileW(subdir.Data, FILE_LIST_DIRECTORY, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+	if (m_DirectoryHandle == INVALID_HANDLE_VALUE)
+	{
+		DWORD nLastError = GetLastError();
+		if (IgnorableSearchError(nLastError, true))
+		{
+			// Did we access something we can't access while recursing?
+			if (DequeuePath())
+				goto find_first;
+
+			return false;
+		}
+		else
+		{
+			SaveWin32Error("CreateFile", nLastError);
+			throw E_APIERROR;
+		}
+	}
+
+	m_FileSearchData.SetFileInfo(m_FileInfoBuffer.Address());
+
+	m_IoStatusBlock.Status = 0;
+	m_IoStatusBlock.Information = 0;
+	if (fpNtQueryDirectoryFileEx)
+		m_IoResult = fpNtQueryDirectoryFileEx(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, SL_RESTART_SCAN, 0);
+	else
+		m_IoResult = fpNtQueryDirectoryFile(m_DirectoryHandle, 0, 0, 0, &m_IoStatusBlock, m_FileInfoBuffer.Address(), m_FileInfoBuffer.Size(), m_FileInfoClass, FALSE, 0, TRUE);
+
+	if (m_IoResult != STATUS_SUCCESS)
+	{
+		SaveWin32Error("NtQueryDirectoryFile", fpRtlNtStatusToDosError(m_IoResult));
+		throw E_APIERROR;
+	}
+
+	if (m_FilterFakePath && m_FileSearchData.IsFakePath())
+		goto find_next;
+
+	m_FileId++;
+	// add subdirectory to queue
+	if ((m_MaxRecursion == 0 || m_RecursionLevel < m_MaxRecursion) && m_FileSearchData.IsRealPath())
+		QueuePath();
+
+	return true;
+}
+
+bool NtFileSearch::FindFirstReverse()
+{
+	return false;
+}
+
+bool NtFileSearch::FindNextReverse()
+{
+	return false;
+}
+
+bool NtFileSearch::SkipFakeDirectories()
+{
+	if (m_FilterFakePath)
+	{
+		while (m_FileSearchData.IsFakePath())
+		{
+			if (!m_FileSearchData.NextEntry())
+				return false;
+		}
+	}
+	return true;
 }
 
 VolumeSearch::~VolumeSearch()
@@ -1246,18 +1732,6 @@ bool VolumeMountPointSearch::FindNext()
 	}
 	m_MountPoint.StringLen();
 	return true;
-}
-
-// cleanup
-void _stdcall VFP2C_Destroy_File(VFP2CTls& tls)
-{
-	int nCount = tls.FileHandles.GetCount();
-	for (int xj = 0; xj < nCount; xj++)
-	{
-		// release all file handles
-		CloseHandle(tls.FileHandles[xj]);
-	}
-	tls.FileHandles.SetIndex(-1);
 }
 
 DWORD _fastcall AdirEx_FileFilter(FoxString& pFileFilter, DWORD& nMatch)
@@ -1359,22 +1833,33 @@ DWORD _fastcall AdirEx_FileFilter(FoxString& pFileFilter, DWORD& nMatch)
 
 void _fastcall ADirEx(ParamBlkEx& parm)
 {
-	FileSearch* pFileSearch = 0;
+	FileSearchBase<>* pFileSearch = 0;
 try
 {
 	FoxString pDestination(parm(1));
 	FoxString pSearchString(parm(2));
 	FoxString pFields(parm, 6);
-	DWORD nFileFilter, nFileMatch;
-	nFileFilter = nFileMatch = ~FILE_ATTRIBUTE_FAKEDIRECTORY;
+	DWORD nFileFilter = 0, nFileMatch = 0;
+	int nFlags, nMaxRecursion;
+
+	nFlags = parm.PCount() >= 4 && parm(4)->ev_long ? parm(4)->ev_long : ADIREX_DEST_ARRAY;
+	nMaxRecursion = parm.PCount() >= 5 ? parm(5)->ev_long : 0;
+
 	if (parm.PCount() >= 3)
 	{
-		if (parm(3)->Vartype() == 'I')
+		if (parm(3)->Numeric())
 		{
-			if (parm(3)->ev_long)
+			nFileFilter = parm(3)->NumericCast<DWORD>();
+			if (parm.PCount() >= 7)
 			{
-				nFileFilter = parm(3)->ev_long;
-				nFileMatch = parm.PCount() >= 7 ? parm(7)->ev_long : nFileFilter;
+				nFileMatch = parm(7)->NumericCast<DWORD>();
+				nFlags |= ADIREX_FILTER_MATCH;
+
+				if (nFlags & (ADIREX_FILTER_ALL | ADIREX_FILTER_EXACT | ADIREX_FILTER_NONE))
+				{
+					SaveCustomErrorEx("AdirEx", "Flags ADIREX_FILTER_ALL, ADIREX_FILTER_EXACT or ADIREX_FILTER_NONE are not valid when the parameter 'nFilterMatch' is passed.", E_INVALIDPARAMS);
+					throw E_APIERROR;
+				}
 			}
 		}
 		else if (parm(3)->Vartype() == 'C')
@@ -1383,34 +1868,68 @@ try
 			{
 				FoxString pFileFilter(parm(3), 0);
 				nFileFilter = AdirEx_FileFilter(pFileFilter, nFileMatch);
+				nFlags |= ADIREX_FILTER_MATCH;
+
+				if (nFlags & (ADIREX_FILTER_ALL | ADIREX_FILTER_EXACT | ADIREX_FILTER_NONE))
+				{
+					SaveCustomErrorEx("AdirEx", "Flags ADIREX_FILTER_ALL, ADIREX_FILTER_EXACT or ADIREX_FILTER_NONE are not valid when the parameter 'ncFilterFilter' is a string.", E_INVALIDPARAMS);
+					throw E_APIERROR;
+				}
 			}
 		}
 		else
 			throw E_INVALIDPARAMS;
 	}
 
-	int nDest = parm.PCount() >= 4 && parm(4)->ev_long ? parm(4)->ev_long : ADIREX_DEST_ARRAY;
-	int nMaxRecursion = parm.PCount() >= 5 ? parm(5)->ev_long : 0;
+	if (!(nFlags & (ADIREX_DEST_ARRAY | ADIREX_DEST_CURSOR | ADIREX_DEST_CALLBACK)))
+		nFlags |= ADIREX_DEST_ARRAY;
 
-	bool bToLocalTime = (nDest & ADIREX_UTC_TIMES) == 0;
-	nDest &= ~ADIREX_UTC_TIMES;
-	bool llRecurse = (nDest & ADIREX_RECURSIVE) > 0;
-	nDest &= ~ADIREX_RECURSIVE;
-	bool bFsRedirection = (nDest & ADIREX_DISABLE_FSREDIRECTION) > 0;
-	nDest &= ~ADIREX_DISABLE_FSREDIRECTION;
-	bool bStringFileAttributes = (nDest & ADIREX_STRING_FILEATTRIBUTES) > 0;
-	nDest &= ~ADIREX_STRING_FILEATTRIBUTES;
-
-	if (!(nDest & (ADIREX_DEST_ARRAY | ADIREX_DEST_CURSOR | ADIREX_DEST_CALLBACK)))
-		nDest |= ADIREX_DEST_ARRAY;
-
-	if ((nDest & ADIREX_DEST_CALLBACK) && (pDestination.Len() > VFP2C_MAX_CALLBACKFUNCTION || pDestination.Len() == 0))
+	if (__popcnt(nFlags & (ADIREX_DEST_ARRAY | ADIREX_DEST_CURSOR | ADIREX_DEST_CALLBACK)) > 1)
 	{
-		SaveCustomError("ADirEx", "Callback function length is zero or greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("AdirEx", "Only one of the flags ADIREX_DEST_ARRAY, ADIREX_DEST_CURSOR or ADIREX_DEST_CALLBACK can be specified.", E_INVALIDPARAMS);
+		throw E_APIERROR;
+	}
+
+	if (__popcnt(nFlags & (ADIREX_FILTER_ALL | ADIREX_FILTER_EXACT | ADIREX_FILTER_NONE)) > 1)
+	{
+		SaveCustomErrorEx("AdirEx", "Only one of the flags ADIREX_FILTER_ALL, ADIREX_FILTER_EXACT or ADIREX_FILTER_NONE can be specified.", E_INVALIDPARAMS);
+		throw E_APIERROR;
+	}
+
+	if (__popcnt(nFlags & (ADIREX_FULLPATH | ADIREX_JUSTFNAME)) > 1)
+	{
+		SaveCustomErrorEx("AdirEx", "Only one of the flags ADIREX_FULLPATH or ADIREX_JUSTFNAME can be specified.", E_INVALIDPARAMS);
+		throw E_APIERROR;
+	}
+
+	if (__popcnt(nFlags & (ADIREX_PARENT_FULLPATH | ADIREX_PARENT_JUSTFNAME)) > 1)
+	{
+		SaveCustomErrorEx("AdirEx", "Only one of the flags ADIREX_PARENT_FULLPATH or ADIREX_PARENT_JUSTFNAME can be specified.", E_INVALIDPARAMS);
+		throw E_APIERROR;
+	}
+
+	if ((nFlags & (ADIREX_FILEID | ADIREX_PARENTID)) == ADIREX_PARENTID)
+	{
+		SaveCustomErrorEx("AdirEx", "The flag ADIREX_PARENTID requires ADIREX_FILEID.", E_INVALIDPARAMS);
+		throw E_APIERROR;
+	}
+
+	if (parm.PCount() >= 6 && parm(6)->Len() && (nFlags & (ADIREX_STRING_FILEATTRIBUTES | ADIREX_NODOSNAME)))
+	{
+		SaveCustomErrorEx("AdirEx", "The flags ADIREX_STRING_FILEATTRIBUTES or ADIREX_NODOSNAME are invalid when the parameter 'cFields' is passed.", E_INVALIDPARAMS);
+		throw E_APIERROR;
+	}
+
+	if ((nFlags & ADIREX_DEST_CALLBACK) && (pDestination.Len() > VFP2C_MAX_CALLBACKFUNCTION || pDestination.Len() == 0))
+	{
+		SaveCustomErrorEx("ADirEx", "Callback function length is zero or greater than maximum length of 1024.", E_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	
-	pFileSearch = new FileSearch(llRecurse, pSearchString, nFileFilter, nFileMatch, pDestination, nDest, bToLocalTime, bStringFileAttributes, nMaxRecursion, bFsRedirection, pFields);
+	if (fpNtQueryDirectoryFileEx || fpNtQueryDirectoryFile)
+		pFileSearch = new NtFileSearch(pSearchString, nFileFilter, nFileMatch, pDestination, nFlags, nMaxRecursion, pFields);
+	else
+		pFileSearch = new Win32FileSearch(pSearchString, nFileFilter, nFileMatch, pDestination, nFlags, nMaxRecursion, pFields);
 
 	unsigned int nFileCount = pFileSearch->ExecuteSearch();
 	Return(nFileCount);
@@ -1418,14 +1937,18 @@ try
 catch(int nErrorNo)
 {
 	RaiseError(nErrorNo);
+	Return(0);
 }
 if (pFileSearch)
+{
 	delete pFileSearch;
+}
+return;
 }
 
 void _fastcall ADirectoryInfo(ParamBlkEx& parm)
 {
-	FileSearch* pFileSearch = 0;
+	Win32FileSearch* pFileSearch = 0;
 try
 {
 	FoxArray pArray(parm(1),3,1);
@@ -1449,7 +1972,7 @@ try
 	if (pDirectory.Len() >= MAX_PATH)
 		pDirectory.PrependIfNotPresent(FILE_UNICODE_EXTENSION);
 
-	pFileSearch = new FileSearch(true, pDirectory);
+	pFileSearch = new Win32FileSearch(pDirectory, 0, 0, 0, ADIREX_RECURSIVE);
 	if (pFileSearch == 0)
 		throw E_INSUFMEMORY;
 
@@ -1457,11 +1980,11 @@ try
 	{
 		do
 		{
-			if (pFileSearch->IsRealDirectory())
+			if (pFileSearch->IsRealPath())
 			{
 				nDirectoryCount++;
 			}
-			else if (!pFileSearch->IsFakeDir())
+			else if (!pFileSearch->IsFakePath())
 			{
 				nFileCount++;
 				nDirectorySize += pFileSearch->FileSize();
@@ -1973,13 +2496,13 @@ void _stdcall SetFileAttributesExCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWO
 
 void _fastcall SetFileAttributesEx(ParamBlkEx& parm)
 {
-	FileSearch* pFileSearch = 0;
+	FileSearchBase<>* pFileSearch = 0;
 try
 {
 	FoxString pFileName;
 	FoxWString<MAX_PATH * 2> pWideFilename;
-	DWORD dwFileAttributes, dwFileAttributesSet, dwFileAttributesClear;
-	bool bClearOrSet;
+	DWORD dwFileAttributes = 0, dwFileAttributesSet = 0, dwFileAttributesClear = 0;
+	bool bClearOrSet = false;
 	BOOL bRet;
 
 	if (parm(1)->Vartype() == 'C')
@@ -2074,15 +2597,13 @@ try
 			throw E_INVALIDPARAMS;
 
 		int nMaxRecursion = parm.PCount() < 3 ? -1 : parm(3)->ev_long;
-		bool bRecurse = nMaxRecursion >= 0;
-		pFileSearch = new FileSearch(bRecurse, pFileName, 0, 0, 0, ADIREX_FULLPATH, false, false, nMaxRecursion);
+		pFileSearch = new Win32FileSearch(pFileName, 0, 0, 0, ADIREX_FULLPATH | (nMaxRecursion >= 0 ? ADIREX_RECURSIVE : 0), nMaxRecursion);
 		if (pFileSearch == 0)
 			throw E_INSUFMEMORY;
 
 		unsigned int nFileCount = pFileSearch->ExecuteSearchCallback(SetFileAttributesExCallback, (LPVOID)&pCallbackParam);
 		Return(nFileCount);
 	}
-
 }
 catch(int nErrorNo)
 {
@@ -2194,6 +2715,7 @@ catch(int nErrorNo)
 }
 }
 
+#pragma warning( disable: 4815)
 void _fastcall GetLongPathNameEx(ParamBlkEx& parm)
 {
 try
@@ -2249,7 +2771,9 @@ catch(int nErrorNo)
 	RaiseError(nErrorNo);
 }
 }
+#pragma warning( default: 4815)
 
+#pragma warning( disable: 4815)
 void _fastcall GetShortPathNameEx(ParamBlkEx& parm)
 {
 try
@@ -2305,6 +2829,7 @@ catch(int nErrorNo)
 	RaiseError(nErrorNo);
 }
 }
+#pragma warning( default: 4815)
 
 void _fastcall CopyFileExLib(ParamBlkEx& parm)
 {
@@ -2712,7 +3237,7 @@ void _stdcall FileSearchDeleteCallback(CStrBuilder<MAX_WIDE_PATH>& pPath, DWORD 
 
 void _fastcall DeleteDirectory(ParamBlkEx& parm)
 {
-	FileSearch* pFileSearch = 0;
+	FileSearchBase<>* pFileSearch = 0;
 try
 {
 	FoxString pDirectory;
@@ -2728,7 +3253,7 @@ try
 
 	FoxString pSearch(pDirectory);
 	pSearch.AddBsWildcard();
-	pFileSearch = new FileSearch(true, pSearch, 0, 0, 0, ADIREX_FULLPATH);
+	pFileSearch = new Win32FileSearch(pSearch, 0, 0, 0, ADIREX_FULLPATH | ADIREX_RECURSIVE);
 	if (pFileSearch == 0)
 		throw E_INSUFMEMORY;
 	pFileSearch->ExecuteReverse(FileSearchDeleteCallback, 0);
@@ -3148,21 +3673,7 @@ void _fastcall AVolumePaths(ParamBlkEx& parm)
 try
 {
 	if (!fpGetVolumePathNamesForVolumeName)
-	{
-		HMODULE hDll;
-		hDll = GetModuleHandle("kernel32.dll");
-		if (hDll)
-		{
-			fpGetVolumePathNamesForVolumeName = (PGETVOLUMEPATHNAMESFORVOLUMENAME)GetProcAddress(hDll, "GetVolumePathNamesForVolumeNameA");
-			if (!fpGetVolumePathNamesForVolumeName)
-				throw E_NOENTRYPOINT;
-		}
-		else
-		{
-			SaveWin32Error("GetModuleHandle", GetLastError());
-			throw E_APIERROR;
-		}
-	}
+		throw E_NOENTRYPOINT;
 
 	FoxArray pArray(parm(1));
 	FoxString pVolume(parm(2));
@@ -3509,7 +4020,7 @@ void _fastcall FCloseEx(ParamBlkEx& parm)
 {
 try
 {
-	BOOL bApiRet, bRet;
+	BOOL bApiRet = TRUE, bRet;
 	HANDLE hFile = parm(1)->Ptr<HANDLE>();
 	VFP2CTls& tls = VFP2CTls::Tls();
 
@@ -3665,7 +4176,7 @@ try
 	}
 
 	pBuffer.Len(pData - pOrigData - bCarri);
-	pBuffer.Return();
+	pBuffer.Return();  
 }
 catch(int nErrorNo)
 {
@@ -4012,7 +4523,7 @@ try
 {
 	FoxArray pArray(parm(1));	
 	VFP2CTls& tls = VFP2CTls::Tls();
-	size_t nHandleCnt = tls.FileHandles.GetCount();
+	unsigned int nHandleCnt = tls.FileHandles.GetCount();
 
 	if (nHandleCnt == 0)
 	{
@@ -4022,7 +4533,7 @@ try
 
 	pArray.Dimension(nHandleCnt, 1);
 
-	for (size_t xj = 0; xj < nHandleCnt; xj++)
+	for (unsigned int xj = 0; xj < nHandleCnt; xj++)
 	{
 		pArray(xj+1) = tls.FileHandles[xj];
 	}
@@ -4033,6 +4544,27 @@ catch(int nErrorNo)
 {
 	RaiseError(nErrorNo);
 }
+}
+
+void _fastcall MemoFieldInfo(ParamBlkEx& parm)
+{
+	try
+	{
+		ValueEx vMemo;
+		vMemo.SetNull();
+		LocatorEx& p1 = parm(1);
+		vMemo = p1;
+		if (parm.PCount() >= 2)
+		{
+			LocatorEx& p2 = parm(2);
+			p2 = vMemo.ev_long;
+		}
+		Return((int)vMemo.ev_real);
+	}
+	catch (int nErrorNo)
+	{
+		RaiseError(nErrorNo);
+	}
 }
 
 #pragma warning(disable : 4290)

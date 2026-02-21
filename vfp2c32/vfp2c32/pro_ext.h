@@ -364,10 +364,10 @@ enum {
 // The FoxInfo structure contains the descriptions of the functions
 // contained in the library.
 typedef struct {
-	char FAR *	funcName;		/* Function name (all caps)				*/
+	const char FAR *	funcName;		/* Function name (all caps)				*/
     FPFI        function;       /* Actual function address              */
 	short		parmCount;		/* # parameters specified or a flag value */
-	char FAR *	parmTypes;		/* Parameter list description			*/
+	const char FAR *	parmTypes;		/* Parameter list description			*/
 } FoxInfo;
 
 typedef struct _FoxTable {

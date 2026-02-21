@@ -107,21 +107,23 @@ RuntimeAssembler::RuntimeAssembler(AsmCallingConvention nCallConv, bool bSpillPa
 
 void RuntimeAssembler::WriteCode(void *lpCodeAddress)
 {
+#if defined(_WIN64)
 	AsmByte* pStartAddress = (AsmByte*)lpCodeAddress;
+#endif
 	AsmByte* pWriteAddress = (AsmByte*)lpCodeAddress;
 	AsmByte* pDataSegmentAddress = (AsmByte*)lpCodeAddress + m_DataSegmentOffset;
-	for (int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
 	{
 		pWriteAddress = m_PrologSegment[xj].Write(pWriteAddress, 0);
 	}
-	for (int xj = 0; xj < m_CodeSegment.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_CodeSegment.GetCount(); xj++)
 	{
 		pWriteAddress = m_CodeSegment[xj].Write(pWriteAddress, pDataSegmentAddress);
 	}
 	if (!m_DataSegment.Empty())
 	{
 		pWriteAddress = pDataSegmentAddress;
-		for (int xj = 0; xj < m_DataSegment.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < m_DataSegment.GetCount(); xj++)
 		{
 			pWriteAddress = m_DataSegment[xj].Write(pWriteAddress);
 		}
@@ -155,7 +157,7 @@ void RuntimeAssembler::UnregisterUnwindInfo(void* lpCodeAddress)
 #if defined(_WIN64)
 	VFP2CTls& tls = VFP2CTls::Tls();
 	DWORD VirtualAddress = (DWORD64)lpCodeAddress - tls.JitBaseAddress;
-	for (int xj = 0; xj < tls.RuntimeFunctions.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < tls.RuntimeFunctions.GetCount(); xj++)
 	{
 		if (tls.RuntimeFunctions[xj].BeginAddress == VirtualAddress)
 		{
@@ -172,12 +174,12 @@ int RuntimeAssembler::CodeSize()
 	if (m_CachedCodeSize != 0)
 		return m_CachedCodeSize;
 	int nCodeSize = 0;
-	for (int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
 	{
 		nCodeSize += m_PrologSegment[xj].Size();
 	}
 	m_CachedPrologSize = nCodeSize;
-	for (int xj = 0; xj < m_CodeSegment.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_CodeSegment.GetCount(); xj++)
 	{
 		nCodeSize += m_CodeSegment[xj].Size();
 	}
@@ -309,24 +311,48 @@ void RuntimeAssembler::Prolog()
 	{
 		int nCount = m_Parameters.GetCount();
 		if (nCount >= 1)
-			Mov(AsmVariable(RSP, 8), RCX);
+		{
+			AsmVariable pVar(RSP, 8);
+			Mov(pVar, RCX);
+		}
 		if (nCount >= 2)
-			Mov(AsmVariable(RSP, 16), RDX);
+		{
+			AsmVariable pVar(RSP, 16);
+			Mov(pVar, RDX);
+		}
 		if (nCount >= 3)
-			Mov(AsmVariable(RSP, 24), R8);
+		{
+			AsmVariable pVar(RSP, 24);
+			Mov(pVar, R8);
+		}
 		if (nCount >= 4)
-			Mov(AsmVariable(RSP, 32), R9);
+		{
+			AsmVariable pVar(RSP, 32);
+			Mov(pVar, R9);
+		}
 	}
 	else
 	{
 		if (IsRegisterMarked(RCX))
-			Mov(AsmVariable(RSP, 8), RCX);
+		{
+			AsmVariable pVar(RSP, 8);
+			Mov(pVar, RCX);
+		}
 		if (IsRegisterMarked(RDX))
-			Mov(AsmVariable(RSP, 16), RDX);
+		{
+			AsmVariable pVar(RSP, 16);
+			Mov(pVar, RDX);
+		}
 		if (IsRegisterMarked(R8))
-			Mov(AsmVariable(RSP, 24), R8);
+		{
+			AsmVariable pVar(RSP, 24);
+			Mov(pVar, R8);
+		}
 		if (IsRegisterMarked(R9))
-			Mov(AsmVariable(RSP, 32), R9);
+		{
+			AsmVariable pVar(RSP, 32);
+			Mov(pVar, R9);
+		}
 	}
 
 	if (m_UseFramePointer)
@@ -452,7 +478,7 @@ void RuntimeAssembler::CreateUnwindInfo()
 	pUnwindCodes.Reserve(m_PrologSegment.GetCount());
 	unsigned short nOpinfo;
 	unsigned short nInstructionOffset = 0;
-	for (int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
 	{
 		AsmInstruction& ins = m_PrologSegment[xj];
 		if (ins.Opcode == OP_MOV_R32_RM32 && ins.ModRM.Reg == RBP && ins.ModRM.Rm == RSP)
@@ -627,7 +653,7 @@ void RuntimeAssembler::Patch()
 	}
 	*/
 
-	for (int nInstruction = 0; nInstruction < m_CodeSegment.GetCount(); nInstruction++)
+	for (unsigned int nInstruction = 0; nInstruction < m_CodeSegment.GetCount(); nInstruction++)
 	{
 		AsmInstruction& rIns = m_CodeSegment[nInstruction];
 		if ((rIns.ModRM.Mod == MODRM_MOD_DISPLACEMENT8 || rIns.ModRM.Mod == MODRM_MOD_DISPLACEMENT32) && rIns.ModRM.Rm == nFramePtrCode && !rIns.Displacement.Fixed)
@@ -652,7 +678,7 @@ void RuntimeAssembler::Patch()
 	*/
 	int nInstructionDistance;
 	// first pass
-	for (int nJump = 0; nJump < m_Jumps.GetCount(); nJump++)
+	for (unsigned int nJump = 0; nJump < m_Jumps.GetCount(); nJump++)
 	{
 		AsmLabel& pJump = m_Jumps[nJump];
 		AsmLabel* pLabel = LabelRef(pJump.Name);
@@ -693,7 +719,7 @@ void RuntimeAssembler::Patch()
 	}
 
 	// second pass
-	for (int nJump = 0; nJump < m_Jumps.GetCount(); nJump++)
+	for (unsigned int nJump = 0; nJump < m_Jumps.GetCount(); nJump++)
 	{
 		AsmLabel& pJump = m_Jumps[nJump];
 		nInstructionDistance = 0;
@@ -723,8 +749,7 @@ void RuntimeAssembler::Patch()
 
 AsmLabel* RuntimeAssembler::LabelRef(const char *pLabel)
 {
-	int nLabels;
-	for (nLabels = 0; nLabels < m_Labels.GetCount(); nLabels++)
+	for (unsigned int nLabels = 0; nLabels < m_Labels.GetCount(); nLabels++)
 	{
 		if (!strcmp(m_Labels[nLabels].Name,pLabel))
 			return &m_Labels[nLabels];
@@ -897,12 +922,15 @@ RuntimeAssembler& RuntimeAssembler::Push(AsmVariable& pVar)
 #if !defined(_WIN64)
 		// push upper 32 bit
 		ins.Opcode = OP_PUSH_RM32;
-		ModRm_Op_Var(ins, MODRM_OP_PUSH, AsmVariable::Var<unsigned int>(pVar, 4));
+		AsmVariable pVarOffset;
+		pVarOffset = AsmVariable::Var<unsigned int>(pVar, 4);
+		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVarOffset);
 		m_Code->Add(ins);
 
 		// push lower 32 bit
 		ins.Opcode = OP_PUSH_RM32;
-		ModRm_Op_Var(ins, MODRM_OP_PUSH, AsmVariable::Var<unsigned int>(pVar, 0));
+		pVarOffset = AsmVariable::Var<unsigned int>(pVar, 0);
+		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVarOffset);
 		m_Code->Add(ins);
 #else
 		ins.Opcode = OP_PUSH_RM32;
@@ -1923,7 +1951,6 @@ RuntimeAssembler& RuntimeAssembler::Cdq()
 RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nRegDest);
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1939,7 +1966,6 @@ RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmRegister n
 RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmVariable pVar)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nRegDest);
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1952,7 +1978,6 @@ RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmVariable p
 RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nRegDest);
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1967,7 +1992,6 @@ RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmRegister 
 RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmVariable pVar)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nRegDest);
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1981,7 +2005,6 @@ RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmVariable 
 RuntimeAssembler& RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nRegDest);
 	ins.Prefix = PREFIX_SSE_F3;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1996,7 +2019,6 @@ RuntimeAssembler& RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmRegister n
 RuntimeAssembler& RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmVariable pVar)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nRegDest);
 	ins.Prefix = PREFIX_SSE_F3;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -3198,7 +3220,7 @@ RuntimeAssembler& RuntimeAssembler::CallConv(AsmCallingConvention nConv)
 void RuntimeAssembler::SpillRegister(AsmRegister nReg)
 {
 #if defined(_WIN64)
-	int nOffset;
+	unsigned int nOffset;
 	switch (nReg)
 	{
 		case RDX:
@@ -3491,7 +3513,6 @@ RuntimeAssembler& RuntimeAssembler::Fld(AsmVariable pVar)
 RuntimeAssembler& RuntimeAssembler::Fst(AsmRegister nReg)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nReg);
 	assert(nReg >= ST0 && nReg <= ST7);
 	ins.Opcode = OP_FST_M64;
 	ins.Opcode2 = Make_Op(OP_FST_REG, nReg);
@@ -3501,7 +3522,6 @@ RuntimeAssembler& RuntimeAssembler::Fst(AsmRegister nReg)
 RuntimeAssembler& RuntimeAssembler::Fstp(AsmRegister nReg)
 {
 	AsmInstruction ins;
-	int nBitCount = RegisterBitCount(nReg);
 	assert(nReg >= ST0 && nReg <= ST7);
 	ins.Opcode = OP_FSTP_M64;
 	ins.Opcode2 = Make_Op(OP_FSTP_REG, nReg);

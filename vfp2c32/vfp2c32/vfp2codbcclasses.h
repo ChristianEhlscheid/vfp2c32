@@ -172,7 +172,7 @@ public:
 	FoxString pParamSchema;
 	FoxArray pInfoArray;
 	CFoxCallback pCallback;
-	int nResultset;
+	unsigned int nResultset;
 	int nCallbackInterval;
 	SQLLEN nRowSetSize;
 	SQLLEN nRowsFetched;

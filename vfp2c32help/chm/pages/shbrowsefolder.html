@@ -24,12 +24,12 @@
 <caption>Flags that specify the options for the dialog box. This parameter can be 0 or a combination of the following values.</caption>
 <tr><th>Flag</th><th>Meaning</th></tr>
 <tr><td>BIF_RETURNONLYFSDIRS</td><td>Only return file system directories. If the user selects folders that are not part of the file system, the OK button is grayed.<br />
-Note  The OK button remains enabled for "\\server" items, as well as "\\server\share" and directory items. However, if the user selects a "\\server" item, passing the PIDL returned by <a href="http://msdn.microsoft.com/en-us/library/bb762115(VS.85).aspx">SHBrowseForFolder</a> to <a href="http://msdn.microsoft.com/en-us/library/bb762194(VS.85).aspx">SHGetPathFromIDList</a> fails.</td></tr>
+Note  The OK button remains enabled for "\\server" items, as well as "\\server\share" and directory items. However, if the user selects a "\\server" item, passing the PIDL returned by SHBrowseForFolder to SHGetPathFromIDList fails.</td></tr>
 <tr><td>BIF_DONTGOBELOWDOMAIN</td><td>Do not include network folders below the domain level in the dialog box's tree view control.</td></tr>
 <tr><td>BIF_STATUSTEXT</td><td>Include a status area in the dialog box. The callback function can set the status text by sending messages to the dialog box. This flag is not supported when BIF_NEWDIALOGSTYLE is specified.</td></tr>
 <tr><td>BIF_RETURNFSANCESTORS</td><td>Only return file system ancestors. An ancestor is a subfolder that is beneath the root folder in the namespace hierarchy. If the user selects an ancestor of the root folder that is not part of the file system, the OK button is grayed.</td></tr>
 <tr><td>BIF_EDITBOX</td><td>Include an edit control in the browse dialog box that allows the user to type the name of an item.</td></tr>
-<tr><td>BIF_VALIDATE</td><td>If the user types an invalid name into the edit box, the browse dialog box calls the application's <a href="http://msdn.microsoft.com/en-us/library/bb762598(v=vs.85).aspx">BrowseCallbackProc</a> with the BFFM_VALIDATEFAILED message. This flag is ignored if BIF_EDITBOX is not specified.</td></tr>
+<tr><td>BIF_VALIDATE</td><td>If the user types an invalid name into the edit box, the browse dialog box calls the application's BrowseCallbackProc with the BFFM_VALIDATEFAILED message. This flag is ignored if BIF_EDITBOX is not specified.</td></tr>
 <tr><td>BIF_NEWDIALOGSTYLE</td><td>Use the new user interface. Setting this flag provides the user with a larger dialog box that can be resized. The dialog box has several new capabilities, including: drag-and-drop capability within the dialog box, reordering, shortcut menus, new folders, delete, and other shortcut menu commands.</td></tr>
 <tr><td>BIF_BROWSEINCLUDEURLS</td><td>The browse dialog box can display URLs. The BIF_USENEWUI and BIF_BROWSEINCLUDEFILES flags must also be set. If any of these three flags are not set, the browser dialog box rejects URLs. Even when these flags are set, the browse dialog box displays URLs only if the folder that contains the selected item supports URLs. When the folder's IShellFolder::GetAttributesOf method is called to request the selected item's attributes, the folder must set the SFGAO_FOLDER attribute flag. Otherwise, the browse dialog box will not display the URL.</td></tr>
 <tr><td>BIF_USENEWUI</td><td>Use the new user interface, including an edit box. This flag is equivalent to BIF_EDITBOX | BIF_NEWDIALOGSTYLE.</td></tr>
@@ -59,11 +59,11 @@ This parameter can be empty or NULL in that case, the namespace root (the Deskto
 The name of an application-defined function that the dialog box calls when an event occurs.<br />
 The function should have the following prototype.</p>
 <div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
-<div class="block"><pre id="code_1">FUNCTION <a href="http://msdn.microsoft.com/en-us/library/bb762598(v=vs.85).aspx">BrowseCallbackProc</a>(hwnd, uMsg, lParam)
+<div class="block"><pre id="code_1">FUNCTION BrowseCallbackProc(hwnd, uMsg, lParam)
 ENDFUNC
 </pre></div>
 <p><br />
-For a description of the parameters have a look at the <a href="http://msdn.microsoft.com/en-us/library/bb762598(v=vs.85).aspx">BrowseCallbackProc</a> documentation.</p>
+For a description of the parameters have a look at the BrowseCallbackProc documentation.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>.T. if a folder was selected, .F. if the dialog was aborted.</p>
@@ -74,10 +74,6 @@ For a description of the parameters have a look at the <a href="http://msdn.micr
 <a href="/pages/getsavefilenameex.html">GetSaveFileNameEx</a><br />
 <a href="/pages/messageboxex.html">MessageBoxEx</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/bb762115(VS.85).aspx">SHBrowseForFolder</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/bb762210(VS.85).aspx">SHILCreateFromPath</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/bb762194(VS.85).aspx">SHGetPathFromIDList</a></p>
 
 
 </div>

@@ -19,7 +19,7 @@
 <dl class="parm"><dt><a id="p1">cSource</a></dt>
 <dd><p>One or more file names. These names should be fully-qualified paths to prevent unexpected results.<br />
 Standard MS-DOS wildcard characters, such as "*", are permitted only in the file-name position. Using a wildcard character elsewhere in the string will lead to unpredictable results.<br />
-Each file name should be terminated by a single <a href="its:dv_foxhelp.chm::/html/1dedf2ee-f48f-46a4-850c-ad53c5d3677c.htm">CHR</a>(0).<br />
+Each file name should be terminated by a single CHR(0).<br />
 <br />
 If the nFlags parameter is contains FOF_SOURCE_CURSOR or FOF_SOURCE_ARRAY, the string is treated as a cursor or array name.<br />
 <br />
@@ -69,7 +69,7 @@ If pFrom does not contain fully qualified path and file names, this flag is igno
 A cursor or array name into which the old and new filenames will be stored.</p>
 </dd></dl>
 <h2>Return Value</h2>
-<p>1 if all files were moved successfull, 0 if the operation was aborted, otherwise the errorcode from the <a href="http://msdn.microsoft.com/en-us/library/bb762164(VS.85).aspx">SHFileOperation</a> API.</p>
+<p>1 if all files were moved successfull, 0 if the operation was aborted, otherwise the errorcode from the SHFileOperation API.</p>
 
 <h2>See Also</h2>
 <h4>Reference</h4>
@@ -79,8 +79,6 @@ A cursor or array name into which the old and new filenames will be stored.</p>
 <a href="/pages/shrenamefiles.html">SHRenameFiles</a><br />
 <a href="/pages/shspecialfolder.html">SHSpecialFolder</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/bb762164(VS.85).aspx">SHFileOperation</a></p>
 
 
 </div>

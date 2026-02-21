@@ -76,7 +76,7 @@ unsigned int _fastcall GetWordCount(const char* pString, const char pSeperator)
 // nMaxLen should be the size of the buffer
 unsigned int _fastcall GetWordNumN(char* pBuffer, const char* pString, const char pSeperator, unsigned int nToken, unsigned int nMaxLen)
 {
-	int nTokenNo = 1;
+	unsigned int nTokenNo = 1;
 	const char* pBuffPtr = pBuffer;
 
 	if (nToken == 1)
@@ -579,6 +579,7 @@ char* _fastcall Int64ToHex(char* pString, __int64 nNumber)
 		c = (nValue & 0xF) + '0';
 		c += -(c > '9') & 0x7;
 		*pString-- = c;
+		nValue >>= 4;
 	}
 	else
 	{
@@ -802,6 +803,7 @@ char* _fastcall UInt64ToHex(char* pString, unsigned __int64 nValue)
 		c = (nValue & 0xF) + '0';
 		c += -(c > '9') & 0x7;
 		*pString-- = c;
+		nValue >>= 4;
 	}
 	else
 	{
@@ -1440,7 +1442,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 	CStringView* pStringView;
 	CWideStringView* pWideStringView;
 	double nDouble;
-	int nPrecision, nUseLength, nChars;
+	int nPrecision = 6, nUseLength, nChars;
 
 	for (lpString = lpBuffer; *lpFormat; lpFormat++)
 	{
@@ -1460,9 +1462,9 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 		lpFormat++;
 
 		if (nUseLength = IsDigit(*lpFormat))
-		{
 			nPrecision = skip_atoi(&lpFormat);
-		}
+		else
+			nPrecision = 0;
 
 		switch (*lpFormat)
 		{
@@ -1649,6 +1651,19 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_SHORT_LITERAL > 0)
 			{
 				lpStringEnd = UIntToStr(lpString, va_arg(lpArgs, unsigned short));
+				nBufferSize -= lpStringEnd - lpString;
+				lpString = lpStringEnd;
+			}
+			else
+			{
+				nBufferSize = 0;
+			}
+			continue;
+
+		case 'H':
+			if (nBufferSize - VFP2C_MAX_HEX_LITERAL > 0)
+			{
+				lpStringEnd = UIntToHex(lpString, va_arg(lpArgs, unsigned int));
 				nBufferSize -= lpStringEnd - lpString;
 				lpString = lpStringEnd;
 			}

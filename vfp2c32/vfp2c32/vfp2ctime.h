@@ -3,6 +3,11 @@
 
 const int VFP2C_MAX_TIMEZONE_NAME	= 512;
 
+typedef DWORD(_stdcall* PGETDYNAMICTIMEZONEINFORMATION)(PDYNAMIC_TIME_ZONE_INFORMATION pTimeZoneInformation);
+typedef BOOL(_stdcall* PGETTIMEZONEINFORMATIONFORYEAR)(USHORT wYear, PDYNAMIC_TIME_ZONE_INFORMATION pdtzi, LPTIME_ZONE_INFORMATION ptzi);
+typedef BOOL(_stdcall* PTZSPECIFICLLOCALTIMETOSYSTEMTIMEEX)(const PDYNAMIC_TIME_ZONE_INFORMATION lpTimeZoneInformation, const SYSTEMTIME* lpLocalTime, SYSTEMTIME* lpUniversalTime);
+typedef BOOL(_stdcall* PSYSTEMTIMETOTZSPECIFICLOCALTIMEEX)(const PDYNAMIC_TIME_ZONE_INFORMATION lpTimeZoneInformation, const SYSTEMTIME* lpUniversalTime, SYSTEMTIME* lpLocalTime);
+
 typedef struct _REG_TIMEZONE_INFORMATION
 {
 	long Bias;
@@ -11,6 +16,27 @@ typedef struct _REG_TIMEZONE_INFORMATION
 	SYSTEMTIME StandardDate;
 	SYSTEMTIME DayligthDate;
 } REG_TIMEZONE_INFORMATION, *LPREG_TIMEZONE_INFORMATION;
+
+class TimeZoneInfo
+{
+public:
+	static TimeZoneInfo& GetTsi();
+	void ToUTC(double& pDateTime);
+	void ToLocal(double& pDateTime);
+
+private:
+	TimeZoneInfo();
+	~TimeZoneInfo();
+	static LRESULT _stdcall TimeChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	void Refresh();
+
+	double m_ZoneBias;
+	DWORD m_CurrentZone;
+	TIME_ZONE_INFORMATION m_ZoneInfo;
+	DYNAMIC_TIME_ZONE_INFORMATION m_DynamicZoneInfo;
+	HWND m_Hwnd;
+	ATOM m_Atom;
+};
 
 #ifdef __cplusplus
 extern "C" {

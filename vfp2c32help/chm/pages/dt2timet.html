@@ -33,7 +33,7 @@ If the passed DateTime value is in the local timezone pass .T., if the DateTime 
 <h2>Example</h2>
 <p>? "Current UNIX timestamp", DT2Timet(), DT2Timet(DATETIME(), .T.)<br />
 ? "Current DateTime in local timezone", DATETIME(), TIMET2DT(DT2TIMET())<br />
-? "Current DateTime in UTC", <a href="http://msdn.microsoft.com/en-us/library/ms724390(VS.85).aspx">GetSystemTime</a>(.T.), TIMET2DT(DT2TIMET(), .T.)</p>
+? "Current DateTime in UTC", GetSystemTime(.T.), TIMET2DT(DT2TIMET(), .T.)</p>
 <h2>See Also</h2>
 <h4>Reference</h4>
 <p><a href="/pages/atimezones.html">ATimeZones</a><br />
@@ -49,9 +49,6 @@ If the passed DateTime value is in the local timezone pass .T., if the DateTime 
 <a href="/pages/timet2dt.html">Timet2DT</a><br />
 <a href="/pages/utc2dt.html">UTC2DT</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms724390(VS.85).aspx">GetSystemTime</a><br />
-<a href="https://learn.microsoft.com/en-us/windows/win32/api/timezoneapi/nf-timezoneapi-systemtimetofiletime">SystemTimeToFileTime</a></p>
 
 
 </div>

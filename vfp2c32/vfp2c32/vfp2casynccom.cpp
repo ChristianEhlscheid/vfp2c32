@@ -106,7 +106,7 @@ STDMETHODIMP CComCallInfo::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT 
 STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags, 
 										DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
-	HRESULT hr;
+	HRESULT hr = DISP_E_MEMBERNOTFOUND;
 
 	switch(dispidMember)
 	{
@@ -125,8 +125,6 @@ STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, W
 				}
 				hr = S_OK;
 			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
 			break;
 
 		case DISPID_Aborted:
@@ -176,8 +174,18 @@ STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, W
 					pvarResult->boolVal = VARIANT_TRUE;
 				}
 			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
+			break;
+
+		case DISPID_CallId:
+			if (wFlags & DISPATCH_PROPERTYGET)
+			{
+				if (pvarResult)
+				{
+					pvarResult->vt = VT_I4;
+					pvarResult->lVal = (LONG)m_CallId;
+				}
+				hr = S_OK;
+			}
 			break;
 	}
 
@@ -469,7 +477,7 @@ STDMETHODIMP CThreadedComObject::Invoke(DISPID dispidMember, REFIID riid, LCID l
 				{
 					pvarResult->vt = VT_I4;
 					m_CritSect.Enter();
-					pvarResult->lVal = m_CallQueue.GetCount() + (m_CurrentCall.m_p ? 1 : 0);
+					pvarResult->lVal = (LONG)m_CallQueue.GetCount() + (m_CurrentCall.m_p ? 1 : 0);
 					m_CritSect.Leave();
 					hr = S_OK;
 				}
@@ -931,7 +939,7 @@ bool CThreadedComObject::DequeueCall()
 	bool ret = true;
 	m_CritSect.Enter();
 	if (!m_CallQueue.IsEmpty())
-		m_CurrentCall = m_CallQueue.RemoveHead();
+		m_CurrentCall.Attach(m_CallQueue.RemoveHead().Detach());
 	else
 		ret = false;
 	m_CritSect.Leave();
@@ -1051,6 +1059,7 @@ unsigned int _stdcall CThreadedComObject::ThreadProc(void* lpParameter)
 	return 0;
 }
 
+#pragma warning( disable: 4815)
 void _fastcall CreateThreadObject(ParamBlkEx& parm)
 {
 	CThreadedComObject* pObject = 0;
@@ -1090,3 +1099,4 @@ catch(int nErrorNo)
 	RaiseError(nErrorNo);
 }
 }
+#pragma warning( default: 4815)

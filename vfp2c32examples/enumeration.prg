@@ -25,25 +25,32 @@ ENDIF
 && enumerate threads of a process
 LOCAL laThreads[1]
 lnCount = APROCESSTHREADS("laThreads",_VFP.ProcessId)
-IF lnCount > 0
-? "Thread ID", laThreads[1,1]		
-? "Owner Process ID", laThreads[1,2]
-? "Thread base priority", laThreads[1,3]
-ENDIF
+? "Threads in VFP", m.lnCount
+FOR m.xj = 1 TO m.lnCount
+? "Thread ID", laThreads[m.xj,1]		
+? "Owner Process ID", laThreads[m.xj,2]
+? "Thread base priority", laThreads[m.xj,3]
+ENDFOR
+
+INKEY(3, 'H')
+
 && enumerate threads of all processes
 && lnCount = APROCESSTHREADS("laThreads",0)
-
 && enumerate all DLL's (modules) loaded by a process
-LOCAL laMods[1]
+LOCAL laMods[1,6]
 lnCount = AProcessModules("laMods",_VFP.ProcessId)
-IF lnCount > 0
-? "Dll name", laMods[1,1]
-? "Dll path", laMods[1,2]
-? "Dll handle (HMODULE)", laMods[1,3]
-? "Dll size in bytes", laMods[1,4]
-? "Dll base address", laMods[1,5]
-ENDIF
+? "Loaded modules IN VFP", m.lnCount
+FOR m.xj = 1 TO m.lnCount
+? "Dll name", laMods[m.xj,1]
+? "Dll path", laMods[m.xj,2]
+? "Dll handle (HMODULE)", laMods[m.xj,3]
+? "Dll size in bytes", laMods[m.xj,4]
+? "Dll base address", laMods[m.xj,5]
+ENDFOR
 
+INKEY(3, 'H')
+
+RETURN
 && enumerate all heaps owned by a process
 LOCAL laHeaps[1]
 lnCount = AProcessHeaps("laHeaps",_VFP.ProcessId)

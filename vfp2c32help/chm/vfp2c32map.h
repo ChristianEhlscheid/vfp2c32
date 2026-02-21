@@ -72,7 +72,7 @@
 #define 72 72 // CompactMem
 #define 73 73 // CompareFileTimes
 #define 74 74 // ContinueService
-#define 75 75 // ControlServiceEx
+#define 75 75 // ControlServiceEx2
 #define 76 76 // CopyFileEx2
 #define 77 77 // CreateCallbackFunc
 #define 78 78 // CreateGuid

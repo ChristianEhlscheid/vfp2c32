@@ -1,0 +1,3 @@
+LIBRARY
+EXPORTS
+GetIDispatch @2

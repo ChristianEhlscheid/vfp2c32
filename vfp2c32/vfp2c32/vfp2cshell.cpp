@@ -15,6 +15,7 @@ static PPSGETPROPERTYKEYFROMNAME fpPSGetPropertyKeyFromName = 0;
 static PPROPVARIANTTOVARIANT fpPropVariantToVariant = 0;
 static PVARIANTTOPROPVARIANT fpVariantToPropVariant = 0;
 
+#pragma warning( disable : 4189)
 void _stdcall VFP2C_Init_Shell()
 {
 	if (fpGetSpecialFolder == 0)
@@ -33,6 +34,7 @@ void _stdcall VFP2C_Init_Shell()
 		}
 	}
 
+
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (tls.Propsys)
 		return;
@@ -49,6 +51,7 @@ void _stdcall VFP2C_Init_Shell()
 		SaveWin32Error("LoadLibrary", GetLastError());
 	}
 }
+#pragma warning( default : 4189)
 
 void _fastcall SHSpecialFolder(ParamBlkEx& parm)
 {
@@ -64,7 +67,7 @@ void _fastcall SHSpecialFolder(ParamBlkEx& parm)
 
 		if (fpGetSpecialFolder(WTopHwnd(), pFolder, parm(1)->ev_long, bCreateDir))
 		{
-			pFolder.Len(strlen(pFolder));
+			pFolder.Len((unsigned int)strlen(pFolder));
 			pRef = pFolder;
 			Return(true);
 		}
@@ -86,7 +89,7 @@ void _fastcall SHCopyFiles(ParamBlkEx& parm)
 		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		FoxString pTitle(parm, 4);
 		SHFILEOPSTRUCT sFileOp = { 0 };
-		bool bMapToArray;
+		bool bMapToArray = false;
 
 		if (wFlags & FOF_RENAMEONCOLLISION && parm.PCount() >= 5)
 		{
@@ -223,7 +226,7 @@ void _fastcall SHMoveFiles(ParamBlkEx& parm)
 		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		FoxString pTitle(parm, 4);
 		SHFILEOPSTRUCT sFileOp = { 0 };
-		bool bMapToArray;
+		bool bMapToArray = false;
 
 		if (wFlags & FOF_RENAMEONCOLLISION && parm.PCount() >= 5)
 		{

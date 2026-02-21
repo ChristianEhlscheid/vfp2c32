@@ -4,6 +4,7 @@
 && this Service spawns an object in a new thread using CreateThreadObject
 && the ExampleWorkerThread2 creates a waitable timer that is signaled every 60 seconds
 && the service supports pause and continue commands
+#DEFINE _DEBUG
 
 DEFINE CLASS ExampleService2 AS ServiceBaseclass OLEPUBLIC
 
@@ -13,7 +14,7 @@ DEFINE CLASS ExampleService2 AS ServiceBaseclass OLEPUBLIC
 	
 	FUNCTION  OnStart(laArgs[] As String, loServiceController AS Object) As Void
 		TRY
-			SET LIBRARY TO vfp2c32t.fll ADDITIVE
+				SET LIBRARY TO vfp2c32t.fll ADDITIVE
 #IFDEF _DEBUG
 		DebugOutput('ExampleService2::OnStart')
 #ENDIF
@@ -82,7 +83,7 @@ DEFINE CLASS ExampleWorker2 AS ServiceBaseclass OLEPUBLIC
 	
 	FUNCTION ThreadFunc() As Void
 		TRY
-			SET LIBRARY TO vfp2c32t.fll ADDITIVE
+				SET LIBRARY TO vfp2c32t.fll ADDITIVE
 #IFDEF _DEBUG
 		DebugOutput('ExampleWorker2::ThreadFunc: ' + TRANSFORM(DATETIME()))
 #ENDIF
@@ -93,7 +94,7 @@ DEFINE CLASS ExampleWorker2 AS ServiceBaseclass OLEPUBLIC
 			m.ldStartTime = DATETIME()
 			m.ldStartTime = m.ldStartTime + (60 - SEC(m.ldStartTime)) && get next full minute
 			m.loTimer.SetTimer(60 * 1000, m.ldStartTime)
-
+			
 			DO WHILE .T.
 				IF m.loTimer.Wait(INFINITE, THIS.CallInfo.AbortEvent) = WAIT_OBJECT_0
 					THIS.OnTimer()

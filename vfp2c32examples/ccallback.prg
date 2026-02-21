@@ -1,6 +1,5 @@
 #INCLUDE vfp2c.h
 
-&& CreateCallbackFunc
 
 CD (FULLPATH(JUSTPATH(SYS(16))))
 

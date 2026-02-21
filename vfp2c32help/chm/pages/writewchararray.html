@@ -20,10 +20,10 @@
 <dd><p>The memory address to which the data should be written.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cValue</a></dt>
-<dd><p>A single character.</p>
+<dd><p>A string to convert to unicode and write at the specified address.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">nMaxChars (optional)</a></dt>
-<dd><p>default = <a href="its:dv_foxhelp.chm::/html/6993649e-01d9-4818-a48c-c77e5e3f3061.htm">LEN</a>(<em>cValue</em>)<br />
+<dd><p>default = LEN(<em>cValue</em>)<br />
 <br />
 The maximum number of characters to write.</p>
 </dd></dl>
@@ -108,8 +108,6 @@ This parameter can be set to the value of any code page that is installed or ava
 <a href="/pages/writewchar.html">WriteWChar</a><br />
 <a href="/pages/writewstring.html">WriteWString</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/dd319072(VS.85).aspx">MultiByteToWideChar</a></p>
 
 
 </div>

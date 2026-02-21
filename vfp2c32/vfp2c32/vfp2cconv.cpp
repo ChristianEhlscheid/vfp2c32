@@ -248,6 +248,7 @@ catch(int nErrorNo)
 }
 }
 
+#pragma warning( disable : 4101)
 void _fastcall Int64_Add(ParamBlkEx& parm)
 {
 try
@@ -336,6 +337,7 @@ catch(int nErrorNo)
 	RaiseError(nErrorNo);
 }
 }
+#pragma warning( default : 4101)
 
 void _fastcall Int64_Div(ParamBlkEx& parm)
 {
@@ -597,7 +599,7 @@ try
 	vObject = 0;
     FoxString pVarname(parm(1));
 	// increase the reference count by evaluating the variable into a temporary
-	vObject.Evaluate(pVarname);
+	vObject.Evaluate(pVarname.Ptr<char*>());
 	// release the variable, this will decrease the reference count again
 	LocatorEx::ReleaseVarStatic(pVarname);
 	// don't release the temporary - this is on purpose!

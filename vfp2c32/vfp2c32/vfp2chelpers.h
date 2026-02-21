@@ -5,6 +5,10 @@
 #define VER_SUITE_WH_SERVER 0x8000
 #endif
 
+#include "vfp2clockfree.h"
+#include <shtypes.h>
+#include <atlcoll.h>
+
 typedef void (_stdcall *PGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
 
 typedef enum WindowsVersion
@@ -192,6 +196,7 @@ public:
 		REGSAM samDesired = KEY_ALL_ACCESS);
 	void Open(HKEY hKey, LPCSTR lpKey, REGSAM samDesired, DWORD ulOptions = 0);
 	HKEY OpenSubKey(LPCSTR lpSubKey, REGSAM samDesired, DWORD ulOptions = 0);
+	HKEY OpenSubKey(LPWSTR lpSubKey, REGSAM samDesired, DWORD ulOptions = 0);
 	bool Delete(HKEY hKey, LPCSTR lpKey, bool bShellVersion = false);
 	void QueryInfo(LPSTR lpClass, LPDWORD lpcbClass = 0, LPDWORD lpSubKeys = 0, 
 				  LPDWORD lpcbMaxSubKeyLen = 0, LPDWORD lpcbMaxClassLen = 0,
@@ -200,7 +205,7 @@ public:
 				  PFILETIME lpftLastWriteTime = 0);
 	DWORD QueryValueInfo(LPSTR lpValue, DWORD &lpType);
 	void QueryValue(LPSTR lpValue, LPBYTE lpData, LPDWORD lpDataLen, LPDWORD lpType = 0);
-	void RegistryKey::SetValue(LPCSTR lpValueName, LPBYTE lpData, DWORD dwDataLen, DWORD dwType);
+	void SetValue(LPCSTR lpValueName, LPBYTE lpData, DWORD dwDataLen, DWORD dwType);
 	bool EnumFirstKey(LPSTR lpKey, LPDWORD lpKeyLen, LPSTR lpClass = 0, LPDWORD lpClassLen = 0,
 							   PFILETIME lpftLastWriteTime = 0);
 	bool EnumNextKey(LPSTR lpKey, LPDWORD lpKeyLen, LPSTR lpClass = 0, LPDWORD lpClassLen = 0,
@@ -235,7 +240,7 @@ public:
 	operator bool() { return m_Pointer > 0; }
 
 private:
-	LPVOID m_Pointer;
+	void* m_Pointer;
 };
 
 class CCriticalSection
@@ -336,6 +341,120 @@ public:
 private:
 	CCriticalSection m_CritSect;
 	CAtlList<CThread *> m_Threads;
+};
+
+template<class T, unsigned int nQueueSize>
+class CThreadPool
+{
+public:
+	CThreadPool() : m_Threads(0), m_ThreadCount(0) { }
+
+	~CThreadPool()
+	{
+		HANDLE threads[32];
+		DWORD lastError;
+		unsigned int count;
+		if (m_Threads)
+		{
+			for (unsigned int xj = 0; xj < m_ThreadCount; xj++)
+				m_WorkItems.Push(0);
+
+			for (unsigned int xj = 0; xj < m_ThreadCount; xj += 32)
+			{
+				count = 0;
+				for (unsigned int xt = 0; xt < m_ThreadCount && xt < 32; xt++)
+				{
+					if (m_Threads[xj + xt] != 0)
+					{
+						threads[xt] = m_Threads[xj + xt];
+						count++;
+					}
+				}
+				lastError = WaitForMultipleObjects(count, threads, TRUE, INFINITE);
+			}
+			delete m_Threads;
+		}
+	}
+
+	void Initialize(unsigned int nThreadCount)
+	{
+		DWORD dwThreadId;
+		assert(m_Threads == 0);
+		m_WorkItemCount = 0;
+		m_FinishedWorkItemCount = 0;
+		m_Threads = new HANDLE[nThreadCount];
+		if (m_Threads == 0)
+			throw E_INSUFMEMORY;
+		memset(m_Threads, 0, sizeof(HANDLE) * nThreadCount);
+		m_ThreadCount = nThreadCount;
+		for (unsigned int xj = 0; xj < nThreadCount; xj++)
+		{
+			m_Threads[xj] = CreateThread(0, THREAD_STACKSIZE, ThreadProc, (LPVOID)this, 0, &dwThreadId);
+			if (m_Threads[xj] == 0)
+			{
+				SaveWin32Error("CreateThread", GetLastError());
+				throw E_APIERROR;
+			}
+		}
+	}
+
+	void EnqueueWorkItem(T* workitem)
+	{
+		m_WorkItems.Push(workitem);
+		// long count = _InterlockedIncrement(&m_WorkItemCount);
+		// CStrBuilder<128> pDebug;
+		// pDebug.Format("WorkItem queued: %U\n", count);
+		// OutputDebugString(pDebug);
+	}
+
+	T* DequeueWorkItem()
+	{
+		return m_WorkItems.Pop();
+		// long count = _InterlockedDecrement(&m_WorkItemCount);
+		// CStrBuilder<128> pDebug;
+		// pDebug.Format("WorkItem dequeued: %U - %U\n", count, GetCurrentThreadId());
+		// OutputDebugString(pDebug);
+	}
+
+	T* DequeueFinishedWorkItem()
+	{
+		return m_FinishedWorkItems.Pop();
+		// long count = _InterlockedDecrement(&m_FinishedWorkItemCount);
+		// CStrBuilder<128> pDebug;
+		// pDebug.Format("F-WorkItem dequeued: %U\n", count);
+		// OutputDebugString(pDebug);
+	}
+
+private:
+
+	static DWORD _stdcall ThreadProc(LPVOID lpParm)
+	{
+		CThreadPool* pool = (CThreadPool*)lpParm;
+		T* workitem;
+		while (true)
+		{
+			workitem = pool->DequeueWorkItem();
+			if (!workitem)
+				break;
+			workitem->WorkCallback();
+			pool->EnqueueFinishedItem(workitem);
+		}
+		return 0;
+	}
+
+	void EnqueueFinishedItem(T* workitem)
+	{
+		m_FinishedWorkItems.Push(workitem);
+	}
+
+	unsigned int m_ThreadCount;
+	HANDLE *m_Threads;
+	char __cachelinePadding[64];
+	volatile long m_WorkItemCount;
+	char __cachelinePadding2[64];
+	volatile long m_FinishedWorkItemCount;
+	CBoundSPMCQueue<T*, nQueueSize> m_WorkItems;
+	CBoundMPSCQueue<T*, nQueueSize> m_FinishedWorkItems;
 };
 
 class PerformanceCounter

@@ -302,8 +302,8 @@
 			<param name="Local" value="pages\continueservice.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ControlServiceEx">
-			<param name="Local" value="pages\controlserviceex.html">
+			<param name="Name" value="ControlServiceEx2">
+			<param name="Local" value="pages\controlserviceex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="CopyFileEx2">

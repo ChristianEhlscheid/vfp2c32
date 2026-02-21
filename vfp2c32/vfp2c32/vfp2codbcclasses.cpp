@@ -92,7 +92,7 @@ SqlResultSet* SqlStatement::AddResultSet()
 
 void SqlStatement::FreeParameters()
 {
-	for (int xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		SqlParameter* lpSP = pParameters[xj];
 		if (lpSP->vParmValue.Vartype() == 'C')
@@ -395,7 +395,7 @@ void SqlStatement::ExtractParametersAndRewriteStatement()
 {
 	SqlParameter* lpSP;
 	char* pExpr, * pSQLIn, * pSQLOut, * pSqlOutStart;
-	int nParamNo = 0, nOutputColNo = 0, nLen;
+	int nParamNo = 0, nLen;
 
 	pSQLSend.Size(pSQLInput.Size());
 	pSQLIn = pSQLInput;
@@ -497,12 +497,12 @@ bool SqlStatement::MatchLength(CStringMatcher& pMatcher, SqlParameter* lpSP)
 	{
 		if (!pMatcher.MatchULong(&lpSP->nSize))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected length.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected length.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		if (!pMatcher.MatchChar(')'))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected ')'.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected ')'.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		return true;
@@ -516,12 +516,12 @@ bool SqlStatement::MatchPrecision(CStringMatcher& pMatcher, SqlParameter* lpSP)
 	{
 		if (!pMatcher.MatchShort(&lpSP->nScale))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected precision.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected precision.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		if (!pMatcher.MatchChar(')'))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected ')'.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected ')'.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		return true;
@@ -535,20 +535,20 @@ bool SqlStatement::MatchLengthAndPrecision(CStringMatcher& pMatcher, SqlParamete
 	{
 		if (!pMatcher.MatchULong(&lpSP->nSize))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected precision.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected precision.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		if (pMatcher.MatchChar(','))
 		{
 			if (!pMatcher.MatchShort(&lpSP->nScale))
 			{
-				SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected scale.", &pMatcher.CurrentView());
+				SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected scale.", pMatcher.CurrentView());
 				throw E_APIERROR;
 			}
 		}
 		if (!pMatcher.MatchChar(')'))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected ')'.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected ')'.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		return true;
@@ -559,7 +559,7 @@ bool SqlStatement::MatchLengthAndPrecision(CStringMatcher& pMatcher, SqlParamete
 void SqlStatement::ParseParameterSchema()
 {
 	SqlParameter* lpSP;
-	int nParmNo, nTVPCol;
+	unsigned int nParmNo, nTVPCol;
 	CStringView pSqlType, pAttribute;
 	CStringView pSchema, pCatalog, pTableType;
 	if (!pParamSchema.Len())
@@ -571,7 +571,7 @@ void SqlStatement::ParseParameterSchema()
 	{
 		if (!pMatcher.MatchIdentifier(pParameterArray.pCursor))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected cursor name for parameter array.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected cursor name for parameter array.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		if (pMatcher.End())
@@ -579,9 +579,9 @@ void SqlStatement::ParseParameterSchema()
 
 		do
 		{
-			if (!pMatcher.MatchInteger(&nParmNo))
+			if (!pMatcher.MatchUInteger(&nParmNo))
 			{
-				SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected parameter number.", &pMatcher.CurrentView());
+				SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected parameter number.", pMatcher.CurrentView());
 				throw E_APIERROR;
 			}
 			if (nParmNo < 1 || nParmNo > pParameters.GetCount())
@@ -606,7 +606,7 @@ void SqlStatement::ParseParameterSchema()
 				case 'Q':
 					if (!MatchLength(pMatcher, lpSP))
 					{
-						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected size of datatype.", &pMatcher.CurrentView());
+						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected size of datatype.", pMatcher.CurrentView());
 						throw E_APIERROR;
 					}
 					break;
@@ -622,7 +622,7 @@ void SqlStatement::ParseParameterSchema()
 
 		if (!pMatcher.End())
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected end of schema.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected end of schema.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		return;
@@ -630,9 +630,9 @@ void SqlStatement::ParseParameterSchema()
 
 	do
 	{
-		if (!pMatcher.MatchInteger(&nParmNo))
+		if (!pMatcher.MatchUInteger(&nParmNo))
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected parameter number.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected parameter number.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		if (nParmNo < 1 || nParmNo > pParameters.GetCount())
@@ -661,7 +661,7 @@ void SqlStatement::ParseParameterSchema()
 							{
 								if (!pMatcher.MatchQuotedIdentifier(lpSP->pParmTypeName, VFP2C_ODBC_MAX_PARAMETER_NAME))
 								{
-									SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%20V', expected quoted table valued type name.", &pMatcher.CurrentView());
+									SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%20V', expected quoted table valued type name.", pMatcher.CurrentView());
 									throw E_APIERROR;
 								}
 							}
@@ -681,7 +681,7 @@ void SqlStatement::ParseParameterSchema()
 				}
 				else
 				{
-					SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%20V', expected quoted table valued type name.", &pMatcher.CurrentView());
+					SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%20V', expected quoted table valued type name.", pMatcher.CurrentView());
 					throw E_APIERROR;
 				}
 				{
@@ -889,7 +889,7 @@ void SqlStatement::ParseParameterSchema()
 
 			lpSP->bCustomSchema = true;
 		}
-		else if (pMatcher.MatchInteger(&nTVPCol))
+		else if (pMatcher.MatchUInteger(&nTVPCol))
 		{
 			if (!lpSP->pTableType)
 			{
@@ -907,7 +907,7 @@ void SqlStatement::ParseParameterSchema()
 
 			if (!pMatcher.MatchIdentifier(pAttribute, 64))
 			{
-				SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%64V', expected column attribute for table value parameter '%I' column '%'", &pMatcher.CurrentView(), nParmNo, nTVPCol);
+				SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%64V', expected column attribute for table value parameter '%I' column '%'", pMatcher.CurrentView(), nParmNo, nTVPCol);
 				throw E_APIERROR;
 			}
 
@@ -929,7 +929,7 @@ void SqlStatement::ParseParameterSchema()
 				{
 					if (!pMatcher.MatchIdentifier(pAttribute, 32))
 					{
-						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%32V', expected sort order for table value parameter '%I' column '%'", &pMatcher.CurrentView(), nParmNo, nTVPCol);
+						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%32V', expected sort order for table value parameter '%I' column '%'", pMatcher.CurrentView(), nParmNo, nTVPCol);
 						throw E_APIERROR;
 					}
 					if (pAttribute == "SQL_SS_ASCENDING_ORDER")
@@ -942,7 +942,7 @@ void SqlStatement::ParseParameterSchema()
 					}
 					else
 					{
-						SaveCustomError("SQLExecEx", "Parameter schema invalid, unknown sort order '%V' for table value parameter '%I' column '%'", &pAttribute, nParmNo, nTVPCol);
+						SaveCustomError("SQLExecEx", "Parameter schema invalid, unknown sort order '%V' for table value parameter '%I' column '%'", pAttribute, nParmNo, nTVPCol);
 						throw E_APIERROR;
 					}
 				}
@@ -950,7 +950,7 @@ void SqlStatement::ParseParameterSchema()
 				{
 					if (!pMatcher.MatchShort(&lpTVPCol->nColumnSortOrdinal))
 					{
-						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%32V', expected sort ordinal for table value parameter '%I' column '%'", &pMatcher.CurrentView(), nParmNo, nTVPCol);
+						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%32V', expected sort ordinal for table value parameter '%I' column '%'", pMatcher.CurrentView(), nParmNo, nTVPCol);
 						throw E_APIERROR;
 					}
 				}
@@ -969,7 +969,7 @@ void SqlStatement::ParseParameterSchema()
 		// if no type identified and also no parameter name was specified the parameter schema is invalid
 		else if (!lpSP->pParmName)
 		{
-			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected SQL type.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected SQL type.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 
@@ -977,7 +977,7 @@ void SqlStatement::ParseParameterSchema()
 
 	if (!pMatcher.End())
 	{
-		SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected end of schema.", &pMatcher.CurrentView());
+		SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected end of schema.", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 }
@@ -1133,10 +1133,10 @@ void SqlStatement::EvaluateParameters()
 {
 	SqlParameter* lpSP;
 	SqlVariant* pVariant;
-	int nErrorNo, xj;
+	int nErrorNo;
 	char cType;
 
-	for (xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		lpSP = pParameters[xj];
 		if (lpSP->nParmType > SQL_PARAM_INPUT)
@@ -2016,10 +2016,10 @@ void SqlStatement::BindParameters()
 	SQLPOINTER nValue;
 	PSQLBINDPARAMETER fpSQLBindParameter = 0;
 	HMODULE hDriver;
-	SQLHSTMT hDriverStmt;
+	SQLHSTMT hDriverStmt = 0;
 	bool bVerifyAppDescriptor, bVerifyImpDescriptor;
 
-	for (int xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		lpSP = pParameters[xj];
 		bVerifyAppDescriptor = bVerifyImpDescriptor = false;
@@ -2197,14 +2197,14 @@ void SqlStatement::ParseParameterArraySchema()
 	// create unique array name .. since pStmt is a dynamically allocated pointer it's value is
 	// always unique .. so we can use it to build a variable name ..
 	pArrayName.Format("__VFP2C_ODBC_ARRAY_%U", this);
-	pExeBuffer.Format("AFIELDS(%V,'%V')", &pArrayName.StringView(), &pParameterArray.pCursor);
+	pExeBuffer.Format("AFIELDS(%V,'%V')", pArrayName.StringView(), &pParameterArray.pCursor);
 
 	Execute(pExeBuffer);
 	pArray.Attach(pArrayName);
 	LocatorEx& lArrayLoc = pArray();
 	lArrayLoc.ResetArray(2);
 
-	for (int xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		lpSP = pParameters[xj];
 		if (FindFoxField(lpSP->aParmExpr, lpSP->lVarOrField, pParameterArray.nWorkArea) > 0)
@@ -2340,7 +2340,7 @@ void SqlStatement::BindParameterArray()
 	if (bInMemory)
 	{
 		pParameterArray.pIndicator.Reserve(pParameterArray.nBatchSize * pParameters.GetCount(), false, true);
-		for (int xj = 0; xj < pParameters.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 		{
 			pParameters[xj]->nIndicator = (SQLLEN)&pParameterArray.pIndicator[nRow];
 			nRow += pParameterArray.nBatchSize;
@@ -2354,7 +2354,7 @@ void SqlStatement::BindParameterArray()
 	else
 	{
 		pParameterArray.pIndicator.Reserve(pParameters.GetCount(), false, true);
-		for (int xj = 0; xj < pParameterArray.pIndicator.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pParameterArray.pIndicator.GetCount(); xj++)
 		{
 			pParameterArray.pIndicator[xj] = SQL_DATA_AT_EXEC;
 			pParameters[xj]->pParmPtr = &pParameterArray.pIndicator[xj];
@@ -2364,7 +2364,7 @@ void SqlStatement::BindParameterArray()
 		SetParameterArrayAttributes(false);
 	}
 
-	for (SQLLEN xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		lpSP = pParameters[xj];
 		bVerifyAppDescriptor = bVerifyImpDescriptor = false;
@@ -2510,7 +2510,7 @@ void SqlStatement::LoadInMemoryParameterArray()
 
 	if (pParameterArray.nBatchRecordsProcessed == 0)
 	{
-		for (int xj = 0; xj < pParameters.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 		{
 			lpSP = pParameters[xj];
 			lpSP->pParmPtr = new char[lpSP->nBufferSize * pParameterArray.nBatchSize];
@@ -2522,7 +2522,7 @@ void SqlStatement::LoadInMemoryParameterArray()
 	pParameterArray.pParamRecNo[nRecNoIndex++] = RecNo(pParameterArray.nWorkArea);
 	do
 	{
-		for (int xj = 0; xj < pParameters.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 		{
 			lpSP = pParameters[xj];
 			nIndicatorIndex = nRowNo + (pParameterArray.nBatchSize * xj);
@@ -2633,7 +2633,7 @@ bool SqlStatement::LoadNextParameterArrayBatch()
 
 		if (bInMemory)
 		{
-			for (int xj = 0; xj < pParameters.GetCount(); xj++)
+			for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 			{
 				lpSP = pParameters[xj];
 				lpSP->nIndicator = (SQLLEN)&pParameterArray.pIndicator[nRow];
@@ -2846,7 +2846,7 @@ void SqlStatement::FreeInMemoryParameterArray()
 	char* pBuffer;
 	if ((nFlags & SQLEXECEX_PARAMETER_ARRAY) && UseInMemoryParameterArray())
 	{
-		for (int xj = 0; xj < pParameters.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 		{
 			pBuffer = (char*)pParameters[xj]->pParmPtr;
 			if (pBuffer)
@@ -2860,7 +2860,7 @@ void SqlStatement::FreeInMemoryParameterArray()
 
 SqlParameter* SqlStatement::FindParameter(CStringView pField)
 {
-	for (int xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		if (pField.ICompare(pParameters[xj]->aParmExpr))
 			return pParameters[xj];
@@ -2887,7 +2887,7 @@ void SqlStatement::BindTableValuedParameter(SqlParameter* lpSP)
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO && bStoreInfoAsError)
 		AddODBCError("SQLSetStmtAttr", hStmt);
 
-	for (int xj = 0; xj < lpSP->pTableType->pColumns.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < lpSP->pTableType->pColumns.GetCount(); xj++)
 	{
 		lpTTC = lpSP->pTableType->pColumns[xj];
 		lpTTP = lpSP->pTableTypeParameters[xj];
@@ -3079,7 +3079,8 @@ SQLRETURN SqlStatement::SendParameterArray()
 	SqlParameter* lpSP;
 	SQLPOINTER lpData;
 	SQLLEN nIndicator, nParamIndex;
-	int nErrorNo, nParameterCount = 0, nFirstRow = pParameterArray.nParamsResumeOnError, nRecNoIndex = pParameterArray.nParamsResumeOnError;
+	int nErrorNo, nFirstRow = pParameterArray.nParamsResumeOnError, nRecNoIndex = pParameterArray.nParamsResumeOnError;
+	unsigned int nParameterCount = 0;
 	nApiRet = SQLParamData(hStmt, (SQLPOINTER*)&nParamIndex);
 	while (nApiRet == SQL_NEED_DATA)
 	{
@@ -3189,6 +3190,11 @@ SQLRETURN SqlStatement::SendParameterArray()
 						lpData = 0;
 						nIndicator = SQL_NULL_DATA;
 					}
+					break;
+
+				default:
+					lpData = 0;
+					nIndicator = SQL_NULL_DATA;
 					break;
 			}
 		}
@@ -3365,6 +3371,10 @@ void SqlStatement::SendTableValuedParameter(SqlParameter* lpSP)
 					lpData = &lpSP->sNumericStruct;
 					nIndicator = sizeof(SQL_NUMERIC_STRUCT);
 					break;
+
+				default:
+					lpData = 0;
+					nIndicator = SQL_NULL_DATA;
 				}
 			}
 
@@ -3491,7 +3501,7 @@ void SqlStatement::SaveOutputParameters()
 	Value vNull = { '0' };
 	char cType;
 
-	for (int xj = 0; xj < pParameters.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
 		lpSP = pParameters[xj];
 
@@ -3692,7 +3702,7 @@ void SqlResultSet::ReleaseColumnBuffers()
 	bool bFreeColumnRowSet = pStmt && pStmt->nRowSetSize > 1;
 	if (bFreeColumnRowSet == false)
 	{
-		for (int xj = 0; xj < pColumns.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
 			lpSC = pColumns[xj];
 			if (lpSC->vData.Vartype() == 'C' && lpSC->vData.ValidHandle())
@@ -3704,7 +3714,7 @@ void SqlResultSet::ReleaseColumnBuffers()
 	}
 	else
 	{
-		for (int xj = 0; xj < pColumns.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
 			lpSC = pColumns[xj];
 			if (lpSC->pDataPtr)
@@ -3719,14 +3729,14 @@ void SqlResultSet::FreeColumnBinding()
 {
 	if (hAppRowDesc)
 	{
-		SQLRETURN nApiRet = SQLFreeHandle(SQL_HANDLE_DESC, hAppRowDesc);
+		SQLFreeHandle(SQL_HANDLE_DESC, hAppRowDesc);
 		hAppRowDesc = 0;
 	}
 }
 
 void SqlResultSet::AllocateColumns(SQLSMALLINT nColCount)
 {
-	if (pColumns.GetCount() != nColCount)
+	if (pColumns.GetCount() != (unsigned int)nColCount)
 	{
 		FreeColumnBinding();
 		ReleaseColumnBuffers();
@@ -3742,14 +3752,14 @@ void SqlResultSet::GetColumnMetaData()
 
 	SQLRETURN nApiRet = SQL_SUCCESS;
 	SqlColumn* lpSC;
-	SQLSMALLINT xj, nColLen;
+	SQLSMALLINT nColLen;
 	int nUnnamedCol = 0;
 	bRowSetFetchCapable = true;
 
-	for (xj = 1; xj <= pColumns.GetCount(); xj++)
+	for (unsigned int xj = 1; xj <= pColumns.GetCount(); xj++)
 	{
 		lpSC = pColumns[xj - 1];
-		nApiRet = SQLDescribeCol(pStmt->hStmt, xj, lpSC->pColumnName.Ptr<SQLCHAR*>(), lpSC->pColumnName.Size(),
+		nApiRet = SQLDescribeCol(pStmt->hStmt, (SQLUSMALLINT)xj, lpSC->pColumnName.Ptr<SQLCHAR*>(), lpSC->pColumnName.Size(),
 			&nColLen, &lpSC->nSQLType, &lpSC->nSize, &lpSC->nScale, &lpSC->bNullable);
 		lpSC->pColumnName.Len(nColLen, true);
 		if (nApiRet == SQL_ERROR)
@@ -3927,7 +3937,7 @@ void SqlResultSet::BindColumns()
 				AddODBCError("SQLSetStmtAttr", pStmt->hStmt);
 		}
 
-		for (int xj = 0; xj < pColumns.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
 			lpSC = pColumns[xj];
 			if (lpSC->bBindColumn)
@@ -4066,7 +4076,7 @@ void SqlResultSet::PrepareColumnBindings()
 	}
 	bGetData = (nGetDataExt & SQL_GD_ANY_COLUMN) > 0;
 
-	for (int xj = 0; xj < pColumns.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 	{
 
 		lpSC = pColumns[xj];
@@ -5499,7 +5509,7 @@ void SqlResultSet::ParseCursorSchema()
 			// if no normal identifier found, try to match a quoted (enclosed in ") identifier
 			if (!pMatcher.MatchQuotedIdentifier(pColname, VFP2C_ODBC_MAX_COLUMN_NAME))
 			{
-				SaveCustomError("SQLExecEx", "Cursorschema contained invalid data near '%20V'.", &pMatcher.CurrentView());
+				SaveCustomError("SQLExecEx", "Cursorschema contained invalid data near '%20V'.", pMatcher.CurrentView());
 				throw E_APIERROR;
 			}
 		}
@@ -5538,7 +5548,7 @@ void SqlResultSet::ParseCursorSchema()
 			}
 			if (!pMatcher.MatchULong((unsigned long*)&lpSC->nSize))
 			{
-				SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%V' - '%10V' found, expected column size.", &pColname, &pMatcher.CurrentView());
+				SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%V' - '%10V' found, expected column size.", &pColname, pMatcher.CurrentView());
 				throw E_APIERROR;
 			}
 			if (!pMatcher.MatchChar(')'))
@@ -5590,7 +5600,7 @@ void SqlResultSet::ParseCursorSchema()
 			{
 				if (!pMatcher.MatchShort(&lpSC->nScale))
 				{
-					SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%V' - '%10V' found, expected column size.", &pColname, &pMatcher.CurrentView());
+					SaveCustomError("SQLExecEx", "Invalid cursorschema for column '%V' - '%10V' found, expected column size.", &pColname, pMatcher.CurrentView());
 					throw E_APIERROR;
 				}
 				if (!pMatcher.MatchChar(')'))
@@ -5622,7 +5632,7 @@ void SqlResultSet::ParseCursorSchema()
 
 	if (!pMatcher.MatchChar('|') && !pMatcher.End())
 	{
-		SaveCustomError("SQLExecEx", "Cursorschema contained invalid data near '%20V'.", &pMatcher.CurrentView());
+		SaveCustomError("SQLExecEx", "Cursorschema contained invalid data near '%20V'.", pMatcher.CurrentView());
 		throw E_APIERROR;
 	}
 }
@@ -5645,7 +5655,7 @@ void SqlResultSet::ParseExistingCursorSchema()
 	// create unique array name .. since pStmt is a dynamically allocated pointer it's value is
 	// always unique .. so we can use it to build a variable name ..
 	pArrayName.Format("__VFP2C_ODBC_ARRAY_%U", this);
-	pExeBuffer.Format("AFIELDS(%V,'%V')", &pArrayName.StringView(), &pCursorName.StringView());
+	pExeBuffer.Format("AFIELDS(%V,'%V')", pArrayName.StringView(), pCursorName.StringView());
 
 	Evaluate(vValue, pExeBuffer);
 	nFieldCount = vValue.ev_long;
@@ -5704,7 +5714,6 @@ void SqlResultSet::BindVariableLocators()
 	int nErrorNo, xj;
 	char aCursorOrVar[VFP2C_VFP_MAX_CURSOR_NAME + 1];
 	char aField[VFP2C_VFP_MAX_COLUMN_NAME + 1];
-	unsigned int nPos = 0;
 	CStringView pSchema = pStmt->pCursorNames.GetWordNum(pStmt->nResultset, '|');
 	if (!pSchema)
 	{
@@ -5729,7 +5738,7 @@ void SqlResultSet::BindVariableLocators()
 				}
 				else
 				{
-					SaveCustomError("SQLExecEx", "Variable list contained invalid data near '%20V', expected columnname.", &pMatcher.CurrentView());
+					SaveCustomError("SQLExecEx", "Variable list contained invalid data near '%20V', expected columnname.", pMatcher.CurrentView());
 					throw E_APIERROR;
 				}
 			}
@@ -5747,7 +5756,7 @@ void SqlResultSet::BindVariableLocators()
 		}
 		else
 		{
-			SaveCustomError("SQLExecEx", "Variable list contained invalid data near '%20V', expected columnname.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Variable list contained invalid data near '%20V', expected columnname.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 
@@ -5762,7 +5771,7 @@ void SqlResultSet::BindVariableLocators()
 	{
 		if (!xj)
 		{
-			SaveCustomError("SQLExecEx", "Variable list contained invalid data near '%20V'.", &pMatcher.CurrentView());
+			SaveCustomError("SQLExecEx", "Variable list contained invalid data near '%20V'.", pMatcher.CurrentView());
 			throw E_APIERROR;
 		}
 		else
@@ -5801,7 +5810,7 @@ void SqlResultSet::SetCursorName()
 SqlColumn* SqlResultSet::FindColumn(CStringView pColName)
 {
 	SqlColumn* lpSC;
-	for (int xj = 0; xj < pColumns.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 	{
 		lpSC = pColumns[xj];
 		if (pColName.ICompare(lpSC->pColumnName))
@@ -5831,22 +5840,22 @@ void SqlResultSet::CreateCursor()
 	pArrayRef.Attach(pArrayName);
 	vStringValue.Size(VFP2C_ODBC_MAX_COLUMN_NAME + 1);
 
-	for (int nRow = 1; nRow <= pColumns.GetCount(); nRow++)
+	for (unsigned int nRow = 1; nRow <= pColumns.GetCount(); nRow++)
 	{
 		lpSC = pColumns[nRow - 1];
 		if ((lpSC->cVFPType == 'C' || lpSC->cVFPType == 'V' || lpSC->cVFPType == 'Q') && lpSC->nSize > 254)
 		{
-			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%V': length %I", &lpSC->pColumnName.StringView(), lpSC->nSize);
+			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%V': length %I", lpSC->pColumnName.StringView(), lpSC->nSize);
 			throw E_APIERROR;
 		}
 		else if ((lpSC->cVFPType == 'N' || lpSC->cVFPType == 'F') && (lpSC->nSize > 20 || lpSC->nScale > 19))
 		{
-			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%V': length %I, scale: %I", &lpSC->pColumnName.StringView(), lpSC->nSize, lpSC->nScale);
+			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%V': length %I, scale: %I", lpSC->pColumnName.StringView(), lpSC->nSize, lpSC->nScale);
 			throw E_APIERROR;
 		}
 		else if (lpSC->cVFPType == 'B' && lpSC->nScale > 18)
 		{
-			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%V': length %I", &lpSC->pColumnName.StringView(), lpSC->nScale);
+			SaveCustomError("SqlExecEx", "Invalid cursor schema for field '%V': length %I", lpSC->pColumnName.StringView(), lpSC->nScale);
 			throw E_APIERROR;
 		}
 
@@ -5888,7 +5897,7 @@ void SqlResultSet::CreateCursor()
 		pArray(nRow, 6) = vLogical;
 	}
 
-	pExeBuffer.Format("CREATE CURSOR %V FROM ARRAY %V", &pCursorName.StringView(), &pArrayName.StringView());
+	pExeBuffer.Format("CREATE CURSOR %V FROM ARRAY %V", pCursorName.StringView(), pArrayName.StringView());
 	Execute(pExeBuffer);
 	nWorkArea = Select(0);
 }
@@ -5901,7 +5910,7 @@ void SqlResultSet::BindFieldLocators()
 	SqlColumn* lpSC;
 	int nErrorNo;
 
-	for (int xj = 0; xj < pColumns.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 	{
 		lpSC = pColumns[xj];
 		if (nErrorNo = FindFoxField(lpSC->pColumnName.Ptr<char*>(), lpSC->lField, nWorkArea))
@@ -5922,7 +5931,7 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 	// reset fetch error flags if executed at least once
 	if (pStmt->bExecutedOnce)
 	{
-		for (int xj = 0; xj < pColumns.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 			pColumns[xj]->bStoreInfoAsError = pStmt->bStoreInfoAsError;
 	}
 	if (pStmt->nFlags & SQLEXECEX_CALLBACK_PROGRESS)
@@ -5945,7 +5954,7 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 					throw nErrorNo;
 
 				lpSC = pColumns[0];
-				for (int xj = 0; xj < pColumns.GetCount(); xj++)
+				for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 				{
 					if (nErrorNo = lpSC->pStore(lpSC))
 						throw nErrorNo;
@@ -5979,7 +5988,7 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 						throw nErrorNo;
 
 					lpSC = pColumns[0];
-					for (int xj = 0; xj < pColumns.GetCount(); xj++)
+					for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 					{
 						if (nErrorNo = lpSC->pStoreSet(lpSC, nRow))
 							throw nErrorNo;
@@ -6021,7 +6030,7 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 					throw nErrorNo;
 
 				lpSC = pColumns[0];
-				for (int xj = 0; xj < pColumns.GetCount(); xj++)
+				for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 				{
 					if (nErrorNo = lpSC->pStore(lpSC))
 						throw nErrorNo;
@@ -6049,7 +6058,7 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 						throw nErrorNo;
 
 					lpSC = pColumns[0];
-					for (int xj = 0; xj < pColumns.GetCount(); xj++)
+					for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 					{
 						if (nErrorNo = lpSC->pStoreSet(lpSC, nRow))
 							throw nErrorNo;
@@ -6075,7 +6084,6 @@ void SqlResultSet::FetchToVariables()
 	SQLRETURN nApiRet;
 	SqlColumn* lpSC;
 	int nErrorNo;
-	bool bFetchError = false;
 	nRowsFetched = 0;
 	nApiRet = SQLFetch(pStmt->hStmt);
 	if (SQL_SUCCEEDED(nApiRet))
@@ -6084,7 +6092,7 @@ void SqlResultSet::FetchToVariables()
 			AddODBCError("SqlFetch", pStmt->hStmt);
 
 		lpSC = pColumns[0];
-		for (int xj = 0; xj < pColumns.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
 			if (nErrorNo = lpSC->pStore(lpSC))
 				throw nErrorNo;
@@ -6118,7 +6126,7 @@ void SqlResultSet::FetchOutputColumns(SqlParameterArray& pParameterArray)
 
 		Go(pParameterArray.pParamRecNo[pParameterArray.nParamLastOutput++], pParameterArray.nWorkArea);
 
-		for (int xj = 0; xj < pColumns.GetCount(); xj++)
+		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
 			if (nErrorNo = lpSC->pStore(lpSC))
 				throw nErrorNo;

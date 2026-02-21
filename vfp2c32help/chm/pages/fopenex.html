@@ -31,7 +31,7 @@ If there are existing open handles to a file, the call fails unless they were al
 Subsequent open requests for the file fail, unless the FILE_SHARE_DELETE share mode is specified.</td></tr>
 <tr><td>FILE_FLAG_NO_BUFFERING</td><td>The file or device is being opened with no system caching for data reads and writes.<br />
 This flag does not affect hard disk caching or memory mapped files.<br />
-There are strict requirements for successfully working with files opened with <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> using the FILE_FLAG_NO_BUFFERING flag.</td></tr>
+There are strict requirements for successfully working with files opened with CreateFile using the FILE_FLAG_NO_BUFFERING flag.</td></tr>
 <tr><td>FILE_FLAG_OPEN_NO_RECALL</td><td>The file data is requested, but it should continue to be located in remote storage. It should not be transported back to local storage. This flag is for use by remote storage systems.</td></tr>
 <tr><td>FILE_FLAG_POSIX_SEMANTICS</td><td>Access will occur according to POSIX rules. This includes allowing multiple files with names, differing only in case, for file systems that support that naming. Use care when using this option, because files created with this flag may not be accessible by applications that are written for MS-DOS or 16-bit Windows.</td></tr>
 <tr><td>FILE_FLAG_RANDOM_ACCESS</td><td>Access is intended to be random. The system can use this as a hint to optimize file caching.<br />
@@ -42,7 +42,7 @@ This flag has no effect if the file system does not support cached I/O and FILE_
 <tr><td>FILE_FLAG_WRITE_THROUGH</td><td>Write operations will not go through any intermediate cache, they will go directly to disk.</td></tr>
 </table><p></p>
 <div class="blockheader"><p class="note">Note</p></div>
-<div class="block"><p>For more information on the flags have a look at the <a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a> documentation.
+<div class="block"><p>For more information on the flags have a look at the CreateFile documentation.
 </p></div>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">nAccessMode (optional)</a></dt>
@@ -99,8 +99,6 @@ nFileHandle=FOPENEX("c:\temp\audit.log")
 <a href="/pages/funlockfileex.html">FUnlockFileEx</a><br />
 <a href="/pages/fwriteex.html">FWriteEx</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa363858(VS.85).aspx">CreateFile</a></p>
 
 
 </div>

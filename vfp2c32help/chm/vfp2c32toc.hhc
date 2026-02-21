@@ -368,8 +368,8 @@
 			<param name="Local" value="pages\continueservice.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ControlServiceEx">
-			<param name="Local" value="pages\controlserviceex.html">
+			<param name="Name" value="ControlServiceEx2">
+			<param name="Local" value="pages\controlserviceex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="CopyFileEx2">
@@ -2304,6 +2304,10 @@
 			<param name="Local" value="pages\sqlgetpropex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLGetTypeInfoEx">
+			<param name="Local" value="pages\sqlgettypeinfoex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLPrepareEx">
 			<param name="Local" value="pages\sqlprepareex.html">
 			</OBJECT>
@@ -2330,6 +2334,10 @@
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLSpecialColumnsEx">
 			<param name="Local" value="pages\sqlspecialcolumnsex.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="SQLStatisticsEx">
+			<param name="Local" value="pages\sqlstatisticsex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="SQLTablePrivilegesEx">
@@ -2552,8 +2560,8 @@
 			<param name="Local" value="pages\continueservice.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="ControlServiceEx">
-			<param name="Local" value="pages\controlserviceex.html">
+			<param name="Name" value="ControlServiceEx2">
+			<param name="Local" value="pages\controlserviceex2.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="CreateServiceEx">

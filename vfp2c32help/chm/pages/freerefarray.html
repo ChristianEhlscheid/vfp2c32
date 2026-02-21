@@ -12,18 +12,25 @@
 <div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
 </div>
 <div id="content">
-<p class="description">Frees all memory allocated for the passed in C style array.</p>
+<p class="description">Frees all memory allocated for the passed in C style array.<br />
+<br />
+This is meant to be only used for C style arrays that contain<br />
+pointers to their respective data.<br />
+<br />
+The function loops over the elements from index position nStartElement to nElements and calls HeapFree if a valid pointer is stored at the indexed position to free the memory and the setting the pointer to 0, effectivly cleaning up the array properly without creating memory leaks.</p>
 
 <div class="block"><pre>FreeRefArray(<a href="#p1">nAddress</a>, <a href="#p2">nStartElement</a>, <a href="#p3">nElements</a>)</pre></div>
 <h3>Parameters</h3>
-<dl class="parm"><dt><a id="p1"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p1">nAddress</a></dt>
+<dd><p>The base address of the array.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p2"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p2">nStartElement</a></dt>
+<dd><p>default = 1<br />
+<br />
+The index of the first element to free.</p>
 </dd></dl>
-<dl class="parm"><dt><a id="p3"></a></dt>
-<dd><p></p>
+<dl class="parm"><dt><a id="p3">nElements</a></dt>
+<dd><p>The total number of elements in the array.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>.T. if all elements were freed successful, .F. otherwise.</p>
@@ -45,8 +52,6 @@
 <a href="/pages/unlockhglobal.html">UnlockHGlobal</a><br />
 <a href="/pages/validatemem.html">ValidateMem</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa366701(VS.85).aspx">HeapFree</a></p>
 
 
 </div>

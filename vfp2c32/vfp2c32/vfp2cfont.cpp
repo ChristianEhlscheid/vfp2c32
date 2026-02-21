@@ -24,6 +24,8 @@ try
 
 	if (parm.PCount() < 2 || parm(2)->Vartype() == '0')
 		dwLanguage = GetSystemDefaultLangID();
+	else
+		dwLanguage = parm(2)->NumericCast<LANGID>();
 
 	if (parm.PCount() < 3 || parm(3)->Vartype() == '0')
 		dwPlatform = PLATFORMID_WINDOWS; // default to Windows platform
@@ -59,7 +61,6 @@ try
 	}
 
 	TT_TABLE_DIRECTORY *tblDir;
-	bool bFound = false;
 	CBuffer pTableBuffer(sizeof(TT_TABLE_DIRECTORY) * ttOffsetTable.uNumOfTables);
 	FoxString pNameBuffer(5);
 	ULONG OffsetOS2 = 0, OffsetName = 0, OffsetHead = 0, OffsetPost = 0;
@@ -92,7 +93,7 @@ try
 
 	// OS2 table found
 	USHORT fStyle = 0;
-	SHORT yStrikeoutPosition = 0, yStrikeoutSize;
+	SHORT yStrikeoutPosition = 0, yStrikeoutSize = 0;
 
 	if (OffsetOS2)
 	{

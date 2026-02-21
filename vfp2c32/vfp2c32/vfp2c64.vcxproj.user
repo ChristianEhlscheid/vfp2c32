@@ -24,4 +24,12 @@
     <LocalDebuggerCommand>C:\Program Files %28x86%29\Microsoft Visual FoxPro 9\vfp9.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LocalDebuggerCommand>C:\Program Files %28x86%29\Microsoft Visual FoxPro 9\vfp9.exe</LocalDebuggerCommand>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">
+    <LocalDebuggerCommand>C:\Program Files %28x86%29\Microsoft Visual FoxPro 9\vfp9.exe</LocalDebuggerCommand>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

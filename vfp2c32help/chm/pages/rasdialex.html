@@ -12,12 +12,12 @@
 <div class="flags"><a class="threadsafe" title="Threadsafe"></a></div>
 </div>
 <div id="content">
-<p class="description">The <a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a> function establishes a RAS connection between a RAS client and a RAS server.</p>
+<p class="description">The RasDial function establishes a RAS connection between a RAS client and a RAS server.</p>
 
 <div class="block"><pre>RasDialEx(<a href="#p1"><a href="#p2">cPhonebook</a>Entry | nRasDialParamsPtr</a> [, cPhonebook [, <a href="#p3">cCallback</a> [, <a href="#p4">nFlags</a> [, <a href="#p5">nRasConn</a>]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cPhonebookEntry | nRasDialParamsPtr</a></dt>
-<dd><p>Either the name of the phonebookentry or a pointer to a <a href="http://msdn.microsoft.com/en-us/library/aa377238(VS.85).aspx">RASDIALPARAMS</a> structure.</p>
+<dd><p>Either the name of the phonebookentry or a pointer to a RASDIALPARAMS structure.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">cPhonebook (optional)</a></dt>
 <dd><p>default = empty<br />
@@ -30,7 +30,7 @@ The default phone-book file is the one selected by the user in the User Preferen
 <br />
 A FoxPro function to call back.<br />
 <br />
-If you pass a callback function the <a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a> function is executed asyncronously.<br />
+If you pass a callback function the RasDial function is executed asyncronously.<br />
 It will return immediately and during the dial process your callback function will be called and <br />
 provide you with the current status of the operation.<br />
 <br />
@@ -82,7 +82,7 @@ Pass an existing HRASCONN handle when you resume an asyncronously RasDialEx call
 <p>Dialing a custom number.</p>
 <div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
 <div class="block"><pre id="code_1">LOCAL lnConn, loRasParams
-loRasParams = <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>('RASDIALPARAMS')
+loRasParams = CREATEOBJECT('RASDIALPARAMS')
 loRasParams.szPhoneNumber = '111 2453'
 loRasParams.szCallbackNumber = '*'
 loRasParams.szUserName = 'username'
@@ -103,13 +103,6 @@ lnConn = RasDialEx(loRasParams.Address)
 <a href="/pages/rashangupex.html">RasHangUpEx</a><br />
 <a href="/pages/rasphonebookdlgex.html">RasPhonebookDlgEx</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/aa377004(VS.85).aspx">RasDial</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa377529(VS.85).aspx">RasGetEntryDialParams</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa377480(VS.85).aspx">RasGetEapUserIdentity</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa377503(VS.85).aspx">RasGetConnectStatus</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa377567(VS.85).aspx">RasHangUp</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/aa377480(VS.85).aspx">RasFreeEapUserIdentity</a></p>
 
 
 </div>

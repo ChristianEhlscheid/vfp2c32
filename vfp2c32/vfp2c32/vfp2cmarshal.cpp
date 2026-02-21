@@ -374,6 +374,8 @@ void _fastcall FreeRefArray(ParamBlkEx& parm)
 				AddWin32Error("HeapFree", GetLastError());
 				bApiRet = FALSE;
 			}
+			else
+				*pAddress = 0;
 		}
 		pAddress++;
 	}

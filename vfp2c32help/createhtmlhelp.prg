@@ -26,9 +26,6 @@ DEFINE CLASS cHtmlHelpCreator AS Session
 		IF !USED('vi')
 			USE vfp2cintelli ALIAS vi IN 0 AGAIN SHARED
 		ENDIF
-		IF !USED('ap')
-			USE apilinks ALIAS ap IN 0 AGAIN SHARED
-		ENDIF
 		IF !USED('se')
 			USE settings ALIAS se IN 0 AGAIN SHARED
 		ENDIF
@@ -40,16 +37,12 @@ DEFINE CLASS cHtmlHelpCreator AS Session
 		
 		SELECT vi.expanded AS funcname, CAST('<a href="/pages/' + LOWER(ALLTRIM(vi.expanded)) + '.html">' + ALLTRIM(expanded) + '</a>' AS C(254)) AS funclink FROM vi ;
 			WHERE vi.type = 'F' AND ALLTRIM(vi.cmd) == '{vfp2c32menu}' INTO CURSOR internallinks
-		
-		SELECT ap.apifunc AS funcname, CAST('<a href="' + ALLTRIM(apilink) + '">' + ALLTRIM(apifunc) + '</a>' AS C(254)) AS funclink FROM ap WHERE substitute INTO CURSOR externallinks	
-
 	ENDFUNC
 	
 	FUNCTION Destroy
 		&& close all temporary cursors
 		USE IN SELECT('htmlhelp')
 		USE IN SELECT('vi')
-		USE IN SELECT('ap')
 		USE IN SELECT('se')
 		USE IN SELECT('gr')
 		USE IN SELECT('internallinks')
@@ -148,7 +141,7 @@ DEFINE CLASS cHtmlHelpCreator AS Session
 		ENDIF
 
 		m.lcHtml = THIS.CreateLinks(m.lcHtml, .T., vi.expanded)
-		m.lcHtml = THIS.CreateLinks(m.lcHtml, .F., vi.expanded)
+*!*			m.lcHtml = THIS.CreateLinks(m.lcHtml, .F., vi.expanded)
 
 		IF !EMPTY(vi.groupid) OR !EMPTY(vi.apifuncs)
 			lcHtml = lcHtml + '<h2>See Also</h2>' + CRLF
@@ -166,15 +159,15 @@ DEFINE CLASS cHtmlHelpCreator AS Session
 				lcHtml = lcHtml + '</p>' + CRLF
 			ENDIF
 			
-			IF !EMPTY(vi.apifuncs)
-				LOCAL lcApiLinks
-				m.lcApiLinks = THIS.CreateApiLinks(vi.apifuncs)
-				IF !EMPTY(m.lcApiLinks)
-					lcHtml = lcHtml + '<h4>Used WinApi functions</h4>' + CRLF
-					lcHtml = lcHtml + '<p>' + m.lcApiLinks + '</p>' + CRLF
-				ENDIF
-				RELEASE lcApiLinks
-			ENDIF
+*!*				IF !EMPTY(vi.apifuncs)
+*!*					LOCAL lcApiLinks
+*!*					m.lcApiLinks = THIS.CreateApiLinks(vi.apifuncs)
+*!*					IF !EMPTY(m.lcApiLinks)
+*!*						lcHtml = lcHtml + '<h4>Used WinApi functions</h4>' + CRLF
+*!*						lcHtml = lcHtml + '<p>' + m.lcApiLinks + '</p>' + CRLF
+*!*					ENDIF
+*!*					RELEASE lcApiLinks
+*!*				ENDIF
 			
 		ENDIF
 
@@ -284,29 +277,6 @@ DEFINE CLASS cHtmlHelpCreator AS Session
 			m.lcParameters = STRTRAN(m.lcParameters, m.laParms[m.xj], m.lcReplace, 1, 1, 0)
 		ENDFOR
 		RETURN m.lcParameters
-	ENDFUNC
-
-	FUNCTION CreateApiLinks
-		LPARAMETERS lcApis
-		LOCAL lcHtml, laFuncs[1], lnCount, xj, lcFuncName, lcParm
-		m.lcHtml = ''
-		m.lnCount = ALINES(m.laFuncs, m.lcApis, 1+4)
-		FOR m.xj = 1 TO m.lnCount
-			IF GETWORDCOUNT(m.laFuncs[m.xj]) = 1
-				m.lcFuncName = m.laFuncs[m.xj]
-				m.lcParm = ''
-			ELSE
-				m.lcFuncName = GETWORDNUM(m.laFuncs[m.xj], 1)
-				m.lcParm = SUBSTR(m.laFuncs[m.xj], LEN(GETWORDNUM(m.laFuncs[m.xj],1))+1)
-			ENDIF
-			
-			SELECT ap
-			LOCATE FOR ALLTRIM(ap.apifunc) == m.lcFuncName
-			IF FOUND()
-				m.lcHtml = m.lcHtml + IIF(!EMPTY(m.lcHtml), '<br />' + CRLF, '') + '<a href="' + ALLTRIM(ap.apilink) + '">' + m.lcFuncName + '</a>' + m.lcParm 
-			ENDIF
-		ENDFOR
-		RETURN m.lcHtml
 	ENDFUNC
 
 	FUNCTION ConvertParameters
@@ -649,11 +619,11 @@ ENDTEXT
 					m.lcFunction = ALLTRIM(vs.funcname)
 					m.lcDescription = HtmlChars(vs.descrip) 
 					m.lcDescription = THIS.CreateLinks(m.lcDescription, .T., m.lcFunction)
-					m.lcDescription = THIS.CreateLinks(m.lcDescription, .F., m.lcFunction)
+*!*						m.lcDescription = THIS.CreateLinks(m.lcDescription, .F., m.lcFunction)
 					m.lcHtml = m.lcHtml + CRLF + [<tr class="] + IIF(MOD(RECNO('vs'), 2) = 0, 'even', 'uneven') + ["><td class="w20"><a href="] + LOWER(m.lcFunction) + [.html">] + m.lcFunction + [</a></td><td>] + m.lcDescription + '</td></tr>'
 				ENDSCAN	
 				m.lcHtml = m.lcHtml + CRLF + '</table>' + CRLF
-				
+
 			ENDIF
 				
 		ENDFOR
@@ -702,7 +672,7 @@ ENDTEXT
 				m.lcFunction = ALLTRIM(vs.expanded)
 				m.lcDescription = TextToHtml(vs.descrip, '', '')
 				m.lcDescription = THIS.CreateLinks(m.lcDescription, .T., m.lcFunction)
-				m.lcDescription = THIS.CreateLinks(m.lcDescription, .F., m.lcFunction)
+*!*					m.lcDescription = THIS.CreateLinks(m.lcDescription, .F., m.lcFunction)
 				m.lcHtml = m.lcHtml + CRLF + [<tr class="] + IIF(MOD(RECNO('vs'), 2) = 0, 'even', 'uneven') + ["><td><a href="] + LOWER(m.lcFunction) + [.html">] + m.lcFunction + [</a></td><td>] + m.lcDescription + '</td></tr>'
 			ENDSCAN
 

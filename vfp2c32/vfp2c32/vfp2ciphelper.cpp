@@ -85,13 +85,13 @@ bool IcmpFile::ValidData()
 	return memcmp(m_pEcho->pData, m_Data, min(m_pEcho->wDataSize, m_DataSize)) == 0;
 }
 
+#pragma warning( disable : 4189)
 int _stdcall VFP2C_Init_IpHelper()
 {
 	if (fpIcmpCreateFile)
 		return 0;
 
 	VFP2CTls& tls = VFP2CTls::Tls();
-
 	if (tls.IpHlpApi == 0)
 		tls.IpHlpApi = LoadLibrary("iphlpapi.dll");
 	if (tls.IpHlpApi)
@@ -122,6 +122,7 @@ int _stdcall VFP2C_Init_IpHelper()
 
 	return 0;
 }
+#pragma warning( default : 4189)
 
 void _fastcall Ip2MacAddress(ParamBlkEx& parm)
 {

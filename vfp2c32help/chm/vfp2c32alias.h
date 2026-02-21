@@ -72,7 +72,7 @@
 72=pages/CompactMem.html
 73=pages/CompareFileTimes.html
 74=pages/ContinueService.html
-75=pages/ControlServiceEx.html
+75=pages/ControlServiceEx2.html
 76=pages/CopyFileEx2.html
 77=pages/CreateCallbackFunc.html
 78=pages/CreateGuid.html

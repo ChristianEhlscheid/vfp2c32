@@ -46,8 +46,10 @@ void _stdcall SaveRas32Error(char *pFunction, DWORD nErrorNo)
 }
 
 // initialisation 
+#pragma warning( disable : 4189)
 int _stdcall VFP2C_Init_Ras()
 {
+
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (tls.RasApi32)
 		return 0;
@@ -92,6 +94,7 @@ int _stdcall VFP2C_Init_Ras()
 
 	return 0;
 }
+#pragma warning( default : 4189)
 
 // enumerate active dialup connections into an array
 void _fastcall ARasConnections(ParamBlkEx& parm)
@@ -323,7 +326,6 @@ void _stdcall RasPhonebookDlgCallback::RasPhonebookDlgCallbackFunc(ULONG_PTR dwC
 
 void RasPhonebookDlgCallback::CallbackTxt(DWORD dwEvent, LPTSTR pszText)
 {
-	int nParm3 = 0;
 	m_Callback.Execute(dwEvent, pszText);
 }
 

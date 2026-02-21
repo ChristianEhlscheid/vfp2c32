@@ -17,7 +17,7 @@
 <div class="block"><pre>AServices(<a href="#p1">cArrayName</a>, [<a href="#p2">cServer</a> [, <a href="#p3">cDatabase</a> [, <a href="#p4">nServiceState</a> [, <a href="#p5">nServiceType</a>]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cArrayName</a></dt>
-<dd><p>On return the array contains the following information from the <a href="http://msdn.microsoft.com/en-us/library/ms682648(VS.85).aspx">ENUM_SERVICE_STATUS_PROCESS</a> or <a href="http://msdn.microsoft.com/en-us/library/ms682651(VS.85).aspx">ENUM_SERVICE_STATUS</a> structure.</p>
+<dd><p>On return the array contains the following information from the ENUM_SERVICE_STATUS_PROCESS or ENUM_SERVICE_STATUS structure.</p>
 <table>
 <tr><th style="width: 70px;">Column</th><th>Content</th></tr>
 <tr><td>1</td><td>ServiceName</td></tr>
@@ -33,11 +33,11 @@
 </table></dd></dl>
 <dl class="parm"><dt><a id="p2">cServer (optional)</a></dt>
 <dd><p>The server name on which the service is running.<br />
-See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+See MSDN help for OpenSCManager.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p3">cDatabase (optional)</a></dt>
 <dd><p>The database under which the service is registered.<br />
-See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a>.</p>
+See MSDN help for OpenSCManager.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">nServiceState (optional)</a></dt>
 <dd><p>default = SERVICE_STATE_ALL<br />
@@ -68,7 +68,7 @@ See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.8
 <a href="/pages/aservicestatus.html">AServiceStatus</a><br />
 <a href="/pages/closeservicehandleex.html">CloseServiceHandleEx</a><br />
 <a href="/pages/continueservice.html">ContinueService</a><br />
-<a href="/pages/controlserviceex.html">ControlServiceEx</a><br />
+<a href="/pages/controlserviceex2.html">ControlServiceEx2</a><br />
 <a href="/pages/createserviceex.html">CreateServiceEx</a><br />
 <a href="/pages/openserviceex.html">OpenServiceEx</a><br />
 <a href="/pages/pauseservice.html">PauseService</a><br />
@@ -76,11 +76,6 @@ See MSDN help for <a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.8
 <a href="/pages/stopserviceex.html">StopServiceEx</a><br />
 <a href="/pages/waitforservicestatus.html">WaitForServiceStatus</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/ms682640(VS.85).aspx">EnumServicesStatusEx</a> if supported, otherwise<br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682637(VS.85).aspx">EnumServicesStatus</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms684323(VS.85).aspx">OpenSCManager</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682028(VS.85).aspx">CloseServiceHandle</a></p>
 
 
 </div>

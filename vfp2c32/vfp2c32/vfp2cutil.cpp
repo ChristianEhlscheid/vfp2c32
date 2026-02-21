@@ -12,11 +12,12 @@
 #include "vfp2c32.h"
 #include "vfp2cutil.h"
 #include "vfp2cstring.h"
+#include "vfp2ctime.h"
 
 // some helper functions for common tasks
 
 //converts a filetime value to a datetime value .. milliseconds are truncated ..
-void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime)
+void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, double& pDateTime)
 {
 	// FILETIME base: Januar 1 1601 | C = 0 | FoxPro = 2305814.0
 	// 86400 secs a day, 10000000 "100 nanosecond intervals" in one second
@@ -28,23 +29,23 @@ void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime)
 		sTime.QuadPart = MAXVFPFILETIME; //set to max date ..
 	else if (sTime.QuadPart == 0) // empty Filetime?
 	{
-		pDateTime.ev_real = 0.0;
+		pDateTime = 0.0;
 		return;
 	}
 
 	sTime.QuadPart /= NANOINTERVALSPERSECOND; // gives us seconds since 1601/01/01
-	pDateTime.ev_real = VFPFILETIMEBASE + (double)(sTime.QuadPart / SECONDSPERDAY); // 1601/01/01 + number of seconds / 86400 (= number of days)
-	pDateTime.ev_real += ((double)(sTime.QuadPart % SECONDSPERDAY)) / SECONDSPERDAY; 
+	pDateTime = VFPFILETIMEBASE + (double)(sTime.QuadPart / SECONDSPERDAY); // 1601/01/01 + number of seconds / 86400 (= number of days)
+	pDateTime += ((double)(sTime.QuadPart % SECONDSPERDAY)) / SECONDSPERDAY; 
 }
 
-void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime)
+void _stdcall DateTimeToFileTime(double pDateTime, LPFILETIME pFileTime)
 {
 	LARGE_INTEGER nFileTime;
 	double dDays, dSecs, dDateTime;
 
-	if (pDateTime.ev_real >= VFPFILETIMEBASE)
-		dDateTime = pDateTime.ev_real;
-	else if (pDateTime.ev_real == 0.0) // if empty date .. set filetime to zero
+	if (pDateTime >= VFPFILETIMEBASE)
+		dDateTime = pDateTime;
+	else if (pDateTime == 0.0) // if empty date .. set filetime to zero
 	{
 		pFileTime->dwLowDateTime = 0;
 		pFileTime->dwHighDateTime = 0;
@@ -62,7 +63,7 @@ void _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime)
 	pFileTime->dwHighDateTime = nFileTime.HighPart;
 }
 
-BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL bToLocal)
+BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, double& pDateTime, BOOL bToLocal)
 {
 	FILETIME sFileTime;
 	if (bToLocal)
@@ -80,7 +81,7 @@ BOOL _stdcall FileTimeToDateTime(LPFILETIME pFileTime, ValueEx& pDateTime, BOOL 
 	return TRUE;
 }
 
-BOOL _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL bToUTC)
+BOOL _stdcall DateTimeToFileTime(double pDateTime, LPFILETIME pFileTime, BOOL bToUTC)
 {
 	FILETIME sTime;
 	if (bToUTC)
@@ -98,23 +99,13 @@ BOOL _stdcall DateTimeToFileTime(ValueEx& pDateTime, LPFILETIME pFileTime, BOOL 
 	return TRUE;
 }
 
-void _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime)
-{
-	int lnA, lnY, lnM, lnJDay;
-	lnA = (14 - pSysTime->wMonth) / 12;
-	lnY = pSysTime->wYear + 4800 - lnA;
-	lnM = pSysTime->wMonth + 12 * lnA - 3;
-	lnJDay = pSysTime->wDay + (153 * lnM + 2) / 5 + lnY * 365 + lnY / 4 - lnY / 100 + lnY / 400 - 32045;
-	pDateTime.ev_real = ((double)lnJDay) + (((double)(pSysTime->wHour * 3600 + pSysTime->wMinute * 60 + pSysTime->wSecond)) / 86400);
-}
-
-void _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime)
+void _stdcall DateTimeToSystemTime(double pDateTime, LPSYSTEMTIME pSysTime)
 {
 	int lnA, lnB, lnC, lnD, lnE, lnM;
 	DWORD lnDays, lnSecs;
 	double dDays, dSecs;
 
-	dSecs = modf(pDateTime.ev_real,&dDays);
+	dSecs = modf(pDateTime, &dDays);
 	lnDays = static_cast<DWORD>(dDays);
 
 	lnA = lnDays + 32044;
@@ -140,19 +131,17 @@ void _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime)
 	pSysTime->wMilliseconds = 0; // FoxPro's datetime doesn't have milliseconds .. so just set to zero
 }
 
-void _stdcall DateTimeToLocalDateTime(ValueEx& pDateTime)
+void _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, double& pDateTime)
 {
-	TimeZoneInfo& tsi = TimeZoneInfo::GetTsi();
-	pDateTime.ev_real -= tsi.Bias;
+	int lnA, lnY, lnM, lnJDay;
+	lnA = (14 - pSysTime->wMonth) / 12;
+	lnY = pSysTime->wYear + 4800 - lnA;
+	lnM = pSysTime->wMonth + 12 * lnA - 3;
+	lnJDay = pSysTime->wDay + (153 * lnM + 2) / 5 + lnY * 365 + lnY / 4 - lnY / 100 + lnY / 400 - 32045;
+	pDateTime = ((double)lnJDay) + (((double)(pSysTime->wHour * 3600 + pSysTime->wMinute * 60 + pSysTime->wSecond)) / 86400);
 }
 
-void _stdcall LocalDateTimeToDateTime(ValueEx *pDateTime)
-{
-	TimeZoneInfo& tsi = TimeZoneInfo::GetTsi();
-	pDateTime->ev_real += tsi.Bias;
-}
-
-BOOL _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime, BOOL bToLocal)
+BOOL _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, double& pDateTime, BOOL bToLocal)
 {
 	FILETIME sUTCTime, sFileTime;
 	if (!SystemTimeToFileTime(pSysTime,&sUTCTime))
@@ -176,11 +165,11 @@ BOOL _stdcall SystemTimeToDateTime(LPSYSTEMTIME pSysTime, ValueEx& pDateTime, BO
 	return TRUE;
 }
 
-BOOL _stdcall DateTimeToSystemTime(ValueEx& pDateTime, LPSYSTEMTIME pSysTime, BOOL bToLocal)
+BOOL _stdcall DateTimeToSystemTime(double pDateTime, LPSYSTEMTIME pSysTime, BOOL bToLocal)
 {
 	FILETIME sFileTime, sUTCTime;
 
-	DateTimeToFileTime(pDateTime,&sFileTime);
+	DateTimeToFileTime(pDateTime, &sFileTime);
 
 	if (bToLocal)
 	{

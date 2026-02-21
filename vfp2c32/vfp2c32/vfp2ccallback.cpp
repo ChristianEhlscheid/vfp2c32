@@ -183,7 +183,6 @@ try
 	HWND hHwnd = parm(1)->Ptr<HWND>();
 	UINT uMsg = static_cast<UINT>(parm(2)->ev_long);
 	WindowSubclass* lpSubclass = 0;
-	WindowMessageCallback* lpMsg = 0;
 	bool bClassProc = parm.PCount() == 3 && parm(3)->ev_length;
 
 	// get reference to struct for the hWnd, if none is found - the window was not subclassed
@@ -299,7 +298,7 @@ WindowMessageCallback* WindowSubclass::AddMessageCallback(UINT uMsg)
 {
 	WindowMessageCallback pMsgCallback(uMsg);
 	int nIndex = -1;
-	for (int xj = 0; xj < m_BoundMessages.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_BoundMessages.GetCount(); xj++)
 	{
 		if (m_BoundMessages[xj].m_Msg == uMsg)
 		{
@@ -317,7 +316,7 @@ WindowMessageCallback* WindowSubclass::AddMessageCallback(UINT uMsg)
 bool WindowSubclass::RemoveMessageCallback(UINT uMsg)
 {
 	int nIndex = -1;
-	for (int xj = 0; xj < m_BoundMessages.GetCount(); xj++)
+	for (unsigned int xj = 0; xj < m_BoundMessages.GetCount(); xj++)
 	{
 		if (m_BoundMessages[xj].m_Msg == uMsg)
 		{
@@ -466,8 +465,12 @@ void WindowSubclass::CreateSubclassThunkProc()
 	rasm.CallConv(thiscall).Call(&WindowSubclass::FindMessageCallback, this, varUmsg);
 	rasm.Cmp(nReturnReg,0);
 	rasm.Je(pLabelWndProc);
-	rasm.Mov(bReturn, AsmVariable::Var<bool>(nReturnReg, offsetof(WindowMessageCallback, m_ReturnValue)));
-	rasm.Mov(nReturnReg, AsmVariable::Var<void*>(nReturnReg, offsetof(WindowMessageCallback, m_CallbackThunk)));
+	AsmVariable pVar;
+	pVar = AsmVariable::Var<bool>(nReturnReg, offsetof(WindowMessageCallback, m_ReturnValue));
+	rasm.Mov(bReturn, pVar);
+	AsmVariable pVar2;
+	pVar2 = AsmVariable::Var<void*>(nReturnReg, offsetof(WindowMessageCallback, m_CallbackThunk));
+	rasm.Mov(nReturnReg, pVar2);
 	rasm.CallConv(stdcall).Call(nReturnReg, varHwnd, varUmsg, varWparam, varLparam); // call thunk
 	rasm.Mov(RCX, bReturn);
 	rasm.Cmp(RCX, 0);
@@ -525,7 +528,9 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 
 		// if (vAutoYield.ev_length)
 		//  _Execute("_VFP.AutoYield = .F.")
-		rasm.Mov(nReg, rasm.Var<unsigned int>(varAutoYield, offsetof(Value,ev_length)));
+		AsmVariable pVar;
+		pVar = rasm.Var<unsigned int>(varAutoYield, offsetof(Value, ev_length));
+		rasm.Mov(nReg, pVar);
 		rasm.Cmp(nReg,0);
 		rasm.Je("AutoYieldFalse");
 		rasm.CallConv(fastcall).Call(_Execute, "_VFP.AutoYield = .F.");
@@ -695,7 +700,9 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 		
 		if (nFlags & BINDEVENTSEX_NO_RECURSION)
 		{
-			rasm.Mov(nReg, rasm.Var<unsigned int>(varAutoYield, offsetof(Value,ev_length)));
+			AsmVariable pVar;
+			pVar = rasm.Var<unsigned int>(varAutoYield, offsetof(Value, ev_length));
+			rasm.Mov(nReg, pVar);
 			rasm.Cmp(nReg,0);
 			rasm.Je("AutoYieldBack");
 			// set autoyield to .T. again 
@@ -709,7 +716,9 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 
 		if (nFlags & BINDEVENTSEX_NO_RECURSION)
 		{
-			rasm.Mov(nReg, rasm.Var<unsigned int>(varAutoYield, offsetof(Value, ev_length)));
+			AsmVariable pVar;
+			pVar = rasm.Var<unsigned int>(varAutoYield, offsetof(Value, ev_length));
+			rasm.Mov(nReg, pVar);
 			// if autoyield was .F. before we don't need to set it
 			rasm.Cmp(nReg, 0);
 			rasm.Je("AutoYieldBack");
@@ -718,13 +727,17 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 			rasm.Label("AutoYieldBack");
 		}
 
-		rasm.Mov(AL, rasm.Var<char>(varReturn, offsetof(Value, ev_type)));
+		AsmVariable pVar;
+		pVar = rasm.Var<char>(varReturn, offsetof(Value, ev_type));
+		rasm.Mov(AL, pVar);
 		rasm.Cmp(AL, 'I');
 		rasm.Jne("DoubleConversion");
-		rasm.Mov(nReg, rasm.Var<unsigned int>(varReturn, offsetof(Value, ev_long)));
+		pVar = rasm.Var<unsigned int>(varReturn, offsetof(Value, ev_long));
+		rasm.Mov(nReg, pVar);
 		rasm.Jmp("End");
 		rasm.Label("DoubleConversion");
-		rasm.CvttSd2Si(nReg, rasm.Var<double>(varReturn, offsetof(Value, ev_real)));
+		pVar = rasm.Var<double>(varReturn, offsetof(Value, ev_real));
+		rasm.CvttSd2Si(nReg, pVar);
 		rasm.Label("End");
 	}
 	rasm.Finish();
@@ -813,6 +826,7 @@ try
 
 	RuntimeAssembler rasm(nCallConv, false, false);
 	AsmRegister ReturnReg = rasm.ReturnRegister();
+	AsmVariable pVar;
 
 	int nParmCount, nParmNo, nWordCount, nPrecision;
 	CStringView pParm;
@@ -926,7 +940,8 @@ try
 
 		if (nParmNo >= 1)
 		{
-			rasm.Mov(AsmVariable(ReturnReg, 0), ',');
+			pVar = AsmVariable(ReturnReg, 0);
+			rasm.Mov(pVar, ',');
 			rasm.Add(ReturnReg, 1);
 		}
 #if !defined(_WIN64)
@@ -968,19 +983,20 @@ try
 				}
 				
 				// copy function name into buffer
-				int nStringLen = strlen(pFunc);
+				unsigned int nStringLen = (unsigned int)strlen(pFunc);
 				rasm.CallConv(cdeclaration).Call(memcpy, ReturnReg, pFunc, nStringLen);
 
 				// adjust EAX (end of string)
 				rasm.Add(ReturnReg, nStringLen);
 				// copy '(' to end of buffer
-				rasm.Mov(AsmVariable(ReturnReg, 0), '(');
+				pVar = AsmVariable(ReturnReg, 0);
+				rasm.Mov(pVar, '(');
 				rasm.Add(ReturnReg,1);
 
 				// add pointer parameter to buffer
 				rasm.CallConv(fastcall).Call(UIntToHex, ReturnReg, pParameter);
 				// copy ')' to end of buffer
-				rasm.Mov(AsmVariable(ReturnReg, 0), ')');
+				rasm.Mov(pVar, ')');
 				rasm.Add(ReturnReg,1);
 			}
 		}
@@ -1054,10 +1070,11 @@ try
 				}
 				else if (pParmPrec.ICompare("literal"))
 				{
-					rasm.Mov(AsmVariable(ReturnReg,0), '"');
+					pVar = AsmVariable(ReturnReg, 0);
+					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 					rasm.CallConv(fastcall).Call(Int64ToStr, ReturnReg, pParameter);
-					rasm.Mov(AsmVariable(ReturnReg,0), '"');
+					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 				}
 				else if (pParmPrec.ICompare("currency"))
@@ -1091,10 +1108,11 @@ try
 				}
 				else if (pParmPrec.ICompare("literal"))
 				{
-					rasm.Mov(AsmVariable(ReturnReg, 0), '"');
+					pVar = AsmVariable(ReturnReg, 0);
+					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 					rasm.CallConv(fastcall).Call(UInt64ToStr, ReturnReg, pParameter);
-					rasm.Mov(AsmVariable(ReturnReg, 0), '"');
+					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 				}
 				else if (pParmPrec.ICompare("currency"))
@@ -1120,9 +1138,10 @@ try
 	// add ')' and nullterminate
 	if (nParmCount)
 	{
-		rasm.Mov(AsmVariable(ReturnReg, 0), ')');
+		pVar = AsmVariable(ReturnReg, 0);
+		rasm.Mov(pVar, ')');
 		rasm.Add(ReturnReg,1);
-		rasm.Mov(AsmVariable(ReturnReg, 0), '\0');
+		rasm.Mov(pVar, '\0');
 	}
 
 	if (nSyncFlag & (CALLBACK_ASYNCRONOUS_POST|CALLBACK_ASYNCRONOUS_SEND))
@@ -1152,68 +1171,92 @@ try
 		if (pRetType.ICompare("integer"))
 #endif
 		{
-			rasm.Mov(AL, rasm.Var<char>(pReturnVar, offsetof(Value, ev_type)));
+			AsmVariable pVar;
+			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
+			rasm.Mov(AL, pVar);
 			rasm.Cmp(AL, 'N');
 			rasm.Je("DoubleConversion");
-			rasm.Mov(ReturnReg, rasm.Var<int>(pReturnVar, offsetof(Value, ev_long)));
+			pVar = rasm.Var<int>(pReturnVar, offsetof(Value, ev_long));
+			rasm.Mov(ReturnReg, pVar);
 			rasm.Jmp("End");
 			rasm.Label("DoubleConversion");
-			rasm.CvttSd2Si(ReturnReg, rasm.Var<double>(pReturnVar, offsetof(Value, ev_real)));
+			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
+			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
 		else if (pRetType.ICompare("uinteger") || pRetType.ICompare("ulong"))
 		{
-			rasm.Mov(AL, rasm.Var<char>(pReturnVar, offsetof(Value,ev_type)));
+			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
+			rasm.Mov(AL, pVar);
 			rasm.Cmp(AL,'N');
 			rasm.Je("DoubleConversion");
-			rasm.Mov(ReturnReg, rasm.Var<unsigned int>(pReturnVar, offsetof(Value,ev_long)));
+			pVar = rasm.Var<unsigned int>(pReturnVar, offsetof(Value, ev_long));
+			rasm.Mov(ReturnReg, pVar);
 			rasm.Jmp("End");
 			rasm.Label("DoubleConversion");
-			rasm.CvttSd2Si(ReturnReg, rasm.Var<double>(pReturnVar, offsetof(Value, ev_real)));
+			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
+			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
 		else if (pRetType.ICompare("short"))
-			rasm.Mov(AX, rasm.Var<int>(pReturnVar,offsetof(Value,ev_long)));
+		{
+			pVar = rasm.Var<int>(pReturnVar, offsetof(Value, ev_long));
+			rasm.Mov(AX, pVar);
+		}
 		else if (pRetType.ICompare("ushort"))
-			rasm.Mov(AX, rasm.Var<unsigned int>(pReturnVar,offsetof(Value,ev_long)));
+		{
+			pVar = rasm.Var<unsigned int>(pReturnVar, offsetof(Value, ev_long));
+			rasm.Mov(AX, pVar);
+		}
 		else if (pRetType.ICompare("single") || pRetType.ICompare("double"))
 		{
 #if !defined(_WIN64)
-			rasm.Fld(rasm.Var<double>(pReturnVar, offsetof(Value, ev_real)));
+			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
+			rasm.Fld(pVar);
 #else
-			rasm.Mov(XMM0, rasm.Var<double>(pReturnVar, offsetof(Value, ev_real)));
+			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
+			rasm.Mov(XMM0, pVar);
 #endif
 		}
 		else if (pRetType.ICompare("bool"))
-			rasm.Mov(EAX, rasm.Var<unsigned int>(pReturnVar, offsetof(Value,ev_length)));
+		{
+			pVar = rasm.Var<unsigned int>(pReturnVar, offsetof(Value, ev_length));
+			rasm.Mov(EAX, pVar);
+		}
 #if !defined(_WIN64)
 		else if (pRetType.ICompare("int64"))
 #else
 		else if (pRetType.ICompare("int64") || pRetType.ICompare("long"))
 #endif
 		{
-			rasm.Mov(AL, rasm.Var<char>(pReturnVar, offsetof(Value,ev_type)));
+			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
+			rasm.Mov(AL, pVar);
 			rasm.Cmp(AL,'N');
 			rasm.Je("DoubleConversion");
-			rasm.Mov(ReturnReg, rasm.Var<int>(pReturnVar, offsetof(Value,ev_long)));
+			pVar = rasm.Var<int>(pReturnVar, offsetof(Value, ev_long));
+			rasm.Mov(ReturnReg, pVar);
 			rasm.Cdq();
 			rasm.Jmp("End");
 			rasm.Label("DoubleConversion");
-			rasm.CvttSd2Si(ReturnReg, rasm.Var<double>(pReturnVar, offsetof(Value, ev_real)));
+			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
+			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
 		else if (pRetType.ICompare("uint64"))
 		{
-			rasm.Mov(AL, rasm.Var<char>(pReturnVar, offsetof(Value,ev_type)));
+			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
+			rasm.Mov(AL, pVar);
 			rasm.Cmp(AL,'N');
 			rasm.Je("DoubleConversion");
-			rasm.Mov(ReturnReg, rasm.Var<unsigned int>(pReturnVar, offsetof(Value,ev_long)));
+			pVar = rasm.Var<unsigned int>(pReturnVar, offsetof(Value, ev_long));
+			rasm.Mov(ReturnReg, pVar);
 #if !defined(_WIN64)
 			rasm.Xor(EDX,EDX);
 #endif
 			rasm.Jmp("End");
 			rasm.Label("DoubleConversion");
-			rasm.CvttSd2Si(ReturnReg, rasm.Var<double>(pReturnVar, offsetof(Value, ev_real)));
+			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
+			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
 		else

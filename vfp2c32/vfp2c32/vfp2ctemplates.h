@@ -2,6 +2,7 @@
 #define _VFP2CTEMPLATES_H__
 
 #include <assert.h>
+#include <shlwapi.h>
 
 // forward declarations
 class FoxString;
@@ -10,18 +11,16 @@ struct ValueEx;
 
 #pragma warning(disable : 4244)
 
+// #define sv(s) CStringView((const char*)s,countof(s))
+
 typedef struct CStringView
 {
 	CStringView() { Data = 0; Len = 0; };
 	CStringView(int nLen) { assert(nLen == 0); Data = 0; Len = 0; }
-	CStringView(char* pString) { Data = pString; Len = pString ? strlen(pString) : 0; }
-	CStringView(const char* pString) { Data = const_cast<char*>(pString); Len = pString ? strlen(pString) : 0; }
+	CStringView(char* pString) { Data = pString; Len = pString ? (unsigned int)strlen(pString) : 0; }
 	CStringView(char* pString, unsigned nLen) { Data = pString; Len = nLen; }
-
-	unsigned int SizeOf()
-	{
-		return sizeof(Data) + sizeof(Len) + Len;
-	}
+	CStringView(const char* pString) { Data = const_cast<char*>(pString); Len = pString ? (unsigned int)strlen(pString) : 0; }
+	CStringView(const char* pString, unsigned nLen) { Data = const_cast<char*>(pString); Len = nLen; }
 
 	CStringView Alltrim(const char pWhitespace = ' ')
 	{
@@ -88,9 +87,21 @@ typedef struct CStringView
 			return 0;
 	}
 
+	bool StartsWith(const CStringView pString)
+	{
+		return pString.Len <= Len && memcmp(pString.Data, Data, pString.Len) == 0;
+	}
+
 	CStringView operator+(unsigned int nLen) {
 		if (nLen < Len)
 			return CStringView(Data + nLen, Len - nLen);
+		else
+			return 0;
+	}
+
+	CStringView operator-(unsigned int nLen) {
+		if (nLen < Len)
+			return CStringView(Data + Len - nLen, nLen);
 		else
 			return 0;
 	}
@@ -138,46 +149,48 @@ typedef struct CStringView
 		return false;
 	}
 
-	unsigned int BlockSize()
+	unsigned int DataSize() const
 	{
-		return sizeof(unsigned int) + 1 + Len;
+		return Data ? (Len * sizeof(wchar_t) + sizeof(wchar_t)) : 0;
 	}
 
-	void ToBlock(char* pAddress)
+	char* ToBlock(char* pStructAddress, char* pDataAddress)
 	{
-		unsigned int* pLen = reinterpret_cast<unsigned int*>(pAddress);
-		*pLen = Len;
-		if (Len)
+		*(char**)(pStructAddress) = Data ? pDataAddress : 0;
+		*(unsigned int*)(pStructAddress + sizeof(Data)) = Len;
+		if (Data)
 		{
-			char* pData = (pAddress + 4);
-			memcpy(pData, Data, Len);
-			pData[Len] = '\0';
+			if (Len)
+				memcpy(pDataAddress, Data, Len);
+			pDataAddress[Len] = '\0';
+			pDataAddress += Len;
 		}
+		return pDataAddress;
 	}
 
 	void FromBlock(char* pAddress)
 	{
-		unsigned int* pLen = reinterpret_cast<unsigned int*>(pAddress);
-		Len = *pLen;
-		if (Len)
-			Data = (pAddress + 4);
-		else
-			Data = 0;
+		Data = *(char**)pAddress;
+		Len = *(unsigned int*)(pAddress + sizeof(Len));
 	}
 
 	operator bool() const { return Data && Len; }
-	bool operator!() { return Data == 0 || Len == 0; }
+	bool operator!() const { return Data == 0 || Len == 0; }
 
 	char* Data;
 	unsigned int Len;
 } CStringView;
 
+// #define wsv(s) CWideStringView((const wchar_t*)s,countof(s))
+
 typedef struct CWideStringView
 {
 	CWideStringView() { Data = 0; Len = 0; };
 	CWideStringView(int nLen) { assert(nLen == 0); Data = 0; Len = 0; }
-	CWideStringView(wchar_t* pString) { Data = pString; Len = pString ? wcslen(pString) : 0; }
+	CWideStringView(wchar_t* pString) { Data = pString; Len = pString ? (unsigned int)wcslen(pString) : 0; }
 	CWideStringView(wchar_t* pString, unsigned int nLen) { Data = pString; Len = nLen; }
+	CWideStringView(const wchar_t* pString) { Data = const_cast<wchar_t*>(pString); Len = pString ? (unsigned int)wcslen(pString) : 0; }
+	CWideStringView(const wchar_t* pString, unsigned nLen) { Data = const_cast<wchar_t*>(pString); Len = nLen; }
 
 	CWideStringView Alltrim(const wchar_t pWhitespace = ' ')
 	{
@@ -218,6 +231,14 @@ typedef struct CWideStringView
 			return 0;
 	}
 
+	CWideStringView operator+(unsigned __int64 nLen)
+	{
+		if (nLen < Len)
+			return CWideStringView(Data + nLen, Len - nLen);
+		else
+			return 0;
+	}
+
 	bool operator==(CWideStringView pString) {
 		if (Data && pString.Data)
 		{
@@ -230,20 +251,53 @@ typedef struct CWideStringView
 		return false;
 	}
 
+	unsigned int DataSize()
+	{
+		return Data ? (Len * sizeof(wchar_t) + sizeof(wchar_t)) : 0;
+	}
+
+	char* ToBlock(char* pStructAddress, char* pDataAddress)
+	{
+		*(char**)pStructAddress = Data ? pDataAddress : 0;
+		*(unsigned int*)(pStructAddress + sizeof(Data)) = Len;
+		
+		if (Data)
+		{
+			unsigned int bytes = Len * sizeof(wchar_t);
+			if (bytes)
+				memcpy(pDataAddress, Data, bytes);
+			((wchar_t*)pDataAddress)[Len] = L'\0';
+			pDataAddress += bytes + sizeof(wchar_t);
+		}
+		return pDataAddress;
+	}
+
+	void FromBlock(char* pAddress)
+	{
+		Data = *(wchar_t**)pAddress;
+		Len = *(unsigned int*)(pAddress + sizeof(Len));
+	}
+
 	operator bool() const { return Data && Len; }
 	bool operator!() const { return Data == 0 || Len == 0; }
 
-	unsigned int Len;
 	wchar_t* Data;
+	unsigned int Len;
 } CWideStringView;
 
 template<unsigned int nBufferSize>
 class CStrBuilder
 {
 public:
-	CStrBuilder() : m_Length(0), m_Base(0) { m_String[0] = '\0'; }
+	CStrBuilder() : m_Length(0), m_Base(0)
+	{ 
+		m_String[0] = '\0';
+	}
 
-	unsigned int Len() const { return m_Length; }
+	unsigned int Len() const 
+	{ 
+		return m_Length;
+	}
 
 	CStrBuilder& Len(unsigned int nLen, bool bNullTerminate = false)
 	{
@@ -256,7 +310,21 @@ public:
 
 	unsigned int Size() const { return nBufferSize; }
 
-	CStringView StringView() const { CStringView pView(const_cast<char*>(reinterpret_cast<const char*>(m_String)), m_Length); return pView; }
+	CStringView StringView() const 
+	{
+		const char* pStart = &m_String[0];
+		CStringView pView(const_cast<char*>(pStart), m_Length);
+		return pView;
+	}
+
+	CStringView StringView(unsigned int offset, unsigned int len = -1) const
+	{ 
+		if (len == -1)
+			len = m_Length - offset;
+		const char* pStart = &m_String[offset];
+		CStringView pView(const_cast<char*>(pStart), len);
+		return pView;
+	}
 
 	CStrBuilder& SetFormatBase(int nLen = -1)
 	{
@@ -352,8 +420,8 @@ public:
 		if (pString.Len + m_Length >= nBufferSize)
 			throw E_INSUFMEMORY;
 		memmove(m_String + pString.Len, m_String, m_Length + 1);
-		memcpy(m_String, pString.Data, len);
-		m_Length += len;
+		memcpy(m_String, pString.Data, pString.Len);
+		m_Length += pString.Len;
 		return *this;
 	}
 
@@ -473,7 +541,7 @@ public:
 	{
 		if (m_Length == 0)
 			return *this;
-		int nPos = m_Length;
+		int nPos = m_Length - 1;
 		if (m_String[nPos] == '\\')
 			nPos--;
 		while (nPos > 0 && m_String[nPos] != '\\')
@@ -501,7 +569,7 @@ public:
 	CStrBuilder& PathStripPath()
 	{
 		::PathStripPath(m_String);
-		m_Length = strlen(m_String);
+		m_Length = (unsigned int)strlen(m_String);
 		return *this;
 	}
 
@@ -1104,7 +1172,12 @@ public:
 
 	CStrBuilder& Marshal(const CStringView& pString)
 	{
-		return Append("ReadBytes(").Marshal(reinterpret_cast<void*>(pString.Data)).Append(',').Marshal(pString.Len).Append(')');
+		if (pString.Data == 0)
+			return Append("NULL");
+		else if (pString.Len == 0)
+			return Append("''");
+		else
+			return Append("ReadBytes(").Marshal(reinterpret_cast<void*>(pString.Data)).Append(',').Marshal(pString.Len).Append(')');
 	}
 
 	CStrBuilder& Marshal(const CWideStringView& pString)
@@ -1201,7 +1274,7 @@ public:
 
 	void* Ptr() const
 	{
-		return reinterpret_cast<void*>(m_String);
+		return reinterpret_cast<void*>(const_cast<char*>(m_String));
 	}
 	
 	template<typename T>
@@ -1219,10 +1292,414 @@ public:
 	operator const unsigned char* () const { return reinterpret_cast<const unsigned char*>(m_String); }
 	operator const CStringView() const { return CStringView(const_cast<char*>(reinterpret_cast<const char*>(m_String)), m_Length ); }
 
-private:
+protected:
 	unsigned int m_Length;
 	unsigned int m_Base;
 	char m_String[nBufferSize];
+};
+
+template<unsigned int nBufferSize>
+class CWideStrBuilder
+{
+public:
+	CWideStrBuilder() : m_Length(0), m_Base(0) { m_String[0] = L'\0'; }
+
+	unsigned int Len() const { return m_Length; }
+
+	CWideStrBuilder& Len(unsigned int nLen, bool bNullTerminate = false)
+	{
+		assert(nLen < nBufferSize);
+		m_Length = nLen;
+		if (bNullTerminate)
+			m_String[m_Length] = L'\0';
+		return *this;
+	}
+
+	unsigned int Size() const { return nBufferSize; }
+
+	CWideStringView StringView() const { CWideStringView pView(const_cast<wchar_t*>(reinterpret_cast<const wchar_t*>(m_String)), m_Length); return pView; }
+
+	CWideStrBuilder& SetFormatBase(int nLen = -1)
+	{
+		if (nLen == -1)
+			m_Base = m_Length;
+		else
+			m_Base = nLen;
+		return *this;
+	}
+
+	unsigned int GetFormatBase()
+	{
+		return m_Base;
+	}
+
+	CWideStrBuilder& ResetToFormatBase()
+	{
+		m_Length = m_Base;
+		m_String[m_Base] = L'\0';
+		return *this;
+	}
+
+	CWideStrBuilder& Append(const wchar_t pChar)
+	{
+		if (nBufferSize - m_Length <= 0)
+			throw E_INSUFMEMORY;
+		m_String[m_Length] = pChar;
+		m_Length++;
+		m_String[m_Length] = L'\0';
+		return *this;
+	}
+
+	CWideStrBuilder& Append(const CWideStringView pString)
+	{
+		if (pString.Len >= nBufferSize - m_Length)
+			throw E_INSUFMEMORY;
+		memcpy(m_String + m_Length, pString.Data, pString.Len * 2);
+		m_Length += pString.Len;
+		m_String[m_Length] = L'\0';
+		return *this;
+	}
+
+	bool StartsWith(const CWideStringView pString)
+	{
+		return pString.Len <= m_Length && memcmp(pString.Data, m_String, pString.Len * 2) == 0;
+	}
+
+	CWideStrBuilder& PrependIfNotPresent(const CWideStringView pString)
+	{
+		if (pString.Len < m_Length || memcmp(pString.Data, m_String, pString.Len * 2) != 0)
+		{
+			if (pString.Len + m_Length >= nBufferSize)
+				throw E_INSUFMEMORY;
+			memmove(m_String + pString.Len, m_String, m_Length * 2 + 2);
+			memcpy(m_String, pString.Data, pString.Len * 2);
+			m_Length += pString.Len;
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& Alltrim(const wchar_t cWhitespace = L' ')
+	{
+		if (m_Length == 0)
+			return *this;
+
+		wchar_t* pStart, * pEnd;
+		pStart = m_String;
+		pEnd = m_String + m_Length;	/* compute end of string */
+		unsigned int nLen = m_Length;
+		unsigned int nNewLen;
+
+		while (*pStart == cWhitespace && nLen--)
+			pStart++; /* skip over spaces at beginning of string */
+
+		if (pStart == pEnd) /* entire string consisted of spaces */
+		{
+			*m_String = L'\0';
+			m_Length = 0;
+			return *this;
+		}
+
+		/* find end of valid characters */
+		while (*pEnd == cWhitespace && pEnd > pStart)
+			pEnd--;
+
+		/* need to move string back */
+		if (pStart != m_String)
+		{
+			nNewLen = pEnd - pStart;
+			memmove(m_String, pStart, nNewLen * 2);
+		}
+		else if (pEnd != m_String + m_Length)
+		{
+			nNewLen = pEnd - pStart;
+		}
+		*++pEnd = L'\0';	// nullterminate
+		m_Length = nNewLen; // set new length
+		return *this;
+	}
+
+	CWideStrBuilder& AddBs()
+	{
+		unsigned int nLen = m_Length;
+		if (nLen && m_String[nLen - 1] != L'\\')
+		{
+			if (nLen + 1 > nBufferSize)
+				throw E_INSUFMEMORY;
+			m_String[nLen] = L'\\';
+			m_String[nLen + 1] = L'\0';
+			m_Length++;
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& AddBsWildcard()
+	{
+		if (m_Length)
+		{
+			unsigned int nLen = m_Length;
+			if (nLen > 1 && m_String[nLen - 2] == L'\\' && m_String[nLen - 1] == L'*')
+				return *this;
+
+			if (m_String[nLen - 1] == L'\\')
+			{
+				if (nLen + 1 > nBufferSize)
+					throw E_INSUFMEMORY;
+				m_String[nLen] = '*';
+				m_String[nLen + 1] = L'\0';
+				m_Length = nLen + 1;
+			}
+			else
+			{
+				if (nLen + 2 > nBufferSize)
+					throw E_INSUFMEMORY;
+				m_String[nLen] = L'\\';
+				m_String[nLen + 1] = L'*';
+				m_String[nLen + 2] = L'\0';
+				m_Length = nLen + 2;
+			}
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& LongPathName()
+	{
+		DWORD count = GetLongPathNameW(m_String, m_String, nBufferSize);
+		if (count >= nBufferSize)
+			throw E_INSUFMEMORY;
+		m_Length = count;
+		return *this;
+	}
+
+	CWideStrBuilder& RemoveLastPath()
+	{
+		if (m_Length == 0)
+			return *this;
+		int nPos = m_Length - 1;
+		if (m_String[nPos] == L'\\')
+			nPos--;
+		while (nPos > 0 && m_String[nPos] != L'\\')
+			nPos--;
+		m_String[nPos] = L'\0';
+		m_Length = nPos;
+		return *this;
+	}
+
+	CWideStrBuilder& ShiftLeft(unsigned int nLen)
+	{
+		if (nLen >= m_Length)
+		{
+			m_String[0] = L'\0';
+			m_Length = 0;
+		}
+		else
+		{
+			memmove(m_String, m_String + nLen, (m_Length - nLen) * 2 + 2);
+			m_Length -= nLen;
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& PathStripPath()
+	{
+		::PathStripPathW(m_String);
+		m_Length = (unsigned int)wcslen(m_String);
+		return *this;
+	}
+
+	bool CompareToBase(const CWideStringView pString)
+	{
+		if (m_Base != pString.Len)
+			return false;
+		else
+			return memcmp(m_String, pString.Data, pString.Len * 2) == 0;
+	}
+
+	wchar_t* Strdup() const
+	{
+		wchar_t* pString = new wchar_t[m_Length + 1];
+		if (pString)
+			memcpy(pString, m_String, (m_Length * 2) + 2);
+		return pString;
+	}
+
+	CWideStrBuilder& operator=(const CStringView& pString)
+	{
+		if (pString)
+		{
+			if (pString.Len >= nBufferSize)
+				throw E_INSUFMEMORY;
+
+			int nChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pString.Data, pString.Len, &m_String[0], nBufferSize);
+			if (!nChars)
+			{
+				SaveWin32Error("MultiByteToWideChar", GetLastError());
+				throw E_APIERROR;
+			}
+			m_String[nChars] = L'\0'; // nullterminate
+			m_Length = nChars;
+		}
+		else
+		{
+			m_Length = 0;
+			m_String[0] = L'\0';
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& operator=(const CWideStringView& pString)
+	{
+		if (pString)
+		{
+			if (pString.Data == m_String)
+				return *this;
+			if (pString.Len >= nBufferSize)
+				throw E_INSUFMEMORY;
+			memcpy(m_String, pString.Data, pString.Len * 2);
+			m_Length = pString.Len;
+			m_String[m_Length] = L'\0';
+		}
+		else
+		{
+			m_Length = 0;
+			m_String[0] = L'\0';
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& operator+=(const CStringView& pString)
+	{
+		if (pString)
+		{
+			if (m_Length + pString.Len >= nBufferSize)
+				throw E_INSUFMEMORY;
+
+			int nChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pString.Data, pString.Len, &m_String[m_Length], nBufferSize - m_Length);
+			if (!nChars)
+			{
+				SaveWin32Error("MultiByteToWideChar", GetLastError());
+				throw E_APIERROR;
+			}
+			m_Length += nChars;
+			m_String[m_Length] = L'\0'; // nullterminate
+			return *this;
+		}
+		return *this;
+	}
+
+	CWideStrBuilder& operator+=(const CWideStringView& pString)
+	{
+		if (pString)
+		{
+			if (m_Length + pString.Len >= nBufferSize)
+				throw E_INSUFMEMORY;
+
+			memcpy(m_String + m_Length, pString.Data, (pString.Len * 2));
+			m_Length += pString.Len;
+			m_String[m_Length] = L'\0';
+		}
+		return *this;
+	}
+
+	bool operator==(CWideStringView& pString) const
+	{
+		if (pString.Data == m_String && m_Length == pString.Len)
+			return true;
+		if (m_Length != pString.Len)
+			return false;
+		if (pString.Data)
+			return wcscmp(m_String, pString.Data) == 0;
+		return false;
+	}
+
+	void* Ptr() const
+	{
+		return reinterpret_cast<void*>(const_cast<wchar_t*>(m_String));
+	}
+
+	template<typename T>
+	T Ptr() const
+	{
+		return reinterpret_cast<T>(const_cast<wchar_t*>(reinterpret_cast<const wchar_t*>(m_String)));
+	}
+
+	wchar_t& operator[](int nIndex) { return m_String[nIndex]; }
+	wchar_t& operator[](unsigned long nIndex) { return m_String[nIndex]; }
+
+	operator wchar_t* () const { return const_cast<wchar_t*>(&m_String[0]); }
+	operator const wchar_t* () const { return reinterpret_cast<const wchar_t*>(&m_String[0]); }
+	operator const CWideStringView() const { return CWideStringView(const_cast<wchar_t*>(reinterpret_cast<const wchar_t*>(&m_String[0])), m_Length); }
+
+protected:
+	unsigned int m_Length;
+	unsigned int m_Base;
+	wchar_t m_String[nBufferSize];
+};
+
+template<int size>
+class CAlignedBlob
+{
+public:
+	unsigned int Size() const { return size; }
+	void* Address() { return static_cast<void*>(&m_Pointer[0]); }
+
+	operator void* () const { return reinterpret_cast<void*>(const_cast<char*>(&m_Pointer[0])); }
+	operator char* () const { return &m_Pointer[0]; }
+	operator unsigned char* () const { return reinterpret_cast<unsigned char*>(&m_Pointer[0]); }
+
+private:
+	__declspec(align(8)) char m_Pointer[size];
+};
+
+template<int alignment>
+class CAlignedBuffer
+{
+	public:
+		CAlignedBuffer() : m_Pointer(0), m_Size(0) { }
+		
+		CAlignedBuffer(unsigned int nSize)
+		{
+			Alloc(nSize);
+		}
+
+		~CAlignedBuffer()
+		{
+			if (m_Pointer)
+				_aligned_free(m_Pointer);
+		}
+
+		void Alloc(unsigned int nSize)
+		{
+			if (m_Pointer != 0)
+			{
+				_aligned_free(m_Pointer);
+				m_Pointer = 0;
+			}
+
+			m_Pointer = _aligned_malloc(nSize, alignment);
+			if (m_Pointer == 0)
+				throw E_INSUFMEMORY;
+			m_Size = nSize;
+		}
+
+		unsigned int Size() const { return m_Size; }
+		void* Address() { return static_cast<void*>(m_Pointer); }
+
+		void Detach(CAlignedBuffer& buf)
+		{
+			buf.m_Pointer = m_Pointer;
+			buf.m_Size = m_Size;
+			m_Pointer = 0;
+			m_Size = 0;
+		}
+
+		void Detach() { m_Pointer = 0; m_Size = 0; }
+		operator void* () const { return m_Pointer; }
+		operator char* () const { return static_cast<char*>(m_Pointer);  }
+		operator unsigned char* () const { return reinterpret_cast<unsigned char*>(m_Pointer); }
+
+	private:
+		void* m_Pointer;
+		unsigned int m_Size;
 };
 
 template<class T>

@@ -26,7 +26,12 @@ Memory allocation.</p>
 <tr class="even"><td><a href="freehglobal.html">FreeHGlobal</a></td><td>Frees memory allocated with <a href="/pages/allochglobal.html">AllocHGlobal</a>.</td></tr>
 <tr class="uneven"><td><a href="freemem.html">FreeMem</a></td><td>Frees a memory block allocated from the library internal heap by the <a href="/pages/allocmem.html">AllocMem</a> or <a href="/pages/reallocmem.html">ReAllocMem</a> function.</td></tr>
 <tr class="even"><td><a href="freepmem.html">FreePMem</a></td><td>Frees the memory block the passed in pointer points to from the library internal heap.</td></tr>
-<tr class="uneven"><td><a href="freerefarray.html">FreeRefArray</a></td><td>Frees all memory allocated for the passed in C style array.</td></tr>
+<tr class="uneven"><td><a href="freerefarray.html">FreeRefArray</a></td><td>Frees all memory allocated for the passed in C style array.<br />
+<br />
+This is meant to be only used for C style arrays that contain<br />
+pointers to their respective data.<br />
+<br />
+The function loops over the elements from index position nStartElement to nElements and calls HeapFree if a valid pointer is stored at the indexed position to free the memory and the setting the pointer to 0, effectivly cleaning up the array properly without creating memory leaks.</td></tr>
 <tr class="even"><td><a href="lockhglobal.html">LockHGlobal</a></td><td>Locks a global memory object and returns a pointer to the first byte of the object's memory block.</td></tr>
 <tr class="uneven"><td><a href="reallochglobal.html">ReAllocHGlobal</a></td><td>Changes the size of a specified global memory object.</td></tr>
 <tr class="even"><td><a href="reallocmem.html">ReAllocMem</a></td><td>Changes the size of a memory block previously allocated by <a href="/pages/allocmem.html">AllocMem</a>.</td></tr>

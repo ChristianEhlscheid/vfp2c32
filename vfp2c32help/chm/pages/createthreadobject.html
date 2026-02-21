@@ -43,7 +43,7 @@ If you pass an object it has to implement at least one of these methods:<br />
 </pre></div>
 <p></p>
 <div class="blockheader"><p class="note">Note</p></div>
-<div class="block"><p>You should implement proper COM error handling by using the <a href="its:dv_foxhelp.chm::/html/92f175d6-95d9-4333-8dd4-4d00969d56a6.htm">COMRETURNERROR</a> function inside your COM classes to<br />
+<div class="block"><p>You should implement proper COM error handling by using the COMRETURNERROR function inside your COM classes to<br />
 make the <em>OnError</em> callback return correct information.
 </p></div>
 </dd></dl>
@@ -100,7 +100,7 @@ to check for method abortion and other information. The property will return an 
 </p>
 <table>
 <tr><th>Type</th><th>Name</th><th>Description</th></tr>
-<tr><td>Property</td><td>AbortEvent</td><td>Returns the winapi event object (<a href="http://msdn.microsoft.com/en-us/library/ms682396(VS.85).aspx">CreateEvent</a>) which is used internally to abort the call.</td><tr>
+<tr><td>Property</td><td>AbortEvent</td><td>Returns the winapi event object (CreateEvent) which is used internally to abort the call.</td><tr>
 <tr><td>Method</td><td>Aborted()</td><td>Returns .T. if the call was aborted, .F. otherwise.</td><tr>
 <tr><td>Property</td><td>CallContext</td><td>Returns the value associated with the method call</td><tr>
 <tr><td>Property</td><td>CallId</td><td>Returns the uniqued id assigned to this call.</td><tr>
@@ -141,7 +141,7 @@ ENDDEFINE
 <div class="codeheader"><a onclick="CopyCode('code_2')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
 <div class="block"><pre id="code_2">&amp;&amp; using the above class
 PUBLIC loObj, loCallback, xj, lnCallId
-m.loCallback = <a href="its:dv_foxhelp.chm::/html/932a73fb-6354-402b-bbb2-08386d41fdae.htm">CREATEOBJECT</a>('ExampleCallback')
+m.loCallback = CREATEOBJECT('ExampleCallback')
 m.loObj = CreateThreadObject('YourProject.ExampleObject', m.loCallback, .T.)
 
 FOR m.xj = 1 to 5
@@ -187,30 +187,6 @@ ENDDEFINE
 <a href="/pages/revokeactiveobject.html">RevokeActiveObject</a><br />
 <a href="/pages/stringfromclsid.html">StringFromCLSID</a><br />
 </p>
-<h4>Used WinApi functions</h4>
-<p><a href="http://msdn.microsoft.com/en-us/library/kdzttdcb(v=vs.80).aspx">_beginthreadex</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms724211(VS.85).aspx">CloseHandle</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms688386(VS.85).aspx">CLSIDFromProgID</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms686615(v=vs.85).aspx">CoCreateInstance</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms691421(v=vs.85).aspx">CoGetInterfaceAndReleaseStream</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms693316(v=vs.85).aspx">CoMarshalInterThreadInterfaceInStream</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms695279(v=vs.85).aspx">CoInitializeEx</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms688715(v=vs.85).aspx">CoUninitialize</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682396(VS.85).aspx">CreateEvent</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms644934(v=vs.85).aspx">DispatchMessage</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms682608(v=vs.85).aspx">EnterCriticalSection</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms679360(v=vs.85).aspx">GetLastError</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms683476(v=vs.85).aspx">InitializeCriticalSectionAndSpinCount</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms684169(v=vs.85).aspx">LeaveCriticalSection</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms684242(v=vs.85).aspx">MsgWaitForMultipleObjects</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms644943(v=vs.85).aspx">PeekMessage</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms685081(v=vs.85).aspx">ResetEvent</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms686211(VS.85).aspx">SetEvent</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms221258.aspx">VariantChangeType</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms221165.aspx">VariantClear</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms221402.aspx">VariantInit</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms221697.aspx">VariantCopy</a><br />
-<a href="http://msdn.microsoft.com/en-us/library/ms687032(v=vs.85).aspx">WaitForSingleObject</a></p>
 
 
 </div>

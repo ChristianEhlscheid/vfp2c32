@@ -93,3 +93,8 @@ read.lock
 /vfp2c32front/vfp2c32front.exe
 /vfpexampleservice/msvcr71.dll
 /vfpexampleservice/vfp2c32t.fll
+/vfp2c32/vfp2c32/Intel*
+/vfp2c32examples/dev
+/vfp2c32examples/msvcr100.dll
+/vfp2c32examples/msvcr100d.dll
+/vfp2c32examples/msvcr71.dll

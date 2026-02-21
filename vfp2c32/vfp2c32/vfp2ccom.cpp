@@ -43,9 +43,9 @@ try
 {
 	FoxString pClsId(parm, 1);
 	FoxWString<128> pWideClsId;
+	LPOLESTR pWideProgId = 0;
 	FoxString pProgId;
 
-	CoTaskPtr pWideProgId;
 	HRESULT hr;
 	LPGUID pGuid;
 	GUID sGuid;
@@ -74,14 +74,14 @@ try
 		throw E_INVALIDPARAMS;
 	}
 
-	hr = ProgIDFromCLSID((REFCLSID)*pGuid,pWideProgId);
+	hr = ProgIDFromCLSID((REFCLSID)*pGuid, &pWideProgId);
 	if (FAILED(hr))
 	{
 		SaveWin32Error("ProgIDFromCLSID", hr);
 		throw E_APIERROR;
 	}
-
 	pProgId = pWideProgId;
+	CoTaskMemFree(pWideProgId);
 	pProgId.Return();
 }
 catch(int nErrorNo)

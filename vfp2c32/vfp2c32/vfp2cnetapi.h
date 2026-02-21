@@ -44,7 +44,6 @@ extern "C" {
 // function forward definitions
 int _stdcall VFP2C_Init_Netapi();
 
-void _fastcall ANetUsers(ParamBlkEx& parm);
 void _fastcall ANetFiles(ParamBlkEx& parm);
 void _fastcall ANetServers(ParamBlkEx& parm);
 void _fastcall GetServerTime(ParamBlkEx& parm);

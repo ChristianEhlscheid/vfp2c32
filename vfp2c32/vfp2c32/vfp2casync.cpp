@@ -845,7 +845,7 @@ bool FindFileChangeExThread::RemoveDirectory(CStringView pDirectory)
 	CStrBuilder<MAX_PATH> path;
 	path = pDirectory;
 	path.LongPathName().AddBs();
-	FindFileChangeExEntry *pFFC;
+	FindFileChangeExEntry *pFFC = 0;
 	bool ret = false;
 	POSITION nPos = m_FileChangeEntries.GetStartPosition();
 	if (nPos)
@@ -1072,8 +1072,6 @@ DWORD FindRegistryChangeThread::Run()
 {
 	bool bLoop = true;
 	DWORD nRetVal, nLastError;
-	int nParm2 = 0;
-
 	HANDLE hEvents[2];
 	hEvents[0] = m_RegistryEvent;
 	hEvents[1] = m_AbortEvent;

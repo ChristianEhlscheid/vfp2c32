@@ -14,6 +14,19 @@
 </div>
 <div id="content">
 
+<h2>Version 2.0.0.42 -- 2026-02-05</h2>	
+<ul>
+<li>CallId property of the CallInfo object used in CreateThreadObject returns the correct ID instead of NULL</li>
+<li>extended ADirEx - see documentation for enhanced functionality</li>
+<li>changed parameter "cKeyName" in ARegistryValues to be optional, as specified in the documentation</li>
+<li>changed time zone conversion to use the enhanced windows api in all functions that deal with time zone conversions from/to UTC</li>
+<li>fixed wrong error reporting in ADependentServices</li>
+<li>fixed marshaling of 64-bit integers in internal callback code</li>
+<li>fixed memory leak in ProgIDFromCLSIDLib</li>
+<li>fixed potential memory leak in FreeRefArray</li>
+<li>general code cleanup, so the code compiles without any warnings despite tightened compiler settings</li>
+</ul>
+
 <h2>Version 2.0.0.42 -- 2024-05-01</h2>	
 <ul>
 <li>new function VFP2C32</li>

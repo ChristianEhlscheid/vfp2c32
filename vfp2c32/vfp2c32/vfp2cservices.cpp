@@ -740,7 +740,7 @@ try
 
 	if (!EnumDependentServices(hService, SERVICE_STATE_ALL, pServiceStatus, pBuffer.Size(), &dwBytesNeeded, &dwServiceCount))
 	{
-		SaveWin32Error("EnumDependentServices", nLastError);
+		SaveWin32Error("EnumDependentServices", GetLastError());
 		throw E_APIERROR;
 	}
     
@@ -811,10 +811,10 @@ try
 	DWORD dwServiceType = parm.PCount() >= 4 && parm(4)->Vartype() == 'N' ? (DWORD)parm(4)->ev_real : SERVICE_WIN32_OWN_PROCESS;
 	DWORD dwStartType = parm.PCount() >= 5 && parm(5)->Vartype() == 'N' ? (DWORD)parm(5)->ev_real : SERVICE_AUTO_START;
 	DWORD dwErrorControl = parm.PCount() >= 6 && parm(6)->Vartype() == 'N' ? (DWORD)parm(6)->ev_real : SERVICE_ERROR_NORMAL;
-	FoxString pLoadOrderGroup(parm, 7);
-	FoxString pDependencies(parm, 8);
-	FoxString pServiceAccount(parm, 9);
-	FoxString pPassword(parm, 10);
+	FoxString pLoadOrderGroup(parm, 7, 2, NullIfEmpty);
+	FoxString pDependencies(parm, 8, 2, NullIfEmpty);
+	FoxString pServiceAccount(parm, 9, 2, NullIfEmpty);
+	FoxString pPassword(parm, 10, NullIfEmpty);
 	FoxString pMachine(parm, 11, NullIfEmpty);
 	FoxString pDatabase(parm, 12, NullIfEmpty);
 	SC_HANDLE hService;

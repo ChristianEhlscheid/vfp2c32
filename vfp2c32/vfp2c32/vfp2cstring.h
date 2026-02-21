@@ -9,6 +9,7 @@ const int VFP2C_MAX_DOUBLE_LITERAL = 66;
 const int VFP2C_MAX_SHORT_LITERAL = 6;
 const int VFP2C_MAX_INT_LITERAL = 11;
 const int VFP2C_MAX_BIGINT_LITERAL = 20;
+const int VFP2C_MAX_HEX_LITERAL = 10;
 
 const char MIN_CHAR = -128;
 const char MAX_CHAR = 127;
