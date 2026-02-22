@@ -472,6 +472,7 @@ private:
 	unsigned short m_PathIndices[512];
 };
 
+template<int nMaxDepth>
 class CWidePathBuilder : public CWideStrBuilder<MAX_WIDE_PATH>
 {
 public:
@@ -483,6 +484,7 @@ public:
 
 	void AddPath(CWideStringView pPath)
 	{
+		assert(m_PathIndex == 0xFFFF || m_PathIndex < (nMaxDepth - 1));
 		unsigned short nCurrentLen = m_PathIndex != 0xFFFF ? m_PathIndices[m_PathIndex] : 0;
 		if (pPath.Len == 0 || pPath.Data == 0)
 		{
@@ -554,7 +556,7 @@ public:
 
 private:
 	unsigned short m_PathIndex;
-	unsigned short m_PathIndices[512];
+	unsigned short m_PathIndices[nMaxDepth];
 };
 
 template<class Derived>
@@ -705,6 +707,9 @@ public:
 
 protected:
 
+	// optimisation to reduce the number of unicode to ansi conversions
+	// the directory enumeration works entirely with unicode strings, and whenever we need to store a result the current path is converted to ansi,
+	// the last converted path id is cached, so we only convert each path once
 	void SyncPath(int nRoot, int nLevel, bool bIncludeBackSlash = false)
 	{
 		if (m_PathId != m_PathId_Filename)
@@ -715,6 +720,7 @@ protected:
 		}
 		else
 		{
+			// path hasn't changed, but reset to last known size (removes the filename part)
 			m_Filename.Len(m_Path_Filename_Len);
 		}
 	}
@@ -728,7 +734,7 @@ protected:
 	FoxString					m_JustFName;
 	FoxString					m_AlternateName;
 	FoxString					m_Filename;
-	CWidePathBuilder			m_Path;
+	CWidePathBuilder<4096>		m_Path;
 };
 
 class Win32FileSearchData : public FileSearchData<Win32FileSearchData>
@@ -851,6 +857,7 @@ public:
 
 protected:
 	FoxString	m_FileName;
+	FoxString	m_AlternateName;
 	FoxDateTime m_FileTime;
 	FoxInt64	m_FileSize;
 	DWORD		m_Flags;

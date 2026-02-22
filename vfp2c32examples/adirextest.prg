@@ -5,7 +5,7 @@ CD (FULLPATH(JUSTPATH(SYS(16))))
 IF TYPE('_WIN64') == 'L' AND _WIN64
 SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32.fll ADDITIVE
+SET LIBRARY TO vfp2c32d.fll ADDITIVE
 ENDIF
 
 _SCREEN.Cls()
@@ -14,11 +14,11 @@ _SCREEN.Cls()
 && ADIREX examples
 && ---------------
 LOCAL lcPath, lnStart, lnEnd, lnFlags, lnAttribs
-*!*	IF !SHBROWSEFOLDER('Select a path to search', BIF_RETURNONLYFSDIRS + BIF_NEWDIALOGSTYLE, @lcPath)
-*!*		RETURN
-*!*	ENDIF
-*!*	m.lcPath = ADDBS(m.lcPath) + '*.php'
-m.lcPath = 'C:\*.bat'
+IF !SHBROWSEFOLDER('Select a path to search', BIF_RETURNONLYFSDIRS + BIF_NEWDIALOGSTYLE, @lcPath)
+	RETURN
+ENDIF
+m.lcPath = ADDBS(m.lcPath) + '*.bat'
+*!*	m.lcPath = 'C:\*.bat'
 ? m.lcPath
 
 USE IN SELECT('cFiles')
@@ -27,7 +27,7 @@ m.lnFlags = ADIREX_DEST_CURSOR + ADIREX_RECURSE + ADIREX_INCLUDE_REPARSE_POINT &
 m.lnAttribs = '-H'
 
 m.lnStart = SECONDS()
-? ADIREX('cFiles', m.lcPath, m.lnAttribs, m.lnFlags, 0, 'fileid,filename,filesize,fileattribs')
+? ADIREX('cFiles', m.lcPath, m.lnAttribs, m.lnFlags, 0, 'fileid,filename,dosfilename,filesize,fileattribs')
 m.lnEnd = SECONDS()
 ? m.lnEnd - m.lnStart
 

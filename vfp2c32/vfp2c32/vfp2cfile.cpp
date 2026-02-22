@@ -492,7 +492,7 @@ bool FileSearchStorageArray<TData>::StorePath(PathSearchEntry* pPath, void* pFil
 	if (m_Index_Filename >= 1)
 	{
 		if (m_Flags & ADIREX_PARENT_JUSTFNAME)
-			m_Array(nRow, m_Index_Filename) = pPath->Filename();
+			m_Array(nRow, m_Index_Filename) = m_FileName = pPath->Filename();
 		else
 			m_Array(nRow, m_Index_Filename) = m_FileName = pData->GetPath((m_Flags & ADIREX_PARENT_FULLPATH) ? 0 : 1, nLevel);
 	}
@@ -997,7 +997,7 @@ bool FileSearchStorageCallback<TData>::StorePath(PathSearchEntry* pPath, void* p
 		nParentId = 0;
 	}
 
-	CStringView pAlternateFileName = pPath->AlternateFilename();
+	CStringView pAlternateFileName = m_AlternateName = pPath->AlternateFilename();
 	m_CreationTime = pPath->CreationTime();
 	m_AccessTime = pPath->LastAccessTime();
 	m_WriteTime = pPath->LastWriteTime();
