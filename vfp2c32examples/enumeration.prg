@@ -50,7 +50,6 @@ ENDFOR
 
 INKEY(3, 'H')
 
-RETURN
 && enumerate all heaps owned by a process
 LOCAL laHeaps[1]
 lnCount = AProcessHeaps("laHeaps",_VFP.ProcessId)

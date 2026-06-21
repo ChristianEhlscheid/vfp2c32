@@ -628,6 +628,38 @@
 			<param name="Local" value="pages\getwindowtextex.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_alloc_scratch">
+			<param name="Local" value="pages\hyperscan_alloc_scratch.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_compile">
+			<param name="Local" value="pages\hyperscan_compile.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_free_database">
+			<param name="Local" value="pages\hyperscan_free_database.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_free_scratch">
+			<param name="Local" value="pages\hyperscan_free_scratch.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_platform">
+			<param name="Local" value="pages\hyperscan_platform.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_scan">
+			<param name="Local" value="pages\hyperscan_scan.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_scan_cursor">
+			<param name="Local" value="pages\hyperscan_scan_cursor.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_scan_files">
+			<param name="Local" value="pages\hyperscan_scan_files.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="IcmpPing">
 			<param name="Local" value="pages\icmpping.html">
 			</OBJECT>
@@ -2024,6 +2056,44 @@
 		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="VFP2CSys">
 			<param name="Local" value="pages\vfp2csys.html">
+			</OBJECT>
+		</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Hyperscan">
+		<param name="Local" value="pages\group_33114hm3f.html">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_alloc_scratch">
+			<param name="Local" value="pages\hyperscan_alloc_scratch.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_compile">
+			<param name="Local" value="pages\hyperscan_compile.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_free_database">
+			<param name="Local" value="pages\hyperscan_free_database.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_free_scratch">
+			<param name="Local" value="pages\hyperscan_free_scratch.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_platform">
+			<param name="Local" value="pages\hyperscan_platform.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_scan">
+			<param name="Local" value="pages\hyperscan_scan.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_scan_cursor">
+			<param name="Local" value="pages\hyperscan_scan_cursor.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hyperscan_scan_files">
+			<param name="Local" value="pages\hyperscan_scan_files.html">
 			</OBJECT>
 		</UL>
 	<LI> <OBJECT type="text/sitemap">

@@ -1,4 +1,5 @@
 #include "vfp2c32.h"
+
 #include "vfp2carray.h"
 
 void _fastcall ASplitStr(ParamBlkEx& parm)
@@ -6,12 +7,13 @@ void _fastcall ASplitStr(ParamBlkEx& parm)
 try
 {
 	unsigned char *pSubString;
-	int nRows, nRemain, xj, nSubStrLen = parm(3)->ev_long;
+	unsigned int nRows, nRemain, xj;
+	int nSubStrLen = parm(3)->ev_long;
 
 	if (nSubStrLen <= 0)
 	{
-		SaveCustomError("ASplitStr", "Parameter nLen <= 0");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("ASplitStr", "Parameter nLen <= 0", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	FoxArray pArray(parm(1));
@@ -31,7 +33,7 @@ try
 	FoxString pBuffer(nSubStrLen);
 	pArray.Dimension(nRows + (nRemain ? 1 : 0));
 
-	pSubString = pString;
+	pSubString = pString.Ptr<unsigned char*>();
 	for (xj = 1; xj <= nRows; xj++)
 	{
 		pArray(xj) = pBuffer.CopyBytes(pSubString, nSubStrLen);
@@ -67,8 +69,8 @@ try
         TargetDim = 1;
 	else if (parm(2)->ev_long < 0)
 	{
-		SaveCustomError("ASum", "Parameter 2 < 0, no valid dimension");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("ASum", "Parameter 2 < 0, no valid dimension", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	else
 		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
@@ -164,8 +166,8 @@ try
         TargetDim = 1;
 	else if (parm(2)->ev_long < 0)
 	{
-		SaveCustomError("AAverage", "Parameter 2 < 0, no valid dimension");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("AAverage", "Parameter 2 < 0, no valid dimension", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	else
 		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
@@ -185,7 +187,9 @@ try
 	}
 
 	MaxElements = (StopDim - StartDim + 1) * Rows;
-	pValues = new union __AAverageValues[MaxElements];
+	pValues = new(std::nothrow) union __AAverageValues[MaxElements];
+	if (!pValues)
+		throw E_INSUFMEMORY;
 
 	unsigned int CurrentRow, CurrentDim;
 	for (CurrentDim = StartDim; CurrentDim <= StopDim; CurrentDim++)
@@ -276,8 +280,8 @@ try
         TargetDim = 1;
 	else if (parm(2)->ev_long < 0)
 	{
-		SaveCustomError("AMax", "Parameter 2 < 0, no valid dimension");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("AMax", "Parameter 2 < 0, no valid dimension", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	else
 		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);
@@ -375,8 +379,8 @@ try
         TargetDim = 1;
 	else if (parm(2)->ev_long < 0)
 	{
-		SaveCustomError("AMin", "Parameter 2 < 0, no valid dimension");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("AMin", "Parameter 2 < 0, no valid dimension", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	else
 		TargetDim = static_cast<unsigned int>(parm(2)->ev_long);

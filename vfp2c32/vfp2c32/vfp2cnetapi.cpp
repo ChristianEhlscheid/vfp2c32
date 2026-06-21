@@ -7,7 +7,6 @@
 #endif
 #include "vfp2c32.h"
 #include "vfp2cnetapi.h"
-#include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
 #include "vfp2ctime.h"
 
@@ -94,8 +93,8 @@ try
 
 			while (dwEntries--)
 			{
-				pArray(nRow,1) = pNetInfo = pFileInfo3->fi3_pathname;
-				pArray(nRow,2) = pNetInfo = pFileInfo3->fi3_username;
+				pArray(nRow,1) = pNetInfo = CWideStringView(pFileInfo3->fi3_pathname);
+				pArray(nRow,2) = pNetInfo = CWideStringView(pFileInfo3->fi3_username);
 				pArray(nRow,3) = (int)pFileInfo3->fi3_id;		
 				pArray(nRow,4) = (int)pFileInfo3->fi3_permissions;
 				pArray(nRow,5) = (int)pFileInfo3->fi3_num_locks;
@@ -164,11 +163,11 @@ try
 				while(dwEntries--)
 				{
 					pArray(nRow,1) = pInfo101->sv101_platform_id;
-					pArray(nRow,2) = pData = pInfo101->sv101_name;
+					pArray(nRow,2) = pData = CWideStringView(pInfo101->sv101_name);
 					pArray(nRow,3) = pInfo101->sv101_version_major;
 					pArray(nRow,4) = pInfo101->sv101_version_minor;
 					pArray(nRow,5) = pInfo101->sv101_type;
-					pArray(nRow,6) = pData = pInfo101->sv101_comment;
+					pArray(nRow,6) = pData = CWideStringView(pInfo101->sv101_comment);
 					nRow++;
 				}
 			}
@@ -179,7 +178,7 @@ try
 				while(dwEntries--)
 				{
 					pArray(nRow,1) = pInfo100->sv100_platform_id;
-					pArray(nRow,2) = pData = pInfo100->sv100_name;
+					pArray(nRow,2) = pData = CWideStringView(pInfo100->sv100_name);
 					nRow++;
 				}
 			}
@@ -232,7 +231,7 @@ try
 	{
 		pServTime = pBuffer;
 		pTime = TimeOfDayInfoToDateTime(pServTime, eTimeZone);
-		pTime.Return();
+		Return(pTime);
 	}
 	else
 	{
@@ -250,11 +249,11 @@ double _stdcall TimeOfDayInfoToDateTime(LPTIME_OF_DAY_INFO pTimeOfDay, TimeZone 
 {
 	double dDateTime;
 	int lnA, lnY, lnM, lnJDay, lnSeconds;
-	lnA = (14 - pTimeOfDay->tod_month) / 12;
-	lnY = pTimeOfDay->tod_year + 4800 - lnA;
-	lnM = pTimeOfDay->tod_month + 12 * lnA - 3;
-	lnJDay = pTimeOfDay->tod_day + (153 * lnM + 2) / 5 + lnY * 365 + lnY / 4 - lnY / 100 + lnY / 400 - 32045;
-	lnSeconds = pTimeOfDay->tod_hours * 3600 + pTimeOfDay->tod_mins * 60 + pTimeOfDay->tod_secs;
+	lnA = (int)(14 - pTimeOfDay->tod_month) / 12;
+	lnY = (int)(pTimeOfDay->tod_year + 4800 - lnA);
+	lnM = (int)(pTimeOfDay->tod_month + 12 * lnA - 3);
+	lnJDay = (int)((pTimeOfDay->tod_day + (153 * lnM + 2) / 5 + lnY * 365 + lnY / 4 - lnY / 100 + lnY / 400 - 32045));
+	lnSeconds = (int)(pTimeOfDay->tod_hours * 3600 + pTimeOfDay->tod_mins * 60 + pTimeOfDay->tod_secs);
 	dDateTime = ((double)lnJDay) + ((double)lnSeconds / SECONDSPERDAY);
 
 	if (eTargetTimeZone == UTC)

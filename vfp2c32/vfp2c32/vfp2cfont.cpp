@@ -7,7 +7,6 @@
 #endif
 #include "vfp2c32.h"
 #include "vfp2cfont.h"
-#include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
 
@@ -27,6 +26,7 @@ try
 	else
 		dwLanguage = parm(2)->NumericCast<LANGID>();
 
+	// TODO - use dwPlatform
 	if (parm.PCount() < 3 || parm(3)->Vartype() == '0')
 		dwPlatform = PLATFORMID_WINDOWS; // default to Windows platform
 
@@ -34,7 +34,7 @@ try
 	DWORD dwRetVal, dwRead;
 	ApiHandle hFile;
 
-	hFile = CreateFile(pFileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+	hFile = CreateFile(pFileName.Ptr<LPCSTR>(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
 	if (!hFile)
 	{
 		SaveWin32Error("CreateFile", GetLastError());
@@ -55,37 +55,36 @@ try
 	//check if this is a TrueType font and the version is 1.0
 	if( ttOffsetTable.uMajorVersion != 1 || ttOffsetTable.uMinorVersion != 0)
 	{
-		FoxValue vNull;
-		Return(vNull);
+		ReturnNull();
 		return;
 	}
 
 	TT_TABLE_DIRECTORY *tblDir;
 	CBuffer pTableBuffer(sizeof(TT_TABLE_DIRECTORY) * ttOffsetTable.uNumOfTables);
 	FoxString pNameBuffer(5);
-	ULONG OffsetOS2 = 0, OffsetName = 0, OffsetHead = 0, OffsetPost = 0;
+	LONG OffsetOS2 = 0, OffsetName = 0, OffsetHead = 0, OffsetPost = 0;
 
-	bApiRet = ReadFile(hFile, pTableBuffer, pTableBuffer.Size(), &dwRead, 0);
+	bApiRet = ReadFile(hFile, pTableBuffer.Ptr<void*>(), pTableBuffer.Size(), &dwRead, 0);
 	if (!bApiRet)
 	{
 		SaveWin32Error("ReadFile", GetLastError());
 		throw E_APIERROR;
 	}
 
-	tblDir = (TT_TABLE_DIRECTORY*)pTableBuffer.Address();
+	tblDir = pTableBuffer.Ptr<TT_TABLE_DIRECTORY*>();
 
 	for(int i=0; i< ttOffsetTable.uNumOfTables; i++)
 	{
 		//the table's tag cannot exceed 4 characters
 		pNameBuffer.StrnCpy(tblDir->szTag, 4);
 
-		if (pNameBuffer.ICompare("OS/2"))
+		if (pNameBuffer.ICompare(__sv("OS/2")))
 			OffsetOS2 = SWAPLONG(tblDir->uOffset);
-		else if (pNameBuffer.ICompare("name"))
+		else if (pNameBuffer.ICompare(__sv("name")))
 			OffsetName = SWAPLONG(tblDir->uOffset);
-		else if (pNameBuffer.ICompare("head"))
+		else if (pNameBuffer.ICompare(__sv("head")))
 			OffsetHead = SWAPLONG(tblDir->uOffset);
-		else if (pNameBuffer.ICompare("post"))
+		else if (pNameBuffer.ICompare(__sv("post")))
 			OffsetPost = SWAPLONG(tblDir->uOffset);
 
 		tblDir++;
@@ -155,9 +154,9 @@ try
 		ttNTHeader.uStorageOffset = SWAPWORD(ttNTHeader.uStorageOffset);
 
 		CBuffer pRecordBuffer(sizeof(TT_NAME_RECORD) * ttNTHeader.uNRCount);
-		TT_NAME_RECORD *pRecord = (TT_NAME_RECORD*)pRecordBuffer.Address();
+		TT_NAME_RECORD* pRecord = pRecordBuffer.Ptr<TT_NAME_RECORD*>();
 
-		bApiRet = ReadFile(hFile, pRecordBuffer, pRecordBuffer.Size(), &dwRead, 0);
+		bApiRet = ReadFile(hFile, pRecordBuffer.Ptr<TT_NAME_RECORD*>(), pRecordBuffer.Size(), &dwRead, 0);
 		if (!bApiRet)
 		{
 			SaveWin32Error("ReadFile", GetLastError());
@@ -182,11 +181,17 @@ try
 		USHORT nameIDs[6] = {0, 1, 2, 3, 4, 6};
 		char nameProps[6][20] = {"copyright", "fontfamily", "fontsubfamily", "uniqueidentifier", "fullname", "postscriptname"};
 
-		for (USHORT xj = 0; xj < sizeof(nameIDs) / sizeof(USHORT); xj++)
+		for (unsigned int xj = 0; xj < countof(nameIDs); xj++)
 		{
-			if((pName = GetFontNameRecord(pRecord, ttNTHeader.uNRCount, nameIDs[xj], PLATFORMID_WINDOWS, dwLanguage)) ||
-				(pName = GetFontNameRecord(pRecord, ttNTHeader.uNRCount, nameIDs[xj], PLATFORMID_WINDOWS, LANGID_ENGLISH_US)) ||
-				(pName = GetFontNameRecord(pRecord, ttNTHeader.uNRCount, nameIDs[xj], PLATFORMID_WINDOWS, 0)))
+			pName = GetFontNameRecord(pRecord, ttNTHeader.uNRCount, nameIDs[xj], PLATFORMID_WINDOWS, dwLanguage);
+			if (!pName)
+			{
+				pName = GetFontNameRecord(pRecord, ttNTHeader.uNRCount, nameIDs[xj], PLATFORMID_WINDOWS, LANGID_ENGLISH_US);
+				if (!pName)
+					pName = GetFontNameRecord(pRecord, ttNTHeader.uNRCount, nameIDs[xj], PLATFORMID_WINDOWS, 0);
+			}
+				
+			if(pName)
 			{
 				
 				pNameRecordBuffer.Size(pName->uStringLength);
@@ -208,7 +213,7 @@ try
 				pNameRecordBufferAnsi.Size(pName->uStringLength / 2);
 				pNameRecordBufferAnsi.Len(pName->uStringLength / 2);
 
-				BigEndianWideCharToMultiByte(pNameRecordBuffer.Ptr<wchar_t*>(), pNameRecordBuffer.Size() / 2, pNameRecordBufferAnsi, pNameRecordBufferAnsi.Size());
+				BigEndianWideCharToMultiByte(pNameRecordBuffer.Ptr<wchar_t*>(), pNameRecordBuffer.Size() / 2, pNameRecordBufferAnsi.Ptr<char*>(), pNameRecordBufferAnsi.Size());
 
 				pFontInfo(nameProps[xj]) << pNameRecordBufferAnsi;
 			}
@@ -303,5 +308,5 @@ void __stdcall BigEndianWideCharToMultiByte(wchar_t *pWString, unsigned int nWid
 		*pTmp = SWAPWORD(*pTmp);
 		pTmp++;
 	}
-	WideCharToMultiByte(CP_ACP, 0, pWString, nWideChars, pBuffer, nBytes, 0, 0);
+	WideCharToMultiByte(CP_ACP, 0, pWString, (int)nWideChars, pBuffer, (int)nBytes, 0, 0);
 }

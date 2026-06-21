@@ -3,7 +3,6 @@
 #ifndef _VFP2CASYNC_H__
 #define _VFP2CASYNC_H__
 
-#include <malloc.h>
 #include "vfp2chelpers.h"
 #include "vfp2clockfree.h"
 
@@ -15,7 +14,7 @@ class FindFileChangeThread : public CThread
 {
 public:
 	FindFileChangeThread(CThreadManager &pManager);
-	~FindFileChangeThread();
+	virtual ~FindFileChangeThread();
 
 	virtual void SignalThreadAbort();
 	virtual DWORD Run();
@@ -45,10 +44,10 @@ public:
 	bool OnFileChangeEvent(DWORD dwBytes, FindFileChangeExThread *pThread);
 	void Cancel(bool bAbort);
 	bool IsValid();
-	bool IsAborted();
+	bool IsAborted() const;
 	bool CompareDirectory(CStrBuilder<MAX_PATH> &pDirectory);
-	bool CheckIdentity(DWORD nIdentity);
-	USHORT GetIdentity();
+	bool CheckIdentity(DWORD nIdentity) const;
+	USHORT GetIdentity() const;
 
 	void* operator new(size_t sz)
 	{

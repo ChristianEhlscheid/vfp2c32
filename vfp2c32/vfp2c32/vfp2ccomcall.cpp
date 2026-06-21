@@ -73,7 +73,7 @@ void ComCall::SetParameterCount(unsigned int nParmCount)
 	m_Parameters.cArgs = nParmCount;
 	if (nParmCount > 0)
 	{
-		m_Parameters.rgvarg = new VARIANTARG[nParmCount];
+		m_Parameters.rgvarg = new(std::nothrow) VARIANTARG[nParmCount];
 		if (!m_Parameters.rgvarg)
 			throw E_INSUFMEMORY;
 
@@ -651,7 +651,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -723,7 +723,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -792,7 +792,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -863,7 +863,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -934,7 +934,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -1005,7 +1005,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -1075,7 +1075,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)
@@ -1197,7 +1197,7 @@ try
 	unsigned int nRows, nDims;
 	nRows = pArray.ALen(nDims);
 
-	pArrayBounds = new SAFEARRAYBOUND[nDims];
+	pArrayBounds = new(std::nothrow) SAFEARRAYBOUND[nDims];
 	if (!pArrayBounds)
 		throw E_INSUFMEMORY;
 	for (unsigned int xj = 0; xj < nDims; xj++)

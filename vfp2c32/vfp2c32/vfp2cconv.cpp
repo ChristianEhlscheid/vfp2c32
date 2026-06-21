@@ -5,18 +5,44 @@
 #endif
 #include "vfp2c32.h"
 #include "vfp2cconv.h"
-#include "vfp2cutil.h"
 #include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
 #include "vfp2casmfuncs.h"
+
+unsigned char* _fastcall PG_ByteA2Str(unsigned char* pInput, unsigned char* pInputEnd, unsigned char* pOutput)
+{
+	while (pInput < pInputEnd)
+	{
+		if (*pInput == '\\')
+		{
+			if (pInput[1] >= '0' && pInput[1] <= '7' &&
+				pInput[2] >= '0' && pInput[2] <= '7' &&
+				pInput[3] >= '0' && pInput[3] <= '7')
+			{
+				*pOutput++ = (pInput[1] - '0') * 64 + (pInput[2] - '0') * 8 + (pInput[3] - '0');
+				pInput += 4;
+				continue;
+			}
+			else if (pInput[1] == '\\')
+			{
+				*pOutput++ = '\\';
+				pInput += 2;
+			}
+			else // unrecognized sequence after '\', just output as is ..
+				*pOutput++ = *pInput++;
+		}
+		else
+			*pOutput++ = *pInput++;
+	}
+	return pOutput;
+}
 
 void _fastcall PG_ByteA2Str(ParamBlkEx& parm)
 {
 try
 {
 	FoxString vRetVal;
-	unsigned char *pInput, *pInputEnd, *pRetVal, *pRetValStart;
-	unsigned int nMemoLen = 0;
+	unsigned char *pInput, *pRetVal, *pRetValEnd;
 
 	if (parm(1)->Vartype() == 'C')
 	{
@@ -28,55 +54,32 @@ try
 		}
 
 		vRetVal.Size(vInput.Len());
-		pRetValStart = pRetVal = vRetVal;
-		pInput = vInput;
-		pInputEnd = pInput + vInput.Len();
+		pRetVal = vRetVal.Ptr<unsigned char*>();
+		pInput = vInput.Ptr<unsigned char*>();
+		pRetValEnd = PG_ByteA2Str(pInput, pInput + vInput.Len(), pRetVal);
 	}
 	else if (parm(1).IsMemoRef())
 	{
 		FoxMemo vMemo(parm(1));
-		pInput = reinterpret_cast<unsigned char*>(vMemo.Read(nMemoLen));
+		unsigned int nMemoLen = 0;
+		unique_ptr<char*> pInputMemo = vMemo.Read(nMemoLen);
 		if (nMemoLen == 0)
 		{
 			vRetVal.Return();
 			return;
 		}
-
-		pInputEnd = pInput + nMemoLen;
+		pInput = pInputMemo.Ptr<unsigned char*>();
 		vRetVal.Size(nMemoLen);
-		pRetValStart = pRetVal = vRetVal;
+		pRetVal = vRetVal.Ptr<unsigned char*>();
+		pRetValEnd = PG_ByteA2Str(pInput, pInput + nMemoLen, pRetVal);
 	}
 	else
 	{
-		SaveCustomError("PG_ByteA2Str", "Invalid type '%s' for parameter 1", parm(1)->Vartype());	
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("PG_ByteA2Str", "Invalid type '%s' for parameter 1", E_VFP_INVALIDPARAMS, parm(1)->Vartype());
+		throw E_APIERROR;
 	}
 
-	while (pInput < pInputEnd)
-	{
-		if (*pInput == '\\')
-		{
-			if	(pInput[1] >= '0' && pInput[1] <= '7' && 
-				pInput[2] >= '0' && pInput[2] <= '7' &&
-				pInput[3] >= '0' && pInput[3] <= '7')
-			{
-				*pRetVal++ = (pInput[1] - '0') * 64	+ (pInput[2] - '0') * 8 + (pInput[3] - '0');
-				pInput += 4;
-				continue;
-			}
-			else if (pInput[1] == '\\')
-			{
-				*pRetVal++ = '\\';
-				pInput += 2;
-			}
-			else // unrecognized sequence after '\', just output as is ..
-				*pRetVal++ = *pInput++;
-		}
-		else
-			*pRetVal++ = *pInput++;
-	}
-
-	vRetVal.Len(pRetVal - pRetValStart);
+	vRetVal.Len(pRetValEnd - pRetVal);
 	vRetVal.Return();
 }
 catch(int nErrorNo)
@@ -85,16 +88,36 @@ catch(int nErrorNo)
 }
 }
 
+unsigned char* PG_Str2ByteA(unsigned char* pInput, unsigned char* pInputEnd, unsigned char* pOutput, bool bDouble)
+{
+	while (pInput < pInputEnd)
+	{
+		if (*pInput < 32 || *pInput > 126 || *pInput == '\\' || *pInput == '\'')
+		{
+			if (bDouble)
+				*pOutput++ = '\\';
+
+			*pOutput++ = '\\';
+			*pOutput++ = '0' + (*pInput / 64) % 8;
+			*pOutput++ = '0' + (*pInput / 8) % 8;
+			*pOutput++ = '0' + *pInput % 8;
+			pInput++;
+		}
+		else
+			*pOutput++ = *pInput++;
+	}
+	return pOutput;
+}
+
 void _fastcall PG_Str2ByteA(ParamBlkEx& parm)
 {
 try
 {
 	FoxString vRetVal;
-	unsigned char *pInput, *pInputEnd, *pRetVal, *pRetValStart;
-	unsigned int nMemoLen = 0;
+	unsigned char *pInput, *pRetVal, *pRetValEnd;
 	bool bDouble = parm.PCount() == 2 ? parm(2)->ev_length > 0 : false;
 	int nMemMulti = bDouble == false ? 4 : 5;
-
+	
 	if (parm(1)->Vartype() == 'C')
 	{
 		FoxString vInput(parm(1), 0);
@@ -103,53 +126,37 @@ try
 			vRetVal.Return();
 			return;
 		}
-		// allocate 4/5 times the space of the original which is the maximum size
+
+		// allocate 4 or 5 times the space of the original which is the maximum size
 		// the data can grow if all characters have to be translated to octal reprensentation
 		vRetVal.Size(vInput.Len() * nMemMulti);
-
-		pRetValStart = pRetVal = vRetVal;
-		pInput = vInput;
-		pInputEnd = pInput + vInput.Len();
+		pRetVal = vRetVal.Ptr<unsigned char*>();
+		pInput = vInput.Ptr<unsigned char*>();
+		pRetValEnd = PG_Str2ByteA(pInput, pInput + vInput.Len(), pRetVal, bDouble);
 	}
 	else if (parm(1).IsMemoRef())
 	{
 		FoxMemo vMemo(parm(1));
-		pInput = reinterpret_cast<unsigned char*>(vMemo.Read(nMemoLen));
+		unsigned int nMemoLen = 0;
+		unique_ptr<char*> pMemoInput = vMemo.Read(nMemoLen);
 		if (nMemoLen == 0)
 		{
 			vRetVal.Return();
 			return;
 		}
-		pInputEnd = pInput + nMemoLen;
-
+		pInput = pMemoInput.Ptr<unsigned char*>();
 		// 4/5 times .. see comment above ..
 		vRetVal.Size(nMemoLen * nMemMulti);
-		pRetValStart = pRetVal = vRetVal;
+		pRetVal = vRetVal.Ptr<unsigned char*>();
+		pRetValEnd = PG_Str2ByteA(pInput, pInput + nMemoLen, pRetVal, bDouble);
 	}
 	else
 	{
-		SaveCustomError("PG_Str2ByteA", "Invalid type '%s' for parameter 1", parm(1)->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("PG_Str2ByteA", "Invalid type '%s' for parameter 1", E_VFP_INVALIDPARAMS, parm(1)->Vartype());
+		throw E_APIERROR;
 	}
 
-	while (pInput < pInputEnd)
-	{
-		if (*pInput < 32 || *pInput > 126 || *pInput == '\\' || *pInput == '\'')
-		{
-			if (bDouble)
-				*pRetVal++ = '\\';
-
-			*pRetVal++ = '\\';
-			*pRetVal++ = '0' + (*pInput / 64) % 8;
-			*pRetVal++ = '0' + (*pInput / 8) % 8;
-			*pRetVal++ = '0' + *pInput % 8;
-			pInput++;
-		}
-		else
-			*pRetVal++ = *pInput++;
-	}
-
-	vRetVal.Len(pRetVal - pRetValStart);
+	vRetVal.Len(pRetValEnd - pRetVal);
 	vRetVal.Return();
 }
 catch(int nErrorNo)
@@ -213,12 +220,12 @@ try
 			else if (parm(4)->Vartype() == 'C')
 			{
 				FoxString pWindow(parm(4));
-				hHwnd = WHwndByTitle(pWindow);
+				hHwnd = WHwndByTitle(pWindow.Ptr<LPSTR>());
 			}
 			else
 			{
-				SaveCustomError("GetCursorPosEx", "Invalid type '%s' for parameter 4", parm(4)->Vartype());
-				throw E_INVALIDPARAMS;
+				SaveCustomErrorEx("GetCursorPosEx", "Invalid type '%s' for parameter 4", E_VFP_INVALIDPARAMS, parm(4)->Vartype());
+				throw E_APIERROR;
 			}
 
 			if (!ScreenToClient(hHwnd,&sPoint))
@@ -400,9 +407,9 @@ void _fastcall Value2Variant(ParamBlkEx& parm)
 {
 	ValueEx vVariant;
 	vVariant.SetString(sizeof(PackedValue));
-	PackedValue vData = {0};
+	PackedValue vData = { {0}, 0 };
 	char *pVariant;
-	int nSize = 0;
+	unsigned int nSize = 0;
 
 	vData.ev_type = parm(1)->Vartype();
 	switch(parm(1)->Vartype())
@@ -462,24 +469,26 @@ void _fastcall Variant2Value(ParamBlkEx& parm)
 try
 {
 	FoxValue vVariant;
-	FoxMemo vMemo(parm, 1);
 	FoxString vString(parm, 1);
 	LPPackedValue pData;
 	LPPackedValue pDataTmp;
+	unique_ptr<char*> pMemoContent;
 
 	if (parm(1).IsMemoRef())
 	{
+		FoxMemo vMemo(parm(1));
 		unsigned int nLen = 0;
-		pData = reinterpret_cast<LPPackedValue>(vMemo.Read(nLen));
+		pMemoContent = vMemo.Read(nLen);
+		pData = pMemoContent.Ptr<LPPackedValue>();
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		pData = (LPPackedValue)(char*)vString;
+		pData = vString.Ptr<LPPackedValue>();
 	}
 	else
 	{
-		SaveCustomError("Variant2Value", "Invalid type '%s' for parameter 1.", parm(1)->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("Variant2Value", "Invalid type '%s' for parameter 1.", E_VFP_INVALIDPARAMS, parm(1)->Vartype());
+		throw E_APIERROR;
 	}
 
 	vVariant->ev_type = pData->ev_type;
@@ -545,8 +554,8 @@ try
 {
 	if (parm(1)->ev_real < MIN_INT || parm(1)->ev_real > MAX_UINT)
 	{
-		SaveCustomError("Num2Binary", "Parameter out of range, < MIN_INT or > MAX_UINT");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("Num2Binary", "Parameter out of range, < MIN_INT or > MAX_UINT", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 		
 	int nNum = parm(1)->ev_long;
@@ -554,7 +563,7 @@ try
 	char *pBin;
 
 	vBin.Len(32);
-	pBin = vBin;
+	pBin = vBin.Ptr<LPSTR>();
 	pBin += 31;
 
 	for (int xj = 0; xj <= 31; xj++)
@@ -580,7 +589,7 @@ try
 	LocatorEx sVar;
 	// create the public variable and store the object reference into it
 	// this will increase the reference count by one
-	sVar.NewVar(pVarname, true);
+	sVar.NewVar(pVarname.Ptr<LPSTR>(), true);
 	sVar.Store(parm(2));
 	// release the parameter object, this will decrease the reference count again to the previous value
 	parm(2)->ObjectRelease();
@@ -596,12 +605,12 @@ void _fastcall ReleasePublicShadowObjReference(ParamBlkEx& parm)
 try
 {
 	ValueEx vObject;
-	vObject = 0;
+	vObject.SetNull();
     FoxString pVarname(parm(1));
 	// increase the reference count by evaluating the variable into a temporary
 	vObject.Evaluate(pVarname.Ptr<char*>());
 	// release the variable, this will decrease the reference count again
-	LocatorEx::ReleaseVarStatic(pVarname);
+	LocatorEx::ReleaseVarStatic(pVarname.Ptr<LPSTR>());
 	// don't release the temporary - this is on purpose!
 }
 catch(int nErrorNo)
@@ -632,7 +641,7 @@ try
 	else
 	{
 		FoxString pLocaleInfo(256);
-		nApiRet = GetLocaleInfo(nLocale, nType, pLocaleInfo, pLocaleInfo.Size());
+		nApiRet = GetLocaleInfo(nLocale, nType, pLocaleInfo.Ptr<LPSTR>(), (int)pLocaleInfo.Size());
 		if (nApiRet == 0)
 		{
 			SaveWin32Error("GetLocaleInfo", GetLastError());

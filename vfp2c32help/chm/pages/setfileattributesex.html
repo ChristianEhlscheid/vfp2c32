@@ -20,11 +20,14 @@
 <dd><p>The name of the file or a wildcard for which to set the attributes.<br />
 </p>
 <div class="blockheader"><p class="note">Note</p></div>
-<div class="block"><p>This can be a relative path or only a filename, the VFP function FULLPATH is used to retrieve the fully qualified filename. <br />
-The usual VFP search path (SET PATH) is used.
+<div class="block"><p>If the <em>nMaxRecursion</em> parameter is ommitted or -2<br />
+this can be a relative path or only a filename, the VFP function FULLPATH is used to retrieve the fully qualified filename. <br />
+The usual VFP search path (SET PATH) is used.<br />
+<br />
+If the <em>nMaxRecursion</em> parameter is greater or equal to -1 the parameter is interpreted as a wildcard search and must be a fully qualified path.<br />
+<br />
+Multiple wildcard patterns can be passed by seperating them with the '|' character, e.g. "C:\images\*.jpg|*.bmp|*.gif|*.png"
 </p></div>
-<p><br />
-Fully qualified (drive:\path\wildcard) search string e.g. "C:\Winnt\*.dll"</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p2">ncAttributes (additional)</a></dt>
 <dd><table>
@@ -43,16 +46,23 @@ When passing a numeric value, the file attributes are overwritten with the new v
 <tr><td>FILE_ATTRIBUTE_TEMPORARY</td><td>T</td><td>A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.</td></tr>
 </table></dd></dl>
 <dl class="parm"><dt><a id="p3">nAttributesRemove (optional)</a></dt>
-<dd><p>When passed the parameter "ncAttributes" has to be a numeric value and these attributes are<br />
-added to the current file attributes.<br />
-The attributes supplied in this parameter are removed from the file attributes.</p>
+<dd><p>default = 0<br />
+<br />
+When this parameter is passed and not 0 the parameter <em>ncAttributes</em> has to be a numeric value specifying the attributes to <br />
+add to the current file attributes.<br />
+The attributes supplied in this parameter are removed from the file attributes.<br />
+<br />
+If the <em>ncAttributes</em> parameter is a string this parameter is ignored.</p>
 </dd></dl>
 <dl class="parm"><dt><a id="p4">nMaxRecursion (optional)</a></dt>
-<dd><p>default = -1<br />
+<dd><p>default = -2<br />
 <br />
--1 = no recursion<br />
+-2 = the <em>cFileName</em> parameter is treated as a single filename <br />
+otherwise the <em>cFileName</em> parameter is interpreted as a wildcard and the <em>nMaxRecursion</em> parameter controls the directory depth<br />
+of the operation<br />
+-1 = no recursion into subdirectories<br />
 0 = recurse into all subdirectories<br />
-&gt;0 = recurse into x subdirectories</p>
+&gt;0 = recurse into a maximum of the passed in number of subdirectories</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>The number of files that were changed.</p>

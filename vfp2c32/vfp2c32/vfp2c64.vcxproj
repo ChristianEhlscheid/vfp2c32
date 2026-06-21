@@ -125,6 +125,13 @@
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <IncludePath>C:\Program Files (x86)\Visual Leak Detector\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;$(LibraryPath)</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+    <ClangTidyToolPath>
+    </ClangTidyToolPath>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <MaxNumberOfProcesses>
+    </MaxNumberOfProcesses>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -134,6 +141,9 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IncludePath>C:\Program Files (x86)\Visual Leak Detector\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;$(LibraryPath)</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -142,6 +152,11 @@
     <TargetExt>.fll</TargetExt>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <ClangTidyToolPath>C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\bin\</ClangTidyToolPath>
+    <MaxNumberOfProcesses>0</MaxNumberOfProcesses>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>vfp2c64</TargetName>
@@ -150,6 +165,15 @@
     <TargetExt>.fll</TargetExt>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
+    <ClangTidyToolPath>C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin\</ClangTidyToolPath>
+    <MaxNumberOfProcesses>0</MaxNumberOfProcesses>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+    <ClangTidyPrependExtraArgs>
+    </ClangTidyPrependExtraArgs>
+    <ClangTidyExtraArgs>
+    </ClangTidyExtraArgs>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>vfp2c64d</TargetName>
@@ -163,11 +187,21 @@
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <IncludePath>C:\Program Files (x86)\Visual Leak Detector\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Visual Leak Detector\lib\Win64;$(LibraryPath)</LibraryPath>
+    <ClangTidyToolPath>
+    </ClangTidyToolPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <MaxNumberOfProcesses>
+    </MaxNumberOfProcesses>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugTS|x64'">
     <TargetExt>.fll</TargetExt>
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|Win32'">
     <TargetExt>.fll</TargetExt>
@@ -175,12 +209,22 @@
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <ClangTidyToolPath>C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\bin\</ClangTidyToolPath>
+    <MaxNumberOfProcesses>0</MaxNumberOfProcesses>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseTS|x64'">
     <TargetExt>.fll</TargetExt>
     <TargetName>vfp2c64t</TargetName>
     <IntDir>$(SolutionDir)tmp\$(Platform)$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
+    <ClangTidyToolPath>C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin\</ClangTidyToolPath>
+    <MaxNumberOfProcesses>0</MaxNumberOfProcesses>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -198,11 +242,12 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
-      <CreateHotpatchableImage>true</CreateHotpatchableImage>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -212,6 +257,7 @@
       <AdditionalDependencies>winapims.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <IgnoreSpecificDefaultLibraries>msvcrt; msvcprtd</IgnoreSpecificDefaultLibraries>
+      <ShowProgress>NotSet</ShowProgress>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
@@ -278,6 +324,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <MinimalRebuild>true</MinimalRebuild>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -290,6 +337,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <TargetMachine>MachineX86</TargetMachine>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <SetChecksum>false</SetChecksum>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
@@ -318,6 +366,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <DisableSpecificWarnings>4100;4121;4201;4324;4706</DisableSpecificWarnings>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <MinimalRebuild>true</MinimalRebuild>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -325,6 +374,10 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <Profile>false</Profile>
+      <ShowProgress>NotSet</ShowProgress>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapFileName>$(TargetDir)$(TargetName).map</MapFileName>
+      <OptimizeReferences>false</OptimizeReferences>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
@@ -370,7 +423,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <PreprocessorDefinitions>_WIN64;NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;VFP2C64_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -385,6 +438,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <MinimalRebuild>true</MinimalRebuild>
       <OpenMPSupport>false</OpenMPSupport>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -392,6 +446,9 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SetChecksum>false</SetChecksum>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
@@ -416,14 +473,18 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <MinimalRebuild>true</MinimalRebuild>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>msvcprtd</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>vfp2c32.def</ModuleDefinitionFile>
       <AdditionalDependencies>winapims64.lib;shlwapi.lib;urlmon.lib;wininet.lib;ws2_32.lib;propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"</Command>
@@ -435,6 +496,9 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <ModuleDefinitionFile>vfp2c32t.def</ModuleDefinitionFile>
       <TargetMachine>MachineX86</TargetMachine>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ClCompile>
       <CallingConvention>FastCall</CallingConvention>
@@ -456,6 +520,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(SolutionDir)..\vfp2c32examples\$(TargetFileName)"
@@ -463,6 +528,10 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="hs.h" />
+    <ClInclude Include="hs_common.h" />
+    <ClInclude Include="hs_compile.h" />
+    <ClInclude Include="hs_runtime.h" />
     <ClInclude Include="pro_ext64.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="vfp2c32.h" />
@@ -479,6 +548,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     <ClInclude Include="vfp2cfile.h" />
     <ClInclude Include="vfp2cfont.h" />
     <ClInclude Include="vfp2chelpers.h" />
+    <ClInclude Include="vfp2chyperscan.h" />
     <ClInclude Include="vfp2ciphelper.h" />
     <ClInclude Include="vfp2clockfree.h" />
     <ClInclude Include="vfp2cmarshal.h" />
@@ -516,6 +586,7 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     <ClCompile Include="vfp2cfile.cpp" />
     <ClCompile Include="vfp2cfont.cpp" />
     <ClCompile Include="vfp2chelpers.cpp" />
+    <ClCompile Include="vfp2chyperscan.cpp" />
     <ClCompile Include="vfp2ciphelper.cpp" />
     <ClCompile Include="vfp2cmarshal.cpp" />
     <ClCompile Include="vfp2cnetapi.cpp" />
@@ -537,6 +608,8 @@ copy "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).pdb" "$(SolutionD
     <ClCompile Include="vfp2cwinsock.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\.clang-tidy" />
+    <None Include="..\vfp2c64.natstepfilter" />
     <None Include="vfp2c32.def" />
     <CustomBuild Include="vfp2casmtest.asm">
       <FileType>Document</FileType>

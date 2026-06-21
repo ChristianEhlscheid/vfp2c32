@@ -30,7 +30,6 @@ private:
 	static LRESULT _stdcall TimeChangeWindowProc(HWND nHwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	void Refresh();
 
-	double m_ZoneBias;
 	DWORD m_CurrentZone;
 	TIME_ZONE_INFORMATION m_ZoneInfo;
 	DYNAMIC_TIME_ZONE_INFORMATION m_DynamicZoneInfo;

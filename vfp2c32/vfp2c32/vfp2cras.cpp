@@ -6,7 +6,6 @@
 #include "pro_ext64.h"
 #endif
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
 #include "vfp2cras.h"
 #include "vfp2ccppapi.h"
 
@@ -31,7 +30,7 @@ static PRASDIALDLG fpRasDialDlg = 0;
 static PRASCLEARCONNECTIONSTATISTICS fpRasClearConnectionStatistics = 0;
 
 // RAS error handler
-void _stdcall SaveRas32Error(char *pFunction, DWORD nErrorNo)
+void _stdcall SaveRas32Error(const char *pFunction, DWORD nErrorNo)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (tls.ErrorCount == VFP2C_MAX_ERRORS)
@@ -116,14 +115,14 @@ try
 	DWORD dwConns, nApiRet;
 
 	CBuffer pBuffer(dwBytes);
-	lpRas = reinterpret_cast<LPRASCONN>(pBuffer.Address());
+	lpRas = pBuffer.Ptr<LPRASCONN>();
 	lpRas->dwSize = sizeof(RASCONN);
 
 	nApiRet = fpRasEnumConnections(lpRas, &dwBytes, &dwConns);
 	if (nApiRet == ERROR_BUFFER_TOO_SMALL)
 	{
 		pBuffer.Size(dwBytes);
-		lpRas = reinterpret_cast<LPRASCONN>(pBuffer.Address());
+		lpRas = pBuffer.Ptr<LPRASCONN>();
 		lpRas->dwSize = sizeof(RASCONN);
 		nApiRet = fpRasEnumConnections(lpRas, &dwBytes, &dwConns);
 	}
@@ -191,14 +190,14 @@ try
 
 	DWORD dwSize = 1024, dwEntries, nApiRet;
 	CBuffer pBuffer(dwSize);
-	LPRASDEVINFO lpRasDev = reinterpret_cast<LPRASDEVINFO>(pBuffer.Address());
+	LPRASDEVINFO lpRasDev = pBuffer.Ptr<LPRASDEVINFO>();
 	lpRasDev->dwSize = sizeof(RASDEVINFO);
 
 	nApiRet = fpRasEnumDevices(lpRasDev,&dwSize,&dwEntries);
 	if (nApiRet == ERROR_BUFFER_TOO_SMALL)
 	{
 		pBuffer.Size(dwSize);
-		lpRasDev = reinterpret_cast<LPRASDEVINFO>(pBuffer.Address());
+		lpRasDev = pBuffer.Ptr<LPRASDEVINFO>();
 		lpRasDev->dwSize = sizeof(RASDEVINFO);
 		nApiRet = fpRasEnumDevices(lpRasDev,&dwSize,&dwEntries);
 	}
@@ -253,16 +252,16 @@ try
 
 	DWORD dwSize = 2048, dwEntries, nApiRet;
 	CBuffer pBuffer(dwSize);
-	LPRASENTRYNAME lpRasEntry = reinterpret_cast<LPRASENTRYNAME>(pBuffer.Address());
+	LPRASENTRYNAME lpRasEntry = pBuffer.Ptr<LPRASENTRYNAME>();
 	lpRasEntry->dwSize = sizeof(RASENTRYNAME);
 
-	nApiRet = fpRasEnumEntries(0,pPhonebookFile,lpRasEntry,&dwSize,&dwEntries);
+	nApiRet = fpRasEnumEntries(0,pPhonebookFile.Ptr<LPCSTR>(),lpRasEntry,&dwSize,&dwEntries);
 	if (nApiRet == ERROR_BUFFER_TOO_SMALL)
 	{
 		pBuffer.Size(dwSize);
-		lpRasEntry = reinterpret_cast<LPRASENTRYNAME>(pBuffer.Address());
+		lpRasEntry = pBuffer.Ptr<LPRASENTRYNAME>();
 		lpRasEntry->dwSize = sizeof(RASENTRYNAME);
-		nApiRet = fpRasEnumEntries(0,pPhonebookFile,lpRasEntry,&dwSize,&dwEntries);
+		nApiRet = fpRasEnumEntries(0,pPhonebookFile.Ptr<LPCSTR>(),lpRasEntry,&dwSize,&dwEntries);
 	}
 
 	if (nApiRet != ERROR_SUCCESS)
@@ -321,6 +320,9 @@ void _stdcall RasPhonebookDlgCallback::RasPhonebookDlgCallbackFunc(ULONG_PTR dwC
 		case RASPBDEVENT_NoUser:
 		case RASPBDEVENT_NoUserEdit:
 			pCallback->Callback(dwEvent,pData);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -331,7 +333,7 @@ void RasPhonebookDlgCallback::CallbackTxt(DWORD dwEvent, LPTSTR pszText)
 
 void RasPhonebookDlgCallback::Callback(DWORD dwEvent, LPVOID pData)
 {
-	CStringView pParm2 = "";
+	CStringView pParm2 = __sv("");
 	m_Callback.Execute(dwEvent, pParm2, pData);
 }
 
@@ -346,17 +348,18 @@ try
 	if (!fpRasPhonebookDlg)
 		throw E_NOENTRYPOINT;
 
-	FoxString pEntry(parm,1);
-	FoxString pPhonebookFile(parm,2);
-	FoxString pCallback(parm,3);
+	FoxString pEntry(parm, 1);
+	FoxString pPhonebookFile(parm, 2);
+	FoxString pCallback(parm, 3);
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 	{
-		SaveCustomError("RasPhonebookDlgEx", "Callback function length is greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("RasPhonebookDlgEx", "Callback function length is greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
-	RASPBDLG sDialog = {0};
+	RASPBDLG sDialog;
+	RtlZeroMemory(&sDialog, sizeof(RASPBDLG));
 	sDialog.dwSize = sizeof(RASPBDLG);
 	sDialog.hwndOwner = WTopHwnd();
 	sDialog.dwFlags = parm.PCount() >= 4 ? parm(4)->ev_long : 0;
@@ -371,7 +374,7 @@ try
 		sDialog.dwCallbackId = reinterpret_cast<ULONG_PTR>(&sCallback);
 	}
 
-	BOOL bRetVal = fpRasPhonebookDlg(pPhonebookFile,pEntry,&sDialog);
+	BOOL bRetVal = fpRasPhonebookDlg(pPhonebookFile.Ptr<LPSTR>(),pEntry.Ptr<LPSTR>(),&sDialog);
 	if (!bRetVal)
 	{
 		// an error occured?
@@ -401,7 +404,7 @@ DWORD RasDialCallback::Callback(DWORD dwSubEntry, HRASCONN hrasconn,
 								UINT unMsg,	RASCONNSTATE rascs, DWORD dwError, DWORD dwExtendedError)
 {
 	ValueEx vRetVal;
-	vRetVal = 0;
+	vRetVal.SetNull();
 	if (m_Callback.Evaluate(vRetVal, dwSubEntry, hrasconn, unMsg, rascs, dwError, dwExtendedError) == 0)
 	{
 		if (vRetVal.Numeric())
@@ -433,6 +436,7 @@ DWORD _stdcall RasDialCallback::RasDialCallbackFunc(ULONG_PTR dwCallbackId, DWOR
 void _fastcall RasDialEx(ParamBlkEx& parm)
 {
 	RASEAPUSERIDENTITY *pUserIdentity = 0;
+	RasDialCallback* pRasCallback = 0;
 try
 {
 	int nErrorNo = VFP2C_Init_Ras();
@@ -457,21 +461,23 @@ try
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 	{
-		SaveCustomError("RasPhonebookDlgEx", "Callback function length is greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("RasPhonebookDlgEx", "Callback function length is greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	// local variables
 	DWORD nApiRet;
 
 	char *pPhonebook = 0;
-	pPhonebook = pPhonebookFile;
+	pPhonebook = pPhonebookFile.Ptr<char*>();
 
-	RASDIALPARAMS sDialParams = {0};
-	sDialParams.dwSize = sizeof(RASDIALPARAMS);
+	RASDIALPARAMS sDialParams;
+	RtlZeroMemory(&sDialParams, sizeof(RASDIALPARAMS));
+	sDialParams.dwSize = sizeof(sDialParams);
 	LPRASDIALPARAMS pDialParamsPtr = &sDialParams;
 
-	RASDIALEXTENSIONS sDialExtensions = {0};
+	RASDIALEXTENSIONS sDialExtensions;
+	RtlZeroMemory(&sDialExtensions, sizeof(RASDIALEXTENSIONS));
 	sDialExtensions.dwSize = sizeof(RASDIALEXTENSIONS);
 	sDialExtensions.dwfOptions = parm.PCount() >= 4 ? parm(4)->ev_long : 0;
 
@@ -479,7 +485,7 @@ try
 	{
 		// get RASDIAL parameters
 		BOOL bPassword;
-		nApiRet = fpRasGetEntryDialParams(pEntry,&sDialParams,&bPassword);
+		nApiRet = fpRasGetEntryDialParams(pEntry.Ptr<LPCSTR>(),&sDialParams,&bPassword);
 		if (nApiRet != ERROR_SUCCESS)
 		{
 			SaveRas32Error("RasGetEntryDialParams", nApiRet);
@@ -488,7 +494,7 @@ try
 
 		if (fpRasGetEapUserIdentity && fpRasFreeEapUserIdentity)
 		{
-			nApiRet = fpRasGetEapUserIdentity(pPhonebook,pEntry,0,0,&pUserIdentity);
+			nApiRet = fpRasGetEapUserIdentity(pPhonebook,pEntry.Ptr<LPCSTR>(),0,0,&pUserIdentity);
 			if (nApiRet == ERROR_SUCCESS)
 			{
 				strcpy(sDialParams.szUserName,pUserIdentity->szUserName);
@@ -514,20 +520,12 @@ try
 		dwNotifier = 2;
 		lpNotifier = reinterpret_cast<LPVOID>(RasDialCallback::RasDialCallbackFunc);
 
-		RasDialCallback *pRasCallback = new RasDialCallback;
+		pRasCallback = new(std::nothrow) RasDialCallback;
 		if (!pRasCallback)
 			throw E_INSUFMEMORY;
 			
-		try
-		{
-			pRasCallback->SetCallback(pCallback);
-			pDialParamsPtr->dwCallbackId = reinterpret_cast<ULONG_PTR>(pRasCallback);
-		}
-		catch(int nErrorNo)
-		{
-			delete pRasCallback;
-			throw nErrorNo;
-		}
+		pRasCallback->SetCallback(pCallback);
+		pDialParamsPtr->dwCallbackId = reinterpret_cast<ULONG_PTR>(pRasCallback);
 	}
 
 	nApiRet = fpRasDial(&sDialExtensions,pPhonebook,&sDialParams,dwNotifier,lpNotifier,&hConn);
@@ -535,7 +533,6 @@ try
 	{
 		SaveRas32Error("RasDial", nApiRet);
 		
-		// call RasHangUp to cleanup the RAS handle
 		if (hConn && !pCallback.Len())
 		{
 			RASCONNSTATUS sStatus;
@@ -544,15 +541,11 @@ try
 			if (nApiRet != ERROR_INVALID_HANDLE)
 			{
 				fpRasHangUp(hConn);
-			
 				while(true)
 				{
 					Sleep(50);
-					nApiRet = fpRasGetConnectStatus(hConn,&sStatus);
-					if (nApiRet == ERROR_INVALID_HANDLE)
-						break;
-					else if (nApiRet == ERROR_SUCCESS);
-					else
+					nApiRet = fpRasGetConnectStatus(hConn, &sStatus);
+					if (nApiRet == ERROR_INVALID_HANDLE || nApiRet != ERROR_SUCCESS)
 						break;
 				}
 			}
@@ -569,6 +562,9 @@ catch(int nErrorNo)
 {
 	if (pUserIdentity)
 		fpRasFreeEapUserIdentity(pUserIdentity);
+
+	if (pRasCallback)
+		delete pRasCallback;
 
 	RaiseError(nErrorNo);
 }
@@ -589,14 +585,15 @@ try
 	FoxString pEntry(parm,2);
 	FoxString pPhonenumber(parm,3);
 
-	RASDIALDLG sDialog = {0};
+	RASDIALDLG sDialog;
+	RtlZeroMemory(&sDialog, sizeof(RASDIALDLG));
 	sDialog.dwSize = sizeof(RASDIALDLG);
 	if (parm.PCount() >= 4)
 		sDialog.dwSubEntry = parm(4)->ev_long;
 	if (parm.PCount() >= 5)
 		sDialog.hwndOwner = parm(5)->Ptr<HWND>();
 
-	BOOL bRetVal = fpRasDialDlg(pPhonebook,pEntry,pPhonenumber,&sDialog);
+	BOOL bRetVal = fpRasDialDlg(pPhonebook.Ptr<LPSTR>(),pEntry.Ptr<LPSTR>(),pPhonenumber.Ptr<LPSTR>(),&sDialog);
 	if (!bRetVal)
 	{
 		if (sDialog.dwError)
@@ -675,7 +672,8 @@ try
 	FoxArray pArray(parm(2),5,1);
 
 	FoxString pValue(RAS_MaxPhoneNumber+1);
-	RASCONNSTATUS sStatus = {0};
+	RASCONNSTATUS sStatus;
+	RtlZeroMemory(&sStatus, sizeof(RASCONNSTATUS));
 	sStatus.dwSize = sizeof(RASCONNSTATUS);
 
 	DWORD nApiRet = fpRasGetConnectStatus(hConn,&sStatus);
@@ -787,11 +785,11 @@ try
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION || pCallback.Len() == 0)
 	{
-		SaveCustomError("RasConnectionNotificationEx", "Callback function length is zero or greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("RasConnectionNotificationEx", "Callback function length is zero or greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
-	RasNotifyThread *pNotifyThread = new RasNotifyThread(goThreadManager);
+	RasNotifyThread *pNotifyThread = new(std::nothrow) RasNotifyThread(goThreadManager);
 	if (!pNotifyThread)
 		throw E_INSUFMEMORY;
 

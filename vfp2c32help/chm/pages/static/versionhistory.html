@@ -14,6 +14,27 @@
 </div>
 <div id="content">
 
+<h2>Version 2.0.0.44 -- 2026-06-21</h2>	
+<ul>
+<li>added Intel Hyperscan regular expression functions</li>
+<li>ADirEx - added file name/extension filtering with multiple wildcard expressions</li>
+<li>UnbindEventsEx - fixed wrong calling convention on internal callback function</li>
+<li>SqlExecEx - fixed incorrect parsing of parameter schema cursor and fieldnames if they were longer than 29 characters</li>
+<li>SqlExecEx - fixed batch parameter binding of currency columns for MySQL/MariaDB</li>
+<li>SqlExecEx - fixed retrieval of currency columns with SQLGetData</li>
+<li>SqlExecEx - fixed retrieval of varchar(max) columns under various conditions</li>
+<li>SQLVariantToValue - fixed conversion of datatype SQL_C_DOUBLE and a memory leak</li>
+<li>AIpAddresses - takes an additional parameter to specify the type of IP's (IPv4, IPv6) to return</li>
+<li>ResolveHostToIp - takes an additional parameter to specify type of IP's (IPv4, IPv6) to return</li>
+<li>IcmpPing - can handle IPv6 now - and takes two additional parameters, the type of IP's (IPv4, IPv6) to resolve during name resolution and a source IP to force a local network interface</li>
+<li>Breaking change: all functions that take an arrayname as a string parameter to return results in the passed array only create the array if the count is greater than 0.</li>
+<li>Breaking change: all function parameter validation that goes beyond the basic checks of the number and type of parameters will raise the VFP error no. 1098 with a meaningful error description,
+if the number or type of the parameters is wrong the usual VFP error no. 11 is raised.</li>
+<li>Breaking change: SetFileAttributesEx - the 4th parameter was changed from type L to I as documented in the help file, this changes the behaviour slightly - recheck your sources if you use this function!</li>
+<li>fixed FOR EACH LOOP over SHGetShellItem -> GetPropertyDescriptionList()</li>
+<li>general code cleanup and fixed some hidden issues by using Clang's static analysis on the C++ sourcecode</li>
+</ul>
+
 <h2>Version 2.0.0.43 -- 2026-02-21</h2>	
 <ul>
 <li>CallId property of the CallInfo object used in CreateThreadObject returns the correct ID instead of NULL</li>

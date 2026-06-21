@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <stdio.h> // sprintf, memcpy and other common C library routines
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -7,7 +6,6 @@
 #include "pro_ext64.h"
 #endif
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
 #include "vfp2cstring.h"
 #include "vfp2cmarshal.h"
 #include "vfp2ccppapi.h"
@@ -18,7 +16,8 @@ int _stdcall VFP2C_Init_Marshal()
 	// create default Heap
 	if (VFP2CTls::Heap == 0)
 	{
-		if (!(VFP2CTls::Heap = HeapCreate(0, HEAP_INITIAL_SIZE, 0)))
+		VFP2CTls::Heap = HeapCreate(0, HEAP_INITIAL_SIZE, 0);
+		if (!VFP2CTls::Heap)
 		{
 			AddWin32Error("HeapCreate", GetLastError());
 			return E_APIERROR;
@@ -82,7 +81,7 @@ void _stdcall AddDebugAlloc(void* pPointer, int nSize)
 		if (!pDbg)
 			return;
 
-		_Evaluate(vProgInfo, "ALLTRIM(STR(LINENO())) + ':' + PROGRAM() + CHR(0)");
+		__Evaluate(vProgInfo, "ALLTRIM(STR(LINENO())) + ':' + PROGRAM() + CHR(0)");
 		if (vProgInfo.Vartype() == 'C')
 		{
 			pProgInfo = _strdup(vProgInfo.HandleToPtr());
@@ -142,7 +141,7 @@ void _stdcall ReplaceDebugAlloc(void* pOrig, void* pNew, int nSize)
 
     if (pDbg)
 	{
-		_Evaluate(vProgInfo, "ALLTRIM(STR(LINENO())) + ':' + PROGRAM() + CHR(0)");
+		__Evaluate(vProgInfo, "ALLTRIM(STR(LINENO())) + ':' + PROGRAM() + CHR(0)");
 		if (vProgInfo.Vartype() == 'C')
 		{
 			pProgInfo = _strdup(vProgInfo.HandleToPtr());
@@ -335,7 +334,8 @@ void _fastcall FreePMem(ParamBlkEx& parm)
 	void* pAlloc;
 	if (parm(1)->ev_long)
 	{
-		if ((pAlloc = *parm(1)->Ptr<void**>()))
+		pAlloc = *parm(1)->Ptr<void**>();
+		if (pAlloc)
 		{
 			if (HeapFree(VFP2CTls::Heap, 0, pAlloc))
 			{
@@ -385,7 +385,7 @@ void _fastcall FreeRefArray(ParamBlkEx& parm)
 void _fastcall SizeOfMem(ParamBlkEx& parm)
 {
 	if (parm(1)->ev_long)
-		Return((int)HeapSize(VFP2CTls::Heap, 0, parm(1)->Ptr<void**>()));
+		Return((int)HeapSize(VFP2CTls::Heap, 0, parm(1)->Ptr<void*>()));
 	else
 		Return(0);
 }
@@ -396,7 +396,7 @@ void _fastcall ValidateMem(ParamBlkEx& parm)
 	if (nErrorNo)
 		RaiseError(nErrorNo);
 
-	Return(HeapValidate(VFP2CTls::Heap, 0, parm(1)->Ptr<void**>()) > 0);
+	Return(HeapValidate(VFP2CTls::Heap, 0, parm(1)->Ptr<void*>()) > 0);
 }
 
 void _fastcall CompactMem(ParamBlkEx& parm)
@@ -930,6 +930,7 @@ void _fastcall WriteGPCString(ParamBlkEx& parm)
 			{
 				SaveWin32Error("GlobalReAlloc", GetLastError());
 				RaiseError(E_APIERROR);
+				return;
 			}
 			REPLACEDEBUGALLOC(pOldAddress, pNewAddress, dwLen);
 		}
@@ -940,6 +941,7 @@ void _fastcall WriteGPCString(ParamBlkEx& parm)
 			{
 				SaveWin32Error("GlobalAlloc", GetLastError());
 				RaiseError(E_APIERROR);
+				return;
 			}
 			ADDDEBUGALLOC(pNewAddress, dwLen);
 		}
@@ -1061,8 +1063,8 @@ void _fastcall WriteWString(ParamBlkEx& parm)
 	unsigned int nCodePage = parm.PCount() == 2 ? VFP2CTls::Tls().ConvCP : parm(3)->ev_long;
 	wchar_t *pDest = 0;
 	int nStringLen, nBytesNeeded, nBytesWritten;	
-	nStringLen = parm(2)->ev_length;
-	nBytesNeeded = nStringLen * sizeof(wchar_t) + sizeof(wchar_t);
+	nStringLen = (int)parm(2)->ev_length;
+	nBytesNeeded = nStringLen * 2 + 2; // * sizeof(wchar_t) + sizeof(wchar_t)
 
 	__try
 	{
@@ -1111,8 +1113,8 @@ void _fastcall WritePWString(ParamBlkEx& parm)
 
 	if (parm(2)->Vartype() == 'C' && pOld)
 	{
-		nStringLen = parm(2)->ev_length;
-		nBytesNeeded = nStringLen * sizeof(wchar_t) + sizeof(wchar_t);
+		nStringLen = (int)parm(2)->ev_length;
+		nBytesNeeded = nStringLen * 2 + 2; // * sizeof(wchar_t) + sizeof(wchar_t)
 
 		__try
 		{
@@ -1172,7 +1174,7 @@ void _fastcall WriteWCharArray(ParamBlkEx& parm)
 	unsigned int nCodePage = parm.PCount() == 3 ? VFP2CTls::Tls().ConvCP : parm(4)->ev_long;
 	int nBytesWritten, nArrayWidth, nStringLen;
 	nArrayWidth = parm(3)->ev_long - 1; // -1 for null terminator
-	nStringLen = parm(2)->ev_length;
+	nStringLen = (int)parm(2)->ev_length;
 
 	if (pString)
 	{
@@ -1615,7 +1617,7 @@ void _fastcall ReadWString(ParamBlkEx& parm)
 		nStringLen = lstrlenW(pString);
 		if (nStringLen)
 		{
-			nBufferLen = nStringLen * sizeof(wchar_t) + sizeof(wchar_t);
+			nBufferLen = nStringLen * 2 + 2; // * sizeof(wchar_t) + sizeof(wchar_t)
 			if (vBuffer.AllocHandle(nBufferLen))
 			{
 				nBufferLen = WideCharToMultiByte(nCodePage, 0, pString, nStringLen, vBuffer.HandleToPtr(), nBufferLen, 0, 0);
@@ -1653,7 +1655,7 @@ void _fastcall ReadPWString(ParamBlkEx& parm)
 			nStringLen = lstrlenW(*pString);
 			if (nStringLen)
 			{
-				nBufferLen = nStringLen * sizeof(wchar_t);
+				nBufferLen = nStringLen * 2; // * sizeof(wchar_t)
 				if (vBuffer.AllocHandle(nBufferLen))
 				{
 					nBufferLen = WideCharToMultiByte(nCodePage, 0, *pString, nStringLen, vBuffer.HandleToPtr(), nBufferLen, 0, 0);
@@ -1686,10 +1688,10 @@ void _fastcall ReadWCharArray(ParamBlkEx& parm)
 
 	if (pString)
 	{
-		nStringLen = wstrnlen(pString, parm(2)->ev_long);
+		nStringLen = (int)wstrnlen(pString, parm(2)->ev_long);
 		if (nStringLen)
 		{
-			nBufferLen = nStringLen * sizeof(wchar_t);
+			nBufferLen = nStringLen * 2; // * sizeof(wchar_t)
 			if (vBuffer.AllocHandle(nBufferLen))
 			{
 				nBufferLen = WideCharToMultiByte(nCodePage, 0, pString, nStringLen, vBuffer.HandleToPtr(), nBufferLen, 0, 0);
@@ -1856,7 +1858,7 @@ try
 				BEGIN_ARRAYLOOP()
 					pValue = vfpArray();
 					if (pValue.Vartype() == 'L')
-						*CArray = pValue->ev_length;
+						*CArray = (BOOL)pValue->ev_length;
 					else if (pValue.Vartype() != '0')
 						throw E_INVALIDPARAMS;
 					CArray++;
@@ -1916,7 +1918,7 @@ try
 
 						if (*CArray)
 						{
-							nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), pValue->ev_length, *CArray, pValue->ev_length);
+							nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), (int)pValue->ev_length, *CArray, (int)pValue->ev_length);
 							if (nCharsWritten)
 							{
 								(*CArray)[nCharsWritten] = L'\0';
@@ -1985,7 +1987,7 @@ try
 					pValue = vfpArray();
 					if (pValue.Vartype() == 'C')
 					{
-						nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), min(pValue->ev_length, nLength), CArray, nLength);
+						nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), (int)min(pValue->ev_length, nLength), CArray, (int)nLength);
 						if (nCharsWritten)
 						{
 							if (nCharsWritten < nLength)
@@ -1998,7 +2000,10 @@ try
 						}
 					}
 					else if (pValue.Vartype() == '0')
+					{
+						// NOLINTNEXTLINE(bugprone-implicit-widening-of-multiplication-result)
 						memset(CArray, 0, nLength * 2);
+					}
 					else
 						throw E_INVALIDPARAMS;
 
@@ -2181,7 +2186,7 @@ try
 							pValue.Size(nByteCount);
 						if (nByteCount)
 						{
-							nCharsWritten = WideCharToMultiByte(nCodePage, 0, *CArray, nWCharCount, pValue, pValue.Size(), 0, 0);
+							nCharsWritten = WideCharToMultiByte(nCodePage, 0, *CArray, (int)nWCharCount, pValue.Ptr<LPSTR>(), (int)pValue.Size(), 0, 0);
 							if (nCharsWritten)
 								pValue.Len(nCharsWritten);
 							else
@@ -2229,7 +2234,7 @@ try
 				FoxString pValue(nLen);
 				
 				BEGIN_ARRAYLOOP()
-					nCharCount = WideCharToMultiByte(nCodePage, 0, CArray, nLen, pValue, pValue.Size(), 0, 0);
+					nCharCount = WideCharToMultiByte(nCodePage, 0, CArray, (int)nLen, pValue.Ptr<LPSTR>(), (int)pValue.Size(), 0, 0);
 					if (nCharCount)
 						pValue.Len(nCharCount);
 					else
@@ -2412,7 +2417,7 @@ try
 					BEGIN_FIELDLOOP()										
 						pValue = pCursor(nFieldNo);
 						if (pValue.Vartype() == 'L')
-							CArray[nRecNo + (nRecCount * nFieldNo)] = pValue->ev_length;
+							CArray[nRecNo + (nRecCount * nFieldNo)] = (BOOL)pValue->ev_length;
 						else if (pValue.Vartype() != '0')
 							throw E_INVALIDPARAMS;
 					END_FIELDLOOP()
@@ -2477,7 +2482,7 @@ try
 
 							if (*pString)
 							{
-								nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), pValue->ev_length, *pString, pValue->ev_length);
+								nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), (int)pValue->ev_length, *pString, (int)pValue->ev_length);
 								if (nCharsWritten)
 								{
 									(*pString)[nCharsWritten] = L'\0';
@@ -2515,7 +2520,7 @@ try
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
-						pString = CArray + (nFieldNo * nDimensionSize);
+						pString = CArray + (size_t)(nFieldNo * nDimensionSize);
                 		if (pValue.Vartype() == 'C')
 						{
 							nCharCount = min(pValue->ev_length, nLength);
@@ -2549,10 +2554,10 @@ try
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
 						pValue = pCursor(nFieldNo);
-						pString = CArray + (nFieldNo * nDimensionSize);
+						pString = CArray + (size_t)(nFieldNo * nDimensionSize);
 						if (pValue.Vartype() == 'C')
 						{
-							nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), min(pValue->ev_length, nLen), pString, nLen);
+							nCharsWritten = MultiByteToWideChar(nCodePage, 0, pValue.HandleToPtr(), (int)min(pValue->ev_length, nLen), pString, (int)nLen);
 							if (nCharsWritten)
 							{
 								if (nCharsWritten < nLen)
@@ -2661,9 +2666,9 @@ try
 	unsigned int nFieldCount;
 	unsigned int nRowCount = parm(4)->ev_long;
 	char CursorName[VFP_MAX_CURSOR_NAME];
-	char *pFieldNames = pCursorAndFields;
-	pFieldNames += GetWordNumN(CursorName, pCursorAndFields, '.', 1, VFP_MAX_CURSOR_NAME) + 1;
-	pCursor.Attach(CursorName, pFieldNames);
+	char *pFieldNames = pCursorAndFields.Ptr<char*>();
+	pFieldNames += GetWordNumN(CursorName, pCursorAndFields.Ptr<LPCSTR>(), '.', 1, VFP_MAX_CURSOR_NAME) + 1;
+	pCursor.Attach(CStringView(CursorName), CStringView(pFieldNames));
 	pCursor.GoTop();
 	nFieldCount = pCursor.FCount();
 
@@ -2800,7 +2805,7 @@ try
 								pValue.Size(nByteCount);
 							if (nByteCount)
 							{
-								nCharsWritten = WideCharToMultiByte(nCodePage, 0, pString, nWCharCount, pValue, pValue.Size(), 0, 0);
+								nCharsWritten = WideCharToMultiByte(nCodePage, 0, pString, (int)nWCharCount, pValue.Ptr<LPSTR>(), (int)pValue.Size(), 0, 0);
 								if (nCharsWritten)
 									pValue.Len(nCharsWritten);
 								else
@@ -2832,7 +2837,7 @@ try
 				FoxString pValue(nLen);
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
-						pString = CArray + (nFieldNo * nDimensionSize);
+						pString = CArray + (size_t)(nFieldNo * nDimensionSize);
 						pCursor(nFieldNo) = pValue.StrnCpy(pString, nLen);
 						CArray += nLen;
 					END_FIELDLOOP()
@@ -2849,15 +2854,15 @@ try
 				wchar_t *pString;
 				int nCharCount, nByteLen;
 				unsigned int nLen = parm(5)->ev_long;
-				nByteLen = nLen * sizeof(wchar_t);
+				nByteLen = (int)(nLen * sizeof(wchar_t));
 				unsigned int nDimensionSize = nByteLen * nRowCount;
 				UINT nCodePage = parm.PCount() == 5 ? tls.ConvCP : parm(6)->ev_long;
 				FoxString pValue(nByteLen);
 				
 				BEGIN_CURSORLOOP()
 					BEGIN_FIELDLOOP()
-						pString = CArray + (nFieldNo * nDimensionSize);
-						nCharCount = WideCharToMultiByte(nCodePage,0, pString, -1, pValue, pValue.Size(), 0, 0);
+						pString = CArray + (size_t)(nFieldNo * nDimensionSize);
+						nCharCount = WideCharToMultiByte(nCodePage, 0, pString, -1, pValue.Ptr<LPSTR>(), (int)pValue.Size(), 0, 0);
 						if (nCharCount)
 							pValue.Len(nCharCount);
 						else

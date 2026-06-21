@@ -1,6 +1,4 @@
 #include <windows.h>
-#include <math.h>
-#include <stdio.h>
 #include <sql.h>
 
 #if !defined(_WIN64)
@@ -304,7 +302,7 @@ void SqlStatement::SaveRowCount()
 	SQLRETURN nApiRet;
 	SQLLEN nCount;
 	SQLLEN nNCStatus;
-	int nIndex;
+	unsigned int nIndex;
 	ValueEx vRowCount;
 	ValueEx vNoCountStatus;
 	vRowCount.SetDouble();
@@ -349,7 +347,7 @@ SQLSMALLINT SqlStatement::GetDefaultDecimals()
 	if (nDefaultDecimals == -1)
 	{
 		ValueEx vDecimals;
-		vDecimals = 0;
+		vDecimals.SetNull();
 		Evaluate(vDecimals, "SET('Decimals')");
 		nDefaultDecimals = (SQLSMALLINT)vDecimals.ev_long;
 	}
@@ -358,16 +356,18 @@ SQLSMALLINT SqlStatement::GetDefaultDecimals()
 
 bool SqlStatement::ParseParameters()
 {
-	char* pSQL = pSQLInput;
+	char* pSQL = pSQLInput.Ptr<char*>();
 	nParameterCount = 0;
 	while (*pSQL)
 	{
 		if (*pSQL == '"') // skip over strings
 		{
+			// NOLINTNEXTLINE(bugprone-inc-dec-in-conditions)
 			while (*pSQL && *pSQL++ != '"');
 		}
 		else if (*pSQL == '\'') // skip over strings
 		{
+			// NOLINTNEXTLINE(bugprone-inc-dec-in-conditions)
 			while (*pSQL && *pSQL++ != '\'');
 		}
 		else if (*pSQL == '?' &&
@@ -398,8 +398,8 @@ void SqlStatement::ExtractParametersAndRewriteStatement()
 	int nParamNo = 0, nLen;
 
 	pSQLSend.Size(pSQLInput.Size());
-	pSQLIn = pSQLInput;
-	pSQLOut = pSqlOutStart = pSQLSend;
+	pSQLIn = pSQLInput.Ptr<char*>();
+	pSQLOut = pSqlOutStart = pSQLSend.Ptr<char*>();
 
 	while (*pSQLIn)
 	{
@@ -569,7 +569,7 @@ void SqlStatement::ParseParameterSchema()
 
 	if (nFlags & SQLEXECEX_PARAMETER_ARRAY)
 	{
-		if (!pMatcher.MatchIdentifier(pParameterArray.pCursor))
+		if (!pMatcher.MatchIdentifier(pParameterArray.pCursor, VFP_MAX_CURSOR_NAME))
 		{
 			SaveCustomError("SQLExecEx", "Parameter schema contained invalid data near '%20V', expected cursor name for parameter array.", pMatcher.CurrentView());
 			throw E_APIERROR;
@@ -617,6 +617,8 @@ void SqlStatement::ParseParameterSchema()
 				case 'F':
 					MatchLengthAndPrecision(pMatcher, lpSP);
 					break;
+				default:
+					break;
 			}
 		} while (pMatcher.MatchChar(','));
 
@@ -647,7 +649,7 @@ void SqlStatement::ParseParameterSchema()
 
 		if (pMatcher.MatchIdentifier(pSqlType))
 		{
-			if (pSqlType == "SQL_SS_TABLE")
+			if (pSqlType == __sv("SQL_SS_TABLE"))
 			{
 				lpSP->nSQLType = SQL_SS_TABLE;
 				lpSP->nCType = SQL_C_DEFAULT;
@@ -695,141 +697,141 @@ void SqlStatement::ParseParameterSchema()
 					lpSP->pTableTypeParameters.Allocate(lpSP->pTableType->pColumns.GetCount());
 				}
 			}
-			else if (pSqlType == "SQL_CHAR")
+			else if (pSqlType == __sv("SQL_CHAR"))
 			{
 				lpSP->nSQLType = SQL_CHAR;
 				lpSP->nCType = SQL_C_CHAR;
 			}
-			else if (pSqlType == "SQL_VARCHAR")
+			else if (pSqlType == __sv("SQL_VARCHAR"))
 			{
 				lpSP->nSQLType = SQL_VARCHAR;
 				lpSP->nCType = SQL_C_CHAR;
 			}
-			else if (pSqlType == "SQL_LONGVARCHAR")
+			else if (pSqlType == __sv("SQL_LONGVARCHAR"))
 			{
 				lpSP->nSQLType = SQL_LONGVARCHAR;
 				lpSP->nCType = SQL_C_CHAR;
 			}
-			else if (pSqlType == "SQL_WCHAR")
+			else if (pSqlType == __sv("SQL_WCHAR"))
 			{
 				lpSP->nSQLType = SQL_WCHAR;
 				lpSP->nCType = SQL_C_WCHAR;
 			}
-			else if (pSqlType == "SQL_WVARCHAR")
+			else if (pSqlType == __sv("SQL_WVARCHAR"))
 			{
 				lpSP->nSQLType = SQL_WVARCHAR;
 				lpSP->nCType = SQL_C_WCHAR;
 			}
-			else if (pSqlType == "SQL_WLONGVARCHAR")
+			else if (pSqlType == __sv("SQL_WLONGVARCHAR"))
 			{
 				lpSP->nSQLType = SQL_WLONGVARCHAR;
 				lpSP->nCType = SQL_C_WCHAR;
 			}
-			else if (pSqlType == "SQL_BINARY")
+			else if (pSqlType == __sv("SQL_BINARY"))
 			{
 				lpSP->nSQLType = SQL_BINARY;
 				lpSP->nCType = SQL_C_BINARY;
 			}
-			else if (pSqlType == "SQL_VARBINARY")
+			else if (pSqlType == __sv("SQL_VARBINARY"))
 			{
 				lpSP->nSQLType = SQL_VARBINARY;
 				lpSP->nCType = SQL_C_BINARY;
 			}
-			else if (pSqlType == "SQL_LONGVARBINARY")
+			else if (pSqlType == __sv("SQL_LONGVARBINARY"))
 			{
 				lpSP->nSQLType = SQL_LONGVARBINARY;
 				lpSP->nCType = SQL_C_BINARY;
 			}
-			else if (pSqlType == "SQL_BIGINT")
+			else if (pSqlType == __sv("SQL_BIGINT"))
 			{
 				lpSP->nSQLType = SQL_BIGINT;
 				lpSP->nCType = SQL_C_CHAR;
 			}
-			else if (pSqlType == "SQL_INTEGER")
+			else if (pSqlType == __sv("SQL_INTEGER"))
 			{
 				lpSP->nSQLType = SQL_INTEGER;
 				lpSP->nCType = SQL_C_SLONG;
 			}
-			else if (pSqlType == "SQL_TINYINT")
+			else if (pSqlType == __sv("SQL_TINYINT"))
 			{
 				lpSP->nSQLType = SQL_TINYINT;
 				lpSP->nCType = SQL_C_SLONG;
 			}
-			else if (pSqlType == "SQL_SMALLINT")
+			else if (pSqlType == __sv("SQL_SMALLINT"))
 			{
 				lpSP->nSQLType = SQL_SMALLINT;
 				lpSP->nCType = SQL_C_SLONG;
 			}
-			else if (pSqlType == "SQL_DOUBLE")
+			else if (pSqlType == __sv("SQL_DOUBLE"))
 			{
 				lpSP->nSQLType = SQL_DOUBLE;
 				lpSP->nCType = SQL_C_DOUBLE;
 			}
-			else if (pSqlType == "SQL_FLOAT")
+			else if (pSqlType == __sv("SQL_FLOAT"))
 			{
 				lpSP->nSQLType = SQL_FLOAT;
 				lpSP->nCType = SQL_C_DOUBLE;
 			}
-			else if (pSqlType == "SQL_REAL")
+			else if (pSqlType == __sv("SQL_REAL"))
 			{
 				lpSP->nSQLType = SQL_REAL;
 				lpSP->nCType = SQL_C_DOUBLE;
 			}
-			else if (pSqlType == "SQL_NUMERIC")
+			else if (pSqlType == __sv("SQL_NUMERIC"))
 			{
 				lpSP->nSQLType = SQL_NUMERIC;
 				lpSP->nCType = SQL_C_CHAR;
 				MatchLengthAndPrecision(pMatcher, lpSP);
 			}
-			else if (pSqlType == "SQL_DECIMAL")
+			else if (pSqlType == __sv("SQL_DECIMAL"))
 			{
 				lpSP->nSQLType = SQL_DECIMAL;
 				lpSP->nCType = SQL_C_CHAR;
 				MatchLengthAndPrecision(pMatcher, lpSP);
 			}
-			else if (pSqlType == "SQL_BIT")
+			else if (pSqlType == __sv("SQL_BIT"))
 			{
 				lpSP->nSQLType = SQL_BIT;
 				lpSP->nCType = SQL_C_LONG;
 			}
-			else if (pSqlType == "SQL_DATE")
+			else if (pSqlType == __sv("SQL_DATE"))
 			{
 				lpSP->nSQLType = SQL_DATE;
 				lpSP->nCType = SQL_C_DATE;
 			}
-			else if (pSqlType == "SQL_TYPE_TIME")
+			else if (pSqlType == __sv("SQL_TYPE_TIME"))
 			{
 				lpSP->nSQLType = SQL_TYPE_TIME;
 				lpSP->nCType = SQL_C_BINARY;
 				lpSP->nBufferSize = sizeof(SQL_TIME_STRUCT);
 			}
-			else if (pSqlType == "SQL_INTERVAL")
+			else if (pSqlType == __sv("SQL_INTERVAL"))
 			{
 				lpSP->nSQLType = SQL_INTERVAL;
 				MatchPrecision(pMatcher, lpSP);
 				if (pMatcher.MatchIdentifier(pAttribute, 64))
 				{
-					if (pAttribute == "SQL_INTERVAL_DAY")
+					if (pAttribute == __sv("SQL_INTERVAL_DAY"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_DAY;
-					else if (pAttribute == "SQL_INTERVAL_DAY_TO_HOUR")
+					else if (pAttribute == __sv("SQL_INTERVAL_DAY_TO_HOUR"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_DAY_TO_HOUR;
-					else if (pAttribute == "SQL_INTERVAL_DAY_TO_MINUTE")
+					else if (pAttribute == __sv("SQL_INTERVAL_DAY_TO_MINUTE"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_DAY_TO_MINUTE;
-					else if (pAttribute == "SQL_INTERVAL_DAY_TO_SECOND")
+					else if (pAttribute == __sv("SQL_INTERVAL_DAY_TO_SECOND"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_DAY_TO_SECOND;
-					else if (pAttribute == "SQL_INTERVAL_HOUR")
+					else if (pAttribute == __sv("SQL_INTERVAL_HOUR"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_HOUR;
-					else if (pAttribute == "SQL_INTERVAL_HOUR_TO_MINUTE")
+					else if (pAttribute == __sv("SQL_INTERVAL_HOUR_TO_MINUTE"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_HOUR_TO_MINUTE;
-					else if (pAttribute == "SQL_INTERVAL_HOUR_TO_SECOND")
+					else if (pAttribute == __sv("SQL_INTERVAL_HOUR_TO_SECOND"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_HOUR_TO_SECOND;
-					else if (pAttribute == "SQL_INTERVAL_MONTH")
+					else if (pAttribute == __sv("SQL_INTERVAL_MONTH"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_MONTH;
-					else if (pAttribute == "SQL_INTERVAL_SECOND")
+					else if (pAttribute == __sv("SQL_INTERVAL_SECOND"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_SECOND;
-					else if (pAttribute == "SQL_INTERVAL_YEAR")
+					else if (pAttribute == __sv("SQL_INTERVAL_YEAR"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_YEAR;
-					else if (pAttribute == "SQL_INTERVAL_YEAR_TO_MONTH")
+					else if (pAttribute == __sv("SQL_INTERVAL_YEAR_TO_MONTH"))
 						lpSP->nCType = lpSP->nSQLTypeCode = SQL_INTERVAL_YEAR_TO_MONTH;
 					else
 					{
@@ -838,14 +840,14 @@ void SqlStatement::ParseParameterSchema()
 					}
 				}
 			}
-			else if (pSqlType == "SQL_DATETIME")
+			else if (pSqlType == __sv("SQL_DATETIME"))
 			{
 				lpSP->nSQLType = SQL_DATETIME;
 				lpSP->nSQLTypeCode = SQL_CODE_TIMESTAMP;
 				lpSP->nCType = SQL_C_TIMESTAMP;
 				MatchPrecision(pMatcher, lpSP);
 			}
-			else if (pSqlType == "SQL_TYPE_TIMESTAMP")
+			else if (pSqlType == __sv("SQL_TYPE_TIMESTAMP"))
 			{
 				lpSP->nSQLType = SQL_TYPE_TIMESTAMP;
 				lpSP->nCType = SQL_C_TYPE_TIMESTAMP;
@@ -853,7 +855,7 @@ void SqlStatement::ParseParameterSchema()
 				lpSP->nSize = 20 + lpSP->nScale; // yyyy-dd-mm hh:mm:ss.fffffff 
 				lpSP->nBufferSize = sizeof(SQL_TIMESTAMP_STRUCT);
 			}
-			else if (pSqlType == "SQL_TIMESTAMP")
+			else if (pSqlType == __sv("SQL_TIMESTAMP"))
 			{
 				lpSP->nSQLType = SQL_TIMESTAMP;
 				lpSP->nCType = SQL_C_BINARY;
@@ -861,12 +863,12 @@ void SqlStatement::ParseParameterSchema()
 				MatchPrecision(pMatcher, lpSP);
 				lpSP->nSize = 20 + lpSP->nScale; // yyyy-dd-mm hh:mm:ss.fffffff 
 			}
-			else if (pSqlType == "SQL_SS_VARIANT")
+			else if (pSqlType == __sv("SQL_SS_VARIANT"))
 			{
 				lpSP->nSQLType = SQL_SS_VARIANT;
 				lpSP->nCType = SQL_C_BINARY;
 			}
-			else if (pSqlType == "SQL_SS_TIME2")
+			else if (pSqlType == __sv("SQL_SS_TIME2"))
 			{
 				lpSP->nSQLType = SQL_SS_TIME2;
 				lpSP->nCType = SQL_C_BINARY;
@@ -874,7 +876,7 @@ void SqlStatement::ParseParameterSchema()
 				MatchPrecision(pMatcher, lpSP);
 				lpSP->nSize = 9 + lpSP->nScale; // hh:mm:ss.fffffff 
 			}
-			else if (pSqlType == "SQL_SS_TIMESTAMPOFFSET")
+			else if (pSqlType == __sv("SQL_SS_TIMESTAMPOFFSET"))
 			{
 				lpSP->nSQLType = SQL_SS_TIMESTAMPOFFSET;
 				lpSP->nCType = SQL_C_BINARY;
@@ -913,30 +915,30 @@ void SqlStatement::ParseParameterSchema()
 
 			do
 			{
-				if (pAttribute == "SQL_DESC_AUTO_UNIQUE_VALUE")
+				if (pAttribute == __sv("SQL_DESC_AUTO_UNIQUE_VALUE"))
 				{
 					lpTVPCol->nDescAutoUniqueValue = SQL_TRUE;
 				}
-				else if (pAttribute == "SQL_CA_SS_COLUMN_COMPUTED")
+				else if (pAttribute == __sv("SQL_CA_SS_COLUMN_COMPUTED"))
 				{
 					lpTVPCol->nColumnComputed = SQL_TRUE;
 				}
-				else if (pAttribute == "SQL_CA_SS_COLUMN_IN_UNIQUE_KEY")
+				else if (pAttribute == __sv("SQL_CA_SS_COLUMN_IN_UNIQUE_KEY"))
 				{
 					lpTVPCol->nColumnInUniqueKey = SQL_TRUE;
 				}
-				else if (pAttribute == "SQL_CA_SS_COLUMN_SORT_ORDER")
+				else if (pAttribute == __sv("SQL_CA_SS_COLUMN_SORT_ORDER"))
 				{
 					if (!pMatcher.MatchIdentifier(pAttribute, 32))
 					{
 						SaveCustomError("SQLExecEx", "Parameter schema contained invalid data '%32V', expected sort order for table value parameter '%I' column '%'", pMatcher.CurrentView(), nParmNo, nTVPCol);
 						throw E_APIERROR;
 					}
-					if (pAttribute == "SQL_SS_ASCENDING_ORDER")
+					if (pAttribute == __sv("SQL_SS_ASCENDING_ORDER"))
 					{
 						lpTVPCol->nColumnSortOrder = SQL_SS_ASCENDING_ORDER;
 					}
-					else if (pAttribute == "SQL_SS_DESCENDING_ORDER")
+					else if (pAttribute == __sv("SQL_SS_DESCENDING_ORDER"))
 					{
 						lpTVPCol->nColumnSortOrder = SQL_SS_DESCENDING_ORDER;
 					}
@@ -946,7 +948,7 @@ void SqlStatement::ParseParameterSchema()
 						throw E_APIERROR;
 					}
 				}
-				else if (pAttribute == "SQL_CA_SS_COLUMN_SORT_ORDINAL")
+				else if (pAttribute == __sv("SQL_CA_SS_COLUMN_SORT_ORDINAL"))
 				{
 					if (!pMatcher.MatchShort(&lpTVPCol->nColumnSortOrdinal))
 					{
@@ -954,7 +956,7 @@ void SqlStatement::ParseParameterSchema()
 						throw E_APIERROR;
 					}
 				}
-				else if (pAttribute == "SQL_CA_SS_COLUMN_HAS_DEFAULT_VALUE")
+				else if (pAttribute == __sv("SQL_CA_SS_COLUMN_HAS_DEFAULT_VALUE"))
 				{
 					lpTVPCol->nColumnHasDefaultValue = SQL_TRUE;
 				}
@@ -1141,7 +1143,8 @@ void SqlStatement::EvaluateParameters()
 		lpSP = pParameters[xj];
 		if (lpSP->nParmType > SQL_PARAM_INPUT)
 		{
-			if (nErrorNo = FindFoxVarOrFieldEx(lpSP->aParmExpr, &lpSP->lVarOrField))
+			nErrorNo = FindFoxVarOrFieldEx(lpSP->aParmExpr, &lpSP->lVarOrField);
+			if (nErrorNo)
 				throw nErrorNo;
 
 			bOutputParams = true;
@@ -1164,7 +1167,7 @@ void SqlStatement::EvaluateParameters()
 							throw E_INSUFMEMORY;
 					}
 					else
-						lpSP->nBufferSize = lpSP->vParmValue.Len();
+						lpSP->nBufferSize = (SQLINTEGER)lpSP->vParmValue.Len();
 
 					lpSP->vParmValue.LockHandle();
 					lpSP->pParmPtr = lpSP->vParmValue.HandleToPtr();
@@ -1202,7 +1205,7 @@ void SqlStatement::EvaluateParameters()
 							lpSP->nBufferSize = VFP2C_SQLSERVER_MAX_VARCHAR_LEN + 2;
 						}
 						else
-							lpSP->nBufferSize = lpSP->vParmValue.Len();
+							lpSP->nBufferSize = (SQLINTEGER)lpSP->vParmValue.Len();
 
 						lpSP->vParmValue.LockHandle();
 						lpSP->pParmPtr = lpSP->vParmValue.HandleToPtr();
@@ -1230,7 +1233,7 @@ void SqlStatement::EvaluateParameters()
 							lpSP->nBufferSize = 32;
 						}
 						else
-							lpSP->nBufferSize = lpSP->vParmValue.Len();
+							lpSP->nBufferSize = (SQLINTEGER)lpSP->vParmValue.Len();
 
 						lpSP->nSize = lpSP->vParmValue.Len();
 						lpSP->vParmValue.LockHandle();
@@ -1302,10 +1305,10 @@ void SqlStatement::EvaluateParameters()
 				if (lpSP->nSQLType == SQL_SS_TABLE)
 				{
 					lpSP->pParmPtr = lpSP->pParmTypeName.Data;
-					lpSP->nBufferSize = lpSP->pParmTypeName.Len;
+					lpSP->nBufferSize = (SQLINTEGER)lpSP->pParmTypeName.Len;
 					lpSP->vParmValue.NullTerminate();
 					lpSP->vParmValue.LockHandle();
-					lpSP->nWorkArea = Select(lpSP->vParmValue.HandleToPtr());
+					lpSP->nWorkArea = Select(CStringView(lpSP->vParmValue.HandleToPtr(), lpSP->vParmValue.Len()));
 					// lpSP->nSize = 1; // no. of rows
 					if (lpSP->nWorkArea == 0)
 					{
@@ -1321,10 +1324,10 @@ void SqlStatement::EvaluateParameters()
 				lpSP->pParmPtr = lpSP->vParmValue.HandleToPtr();
 				if (!lpSP->bCustomSchema)
 				{
-					lpSP->nSize = lpSP->nBufferSize = lpSP->vParmValue.Len();
+					lpSP->nBufferSize = (SQLINTEGER)(lpSP->nSize = lpSP->vParmValue.Len());
 					if (lpSP->nSize < VFP2C_SQLSERVER_MAX_VARCHAR_LEN)
 					{
-						lpSP->nIndicator = lpSP->nSize;
+						lpSP->nIndicator = (SQLINTEGER)lpSP->nSize;
 					}
 					else
 					{
@@ -1360,7 +1363,7 @@ void SqlStatement::EvaluateParameters()
 							break;
 						case SQL_TIMESTAMP:
 						case SQL_TYPE_TIMESTAMP:
-							StringToTimestamp_Struct((char*)lpSP->pParmPtr, lpSP->vParmValue.Len(), lpSP->nScale, &lpSP->sTimestampStruct);
+							StringToTimestamp_Struct((char*)lpSP->pParmPtr, (SQLINTEGER)lpSP->vParmValue.Len(), lpSP->nScale, &lpSP->sTimestampStruct);
 							lpSP->pParmPtr = &lpSP->sTimestampStruct;
 							break;
 						case SQL_SS_VARIANT:
@@ -1377,10 +1380,10 @@ void SqlStatement::EvaluateParameters()
 
 					if (lpSP->nSize == 0)
 					{
-						lpSP->nSize = lpSP->nBufferSize = lpSP->vParmValue.Len();
+						lpSP->nBufferSize = (SQLINTEGER)(lpSP->nSize = lpSP->vParmValue.Len());
 						if (lpSP->nSize < VFP2C_SQLSERVER_MAX_VARCHAR_LEN)
 						{
-							lpSP->nIndicator = lpSP->nSize;
+							lpSP->nIndicator = (SQLINTEGER)lpSP->nSize;
 						}
 						else
 						{
@@ -1457,12 +1460,12 @@ void SqlStatement::EvaluateParameters()
 						case SQL_SS_VARIANT:
 							lpSP->bPutData = false;
 							lpSP->nIndicator = 0;
-							lpSP->nBufferSize = lpSP->nParmType == SQL_PARAM_INPUT ? lpSP->nSize : VFP2C_ODBC_MAX_VARIABLE_BUFFER;
+							lpSP->nBufferSize = lpSP->nParmType == SQL_PARAM_INPUT ? (SQLINTEGER)lpSP->nSize : VFP2C_ODBC_MAX_VARIABLE_BUFFER;
 							lpSP->vMemoValue.SetString();
 							if (!lpSP->vMemoValue.AllocHandle(lpSP->nBufferSize))
 								throw E_INSUFMEMORY;
 							pVariant = lpSP->vMemoValue.HandleToPtr<SqlVariant*>();
-							nErrorNo = GetMemoContent(lpSP->vParmValue, (char*)pVariant);
+							nErrorNo = FoxMemo::Read(lpSP->vParmValue, (char*)pVariant);
 							if (nErrorNo)
 								throw nErrorNo;
 							switch (pVariant->nType)
@@ -1477,7 +1480,7 @@ void SqlStatement::EvaluateParameters()
 										lpSP->nSQLType = SQL_VARBINARY;
 										lpSP->nCType = pVariant->nType;
 									}
-									lpSP->nIndicator = lpSP->nSize = pVariant->nSize;
+									lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize = pVariant->nSize);
 									break;
 								case SQL_C_CHAR:
 									if (pVariant->nSize < VFP2C_ODBC_MAX_CHAR_LEN)
@@ -1489,7 +1492,7 @@ void SqlStatement::EvaluateParameters()
 										lpSP->nSQLType = SQL_VARCHAR;
 										lpSP->nCType = pVariant->nType;
 									}
-									lpSP->nIndicator = lpSP->nSize = pVariant->nSize;
+									lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize = pVariant->nSize);
 									break;
 								case SQL_C_SLONG:
 									lpSP->nSQLType = SQL_INTEGER;
@@ -1498,7 +1501,7 @@ void SqlStatement::EvaluateParameters()
 								case SQL_C_SBIGINT:
 									lpSP->nSQLType = SQL_BIGINT;
 									lpSP->nCType = SQL_C_CHAR;
-									lpSP->nIndicator = lpSP->nSize - sizeof(SqlVariant);
+									lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize - sizeof(SqlVariant));
 									lpSP->nSize -= sizeof(SqlVariant);
 									break;
 								case SQL_C_NUMERIC:
@@ -1506,7 +1509,7 @@ void SqlStatement::EvaluateParameters()
 									if (pVariant->nSize > 20 || pVariant->nScale > 16)
 									{
 										lpSP->nCType = SQL_C_CHAR;
-										lpSP->nIndicator = lpSP->nSize - sizeof(SqlVariant);
+										lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize - sizeof(SqlVariant));
 										lpSP->nSize = pVariant->nSize;
 										lpSP->nScale = pVariant->nScale;
 									}
@@ -1530,7 +1533,7 @@ void SqlStatement::EvaluateParameters()
 									{
 										lpSP->nSQLType = SQL_TIMESTAMP;
 										lpSP->nCType = SQL_C_CHAR;
-										lpSP->nIndicator = lpSP->nSize - sizeof(SqlVariant);
+										lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize - sizeof(SqlVariant));
 										lpSP->nScale = pVariant->nScale;
 									}
 									else
@@ -1546,13 +1549,13 @@ void SqlStatement::EvaluateParameters()
 								case SQL_C_SS_TIMESTAMPOFFSET:
 									lpSP->nSQLType = SQL_SS_TIMESTAMPOFFSET;
 									lpSP->nCType = SQL_C_CHAR;
-									lpSP->nIndicator = lpSP->nSize - sizeof(SqlVariant);
+									lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize - sizeof(SqlVariant));
 									lpSP->nScale = pVariant->nScale;
 									break;
 								
 								default:
 									lpSP->nSQLType = lpSP->nCType = pVariant->nType;
-									lpSP->nIndicator = lpSP->nSize = pVariant->nSize;
+									lpSP->nIndicator = (SQLINTEGER)(lpSP->nSize = pVariant->nSize);
 									lpSP->nScale = pVariant->nScale;
 							}
 							lpSP->pParmPtr = &pVariant->pData;
@@ -1733,6 +1736,7 @@ void SqlStatement::EvaluateParameters()
 			break;
 
 		case '0':
+		default:
 			lpSP->nIndicator = SQL_NULL_DATA;
 			cType = (char)lpSP->vParmValue.ev_long;
 			// set default if not specified in parameter schema
@@ -1809,6 +1813,8 @@ void SqlStatement::EvaluateParameters()
 						lpSP->nCType = SQL_C_NUMERIC;
 						lpSP->nSQLType = SQL_NUMERIC;
 						break;
+					default:
+						break;
 					}
 				}
 				else
@@ -1822,11 +1828,7 @@ void SqlStatement::EvaluateParameters()
 						lpSP->nCType = SQL_C_BINARY;
 						break;
 					case SQL_LONGVARCHAR:
-						lpSP->nCType = SQL_C_CHAR;
-						break;
 					case SQL_CHAR:
-						lpSP->nCType = SQL_C_CHAR;
-						break;
 					case SQL_DECIMAL:
 						lpSP->nCType = SQL_C_CHAR;
 						break;
@@ -1850,6 +1852,8 @@ void SqlStatement::EvaluateParameters()
 						break;
 					case SQL_SS_VARIANT:
 						lpSP->nCType = SQL_C_BINARY;
+						break;
+					default:
 						break;
 					}
 				}
@@ -1954,6 +1958,8 @@ void SqlStatement::EvaluateParameters()
 						lpSP->nCType = SQL_C_NUMERIC;
 						lpSP->nSQLType = SQL_NUMERIC;
 						break;
+					default:
+						break;
 					}
 				}
 				else
@@ -2001,6 +2007,8 @@ void SqlStatement::EvaluateParameters()
 					case SQL_NUMERIC:
 					case SQL_DECIMAL:
 						lpSP->nCType = SQL_C_NUMERIC;
+						break;
+					default:
 						break;
 					}
 				}
@@ -2057,8 +2065,8 @@ void SqlStatement::BindParameters()
 		// if we have a named parameter, set additional descriptor information
 		if (lpSP->pParmName)
 		{
-			SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_NAME, lpSP->pParmName.Data, lpSP->pParmName.Len);
-			SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_UNNAMED, SQL_NAMED, SQL_IS_SMALLINT);
+			SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_NAME, lpSP->pParmName.Data, (SQLINTEGER)lpSP->pParmName.Len);
+			SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_UNNAMED, SQL_NAMED, SQL_IS_SMALLINT);
 			bVerifyImpDescriptor = true;
 		}
 
@@ -2072,7 +2080,7 @@ void SqlStatement::BindParameters()
 			if (lpSP->nScale)
 			{
 				nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nScale));
-				SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
+				SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
 				bVerifyAppDescriptor = true;
 			}
 			break;
@@ -2082,29 +2090,30 @@ void SqlStatement::BindParameters()
 			if (lpSP->nSize)
 			{
 				nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nSize));
-				SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
-				SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
+				SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
+				SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
 				bVerifyAppDescriptor = bVerifyImpDescriptor = true;
 			}
 
 			if (lpSP->nScale)
 			{
 				nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nScale));
-				SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
-				SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
+				SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
+				SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
 				bVerifyAppDescriptor = bVerifyImpDescriptor = true;
 			}
+			break;
 
 		case SQL_SS_TABLE:
 			if (lpSP->pParmTypeSchema)
 			{
-				SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_CA_SS_SCHEMA_NAME, lpSP->pParmTypeSchema.Data, lpSP->pParmTypeSchema.Len);
+				SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_CA_SS_SCHEMA_NAME, lpSP->pParmTypeSchema.Data, (SQLINTEGER)lpSP->pParmTypeSchema.Len);
 			}
 
 			// already set by SQLBindParameter
 			if (lpSP->pParmTypeName)
 			{
-				SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_CA_SS_TYPE_NAME, lpSP->pParmTypeName.Data, lpSP->pParmTypeName.Len);
+				SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_CA_SS_TYPE_NAME, lpSP->pParmTypeName.Data, (SQLINTEGER)lpSP->pParmTypeName.Len);
 			}
 
 			// only bind columns if there are rows to send
@@ -2115,12 +2124,14 @@ void SqlStatement::BindParameters()
 			lpSP->bPutData = true; // reset SQL_DESC_DATA_PTR to the SqlParameter* pointer
 			bVerifyAppDescriptor = bVerifyImpDescriptor = true;
 			break;
+		default:
+			break;
 		}
 
 		if (bVerifyAppDescriptor)
-			SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_DATA_PTR, lpSP->bPutData ? lpSP : lpSP->pParmPtr, SQL_IS_POINTER);
+			SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_DATA_PTR, lpSP->bPutData ? lpSP : lpSP->pParmPtr, SQL_IS_POINTER);
 		if (bVerifyImpDescriptor)
-			SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_DATA_PTR, lpSP->bPutData ? lpSP : lpSP->pParmPtr, SQL_IS_POINTER);
+			SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_DATA_PTR, lpSP->bPutData ? lpSP : lpSP->pParmPtr, SQL_IS_POINTER);
 	}
 }
 
@@ -2140,12 +2151,12 @@ SQLRETURN SqlStatement::Exec()
 			if (nParameterCount)
 			{
 				pSQL = pSQLSend.Ptr<SQLCHAR*>();
-				nSQLLen = pSQLSend.Len();
+				nSQLLen = (SQLINTEGER)pSQLSend.Len();
 			}
 			else
 			{
 				pSQL = pSQLInput.Ptr<SQLCHAR*>();
-				nSQLLen = pSQLInput.Len();
+				nSQLLen = (SQLINTEGER)pSQLInput.Len();
 			}
 
 			nApiRet = SQLPrepare(hStmt, pSQL, nSQLLen);
@@ -2164,12 +2175,12 @@ SQLRETURN SqlStatement::Exec()
 		if (nParameterCount)
 		{
 			pSQL = pSQLSend.Ptr<SQLCHAR*>();
-			nSQLLen = pSQLSend.Len();
+			nSQLLen = (SQLINTEGER)pSQLSend.Len();
 		}
 		else
 		{
 			pSQL = pSQLInput.Ptr<SQLCHAR*>();
-			nSQLLen = pSQLInput.Len();
+			nSQLLen = (SQLINTEGER)pSQLInput.Len();
 		}
 		nApiRet = SQLExecDirect(hStmt, pSQL, nSQLLen);
 	}
@@ -2244,7 +2255,7 @@ void SqlStatement::ParseParameterArraySchema()
 					vRowValue = lArrayLoc(nRow, 3);
 					lpSP->nSize = (SQLUINTEGER)vRowValue.ev_long;
 				}
-				lpSP->nBufferSize = lpSP->nSize;
+				lpSP->nBufferSize = (SQLINTEGER)lpSP->nSize;
 				break;
 			case 'I':
 				lpSP->nBufferSize = sizeof(int);
@@ -2281,6 +2292,9 @@ void SqlStatement::ParseParameterArraySchema()
 				lpSP->nSize = VFP2C_VFP_CURRENCY_PRECISION;
 				lpSP->nScale = VFP2C_VFP_CURRENCY_SCALE;
 				lpSP->nBufferSize = sizeof(SQL_NUMERIC_STRUCT);
+				break;
+
+			default:
 				break;
 		}
 
@@ -2390,7 +2404,7 @@ void SqlStatement::BindParameterArray()
 				if (lpSP->nScale)
 				{
 					nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nScale));
-					SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
+					SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
 					bVerifyAppDescriptor = true;
 				}
 				break;
@@ -2400,13 +2414,13 @@ void SqlStatement::BindParameterArray()
 				if (lpSP->nSQLTypeCode)
 				{
 					nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nSQLTypeCode));
-					SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_DATETIME_INTERVAL_CODE, nValue, SQL_IS_SMALLINT);
+					SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_DATETIME_INTERVAL_CODE, nValue, SQL_IS_SMALLINT);
 					bVerifyAppDescriptor = true;
 				}
 				if (lpSP->nScale)
 				{
 					nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nScale));
-					SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
+					SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
 					bVerifyAppDescriptor = true;
 				}
 				break;
@@ -2417,23 +2431,26 @@ void SqlStatement::BindParameterArray()
 				if (lpSP->nSize)
 				{
 					nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nSize));
-					SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
+					SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_PRECISION, nValue, SQL_IS_SMALLINT);
 					bVerifyAppDescriptor = true;
 				}
 
 				if (lpSP->nScale)
 				{
 					nValue = reinterpret_cast<SQLPOINTER>(static_cast<UINT_PTR>(lpSP->nScale));
-					SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
+					SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
 					bVerifyAppDescriptor = true;
 				}
+				break;
+
+			default:
 				break;
 		}
 
 		if (bVerifyAppDescriptor)
-			SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_DATA_PTR, (SQLPOINTER)lpSP->pParmPtr, SQL_IS_POINTER);
+			SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_DATA_PTR, (SQLPOINTER)lpSP->pParmPtr, SQL_IS_POINTER);
 		if (bVerifyImpDescriptor)
-			SetImplementationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_DATA_PTR, (SQLPOINTER)lpSP->pParmPtr, SQL_IS_POINTER);
+			SetImplementationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_DATA_PTR, (SQLPOINTER)lpSP->pParmPtr, SQL_IS_POINTER);
 	}
 }
 
@@ -2506,14 +2523,16 @@ void SqlStatement::LoadInMemoryParameterArray()
 	ValueEx vFieldValue;
 	vFieldValue.SetNull();
 	char* pBuffer;
-	int nRowNo = 0, nRecNoIndex = pParameterArray.nParamsResumeOnError, nIndicatorIndex;
+	int nRowNo = 0, nIndicatorIndex;
+	SQLLEN nRecNoIndex = pParameterArray.nParamsResumeOnError;
 
 	if (pParameterArray.nBatchRecordsProcessed == 0)
 	{
 		for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 		{
 			lpSP = pParameters[xj];
-			lpSP->pParmPtr = new char[lpSP->nBufferSize * pParameterArray.nBatchSize];
+			// 
+			lpSP->pParmPtr = new(std::nothrow) char[lpSP->nBufferSize * pParameterArray.nBatchSize];
 			if (!lpSP->pParmPtr)
 				throw E_INSUFMEMORY;
 		}
@@ -2525,11 +2544,12 @@ void SqlStatement::LoadInMemoryParameterArray()
 		for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 		{
 			lpSP = pParameters[xj];
-			nIndicatorIndex = nRowNo + (pParameterArray.nBatchSize * xj);
+			nIndicatorIndex = nRowNo + (int)(pParameterArray.nBatchSize * xj);
 			if (lpSP->lVarOrField.l_NTI)
 				vFieldValue = lpSP->lVarOrField;
 			else
 				Evaluate(vFieldValue, lpSP->aParmExpr);
+
 			if (vFieldValue.Vartype() == '0')
 			{
 				pParameterArray.pIndicator[nIndicatorIndex] = SQL_NULL_DATA;
@@ -2542,41 +2562,44 @@ void SqlStatement::LoadInMemoryParameterArray()
 			case 'V':
 			case 'Q':
 				if (vFieldValue.Len() > (unsigned int)lpSP->nBufferSize)
+				{
+					// NOLINTNEXTLINE(bugprone-implicit-widening-of-multiplication-result)
 					memcpy(pBuffer + nRowNo * lpSP->nBufferSize, vFieldValue.HandleToPtr(), vFieldValue.Len());
+				}
 				else
 				{
 					SaveCustomError("SQLExecEx", "String data right truncation for parameter %U (%20S...), size of parameter was to small.\n"
 						"Buffersize = %U, Datasize = %U", lpSP->nParmNo, lpSP->aParmExpr, lpSP->nBufferSize, vFieldValue.Len());
 					throw E_APIERROR;
 				}
-				pParameterArray.pIndicator[nIndicatorIndex] = vFieldValue.Len();
+				pParameterArray.pIndicator[nIndicatorIndex] = (SQLLEN)vFieldValue.Len();
 				vFieldValue.FreeHandle();
 				vFieldValue.SetNull();
 				break;
 			case 'I':
-				*reinterpret_cast<int*>(pBuffer + nRowNo * sizeof(int)) = (int)vFieldValue.ev_real;
+				*IndexPtr<int*>(pBuffer, nRowNo) = (int)vFieldValue.ev_real;
 				pParameterArray.pIndicator[nIndicatorIndex] = 0; // sizeof(int);
 				break;
 			case 'L':
-				*reinterpret_cast<int*>(pBuffer + nRowNo * sizeof(int)) = (int)vFieldValue.ev_length;
+				*IndexPtr<int*>(pBuffer, nRowNo) = (int)vFieldValue.ev_length;
 				pParameterArray.pIndicator[nIndicatorIndex] = 0; // sizeof(int);
 				break;
 			case 'N':
 			case 'F':
 			case 'B':
-				*reinterpret_cast<double*>(pBuffer + nRowNo * sizeof(double)) = vFieldValue.ev_real;
+				*IndexPtr<double*>(pBuffer, nRowNo) = vFieldValue.ev_real;
 				pParameterArray.pIndicator[nIndicatorIndex] = 0; // sizeof(double);
 				break;
 			case 'D':
-				ValueToDate_Struct(vFieldValue, (SQL_DATE_STRUCT*)(pBuffer + nRowNo * sizeof(SQL_DATE_STRUCT)));
+				ValueToDate_Struct(vFieldValue, IndexPtr<SQL_DATE_STRUCT*>(pBuffer, nRowNo));
 				pParameterArray.pIndicator[nIndicatorIndex] = 0; // sizeof(SQL_DATE_STRUCT);
 				break;
 			case 'T':
-				ValueToTimestamp_Struct(vFieldValue, (SQL_TIMESTAMP_STRUCT*)(pBuffer + nRowNo * sizeof(SQL_TIMESTAMP_STRUCT)));
+				ValueToTimestamp_Struct(vFieldValue, IndexPtr<SQL_TIMESTAMP_STRUCT*>(pBuffer, nRowNo));
 				pParameterArray.pIndicator[nIndicatorIndex] = 0; // sizeof(SQL_TIMESTAMP_STRUCT);
 				break;
 			case 'Y':
-				ValueToNumeric_Struct(vFieldValue, (SQL_NUMERIC_STRUCT*)pBuffer + nRowNo * sizeof(SQL_NUMERIC_STRUCT));
+				ValueToNumeric_Struct(vFieldValue, IndexPtr<SQL_NUMERIC_STRUCT*>(pBuffer, nRowNo));
 				pParameterArray.pIndicator[nIndicatorIndex] = 0;
 				break;
 
@@ -2640,8 +2663,8 @@ bool SqlStatement::LoadNextParameterArrayBatch()
 				nRow += pParameterArray.nBatchSize;
 
 				// reset pointers
-				SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_INDICATOR_PTR, (SQLPOINTER)lpSP->nIndicator, 0);
-				SetApplicationParameterDescriptorField(lpSP->nParmNo, SQL_DESC_OCTET_LENGTH_PTR, (SQLPOINTER)lpSP->nIndicator, 0);
+				SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_INDICATOR_PTR, (SQLPOINTER)lpSP->nIndicator, 0);
+				SetApplicationParameterDescriptorField((SQLSMALLINT)lpSP->nParmNo, SQL_DESC_OCTET_LENGTH_PTR, (SQLPOINTER)lpSP->nIndicator, 0);
 			}
 		}
 		pParameterArray.pParamOperation.SetIndex(pParameterArray.nBatchSize - 1);
@@ -2676,7 +2699,7 @@ void SqlStatement::SaveParameterArrayErrors()
 	VFP2CTls& tls = VFP2CTls::Tls();
 	SQLINTEGER nErrorCount;
 	SQLLEN nRowNo, nSeverity;
-	CArray<SQLINTEGER> pErrorMap;
+	CArray<SQLLEN> pErrorMap;
 	bResumeOnError = false;
 	// store all row numbers for each available error message in a lookup array 
 	SQLRETURN nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, 0, SQL_DIAG_NUMBER, (SQLPOINTER)&nErrorCount, 0, 0);
@@ -2689,13 +2712,13 @@ void SqlStatement::SaveParameterArrayErrors()
 		return;
 
 	pErrorMap.Reserve(nErrorCount, false);
-	pErrorMap.SetIndex(-1);
+	pErrorMap.ResetIndex();
 	for (int xj = 1; xj <= nErrorCount; xj++)
 	{
-		nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, xj, SQL_DIAG_ROW_NUMBER, (SQLPOINTER)&nRowNo, 0, 0);
+		nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, (SQLSMALLINT)xj, SQL_DIAG_ROW_NUMBER, (SQLPOINTER)&nRowNo, 0, 0);
 		if (SQL_SUCCEEDED(nApiRet))
 		{
-			if (nRowNo >= 1 && pErrorMap.Find(nRowNo) != -1)
+			if (nRowNo >= 1 && pErrorMap.Find(nRowNo) != pErrorMap.INVALID_INDEX)
 				nRowNo = SQL_ROW_NUMBER_UNKNOWN;
 			pErrorMap.SetIndex(xj - 1);
 			pErrorMap[xj - 1] = nRowNo;
@@ -2716,11 +2739,11 @@ void SqlStatement::SaveParameterArrayErrors()
 		{
 			if (pErrorMap[xj] < 1)
 			{
-				nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, xj + 1,	(SQLCHAR*)pError->aSqlState,(SQLINTEGER*)&pError->nErrorNo,
+				nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, (SQLSMALLINT)(xj + 1), (SQLCHAR*)pError->aSqlState, (SQLINTEGER*)&pError->nErrorNo,
 					(SQLCHAR*)pError->aErrorMessage, VFP2C_ERROR_MESSAGE_LEN, &nErrorLength);
 				if (SQL_SUCCEEDED(nApiRet))
 				{
-					nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, xj + 1, SQL_DIAG_SS_SEVERITY, (SQLPOINTER)&nSeverity, 0, 0);
+					nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, (SQLSMALLINT)(xj + 1), SQL_DIAG_SS_SEVERITY, (SQLPOINTER)&nSeverity, 0, 0);
 					if (SQL_SUCCEEDED(nApiRet) && nSeverity < EX_MAXISEVERITY)
 						break;
 					pError->nErrorType = VFP2C_ERRORTYPE_ODBC;
@@ -2742,11 +2765,12 @@ void SqlStatement::SaveParameterArrayErrors()
 	SaveParameterArrayErrorsToCursor(pErrorMap);
 }
 
-void SqlStatement::SaveParameterArrayErrorsToCursor(CArray<SQLINTEGER>& pErrorMap)
+void SqlStatement::SaveParameterArrayErrorsToCursor(CArray<SQLLEN>& pErrorMap)
 {
 	SQLRETURN nApiRet;
 	SQLINTEGER nNativeError;
-	SQLSMALLINT nMsgLen, nErrorNo;
+	unsigned int nErrorNo;
+	SQLSMALLINT nMsgLen;
 	SQLINTEGER nColumnNo;
 	FoxString vSqlState;
 	AutoWorkAreaRestore pRestoreWorkArea(0, 0);
@@ -2755,13 +2779,13 @@ void SqlStatement::SaveParameterArrayErrorsToCursor(CArray<SQLINTEGER>& pErrorMa
 	{
 		pGetDataBuffer.Size(VFP2C_ODBC_MAX_VARIABLE_BUFFER);
 		if (nFlags & SQLEXECEX_PARAMETER_ARRAY_SAVE_ERROR_MESSAGE)
-			pParameterArray.pParamStatusCursor.Create(pParameterArray.pParamStatusDestination, "rec_number I,rec_status I,column_number I NULL,error_number I NULL, sqlstate C(5) NULL, message M NULL");
+			pParameterArray.pParamStatusCursor.Create(pParameterArray.pParamStatusDestination, __sv("rec_number I,rec_status I,column_number I NULL,error_number I NULL, sqlstate C(5) NULL, message M NULL"));
 		else
-			pParameterArray.pParamStatusCursor.Create(pParameterArray.pParamStatusDestination, "rec_number I,rec_status I,column_number I NULL,error_number I NULL, sqlstate C(5) NULL");
+			pParameterArray.pParamStatusCursor.Create(pParameterArray.pParamStatusDestination, __sv("rec_number I,rec_status I,column_number I NULL,error_number I NULL, sqlstate C(5) NULL"));
 	}
 	FoxCursor& pCursor = pParameterArray.pParamStatusCursor;
-	int nRow = pParameterArray.pParamStatus[pParameterArray.nParamsResumeOnError] == SQL_PARAM_ERROR ? 1 : pParameterArray.nParamsResumeOnError + 1;
-	for (int xj = pParameterArray.nParamsResumeOnError; xj < pParameterArray.nParamsProcessed; xj++)
+	SQLLEN nRow = pParameterArray.pParamStatus[pParameterArray.nParamsResumeOnError] == SQL_PARAM_ERROR ? 1 : pParameterArray.nParamsResumeOnError + 1;
+	for (SQLLEN xj = pParameterArray.nParamsResumeOnError; xj < pParameterArray.nParamsProcessed; xj++)
 	{
 		if (pParameterArray.pParamStatus[xj] == SQL_SUCCESS)
 		{
@@ -2769,23 +2793,23 @@ void SqlStatement::SaveParameterArrayErrorsToCursor(CArray<SQLINTEGER>& pErrorMa
 			continue;
 		}
 		nErrorNo = pErrorMap.Find(nRow++);
-		if (nErrorNo >= 0)
+		if (nErrorNo != pErrorMap.INVALID_INDEX)
 		{
 			pCursor.AppendBlank();
 			pCursor(0) = pParameterArray.pParamRecNo[xj];
 			pCursor(1) = pParameterArray.pParamStatus[xj];
 			nErrorNo++;
-			nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, nErrorNo, SQL_DIAG_COLUMN_NUMBER, (SQLPOINTER)&nColumnNo, SQL_IS_INTEGER, 0);
+			nApiRet = SQLGetDiagField(SQL_HANDLE_STMT, hStmt, (SQLSMALLINT)nErrorNo, SQL_DIAG_COLUMN_NUMBER, (SQLPOINTER)&nColumnNo, SQL_IS_INTEGER, 0);
 			if (SQL_SUCCEEDED(nApiRet))
 				pCursor(2) = nColumnNo;
 			else
 				pCursor(2) = -1;
 
 			if (nFlags & SQLEXECEX_PARAMETER_ARRAY_SAVE_ERROR_MESSAGE)
-				nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, nErrorNo, vSqlState.Ptr<SQLCHAR*>(), &nNativeError,
-					pGetDataBuffer.Ptr<SQLCHAR*>(), pGetDataBuffer.Size(), &nMsgLen);
+				nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, (SQLSMALLINT)nErrorNo, vSqlState.Ptr<SQLCHAR*>(), &nNativeError,
+					pGetDataBuffer.Ptr<SQLCHAR*>(), (SQLSMALLINT)pGetDataBuffer.Size(), &nMsgLen);
 			else
-				nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, nErrorNo, vSqlState.Ptr<SQLCHAR*>(), &nNativeError,	0, 0, &nMsgLen);
+				nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, (SQLSMALLINT)nErrorNo, vSqlState.Ptr<SQLCHAR*>(), &nNativeError,	0, 0, &nMsgLen);
 
 			if (SQL_SUCCEEDED(nApiRet))
 			{
@@ -2812,7 +2836,7 @@ SQLRETURN SqlStatement::ResumeOnParameterArrayError()
 	if (bResumeOnError)
 	{
 		pParameterArray.nParamsProcessed--;
-		for (int xj = pParameterArray.nParamsResumeOnError; xj < pParameterArray.nParamsProcessed; xj++)
+		for (SQLLEN xj = pParameterArray.nParamsResumeOnError; xj < pParameterArray.nParamsProcessed; xj++)
 			pParameterArray.pParamOperation[xj] = SQL_PARAM_IGNORE;
 
 		pParameterArray.nBatchErrorCount++;
@@ -2862,7 +2886,7 @@ SqlParameter* SqlStatement::FindParameter(CStringView pField)
 {
 	for (unsigned int xj = 0; xj < pParameters.GetCount(); xj++)
 	{
-		if (pField.ICompare(pParameters[xj]->aParmExpr))
+		if (pField.ICompare(CStringView(pParameters[xj]->aParmExpr)))
 			return pParameters[xj];
 	}
 	return 0;
@@ -2891,7 +2915,7 @@ void SqlStatement::BindTableValuedParameter(SqlParameter* lpSP)
 	{
 		lpTTC = lpSP->pTableType->pColumns[xj];
 		lpTTP = lpSP->pTableTypeParameters[xj];
-		nColumnNo = lpTTC->nColumnNo + 1;
+		nColumnNo = (SQLSMALLINT)(lpTTC->nColumnNo + 1);
 
 		nErrorNo = FindFoxField(lpTTC->pColumnName.Ptr<char*>(), lpTTP->lField, lpSP->nWorkArea);
 		if (nErrorNo)
@@ -2951,6 +2975,9 @@ void SqlStatement::BindTableValuedParameter(SqlParameter* lpSP)
 					SetImplementationParameterDescriptorField(nColumnNo, SQL_DESC_SCALE, nValue, SQL_IS_SMALLINT);
 					bVerifyAppDescriptor = bVerifyImpDescriptor = true;
 				}
+				break;
+
+			default:
 				break;
 		}
 
@@ -3029,7 +3056,7 @@ SQLRETURN SqlStatement::SendParameters()
 		}
 		else if (lpSP->vParmValue.Vartype() == 'C')
 		{
-			nApiRet = SQLPutData(hStmt, lpSP->pParmPtr, lpSP->nSize);
+			nApiRet = SQLPutData(hStmt, lpSP->pParmPtr, (SQLINTEGER)lpSP->nSize);
 			if (nApiRet == SQL_ERROR)
 			{
 				SaveODBCError("SQLPutData", hStmt);
@@ -3044,10 +3071,11 @@ SQLRETURN SqlStatement::SendParameters()
 			if (!lpSP->vMemoValue.AllocHandle(lpSP->nSize))
 				throw E_INSUFMEMORY;
 			lpData = lpSP->vMemoValue.HandleToPtr();
-			if (nErrorNo = GetMemoContent(lpSP->vParmValue, lpData))
+			nErrorNo = FoxMemo::Read(lpSP->vParmValue, lpData);
+			if (nErrorNo)
 				throw nErrorNo;
 
-			nApiRet = SQLPutData(hStmt, lpData, lpSP->nSize);
+			nApiRet = SQLPutData(hStmt, lpData, (SQLINTEGER)lpSP->nSize);
 
 			lpSP->vMemoValue.FreeHandle();
 			lpSP->vMemoValue.SetNull();
@@ -3079,7 +3107,8 @@ SQLRETURN SqlStatement::SendParameterArray()
 	SqlParameter* lpSP;
 	SQLPOINTER lpData;
 	SQLLEN nIndicator, nParamIndex;
-	int nErrorNo, nFirstRow = pParameterArray.nParamsResumeOnError, nRecNoIndex = pParameterArray.nParamsResumeOnError;
+	int nErrorNo;
+	SQLLEN nFirstRow = pParameterArray.nParamsResumeOnError, nRecNoIndex = pParameterArray.nParamsResumeOnError;
 	unsigned int nParameterCount = 0;
 	nApiRet = SQLParamData(hStmt, (SQLPOINTER*)&nParamIndex);
 	while (nApiRet == SQL_NEED_DATA)
@@ -3110,7 +3139,7 @@ SQLRETURN SqlStatement::SendParameterArray()
 				case 'V':
 				case 'Q':
 					lpData = lpSP->vParmValue.HandleToPtr<SQLPOINTER>();
-					nIndicator = lpSP->vParmValue.Len();
+					nIndicator = (SQLINTEGER)lpSP->vParmValue.Len();
 					break;
 
 				case 'M':
@@ -3123,7 +3152,8 @@ SQLRETURN SqlStatement::SendParameterArray()
 							throw E_INSUFMEMORY;
 						lpSP->vMemoValue.ev_length = lpSP->vParmValue.ev_long;
 						lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
-						if (nErrorNo = GetMemoContent(lpSP->vParmValue, (char*)lpData))
+						nErrorNo = FoxMemo::Read(lpSP->vParmValue, (char*)lpData);
+						if (nErrorNo)
 							throw nErrorNo;
 					}
 					else if (lpSP->vMemoValue.GetHandleSize() < (unsigned long)lpSP->vParmValue.ev_long)
@@ -3132,14 +3162,16 @@ SQLRETURN SqlStatement::SendParameterArray()
 							throw E_INSUFMEMORY;
 						lpSP->vMemoValue.ev_length = lpSP->vParmValue.ev_long;
 						lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
-						if (nErrorNo = GetMemoContent(lpSP->vParmValue, (char*)lpData))
+						nErrorNo = FoxMemo::Read(lpSP->vParmValue, (char*)lpData);
+						if (nErrorNo)
 							throw nErrorNo;
 					}
 					else
 					{
 						lpSP->vMemoValue.ev_length = lpSP->vParmValue.ev_long;
 						lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
-						if (nErrorNo = GetMemoContent(lpSP->vParmValue, (char*)lpData))
+						nErrorNo = FoxMemo::Read(lpSP->vParmValue, (char*)lpData);
+						if (nErrorNo)
 							throw nErrorNo;
 					}
 					nIndicator = lpSP->vParmValue.ev_long;
@@ -3220,7 +3252,7 @@ SQLRETURN SqlStatement::SendParameterArray()
 
 		if (++nParameterCount == pParameters.GetCount())
 		{
-			pParameterArray.nParamOffset -= sizeof(SQLLEN) * pParameters.GetCount();
+			pParameterArray.nParamOffset -= (SQLINTEGER)(sizeof(SQLLEN) * pParameters.GetCount());
 			nParameterCount = 0;
 		}
 
@@ -3273,6 +3305,7 @@ void SqlStatement::SendTableValuedParameter(SqlParameter* lpSP)
 			if (lpData == (SQLPOINTER)lpSP)
 				break;
 
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			nColumnNumber = reinterpret_cast<INT_PTR>(lpData);
 			lpTVPCol = lpSP->pTableType->pColumns[nColumnNumber];
 			lpTVPParam = lpSP->pTableTypeParameters[nColumnNumber];
@@ -3290,7 +3323,7 @@ void SqlStatement::SendTableValuedParameter(SqlParameter* lpSP)
 				case 'V':
 				case 'Q':
 					lpData = vFieldValue.HandleToPtr<SQLPOINTER>();
-					nIndicator = vFieldValue.Len();
+					nIndicator = (SQLINTEGER)vFieldValue.Len();
 					break;
 
 				case 'M':
@@ -3303,7 +3336,8 @@ void SqlStatement::SendTableValuedParameter(SqlParameter* lpSP)
 							throw E_INSUFMEMORY;
 						lpSP->vMemoValue.ev_length = vFieldValue.ev_long;
 						lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
-						if (nErrorNo = GetMemoContent(vFieldValue, (char*)lpData))
+						nErrorNo = FoxMemo::Read(vFieldValue, (char*)lpData);
+						if (nErrorNo)
 							throw nErrorNo;
 					}
 					else if (lpSP->vMemoValue.GetHandleSize() < (unsigned long)vFieldValue.ev_long)
@@ -3312,14 +3346,16 @@ void SqlStatement::SendTableValuedParameter(SqlParameter* lpSP)
 							throw E_INSUFMEMORY;
 						lpSP->vMemoValue.ev_length = vFieldValue.ev_long;
 						lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
-						if (nErrorNo = GetMemoContent(vFieldValue, (char*)lpData))
+						nErrorNo = FoxMemo::Read(vFieldValue, (char*)lpData);
+						if (nErrorNo)
 							throw nErrorNo;
 					}
 					else
 					{
 						lpSP->vMemoValue.ev_length = vFieldValue.ev_long;
 						lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
-						if (nErrorNo = GetMemoContent(vFieldValue, (char*)lpData))
+						nErrorNo = FoxMemo::Read(vFieldValue, (char*)lpData);
+						if (nErrorNo)
 							throw nErrorNo;
 					}
 					nIndicator = vFieldValue.ev_long;
@@ -3429,7 +3465,7 @@ void SqlStatement::StreamParameters()
 			}
 			else
 			{
-				nBufferSize = lpSP->vParmValue.Len();
+				nBufferSize = (SQLINTEGER)lpSP->vParmValue.Len();
 				lpData = lpSP->pParmPtr ? lpSP->pParmPtr : lpSP->vParmValue.HandleToPtr<SQLPOINTER>();
 			}
 		}
@@ -3443,7 +3479,7 @@ void SqlStatement::StreamParameters()
 				nBufferSize = VFP2C_ODBC_MAX_FETCH_BUFFER;
 			}
 			else
-				nBufferSize = lpSP->vMemoValue.GetHandleSize();
+				nBufferSize = (SQLINTEGER)lpSP->vMemoValue.GetHandleSize();
 
 			lpData = lpSP->vMemoValue.HandleToPtr<SQLPOINTER>();
 		}
@@ -3562,13 +3598,12 @@ void SqlStatement::SaveOutputParameters()
 	}
 }
 
-void SqlStatement::ProgressCallback(int nRowsFetched, bool* bAbort)
+void SqlStatement::ProgressCallback(SQLLEN nRowsFetched, bool* bAbort)
 {
 	ValueEx vCallRet;
-	vCallRet = 0;
-	int nErrorNo;
-
-	if (nErrorNo = pCallback.Evaluate(vCallRet, nResultset, nRowsFetched, nRowsTotal))
+	vCallRet.SetNull();
+	int nErrorNo = pCallback.Evaluate(vCallRet, nResultset, nRowsFetched, nRowsTotal);
+	if (nErrorNo)
 		throw nErrorNo;
 
 	if (vCallRet.Vartype() == 'L')
@@ -3600,10 +3635,10 @@ bool SqlStatement::InfoCallbackOrStore()
 
 		while (nApiRet == SQL_SUCCESS)
 		{
-			pGetDataBuffer.Len(ExtractInfo(pGetDataBuffer, nMsgLen));
+			pGetDataBuffer.Len(ExtractInfo(pGetDataBuffer.Ptr<char*>(), nMsgLen));
 			if (nFlags & SQLEXECEX_STORE_INFO)
 			{
-				int nIndex = pInfoArray.Grow();
+				unsigned int nIndex = pInfoArray.Grow();
 				pInfoArray(nIndex, 1) = pGetDataBuffer;
 				if (nFlags & SQLEXECEX_PARAMETER_ARRAY)
 					pInfoArray(nIndex, 2) = pParameterArray.nParamsProcessed;
@@ -3617,7 +3652,7 @@ bool SqlStatement::InfoCallbackOrStore()
 					pCallback.Execute(-1, pInfo);
 			}
 			nApiRet = SQLGetDiagRec(SQL_HANDLE_STMT, hStmt, nError++, aSQLState, &nNativeError,
-				pGetDataBuffer.Ptr<SQLCHAR*>(), pGetDataBuffer.Size(), &nMsgLen);
+				pGetDataBuffer.Ptr<SQLCHAR*>(), (SQLSMALLINT)pGetDataBuffer.Size(), &nMsgLen);
 		}
 		return true;
 	}
@@ -3662,7 +3697,7 @@ unsigned int SqlStatement::ExtractInfo(char* pMessage, unsigned int nMsgLen)
 
 void SqlStatement::LoadDriverHandles(HMODULE& hDriver, SQLHSTMT& hDriverStmt, SQLHSTMT hStmt)
 {
-	SQLRETURN nApiRet = SQLGetInfo(hConn, SQL_DRIVER_HLIB, &hDriver, 0, 0);
+	SQLRETURN nApiRet = SQLGetInfo(hConn, SQL_DRIVER_HLIB, (SQLPOINTER)&hDriver, 0, 0);
 	if (nApiRet == SQL_ERROR)
 	{
 		SaveODBCError("SQLGetInfo", hConn);
@@ -3672,7 +3707,7 @@ void SqlStatement::LoadDriverHandles(HMODULE& hDriver, SQLHSTMT& hDriverStmt, SQ
 		AddODBCError("SQLGetInfo", hConn);
 
 	hDriverStmt = hStmt;
-	nApiRet = SQLGetInfo(hConn, SQL_DRIVER_HSTMT, &hDriverStmt, 0, 0);
+	nApiRet = SQLGetInfo(hConn, SQL_DRIVER_HSTMT, (SQLPOINTER)&hDriverStmt, 0, 0);
 	if (nApiRet == SQL_ERROR)
 	{
 		SaveODBCError("SQLGetInfo", hConn);
@@ -3718,9 +3753,9 @@ void SqlResultSet::ReleaseColumnBuffers()
 		{
 			lpSC = pColumns[xj];
 			if (lpSC->pDataPtr)
-				delete lpSC->pDataPtr;
+				delete[] (char*)lpSC->pDataPtr;
 			if (lpSC->nIndicator)
-				delete (SQLLEN*)lpSC->nIndicator;
+				delete[] (SQLLEN*)lpSC->nIndicator;
 		}
 	}
 }
@@ -3759,7 +3794,7 @@ void SqlResultSet::GetColumnMetaData()
 	for (unsigned int xj = 1; xj <= pColumns.GetCount(); xj++)
 	{
 		lpSC = pColumns[xj - 1];
-		nApiRet = SQLDescribeCol(pStmt->hStmt, (SQLUSMALLINT)xj, lpSC->pColumnName.Ptr<SQLCHAR*>(), lpSC->pColumnName.Size(),
+		nApiRet = SQLDescribeCol(pStmt->hStmt, (SQLUSMALLINT)xj, lpSC->pColumnName.Ptr<SQLCHAR*>(), (SQLSMALLINT)lpSC->pColumnName.Size(),
 			&nColLen, &lpSC->nSQLType, &lpSC->nSize, &lpSC->nScale, &lpSC->bNullable);
 		lpSC->pColumnName.Len(nColLen, true);
 		if (nApiRet == SQL_ERROR)
@@ -3784,6 +3819,7 @@ void SqlResultSet::GetColumnMetaData()
 			}
 			else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
 				AddODBCError("SQLColAttribute", pStmt->hStmt);
+
 			break;
 
 		case SQL_NUMERIC:
@@ -3800,6 +3836,7 @@ void SqlResultSet::GetColumnMetaData()
 
 			if (!lpSC->bMoney)
 				lpSC->nSize += 2;
+
 			break;
 
 		case SQL_REAL:
@@ -3810,9 +3847,7 @@ void SqlResultSet::GetColumnMetaData()
 			break;
 
 		case SQL_CHAR:
-		case SQL_VARCHAR:
 		case SQL_BINARY:
-		case SQL_VARBINARY:
 		case SQL_SS_UDT:
 		case SQL_SS_VARIANT:
 		case SQL_BIGINT:
@@ -3820,8 +3855,13 @@ void SqlResultSet::GetColumnMetaData()
 		case SQL_GUID:
 			break;
 
+		case SQL_VARCHAR:
+		case SQL_VARBINARY:
+			if (lpSC->nSize == 0)
+				bRowSetFetchCapable = false;
+			break;
+
 		case SQL_WCHAR:
-		case SQL_WVARCHAR:
 			nApiRet = SQLColAttribute(pStmt->hStmt, xj, SQL_DESC_DISPLAY_SIZE, 0, 0, 0, &lpSC->nDisplaySize);
 			if (nApiRet == SQL_ERROR)
 			{
@@ -3830,6 +3870,22 @@ void SqlResultSet::GetColumnMetaData()
 			}
 			else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
 				AddODBCError("SQLColAttribute", pStmt->hStmt);
+
+			break;
+
+		case SQL_WVARCHAR:
+			if (lpSC->nSize == 0)
+				bRowSetFetchCapable = false;
+
+			nApiRet = SQLColAttribute(pStmt->hStmt, xj, SQL_DESC_DISPLAY_SIZE, 0, 0, 0, &lpSC->nDisplaySize);
+			if (nApiRet == SQL_ERROR)
+			{
+				SaveODBCError("SQLColAttribute", pStmt->hStmt);
+				throw E_APIERROR;
+			}
+			else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
+				AddODBCError("SQLColAttribute", pStmt->hStmt);
+
 			break;
 
 		case SQL_LONGVARCHAR:
@@ -3872,7 +3928,7 @@ void SqlResultSet::GetColumnMetaData()
 			if (nUnnamedCol)
 				lpSC->pColumnName.Format("expr%I", nUnnamedCol);
 			else
-				lpSC->pColumnName = "expr";
+				lpSC->pColumnName = __sv("expr");
 
 			nUnnamedCol++;
 		}
@@ -3967,7 +4023,7 @@ void SqlResultSet::BindColumns()
 						AddODBCError("SQLGetStmtAttr", pStmt->hStmt);
 				}
 
-				nApiRet = SQLSetDescField(hImplicitAppRowDesc, lpSC->nColNo, SQL_DESC_PRECISION, (SQLPOINTER)lpSC->nSize, 0);
+				nApiRet = SQLSetDescField(hImplicitAppRowDesc, (SQLSMALLINT)lpSC->nColNo, SQL_DESC_TYPE, (VOID*)SQL_C_NUMERIC, 0);
 				if (nApiRet == SQL_ERROR)
 				{
 					SaveODBCError("SQLSetDescField", hImplicitAppRowDesc);
@@ -3976,7 +4032,7 @@ void SqlResultSet::BindColumns()
 				else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
 					AddODBCError("SQLSetDescField", hImplicitAppRowDesc);
 
-				nApiRet = SQLSetDescField(hImplicitAppRowDesc, lpSC->nColNo, SQL_DESC_SCALE, (SQLPOINTER)lpSC->nScale, 0);
+				nApiRet = SQLSetDescField(hImplicitAppRowDesc, (SQLSMALLINT)lpSC->nColNo, SQL_DESC_PRECISION, (SQLPOINTER)lpSC->nSize, 0);
 				if (nApiRet == SQL_ERROR)
 				{
 					SaveODBCError("SQLSetDescField", hImplicitAppRowDesc);
@@ -3985,7 +4041,7 @@ void SqlResultSet::BindColumns()
 				else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
 					AddODBCError("SQLSetDescField", hImplicitAppRowDesc);
 
-				nApiRet = SQLSetDescField(hImplicitAppRowDesc, lpSC->nColNo, SQL_DESC_DATA_PTR, lpSC->pDataPtr, 0);
+				nApiRet = SQLSetDescField(hImplicitAppRowDesc, (SQLSMALLINT)lpSC->nColNo, SQL_DESC_SCALE, (SQLPOINTER)lpSC->nScale, 0);
 				if (nApiRet == SQL_ERROR)
 				{
 					SaveODBCError("SQLSetDescField", hImplicitAppRowDesc);
@@ -3993,6 +4049,18 @@ void SqlResultSet::BindColumns()
 				}
 				else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
 					AddODBCError("SQLSetDescField", hImplicitAppRowDesc);
+
+				if (lpSC->bBindColumn)
+				{
+					nApiRet = SQLSetDescField(hImplicitAppRowDesc, (SQLSMALLINT)lpSC->nColNo, SQL_DESC_DATA_PTR, lpSC->pDataPtr, 0);
+					if (nApiRet == SQL_ERROR)
+					{
+						SaveODBCError("SQLSetDescField", hImplicitAppRowDesc);
+						throw E_APIERROR;
+					}
+					else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
+						AddODBCError("SQLSetDescField", hImplicitAppRowDesc);
+				}
 			}
 		}
 	}
@@ -4017,7 +4085,7 @@ void SqlResultSet::SaveColumnBinding()
 		return;
 
 	bRebindColumn = true;
-	nApiRet = SQLGetStmtAttr(pStmt->hStmt, SQL_ATTR_APP_ROW_DESC, &hImplicitAppRowDesc, 0, 0);
+	nApiRet = SQLGetStmtAttr(pStmt->hStmt, SQL_ATTR_APP_ROW_DESC, (SQLPOINTER)&hImplicitAppRowDesc, 0, 0);
 	if (nApiRet == SQL_ERROR)
 	{
 		SaveODBCError("SQLGetStmtAttr", pStmt->hStmt);
@@ -4113,7 +4181,7 @@ void SqlResultSet::PrepareColumnBindings()
 					lpSC->cVFPType = 'M';
 					if (pStmt->nRowSetSize == 1)
 					{
-						pStmt->pGetDataBuffer.Size(VFP2C_ODBC_MAX_FETCH_BUFFER);
+						pStmt->pGetDataBuffer.Size(lpSC->nSize + 1);
 						bBindCol = bGetData;
 						if (!lpSC->lField.IsVariable())
 							lpSC->pStore = SQLStoreMemoChar;
@@ -4122,7 +4190,7 @@ void SqlResultSet::PrepareColumnBindings()
 					}
 					else
 					{
-						pStmt->pGetDataBuffer.Size(lpSC->nSize);
+						pStmt->pGetDataBuffer.Size(lpSC->nSize + 1);
 						AllocateColumnBufferSet(lpSC, lpSC->nSize + 1);
 						lpSC->pStoreSet = SQLStoreMemoCharByBindingSet;
 					}
@@ -4132,7 +4200,7 @@ void SqlResultSet::PrepareColumnBindings()
 			{
 				if (lpSC->cVFPType == 'M' || lpSC->cVFPType == 'W')
 				{
-					pStmt->pGetDataBuffer.Size(lpSC->nSize);
+					pStmt->pGetDataBuffer.Size(lpSC->nSize + 1);
 					if (pStmt->nRowSetSize == 1)
 					{
 						bBindCol = bGetData;
@@ -4305,7 +4373,7 @@ void SqlResultSet::PrepareColumnBindings()
 					lpSC->cVFPType = 'M';
 					if (pStmt->nRowSetSize == 1)
 					{
-						pStmt->pGetDataBuffer.Size(lpSC->nSize);
+						pStmt->pGetDataBuffer.Size(lpSC->nSize ? lpSC->nSize + 1 : VFP2C_ODBC_MAX_FETCH_BUFFER);
 						bBindCol = bGetData;
 						if (!lpSC->lField.IsVariable())
 							lpSC->pStore = SQLStoreMemoChar;
@@ -4387,7 +4455,7 @@ void SqlResultSet::PrepareColumnBindings()
 				}
 				else
 				{
-					pStmt->pGetDataBuffer.Size(lpSC->nSize);
+					pStmt->pGetDataBuffer.Size(lpSC->nSize ? lpSC->nSize : VFP2C_ODBC_MAX_FETCH_BUFFER);
 					bBindCol = bGetData;
 					if (CFoxVersion::MajorVersion() >= 9 && pStmt->bMapVarbinary)
 						lpSC->cVFPType = 'W';
@@ -4615,11 +4683,11 @@ void SqlResultSet::PrepareColumnBindings()
 				}
 				else
 				{
-					pStmt->pGetDataBuffer.Size(VFP2C_ODBC_MAX_FETCH_BUFFER);
 					bBindCol = bGetData;
 					lpSC->cVFPType = 'M';
 					if (pStmt->bUnicodeConversion)
 					{
+						pStmt->pGetDataBuffer.Size(lpSC->nSize ? lpSC->nSize + 1 : VFP2C_ODBC_MAX_FETCH_BUFFER);	
 						lpSC->nCType = SQL_C_CHAR;
 						if (!lpSC->lField.IsVariable())
 							lpSC->pStore = SQLStoreMemoChar;
@@ -4628,6 +4696,7 @@ void SqlResultSet::PrepareColumnBindings()
 					}
 					else
 					{
+						pStmt->pGetDataBuffer.Size(lpSC->nSize ? lpSC->nSize + 2 : VFP2C_ODBC_MAX_FETCH_BUFFER);	
 						lpSC->nCType = SQL_C_WCHAR;
 						if (!lpSC->lField.IsVariable())
 							lpSC->pStore = SQLStoreMemoWChar;
@@ -4836,7 +4905,7 @@ void SqlResultSet::PrepareColumnBindings()
 				}
 				else if (lpSC->cVFPType == 'N' || lpSC->cVFPType == 'F' || lpSC->cVFPType == 'B')
 				{
-					lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+					lpSC->vData.SetNumeric((int)lpSC->nSize, lpSC->nScale);
 					lpSC->pDataPtr = &lpSC->vData.ev_real;
 					lpSC->nCType = SQL_C_DOUBLE;
 					if (!lpSC->lField.IsVariable())
@@ -4929,7 +4998,7 @@ void SqlResultSet::PrepareColumnBindings()
 					}
 					else
 					{
-						lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+						lpSC->vData.SetNumeric((int)lpSC->nSize, lpSC->nScale);
 						lpSC->nCType = SQL_C_DOUBLE;
 						lpSC->cVFPType = 'N';
 						if (pStmt->nRowSetSize == 1)
@@ -5059,7 +5128,7 @@ void SqlResultSet::PrepareColumnBindings()
 				}
 				else if (lpSC->cVFPType == 'N' || lpSC->cVFPType == 'B' || lpSC->cVFPType == 'F')
 				{
-					lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+					lpSC->vData.SetNumeric((int)lpSC->nSize, lpSC->nScale);
 					lpSC->pDataPtr = &lpSC->vData.ev_real;
 					lpSC->nCType = SQL_C_DOUBLE;
 					lpSC->bBindColumn = bBindCol;
@@ -5429,7 +5498,7 @@ void SqlResultSet::PrepareColumnBindings()
 				}
 				else if (lpSC->cVFPType == 'B' || lpSC->cVFPType == 'N' || lpSC->cVFPType == 'F')
 				{
-					lpSC->vData.SetNumeric(lpSC->nSize, lpSC->nScale);
+					lpSC->vData.SetNumeric((int)lpSC->nSize, lpSC->nScale);
 					lpSC->pDataPtr = &lpSC->vData.ev_real;
 					lpSC->nCType = SQL_C_DOUBLE;
 					lpSC->bBindColumn = bBindCol;
@@ -5458,7 +5527,7 @@ void SqlResultSet::PrepareColumnBindings()
 	}
 }
 
-void SqlResultSet::AllocateColumnBuffer(SqlColumn* lpSC, int nLen, bool bBindColumn)
+void SqlResultSet::AllocateColumnBuffer(SqlColumn* lpSC, unsigned int nLen, bool bBindColumn)
 {
 	if (bBindColumn)
 	{
@@ -5467,7 +5536,7 @@ void SqlResultSet::AllocateColumnBuffer(SqlColumn* lpSC, int nLen, bool bBindCol
 			throw E_INSUFMEMORY;
 		lpSC->vData.LockHandle();
 		lpSC->pDataPtr = lpSC->vData.HandleToPtr();
-		lpSC->nBufferSize = nLen;
+		lpSC->nBufferSize = (SQLINTEGER)nLen;
 		lpSC->bBindColumn = bBindColumn;
 	}
 	else
@@ -5476,16 +5545,16 @@ void SqlResultSet::AllocateColumnBuffer(SqlColumn* lpSC, int nLen, bool bBindCol
 	}
 }
 
-void SqlResultSet::AllocateColumnBufferSet(SqlColumn* lpSC, int nLen)
+void SqlResultSet::AllocateColumnBufferSet(SqlColumn* lpSC, unsigned int nLen)
 {
 	lpSC->pStmt->pGetDataBuffer.Size(VFP2C_ODBC_MAX_FETCH_BUFFER);
-	lpSC->pDataPtr = new char[nLen * pStmt->nRowSetSize];
+	lpSC->pDataPtr = new(std::nothrow) char[nLen * pStmt->nRowSetSize];
 	if (lpSC->pDataPtr == 0)
 		throw E_INSUFMEMORY;
-	lpSC->nIndicator = (SQLLEN)new SQLLEN[pStmt->nRowSetSize];
+	lpSC->nIndicator = (SQLLEN)new(std::nothrow) SQLLEN[pStmt->nRowSetSize];
 	if (lpSC->nIndicator == 0)
 		throw E_INSUFMEMORY;
-	lpSC->nBufferSize = nLen;
+	lpSC->nBufferSize = (SQLINTEGER)nLen;
 	lpSC->bBindColumn = true;
 }
 
@@ -5711,7 +5780,8 @@ void SqlResultSet::BindVariableLocators()
 		return;
 
 	SqlColumn* lpSC = pColumns[0];
-	int nErrorNo, xj;
+	int nErrorNo;
+	unsigned int xj;
 	char aCursorOrVar[VFP2C_VFP_MAX_CURSOR_NAME + 1];
 	char aField[VFP2C_VFP_MAX_COLUMN_NAME + 1];
 	CStringView pSchema = pStmt->pCursorNames.GetWordNum(pStmt->nResultset, '|');
@@ -5733,7 +5803,8 @@ void SqlResultSet::BindVariableLocators()
 			{
 				if (pMatcher.MatchIdentifier(aField, VFP2C_VFP_MAX_COLUMN_NAME))
 				{
-					if (nErrorNo = FindFoxField(aField, lpSC->lField, aCursorOrVar))
+					nErrorNo = FindFoxField(aField, lpSC->lField, aCursorOrVar);
+					if (nErrorNo)
 						throw nErrorNo;
 				}
 				else
@@ -5744,13 +5815,15 @@ void SqlResultSet::BindVariableLocators()
 			}
 			else
 			{
-				if (nErrorNo = FindFoxVar(aCursorOrVar, lpSC->lField))
+				nErrorNo = FindFoxVar(aCursorOrVar, lpSC->lField);
+				if (nErrorNo)
 					throw nErrorNo;
 			}
 
 			if (!lpSC->lField.IsVariable() && (lpSC->cVFPType == 'M' || lpSC->cVFPType == 'W' || lpSC->cVFPType == 'G'))
 			{
-				if (nErrorNo = MemoChan(lpSC->lField.l_where, &lpSC->hMemoFile))
+				nErrorNo = FoxMemo::Chan(lpSC->lField.l_where, &lpSC->hMemoFile);
+				if (nErrorNo)
 					throw nErrorNo;
 			}
 		}
@@ -5762,7 +5835,7 @@ void SqlResultSet::BindVariableLocators()
 
 		lpSC++;
 
-		if (!--xj)
+		if (!(--xj))
 			break;
 
 	} while (pMatcher.MatchChar(','));
@@ -5799,11 +5872,11 @@ void SqlResultSet::SetCursorName()
 	{
 		CStrBuilder<32> pCursor;
 		if (pStmt->nResultset == 1)
-			pCursor = "sqlresult";
+			pCursor = __sv("sqlresult");
 		else
 			pCursor.Format("sqlresult%U", pStmt->nResultset);
 
-		pCursorName = pCursor;
+		pCursorName = pCursor.StringView();
 	}
 }
 
@@ -5860,20 +5933,19 @@ void SqlResultSet::CreateCursor()
 		}
 
 		// store fieldname
-		vStringValue = lpSC->pColumnName;
+		vStringValue = lpSC->pColumnName.StringView();
 		pArray(nRow, 1) = vStringValue;
 
 		// store fieldtype
-
 		vStringValue.Len(1);
-		vStringValue[0] = lpSC->cVFPType;
+		vStringValue[0] = (char)lpSC->cVFPType;
 		pArray(nRow, 2) = vStringValue;
 
 		// store field width/precision
 		// if the VFP datatype is none of the below ones .. the field width is unneccesary
 		if (lpSC->cVFPType == 'C' || lpSC->cVFPType == 'V' || lpSC->cVFPType == 'Q' ||
 			lpSC->cVFPType == 'F' || lpSC->cVFPType == 'N')
-			vNumeric.ev_long = lpSC->nSize;
+			vNumeric.ev_long = (long)lpSC->nSize;
 		else
 			vNumeric.ev_long = 0;
 
@@ -5897,7 +5969,9 @@ void SqlResultSet::CreateCursor()
 		pArray(nRow, 6) = vLogical;
 	}
 
-	pExeBuffer.Format("CREATE CURSOR %V FROM ARRAY %V", pCursorName.StringView(), pArrayName.StringView());
+	CStringView vCursorName = pCursorName.StringView();
+	CStringView vArrayName = pArrayName.StringView();
+	pExeBuffer.Format("CREATE CURSOR %V FROM ARRAY %V", &vCursorName, &vArrayName);
 	Execute(pExeBuffer);
 	nWorkArea = Select(0);
 }
@@ -5908,16 +5982,25 @@ void SqlResultSet::BindFieldLocators()
 		return;
 
 	SqlColumn* lpSC;
-	int nErrorNo;
-
+	int nErrorNo, nMemoChan = -1;
+	
 	for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 	{
 		lpSC = pColumns[xj];
-		if (nErrorNo = FindFoxField(lpSC->pColumnName.Ptr<char*>(), lpSC->lField, nWorkArea))
+		nErrorNo = FindFoxField(lpSC->pColumnName.Ptr<char*>(), lpSC->lField, nWorkArea);
+		if (nErrorNo)
 			throw nErrorNo;
 
 		if (lpSC->cVFPType == 'M' || lpSC->cVFPType == 'W' || lpSC->cVFPType == 'G')
-			MemoChan(lpSC->lField.l_where, &lpSC->hMemoFile);
+		{
+			if (nMemoChan == -1)
+			{
+				nErrorNo = FoxMemo::Chan(lpSC->lField.l_where, &nMemoChan);
+				if (nErrorNo)
+					throw nErrorNo;
+			}
+			lpSC->hMemoFile = nMemoChan;
+		}
 	}
 }
 
@@ -5950,13 +6033,15 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 					bStoreInfoAsError = false;
 				}
 
-				if (nErrorNo = Append(nWorkArea))
+				nErrorNo = Append(nWorkArea);
+				if (nErrorNo)
 					throw nErrorNo;
 
 				lpSC = pColumns[0];
 				for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 				{
-					if (nErrorNo = lpSC->pStore(lpSC))
+					nErrorNo = lpSC->pStore(lpSC);
+					if (nErrorNo)
 						throw nErrorNo;
 
 					lpSC++;
@@ -5984,13 +6069,15 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 
 				for (int nRow = 0; nRow < pStmt->nRowsFetched; nRow++)
 				{
-					if (nErrorNo = Append(nWorkArea))
+					nErrorNo = Append(nWorkArea);
+					if (nErrorNo)
 						throw nErrorNo;
 
 					lpSC = pColumns[0];
 					for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 					{
-						if (nErrorNo = lpSC->pStoreSet(lpSC, nRow))
+						nErrorNo = lpSC->pStoreSet(lpSC, nRow);
+						if (nErrorNo)
 							throw nErrorNo;
 						lpSC++;
 					}
@@ -6026,13 +6113,15 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 					bStoreInfoAsError = false;
 				}
 
-				if (nErrorNo = Append(nWorkArea))
+				nErrorNo = Append(nWorkArea);
+				if (nErrorNo)
 					throw nErrorNo;
 
 				lpSC = pColumns[0];
 				for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 				{
-					if (nErrorNo = lpSC->pStore(lpSC))
+					nErrorNo = lpSC->pStore(lpSC);
+					if (nErrorNo)
 						throw nErrorNo;
 
 					lpSC++;
@@ -6054,13 +6143,15 @@ void SqlResultSet::FetchToCursor(bool* bAborted)
 
 				for (int nRow = 0; nRow < pStmt->nRowsFetched; nRow++)
 				{
-					if (nErrorNo = Append(nWorkArea))
+					nErrorNo = Append(nWorkArea);
+					if (nErrorNo)
 						throw nErrorNo;
 
 					lpSC = pColumns[0];
 					for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 					{
-						if (nErrorNo = lpSC->pStoreSet(lpSC, nRow))
+						nErrorNo = lpSC->pStoreSet(lpSC, nRow);
+						if (nErrorNo)
 							throw nErrorNo;
 						lpSC++;
 					}
@@ -6094,7 +6185,8 @@ void SqlResultSet::FetchToVariables()
 		lpSC = pColumns[0];
 		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
-			if (nErrorNo = lpSC->pStore(lpSC))
+			nErrorNo = lpSC->pStore(lpSC);
+			if (nErrorNo)
 				throw nErrorNo;
 
 			lpSC++;
@@ -6128,7 +6220,8 @@ void SqlResultSet::FetchOutputColumns(SqlParameterArray& pParameterArray)
 
 		for (unsigned int xj = 0; xj < pColumns.GetCount(); xj++)
 		{
-			if (nErrorNo = lpSC->pStore(lpSC))
+			nErrorNo = lpSC->pStore(lpSC);
+			if (nErrorNo)
 				throw nErrorNo;
 
 			lpSC++;
@@ -6259,6 +6352,8 @@ void SqlParameter::DeduceParameterType(char cType, bool bBinary)
 			nSQLType = SQL_NUMERIC;
 			nCType = SQL_C_NUMERIC;
 			break;
+		default:
+			break;
 		}
 	}
 	else
@@ -6287,6 +6382,8 @@ void SqlParameter::DeduceParameterType(char cType, bool bBinary)
 		case 'G':
 			nSQLType = SQL_VARBINARY;
 			nCType = SQL_C_BINARY;
+			break;
+		default:
 			break;
 		}
 	}
@@ -6327,6 +6424,12 @@ SqlTableType::SqlTableType(CStringView vCatalog, CStringView vSchema, CStringVie
 	pMapKey.Append(pSchema);
 	pMapKey.Append('.');
 	pMapKey.Append(pTypename);
+	nUseMemoSize = 0;
+	bMapVarchar = false;
+	bMapVarbinary = false;
+	bMapBinaryToGeneral = false;
+	bUnicodeConversion = false;
+	nDefaultDecimals = 0;
 }
 
 const char* SqlTableType::Key() const
@@ -6343,11 +6446,3 @@ SqlParameterArray::SqlParameterArray()
 	nParamsResumeOnError = 0;
 	nParamLastOutput = 0;
 }
-
-/**
-
-
-
-* 
-
-*/

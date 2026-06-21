@@ -360,9 +360,9 @@ enum {
 
 
 // Alternate values for parmCount to modify how FoxPro treats the function
-#define INTERNAL		-1		/* Not callable from FoxPro				*/
-#define CALLONLOAD		-2		/* Call when library is loaded			*/
-#define CALLONUNLOAD	-3		/* Call when library is unloaded		*/
+#define INTERNAL		(-1)		/* Not callable from FoxPro				*/
+#define CALLONLOAD		(-2)		/* Call when library is loaded			*/
+#define CALLONUNLOAD	(-3)		/* Call when library is unloaded		*/
 
 
 // The FoxInfo structure contains the descriptions of the functions
@@ -1010,10 +1010,10 @@ void	FASTCALL __EdRevert(WHandle wh, int mode);
 #define _EdRevert(wh)				__EdRevert(wh, ED_REVERT)
 #define _EdSave(wh)					__EdRevert(wh, ED_SAVE)
 
-#define _EdSetPos(wh, pos)			(__EdPos(wh, (EDPOS) pos, ED_SETPOS))
-#define _EdGetLinePos(wh, line)		((EDPOS)__EdPos(wh, (EDLINE) line, ED_GETLINEPOS))
-#define _EdGetLineNum(wh, pos)		((EDLINE)__EdPos(wh, (EDPOS) pos, ED_GETLINENUM))
-#define _EdGetPos(wh)				((EDPOS)__EdPos(wh, 0, ED_GETPOS))
+#define _EdSetPos(wh, pos)			(__EdPos((wh), (EDPOS)(pos), ED_SETPOS))
+#define _EdGetLinePos(wh, line)		((EDPOS)__EdPos((wh), (EDLINE)(line), ED_GETLINEPOS))
+#define _EdGetLineNum(wh, pos)		((EDLINE)__EdPos((wh), (EDPOS)(pos), ED_GETLINENUM))
+#define _EdGetPos(wh)				((EDPOS)__EdPos((wh), 0, ED_GETPOS))
 
 EDPOS	FASTCALL __EdPos(WHandle wh, long pos, int mode);
 int		FASTCALL _EdPosInView(WHandle wh, EDPOS pos);

@@ -98,3 +98,13 @@ read.lock
 /vfp2c32examples/msvcr100.dll
 /vfp2c32examples/msvcr100d.dll
 /vfp2c32examples/msvcr71.dll
+/vfp2c32examples/hs.dll
+/vfp2c32examples/hs_runtime.dll
+/vfp2c32/vfp2c32/vfp2casmtest.asm
+/vfp2c32examples/Tests/FXUPERSIST.XML
+/vfp2c32examples/Tests/FXUPERSISTGETTEMPLATE.XML
+/vfp2c32examples/Tests/FXUResults.CDX
+/vfp2c32examples/Tests/FXUResults.DBF
+/vfp2c32examples/Tests/FXUResults.FPT
+/vfp2c32examples/__vfp2c_classes.VCT
+/vfp2c32examples/__vfp2c_classes.vcx

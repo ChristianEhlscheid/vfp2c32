@@ -10,17 +10,17 @@ public:
 	~CPropVariant() { PropVariantClear(this); }
 };
 
-template<class T>
+template<class Derived>
 class CDispatchBase : public IDispatch
 {
-public:
+private:
 	CDispatchBase() : m_RefCount(1) {};
+	friend Derived;
 
+public:
 	STDMETHOD(QueryInterface)(REFIID riid, void** ppvObject)
 	{
-		*ppvObject = NULL;
 		HRESULT hr;
-
 		// IUnknown
 		if (::IsEqualIID(riid, __uuidof(IUnknown)))
 		{
@@ -34,8 +34,10 @@ public:
 			hr = S_OK;
 		}
 		else
+		{
+			*ppvObject = NULL;
 			hr = E_NOINTERFACE;
-
+		}
 		return hr;
 	};
 
@@ -49,7 +51,7 @@ public:
 		m_RefCount--;
 		if (m_RefCount == 0)
 		{
-			delete static_cast<T*>(this);
+			delete static_cast<Derived*>(this);
 			return 0;
 		}
 		else
@@ -69,13 +71,13 @@ public:
 
 	STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid)
 	{
-		return static_cast<T*>(this)->GetIDsOfNames(riid, rgszNames, cNames, lcid, rgdispid);
+		return static_cast<Derived*>(this)->GetIDsOfNames(riid, rgszNames, cNames, lcid, rgdispid);
 	}
 
 	STDMETHOD(Invoke)(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
 		DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 	{
-		return static_cast<T*>(this)->Invoke(dispidMember, riid, lcid, wFlags, pdispparams, pvarResult, pexcepinfo, puArgErr);
+		return static_cast<Derived*>(this)->Invoke(dispidMember, riid, lcid, wFlags, pdispparams, pvarResult, pexcepinfo, puArgErr);
 	}
 
 protected:
@@ -86,6 +88,7 @@ class CPropertyDescription : public CDispatchBase<CPropertyDescription>
 {
 public:
 	CPropertyDescription(IPropertyDescription* pDesc);
+	virtual ~CPropertyDescription() {};
 
 	// IDispatch methods
 	STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid);
@@ -103,10 +106,12 @@ class CPropertyDescriptionList : public CDispatchBase<CPropertyDescriptionList>
 {
 public:
 	CPropertyDescriptionList(IPropertyDescriptionList* pList);
+	virtual ~CPropertyDescriptionList() {};
 
 	STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid);
 	STDMETHOD(Invoke)(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
 		DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr);
+
 private:
 	ComPtr<IPropertyDescriptionList*> m_List;
 	static const DISPID DISPID_GetAt = 1;
@@ -116,8 +121,7 @@ private:
 class CPropertyDescriptionListEnumerator : public IEnumVARIANT
 {
 public:
-	CPropertyDescriptionListEnumerator(IPropertyDescriptionList* pList);
-	CPropertyDescriptionListEnumerator(CPropertyDescriptionListEnumerator& pEnum);
+	virtual ~CPropertyDescriptionListEnumerator() { };
 
 	STDMETHOD(QueryInterface)(REFIID riid, void** ppvObject);
 	STDMETHOD_(ULONG, AddRef)();
@@ -127,9 +131,11 @@ public:
 	STDMETHOD(Reset)();
 	STDMETHOD(Clone)(IEnumVARIANT** ppEnum);
 
+	static HRESULT Create(IPropertyDescriptionList* pList, IUnknown** pUnk);
+	static HRESULT Create(CPropertyDescriptionListEnumerator& pPropList, IUnknown** pUnk);
 private:
 	ComPtr<IPropertyDescriptionList*> m_List;
-	int m_Index;
+	UINT m_Index;
 	long m_RefCount;	// reference count
 };
 
@@ -137,6 +143,7 @@ class CPropertyStore : public CDispatchBase<CPropertyStore>
 {
 public:
 	CPropertyStore(IPropertyStore* pStore);
+	virtual ~CPropertyStore() {};
 
 	STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid);
 	STDMETHOD(Invoke)(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,
@@ -153,6 +160,7 @@ class CShellItem : public CDispatchBase<CShellItem>
 {
 public:
 	CShellItem(IShellItem2* pShellItem);
+	virtual ~CShellItem() {};
 
 	STDMETHOD(GetIDsOfNames)(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid);
 	STDMETHOD(Invoke)(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags,

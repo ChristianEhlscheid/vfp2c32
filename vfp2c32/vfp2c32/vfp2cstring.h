@@ -1,7 +1,7 @@
 #ifndef _VFP2CSTRING_H__
 #define _VFP2CSTRING_H__
 
-#include <Windows.h>
+#include "vfp2ctemplates.h"
 
 const int VFP2C_MAX_BOOL_LITERAL = 3;
 const int VFP2C_MAX_DATE_LITERAL = 32;
@@ -23,7 +23,7 @@ const int MIN_INT = -2147483647 - 1;
 const int MAX_INT = 2147483647;
 const unsigned int MIN_UINT = 0;
 const unsigned int MAX_UINT = 0xFFFFFFFF;
-const __int64 MIN_INT64 = 0x8000000000000000;
+const __int64 MIN_INT64 = (__int64)0x8000000000000000;
 const __int64 MAX_INT64 = 0x7FFFFFFFFFFFFFFF;
 const unsigned __int64 MIN_UINT64 = 0;
 const unsigned __int64 MAX_UINT64 = 0xFFFFFFFFFFFFFFFF;
@@ -36,7 +36,6 @@ unsigned int _fastcall strnlen(const char* s, unsigned long count);
 unsigned int _fastcall strdblnlen(const char* s, unsigned long count);
 unsigned int _fastcall strdblcount(const char* pString, unsigned long nMaxLen);
 unsigned int _fastcall wstrnlen(const wchar_t* pString, unsigned int nMaxLen);
-unsigned int _fastcall strcpyex(char* pBuffer, const char* pSource);
 unsigned int _fastcall strncpyex(char* pBuffer, const char* pSource, unsigned int nMaxLen);
 unsigned int _cdecl sprintfex(char* lpBuffer, const char* lpFormat, ...);
 unsigned int _stdcall printfex(char* lpBuffer, const char* lpFormat, va_list lpArgs);
@@ -70,40 +69,34 @@ char* _fastcall DoubleToStr(char* pString, double nValue, int nPrecision);
 void _fastcall Int64ToStrBuffer(char* pString, __int64 nNumber);
 void _fastcall UInt64ToStrBuffer(char* pString, unsigned __int64 nNumber);
 #pragma warning(disable : 4290) // disable warning 4290 - VC++ doesn't implement throw ...
-__int64 _fastcall StringToInt64(char* pString, unsigned int nLen);
-unsigned __int64 _fastcall StringToUInt64(char* pString, unsigned int nLen);
+__int64 _fastcall StringToInt64(char* pString, unsigned int nLen) throw(int);
+unsigned __int64 _fastcall StringToUInt64(char* pString, unsigned int nLen) throw(int);
 #pragma warning(default : 4290) // enable warning 4290 - VC++ doesn't implement throw ...
 
 // misc VFP like string functions
-unsigned int _fastcall GetWordCount(const char* pString, const char pSeperator);
 unsigned int _fastcall GetWordNumN(char* pBuffer, const char* pString, const char pSeperator, unsigned int nToken, unsigned int nMaxLen);
-void _fastcall Alltrim(char* pString);
-char* _fastcall AtEx(char* pString, char pSearch, int nOccurence);
-char* _fastcall ReplicateEx(char* pBuffer, char pExpr, int nCount);
-
-char* _fastcall str_append(char* pBuffer, char* pString);
-int _fastcall str_charcount(char* pString, char pChar);
 
 class CStringMatcher
 {
 public:
+	CStringMatcher(char* pString);
 	CStringMatcher(CStringView pString);
 	bool MatchIdentifier(char* pBuffer, int nMaxLen);
-	bool MatchIdentifier(CStringView& pMatch, int nMaxLen = 2^31);
+	bool MatchIdentifier(CStringView& pMatch, int nMaxLen = MAX_INT);
 	bool MatchDottedIdentifier(char* pBuffer, int nMaxLen);
-	bool MatchDottedIdentifier(CStringView& pMatch, int nMaxLen = 2^31);
+	bool MatchDottedIdentifier(CStringView& pMatch, int nMaxLen = MAX_INT);
 	bool MatchQuotedIdentifier(char* pBuffer, int nMaxLen);
-	bool MatchQuotedIdentifier(CStringView& pMatch, int nMaxLen = 2^31);
+	bool MatchQuotedIdentifier(CStringView& pMatch, int nMaxLen = MAX_INT);
 	bool MatchString(const char* pSearch);
 	bool MatchStringCaseInsensitive(const char* pSearch);
 	bool MatchChar(char pSearch);
 	bool MatchChars(const char* pChars, char* pFound);
+	bool MatchShort(short* nShort);
+	bool MatchUShort(unsigned short* nShort);
 	bool MatchInteger(int* nInt);
 	bool MatchUInteger(unsigned int* nUInt);
 	bool MatchULong(unsigned long* nULong);
 	bool MatchULong(unsigned long* nULong, int* nLen);
-	bool MatchShort(short* nShort);
-	bool MatchUShort(unsigned short* nShort);
 	CStringView CurrentView();
 	bool End();
 
@@ -112,6 +105,11 @@ private:
 	unsigned int MatchIdentifier(int nMaxLen);
 	unsigned int MatchDottedIdentifier(int nMaxLen);
 	unsigned int MatchQuotedIdentifier(int nMaxLen);
+	void Convert(const char* pDigits, short* nValue, bool bNegative);
+	void Convert(const char* pDigits, unsigned short* nValue);
+	void Convert(const char* pDigits, int* nValue, bool bNegative);
+	void Convert(const char* pDigits, unsigned int* nValue);
+	void Convert(const char* pDigits, unsigned long* nValue);
 	char* m_String;
 	unsigned int m_Length;
 	unsigned int m_CurrentPos;

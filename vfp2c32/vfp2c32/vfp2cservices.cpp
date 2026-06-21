@@ -1,5 +1,5 @@
 #include <windows.h>
-#include <atlbase.h>
+// #include <atlbase.h>
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -7,10 +7,12 @@
 #include "pro_ext64.h"
 #endif
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
+// #include "vfp2cutil.h"
 #include "vfp2cservices.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
+
+static PNOTIFYYSERVICESTATUSCHANGE fpNotifyServiceStatusChange = 0;
 
 ServiceManager::ServiceManager(const char *pMachine, const char *pDatabase, DWORD dwAccess)
 {
@@ -62,68 +64,37 @@ int Service::Start(DWORD nNumberOfArgs, LPCSTR *pArgs, int nTimeout)
 {
 	// Check if the service is already running
 	QueryStatus(&m_Status);
-
-	if (m_Status.dwCurrentState == SERVICE_RUNNING)
-		return 1;
-
-	if (m_Status.dwCurrentState != SERVICE_START_PENDING)
+	switch (m_Status.dwCurrentState)
 	{
-		if (!StartService(m_Handle, nNumberOfArgs, pArgs))
-		{
-			SaveWin32Error("StartService", GetLastError());
-			throw E_APIERROR;
-		}
+		case SERVICE_STOP_PENDING:
+			if (WaitForServiceStatus(SERVICE_STOPPED, nTimeout) == 0)
+				return 0;
 
-		QueryStatus(&m_Status);
-	}
-
-	// Check the status until the service is no longer start pending. 
-    // Save the tick count and initial checkpoint.
-	DWORD dwOldCheckPoint, dwStartTime, dwTimeout;
-	bool bCustomTimeout = false;
-
-	dwOldCheckPoint = m_Status.dwCheckPoint;
-	dwStartTime = GetTickCount();
-
-	if (nTimeout == 0)
-		return 0;
-	else if (nTimeout == SERVICE_DEFAULT_TIMEOUT)
-		dwTimeout = m_Status.dwWaitHint;
-	else
-	{
-		dwTimeout = nTimeout * 1000;
-		bCustomTimeout = true;
-	}
-
-	while (m_Status.dwCurrentState != SERVICE_RUNNING) 
-	{ 
-		// Check the status again. 
-		QueryStatus(&m_Status);
-
-		if(m_Status.dwCheckPoint > dwOldCheckPoint)
-		{
-			// The service is making progress.
-			if (!bCustomTimeout)
+		case SERVICE_STOPPED:
+			if (!StartService(m_Handle, nNumberOfArgs, pArgs))
 			{
-				dwStartTime = GetTickCount();
-				dwOldCheckPoint = m_Status.dwCheckPoint;
-				dwTimeout = m_Status.dwWaitHint;
+				SaveWin32Error("StartService", GetLastError());
+				throw E_APIERROR;
 			}
-		}
-		else if(GetTickCount() - dwStartTime > dwTimeout)
+			QueryStatus(&m_Status);
 			break;
+		/*
+		case SERVICE_RUNNING:
+		case SERVICE_START_PENDING:
+		case SERVICE_CONTINUE_PENDING:
+		case SERVICE_PAUSE_PENDING:
+		*/
+		default:
+			return 1;
+	};
 
-		Sleep(333);
-	} 
-
-	return m_Status.dwCurrentState == SERVICE_RUNNING ? 1 : 0;
+	return WaitForServiceStatus(SERVICE_RUNNING, nTimeout);
 }
 
 int Service::Stop(bool bStopDependencies, int nTimeout, SC_HANDLE hSCM)
 {
 	// Make sure the service is not already stopped
 	QueryStatus(&m_Status);
-
 	if (m_Status.dwCurrentState == SERVICE_STOPPED)
 		return 1;
 
@@ -134,12 +105,7 @@ int Service::Stop(bool bStopDependencies, int nTimeout, SC_HANDLE hSCM)
 		StopDependantServices(hSCM);
 
 	// Send a stop code to the main service
-	if (!ControlService(m_Handle,SERVICE_CONTROL_STOP,&m_Status))
-	{
-		SaveWin32Error("ControlService", GetLastError());
-		throw E_APIERROR;
-	}
-
+	Control(SERVICE_CONTROL_STOP);
 	return WaitForServiceStatus(SERVICE_STOPPED,nTimeout);
 }
 
@@ -147,7 +113,6 @@ int Service::Pause(int nTimeout)
 {
 	// make sure the service is not already paused
 	QueryStatus(&m_Status);
-
 	if (m_Status.dwCurrentState == SERVICE_PAUSED)
 		return 1;
 
@@ -155,12 +120,7 @@ int Service::Pause(int nTimeout)
 		return WaitForServiceStatus(SERVICE_PAUSED, nTimeout);
 
 	// Send pause command to the service
-	if (!ControlService(m_Handle,SERVICE_CONTROL_PAUSE,&m_Status))
-	{
-		SaveWin32Error("ControlService", GetLastError());
-		throw E_APIERROR;
-	}
-
+	Control(SERVICE_CONTROL_PAUSE);
 	return WaitForServiceStatus(SERVICE_PAUSED, nTimeout);
 }
 
@@ -168,7 +128,6 @@ int Service::Continue(int nTimeout)
 {
 	// make sure the service is not already paused
 	QueryStatus(&m_Status);
-
 	if (m_Status.dwCurrentState == SERVICE_RUNNING)
 		return 1;
 
@@ -176,17 +135,11 @@ int Service::Continue(int nTimeout)
 	if (m_Status.dwCurrentState == SERVICE_CONTINUE_PENDING)
 		return WaitForServiceStatus(SERVICE_RUNNING, nTimeout);
 
-	// Send pause command to the service
-	if (!ControlService(m_Handle, SERVICE_CONTROL_CONTINUE, &m_Status))
-	{
-		SaveWin32Error("ControlService", GetLastError());
-		throw E_APIERROR;
-	}
-
+	Control(SERVICE_CONTROL_CONTINUE);
 	return WaitForServiceStatus(SERVICE_RUNNING,nTimeout);
 }
 
-int Service::Control(DWORD nControlCode)
+void Service::Control(DWORD nControlCode)
 {
 	// Send a stop code to the main service
 	if (!ControlService(m_Handle, nControlCode, &m_Status))
@@ -194,7 +147,6 @@ int Service::Control(DWORD nControlCode)
 		SaveWin32Error("ControlService", GetLastError());
 		throw E_APIERROR;
 	}
-	return 1;
 }
 
 void Service::QueryStatus(LPSERVICE_STATUS pStatus)
@@ -210,7 +162,7 @@ void Service::QueryConfig(CBuffer &pBuffer)
 {
 	DWORD nBytesNeeded = 0;
 	pBuffer.Size(8192);
-	if(!QueryServiceConfig(m_Handle, reinterpret_cast<LPQUERY_SERVICE_CONFIG>(pBuffer.Address()), pBuffer.Size(), &nBytesNeeded))
+	if(!QueryServiceConfig(m_Handle, pBuffer.Ptr<LPQUERY_SERVICE_CONFIG>(), pBuffer.Size(), &nBytesNeeded))
 	{
 		SaveWin32Error("QueryServiceConfig", GetLastError());
 		throw E_APIERROR;
@@ -219,8 +171,12 @@ void Service::QueryConfig(CBuffer &pBuffer)
 
 int Service::WaitForServiceStatus(DWORD dwState, int nTimeout)
 {
-	DWORD nStartTime = GetTickCount();
+	DWORD nStartTime;
 	DWORD dwTimeout;
+	SERVICE_NOTIFY serviceNotify;
+
+	if (m_Status.dwCurrentState == 0)
+		QueryStatus(&m_Status);
 
 	if (nTimeout == SERVICE_DEFAULT_TIMEOUT)
 		dwTimeout = m_Status.dwWaitHint;
@@ -229,21 +185,69 @@ int Service::WaitForServiceStatus(DWORD dwState, int nTimeout)
 	else
 		dwTimeout = nTimeout * 1000;
 
-	QueryStatus(&m_Status);
 	if (dwTimeout == 0)
 		return m_Status.dwCurrentState == dwState ? 1 : 0;
 
-	while (m_Status.dwCurrentState != dwState) 
+	nStartTime = GetTickCount();
+	// NotifyServiceStatusChange doesn't work for driver services
+	if (fpNotifyServiceStatusChange == 0 || (m_Status.dwServiceType & (SERVICE_FILE_SYSTEM_DRIVER | SERVICE_KERNEL_DRIVER)))
 	{
-		QueryStatus(&m_Status);
+		while (m_Status.dwCurrentState != dwState)
+		{
+			if (m_Status.dwCurrentState == dwState)
+				break;
+			if (dwTimeout != INFINITE && GetTickCount() - nStartTime > dwTimeout)
+				break;
 
-		if (m_Status.dwCurrentState == dwState)
-			break;
-		if (dwTimeout != INFINITE && GetTickCount() - nStartTime > dwTimeout)
-			break;
-
-		Sleep(250);
+			Sleep(100);
+			QueryStatus(&m_Status);
+		}
 	}
+	else
+	{
+		// compute wait mask by state
+		DWORD dwWaitMask = (1 << (dwState - 1));
+		serviceNotify.dwNotificationStatus = ERROR_IO_PENDING;
+		serviceNotify.dwVersion = SERVICE_NOTIFY_STATUS_CHANGE;
+		serviceNotify.pContext = 0;
+		serviceNotify.pfnNotifyCallback = ServiceNotifyCallback;
+		DWORD dwRet = fpNotifyServiceStatusChange(m_Handle, dwWaitMask, &serviceNotify);
+		if (dwRet != ERROR_SUCCESS)
+		{
+			SaveWin32Error("NotifyServiceStatusChange", dwRet);
+			throw E_APIERROR;
+		}
+
+		DWORD dwStart = GetTickCount();
+		DWORD dwSleep = dwTimeout;
+		while (dwSleep > 0)
+		{
+			if (SleepEx(dwSleep, TRUE) != 0)
+			{
+				if (serviceNotify.dwNotificationStatus == ERROR_SUCCESS)
+				{
+					m_Status.dwCurrentState = serviceNotify.ServiceStatus.dwCurrentState;
+					m_Status.dwControlsAccepted = serviceNotify.ServiceStatus.dwControlsAccepted;
+					m_Status.dwWin32ExitCode = serviceNotify.ServiceStatus.dwWin32ExitCode;
+					m_Status.dwServiceSpecificExitCode = serviceNotify.ServiceStatus.dwServiceSpecificExitCode;
+					m_Status.dwCheckPoint = serviceNotify.ServiceStatus.dwCheckPoint;
+					m_Status.dwWaitHint = serviceNotify.ServiceStatus.dwWaitHint;
+					return m_Status.dwCurrentState == dwState ? 1 : 0;
+				}
+				else if (serviceNotify.dwNotificationStatus == ERROR_IO_PENDING)
+				{
+					if (dwSleep != INFINITE)
+						dwSleep -= (GetTickCount() - dwStart);
+				}
+				else
+				{
+					SaveWin32Error("NotifyServiceStatusChange", serviceNotify.dwNotificationStatus);
+					throw E_APIERROR;
+				}
+			}
+		}
+	}
+
 	return m_Status.dwCurrentState == dwState ? 1 : 0;
 }
 
@@ -264,7 +268,7 @@ void Service::StopDependantServices(SC_HANDLE hSCM)
 	}
 	
 	pBuffer.Size(nBytesNeeded);
-	pDepStatus = reinterpret_cast<LPENUM_SERVICE_STATUS>(pBuffer.Address());
+	pDepStatus = pBuffer.Ptr<LPENUM_SERVICE_STATUS>();
 
 	if (!EnumDependentServices(m_Handle,SERVICE_ACTIVE, pDepStatus, nBytesNeeded, &nBytesNeeded, &nCount))
 	{
@@ -274,7 +278,7 @@ void Service::StopDependantServices(SC_HANDLE hSCM)
 	
 	for (unsigned int xj = 0; xj < nCount; xj++) 
 	{
-		hDepService.Open(hSCM,pDepStatus->lpServiceName, SERVICE_STOP|SERVICE_QUERY_STATUS|SERVICE_ENUMERATE_DEPENDENTS);
+		hDepService.Open(hSCM, pDepStatus->lpServiceName, SERVICE_STOP|SERVICE_QUERY_STATUS|SERVICE_ENUMERATE_DEPENDENTS);
 		hDepService.Stop(true,INFINITE,hSCM);
 		pDepStatus++;
 	}
@@ -295,6 +299,19 @@ Service& Service::Attach(ValueEx &pVal)
 	return *this;
 }
 
+void Service::ServiceNotifyCallback(PVOID pNotifyService)
+{
+	return;
+}
+
+void _fastcall VFP2C_Init_Services()
+{
+	HMODULE hDll = GetModuleHandle("advapi32.dll");
+	if (hDll)
+	{
+		fpNotifyServiceStatusChange = (PNOTIFYYSERVICESTATUSCHANGE)GetProcAddress(hDll, "NotifyServiceStatusChange");
+	}
+}
 
 void _fastcall OpenServiceEx(ParamBlkEx& parm)
 {
@@ -302,14 +319,14 @@ try
 {
 	DWORD dwAccess = parm.PCount() >= 2 && parm(2)->ev_long ? parm(2)->ev_long : SERVICE_ALL_ACCESS;
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 
 	ServiceManager hSCM;
 	Service hService;
 
-	hSCM.Open(pMachine,pDatabase);
-	hService.Open(hSCM,pServiceName,dwAccess);
+	hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
+	hService.Open(hSCM,pServiceName.Ptr<LPCSTR>(),dwAccess);
 
 	Return(hService.Detach());
 }
@@ -347,8 +364,8 @@ try
 
 	FoxString pService(parm, 1);
 	FoxArray pArgs(parm, 2);
-	FoxString pMachine(parm, 4, NullIfEmpty);
-	FoxString pDatabase(parm, 5, NullIfEmpty);
+	FoxString pMachine(parm, 4, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 5, FoxString::NullIfEmpty);
 	FoxCStringArray pArguments;
 	ServiceManager hSCM;
 	Service hService;
@@ -361,8 +378,8 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine,pDatabase);
-		hService.Open(hSCM,pService, SERVICE_START|SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<const char*>(),pDatabase.Ptr<const char*>());
+		hService.Open(hSCM,pService.Ptr<const char*>(), SERVICE_START|SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -393,14 +410,14 @@ try
 	bool bStopDependencies = parm.PCount() >= 3 && parm(3)->ev_length;
 
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 4, NullIfEmpty);
-	FoxString pDatabase(parm, 5, NullIfEmpty);
+	FoxString pMachine(parm, 4, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 5, FoxString::NullIfEmpty);
 
 	ServiceManager hSCM;
 	Service hService;
 
 	if (parm(1)->Vartype() == 'C' || bStopDependencies)
-        hSCM.Open(pMachine,pDatabase);
+        hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
 
 	if (parm(1)->Numeric())
 	{
@@ -408,7 +425,7 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hService.Open(hSCM,pServiceName,bStopDependencies ? (SERVICE_STOP|SERVICE_QUERY_STATUS|SERVICE_ENUMERATE_DEPENDENTS) : (SERVICE_STOP|SERVICE_QUERY_STATUS));
+		hService.Open(hSCM,pServiceName.Ptr<LPCSTR>(),bStopDependencies ? (SERVICE_STOP|SERVICE_QUERY_STATUS|SERVICE_ENUMERATE_DEPENDENTS) : (SERVICE_STOP|SERVICE_QUERY_STATUS));
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -432,8 +449,8 @@ try
 		parm(2)->ev_long = SERVICE_DEFAULT_TIMEOUT;
 
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 	ServiceManager hSCM;
 	Service hService;
 
@@ -443,8 +460,8 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine,pDatabase);
-		hService.Open(hSCM,pServiceName,SERVICE_PAUSE_CONTINUE|SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM,pServiceName.Ptr<LPCSTR>(),SERVICE_PAUSE_CONTINUE|SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -468,8 +485,8 @@ try
 		parm(2)->ev_long = SERVICE_DEFAULT_TIMEOUT;
 
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 	ServiceManager hSCM;
 	Service hService;
 
@@ -479,8 +496,8 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine,pDatabase);
-		hService.Open(hSCM,pServiceName,SERVICE_PAUSE_CONTINUE|SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM,pServiceName.Ptr<LPCSTR>(),SERVICE_PAUSE_CONTINUE|SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -498,8 +515,8 @@ void _fastcall ControlServiceEx2(ParamBlkEx& parm)
 try
 {
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 	ServiceManager hSCM;
 	Service hService;
 
@@ -509,8 +526,8 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine,pDatabase);
-		hService.Open(hSCM,pServiceName,SERVICE_USER_DEFINED_CONTROL);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM,pServiceName.Ptr<LPCSTR>(),SERVICE_USER_DEFINED_CONTROL);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -528,8 +545,8 @@ void _fastcall AServices(ParamBlkEx& parm)
 try
 {
 	FoxArray pArray(parm(1),1,10);
-	FoxString pMachine(parm, 2, NullIfEmpty);
-	FoxString pDatabase(parm, 3, NullIfEmpty);
+	FoxString pMachine(parm, 2, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 3, FoxString::NullIfEmpty);
 	FoxString pStringBuffer(MAX_PATH+1);
 	ServiceManager hSCM;
 	CBuffer pBuffer;
@@ -542,14 +559,14 @@ try
 	dwState = parm.PCount() >= 4 && parm(4)->ev_long ? parm(4)->ev_long : SERVICE_STATE_ALL;
 	dwType = parm.PCount() >= 5 && parm(5)->ev_long ? parm(5)->ev_long : SERVICE_WIN32;
 
-	hSCM.Open(pMachine,pDatabase,SC_MANAGER_ENUMERATE_SERVICE);
+	hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>(),SC_MANAGER_ENUMERATE_SERVICE);
 
 	pBuffer.Size(dwBytes);
 	pArray.AutoGrow(32);
 
-	while (1)
+	while (true)
 	{
-		if (!EnumServicesStatusEx(hSCM,SC_ENUM_PROCESS_INFO, dwType, dwState, pBuffer, dwBytes, &dwBytes, &nServices, &hResume,0))
+		if (!EnumServicesStatusEx(hSCM,SC_ENUM_PROCESS_INFO, dwType, dwState, pBuffer.Ptr<LPBYTE>(), dwBytes, &dwBytes, &nServices, &hResume, 0))
 			nLastError = GetLastError();
 		else
 			nLastError = ERROR_SUCCESS;
@@ -560,7 +577,7 @@ try
 			throw E_APIERROR;
 		}
 
-		pServiceStatusEx = reinterpret_cast<LPENUM_SERVICE_STATUS_PROCESS>(pBuffer.Address());
+		pServiceStatusEx = pBuffer.Ptr<LPENUM_SERVICE_STATUS_PROCESS>();
 		while (nServices--)
 		{
 			nRow = pArray.Grow();
@@ -603,8 +620,8 @@ try
 {
 	FoxArray pArray(parm(1), 7, 1);
 	FoxString pServiceName(parm, 2);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 	ServiceManager hSCM;
 	Service hService;
 	SERVICE_STATUS sStatus;
@@ -617,8 +634,8 @@ try
 	}
 	else if (parm(2)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine, pDatabase);
-		hService.Open(hSCM, pServiceName, SERVICE_START|SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<const char*>(), pDatabase.Ptr<const char*>());
+		hService.Open(hSCM, pServiceName.Ptr<const char*>(), SERVICE_START|SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -645,8 +662,8 @@ try
 {
 	FoxArray pArray(parm(1), 9, 1);
 	FoxString pServiceName(parm, 2);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 	FoxString pStringBuffer(4096);
 	ServiceManager hSCM;
 	Service hService;
@@ -661,15 +678,15 @@ try
 	}
 	else if (parm(2)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine,pDatabase);
-		hService.Open(hSCM,pServiceName,SERVICE_START|SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM,pServiceName.Ptr<LPCSTR>(),SERVICE_START|SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
 
 	hService.QueryConfig(pBuffer);
 
-	pServiceConfig = reinterpret_cast<LPQUERY_SERVICE_CONFIG>(pBuffer.Address());
+	pServiceConfig = pBuffer.Ptr<LPQUERY_SERVICE_CONFIG>();
 
 	pArray(1) = pServiceConfig->dwServiceType;
 	pArray(2) = pServiceConfig->dwStartType;
@@ -694,8 +711,8 @@ try
 {
 	FoxArray pArray(parm(1), 1, 8);
 	FoxString pServiceName(parm, 2);
-	FoxString pMachine(parm, 3, NullIfEmpty);
-	FoxString pDatabase(parm, 4, NullIfEmpty);
+	FoxString pMachine(parm, 3, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 4, FoxString::NullIfEmpty);
 	FoxString pStringBuffer(MAX_PATH+1);
 
 	ServiceManager hSCM;
@@ -714,8 +731,8 @@ try
 	}
 	else if (parm(2)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine,pDatabase);
-		hService.Open(hSCM,pServiceName,SERVICE_START|SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(),pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM, pServiceName.Ptr<const char*>(), SERVICE_START|SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -736,7 +753,7 @@ try
 	}
 
 	pBuffer.Size(dwBytesNeeded);
-	pServiceStatus = reinterpret_cast<LPENUM_SERVICE_STATUS>(pBuffer.Address());
+	pServiceStatus = pBuffer.Ptr<LPENUM_SERVICE_STATUS>();
 
 	if (!EnumDependentServices(hService, SERVICE_STATE_ALL, pServiceStatus, pBuffer.Size(), &dwBytesNeeded, &dwServiceCount))
 	{
@@ -772,8 +789,8 @@ void _fastcall WaitForServiceStatus(ParamBlkEx& parm)
 try
 {
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 4, NullIfEmpty);
-	FoxString pDatabase(parm, 5, NullIfEmpty);
+	FoxString pMachine(parm, 4, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 5, FoxString::NullIfEmpty);
 
 	ServiceManager hSCM;
 	Service hService;
@@ -785,8 +802,8 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine, pDatabase);
-		hService.Open(hSCM, pServiceName, SERVICE_QUERY_STATUS);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(), pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM, pServiceName.Ptr<LPCSTR>(), SERVICE_QUERY_STATUS);
 	}
 	else
 		throw E_INVALIDPARAMS;
@@ -811,20 +828,20 @@ try
 	DWORD dwServiceType = parm.PCount() >= 4 && parm(4)->Vartype() == 'N' ? (DWORD)parm(4)->ev_real : SERVICE_WIN32_OWN_PROCESS;
 	DWORD dwStartType = parm.PCount() >= 5 && parm(5)->Vartype() == 'N' ? (DWORD)parm(5)->ev_real : SERVICE_AUTO_START;
 	DWORD dwErrorControl = parm.PCount() >= 6 && parm(6)->Vartype() == 'N' ? (DWORD)parm(6)->ev_real : SERVICE_ERROR_NORMAL;
-	FoxString pLoadOrderGroup(parm, 7, 2, NullIfEmpty);
-	FoxString pDependencies(parm, 8, 2, NullIfEmpty);
-	FoxString pServiceAccount(parm, 9, 2, NullIfEmpty);
-	FoxString pPassword(parm, 10, NullIfEmpty);
-	FoxString pMachine(parm, 11, NullIfEmpty);
-	FoxString pDatabase(parm, 12, NullIfEmpty);
+	FoxString pLoadOrderGroup(parm, 7, 2, FoxString::NullIfEmpty);
+	FoxString pDependencies(parm, 8, 2, FoxString::NullIfEmpty);
+	FoxString pServiceAccount(parm, 9, 2, FoxString::NullIfEmpty);
+	FoxString pPassword(parm, 10, FoxString::NullIfEmpty);
+	FoxString pMachine(parm, 11, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 12, FoxString::NullIfEmpty);
 	SC_HANDLE hService;
 
 	ServiceManager hSCM;
-	hSCM.Open(pMachine, pDatabase, SC_MANAGER_CREATE_SERVICE);
+	hSCM.Open(pMachine.Ptr<const char*>(), pDatabase.Ptr<const char*>(), SC_MANAGER_CREATE_SERVICE);
 
-	hService = CreateService(hSCM, pServiceName, pDisplayName, SERVICE_ALL_ACCESS, 
-					dwServiceType, dwStartType, dwErrorControl, pExecutable, 
-					pLoadOrderGroup, 0, pDependencies, pServiceAccount, pPassword);
+	hService = CreateService(hSCM, pServiceName.Ptr<LPCSTR>(), pDisplayName.Ptr<LPCSTR>(), SERVICE_ALL_ACCESS,
+					dwServiceType, dwStartType, dwErrorControl, pExecutable.Ptr<LPCSTR>(),
+					pLoadOrderGroup.Ptr<LPCSTR>(), 0, pDependencies.Ptr<LPCSTR>(), pServiceAccount.Ptr<LPCSTR>(), pPassword.Ptr<LPCSTR>());
 
 	if (hService == 0)
 	{
@@ -849,8 +866,8 @@ void _fastcall DeleteServiceEx(ParamBlkEx& parm)
 try
 {
 	FoxString pServiceName(parm, 1);
-	FoxString pMachine(parm, 2, NullIfEmpty);
-	FoxString pDatabase(parm, 3, NullIfEmpty);
+	FoxString pMachine(parm, 2, FoxString::NullIfEmpty);
+	FoxString pDatabase(parm, 3, FoxString::NullIfEmpty);
 
 	ServiceManager hSCM;
 	Service hService;
@@ -861,8 +878,8 @@ try
 	}
 	else if (parm(1)->Vartype() == 'C')
 	{
-		hSCM.Open(pMachine, pDatabase);
-		hService.Open(hSCM, pServiceName, DELETE);
+		hSCM.Open(pMachine.Ptr<LPCSTR>(), pDatabase.Ptr<LPCSTR>());
+		hService.Open(hSCM, pServiceName.Ptr<LPCSTR>(), DELETE);
 	}
 	else
 		throw E_INVALIDPARAMS;

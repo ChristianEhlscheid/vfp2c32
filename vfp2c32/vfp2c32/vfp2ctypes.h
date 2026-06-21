@@ -1,6 +1,14 @@
 #ifndef _VFP2CTYPES_H__
 #define _VFP2CTYPES_H__
 
+#include <cassert>
+
+#if !defined(_WIN64)
+#include "pro_ext.h"
+#else
+#include "pro_ext64.h"
+#endif
+
 #if defined(_DEBUGALLOCATIONS)
 extern int VfpAllocationCount;
 #endif
@@ -19,6 +27,8 @@ const int E_NOENTRYPOINT = 754;
 const int E_FIELDNOTFOUND = 806;
 const int E_INVALIDPARAMS = 901;
 const int E_CURRENCYOVERFLOW = 988;
+const int E_PROPERTYNOTFOUND = -734;
+const int E_VFP_INVALIDPARAMS = 11;
 const int E_CUSTOMERROR = 7777;
 
 class FoxValue;
@@ -29,67 +39,67 @@ class FoxObject;
 #pragma pack(push,1)
 typedef struct ValueEx : public Value
 {
-	void SetUChar() { ev_type = 'I'; ev_width = 3; ev_long = 0; }
-	void SetUChar(unsigned char nValue) { ev_type = 'I'; ev_width = 3; ev_long = static_cast<long>(nValue); }
-	void SetShort() { ev_type = 'I'; ev_width = 6; }
-	void SetShort(short nValue) { ev_type = 'I'; ev_width = 6; ev_long = static_cast<long>(nValue); }
-	void SetUShort() { ev_type = 'I'; ev_width = 6; }
-	void SetUShort(unsigned short nValue) { ev_type = 'I'; ev_width = 6; ev_long = static_cast<long>(nValue); }
-	void SetInt() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
-	void SetInt(int nValue) { ev_type = 'I'; ev_width = 11; ev_long = nValue; }
-	void SetUInt() { ev_type = 'N'; ev_width = 11; ev_length = 0; ev_real = 0; }
-	void SetUInt(unsigned int nValue) { ev_type = 'N'; ev_width = 11; ev_length = 0; ev_real = static_cast<double>(nValue); }
-	void SetFloat(unsigned int nPrecision = 7) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = 0; }
-	void SetFloat(float nValue, unsigned int nPrecision = 7) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = nValue; }
-	void SetDouble(unsigned int nPrecision = 16) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = 0; }
-	void SetDouble(double nValue, unsigned int nPrecision = 16) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = nValue; }
-	void SetCurrency() { ev_type = 'Y'; ev_currency.QuadPart = 0; }
-	void SetCurrency(CCY nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue.QuadPart; }
-	void SetCurrency(__int64 nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue; }
-	void SetNumeric(int nWidth, unsigned int nPrecision) { ev_type = 'N'; ev_width = (short)nWidth; ev_length = nPrecision; }
-	void SetString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 0; ev_handle = 0; ev_length = nLen; }
-	void SetBinaryString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 1; ev_handle = 0; ev_length = nLen; }
-	void SetLogical() { ev_type = 'L'; ev_length = 0; }
-	void SetLogical(bool bValue) { ev_type = 'L'; ev_length = bValue; }
-	void SetLogical(unsigned int bValue) { ev_type = 'L'; ev_length = bValue; }
-	void SetDate() { ev_type = 'D'; ev_real = 0; }
-	void SetDate(double nDate) { ev_type = 'D'; ev_real = nDate; }
-	void SetDateTime() { ev_type = 'T'; ev_real = 0; }
-	void SetDateTime(double nDate) { ev_type = 'T'; ev_real = nDate; }
-	void SetInt64() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
-	void SetInt64(__int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
-	void SetUInt64() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
-	void SetUInt64(unsigned __int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
+	inline void SetUChar() { ev_type = 'I'; ev_width = 3; ev_long = 0; }
+	inline void SetUChar(unsigned char nValue) { ev_type = 'I'; ev_width = 3; ev_long = static_cast<long>(nValue); }
+	inline void SetShort() { ev_type = 'I'; ev_width = 6; }
+	inline void SetShort(short nValue) { ev_type = 'I'; ev_width = 6; ev_long = static_cast<long>(nValue); }
+	inline void SetUShort() { ev_type = 'I'; ev_width = 6; }
+	inline void SetUShort(unsigned short nValue) { ev_type = 'I'; ev_width = 6; ev_long = static_cast<long>(nValue); }
+	inline void SetInt() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
+	inline void SetInt(int nValue) { ev_type = 'I'; ev_width = 11; ev_long = nValue; }
+	inline void SetUInt() { ev_type = 'N'; ev_width = 11; ev_length = 0; ev_real = 0; }
+	inline void SetUInt(unsigned int nValue) { ev_type = 'N'; ev_width = 11; ev_length = 0; ev_real = static_cast<double>(nValue); }
+	inline void SetFloat(unsigned int nPrecision = 7) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = 0; }
+	inline void SetFloat(float nValue, unsigned int nPrecision = 7) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = nValue; }
+	inline void SetDouble(unsigned int nPrecision = 16) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = 0; }
+	inline void SetDouble(double nValue, unsigned int nPrecision = 16) { ev_type = 'N'; ev_width = 20; ev_length = nPrecision; ev_real = nValue; }
+	inline void SetCurrency() { ev_type = 'Y'; ev_currency.QuadPart = 0; }
+	inline void SetCurrency(CCY nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue.QuadPart; }
+	inline void SetCurrency(__int64 nValue) { ev_type = 'Y'; ev_currency.QuadPart = nValue; }
+	inline void SetNumeric(int nWidth, unsigned int nPrecision) { ev_type = 'N'; ev_width = (short)nWidth; ev_length = nPrecision; }
+	inline void SetString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 0; ev_handle = 0; ev_length = nLen; }
+	inline void SetBinaryString(unsigned int nLen = 0) { ev_type = 'C'; ev_width = 1; ev_handle = 0; ev_length = nLen; }
+	inline void SetLogical() { ev_type = 'L'; ev_length = 0; }
+	inline void SetLogical(bool bValue) { ev_type = 'L'; ev_length = bValue; }
+	inline void SetLogical(unsigned int bValue) { ev_type = 'L'; ev_length = bValue; }
+	inline void SetDate() { ev_type = 'D'; ev_real = 0; }
+	inline void SetDate(double nDate) { ev_type = 'D'; ev_real = nDate; }
+	inline void SetDateTime() { ev_type = 'T'; ev_real = 0; }
+	inline void SetDateTime(double nDate) { ev_type = 'T'; ev_real = nDate; }
+	inline void SetInt64() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
+	inline void SetInt64(__int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
+	inline void SetUInt64() { ev_type = 'N'; ev_width = 20; ev_length = 0; }
+	inline void SetUInt64(unsigned __int64 nValue) { ev_type = 'N'; ev_width = 20; ev_length = 0; ev_real = static_cast<double>(nValue); }
 #if !defined(_WIN64)
-	void SetPointer() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
-	void SetPointer(void* pValue) { ev_type = 'I'; ev_width = 11; ev_long = reinterpret_cast<long>(pValue); }
+	inline void SetPointer() { ev_type = 'I'; ev_width = 11; ev_long = 0; }
+	inline void SetPointer(void* pValue) { ev_type = 'I'; ev_width = 11; ev_long = reinterpret_cast<long>(pValue); }
 	template<typename T>
-	T Ptr() { return reinterpret_cast<T>(reinterpret_cast<void*>(ev_long)); }
-	void* Ptr() { return reinterpret_cast<void*>(ev_long); }
+	inline T Ptr() { return reinterpret_cast<T>(ev_long); }
+	inline void* Ptr() { return reinterpret_cast<void*>(ev_long); }
 #else
-	void SetPointer() { ev_type = 'N'; ev_width = 20; ev_real = 0; }
-	void SetPointer(void* pValue) { ev_type = 'N'; ev_width = 20; ev_real = static_cast<double>(reinterpret_cast<unsigned __int64>(pValue)); }
+	inline void SetPointer() { ev_type = 'N'; ev_width = 20; ev_real = 0; }
+	inline void SetPointer(void* pValue) { ev_type = 'N'; ev_width = 20; ev_real = static_cast<double>(reinterpret_cast<unsigned __int64>(pValue)); }
 	template<typename T>
-	T Ptr() { return reinterpret_cast<T>(ev_long < 0 ? static_cast<UINT_PTR>(ev_real) : static_cast<UINT_PTR>(ev_long)); }
+	inline T Ptr() { return reinterpret_cast<T>(ev_long < 0 ? static_cast<UINT_PTR>(ev_real) : static_cast<UINT_PTR>(ev_long)); }
 	template<>
-	UINT_PTR Ptr<UINT_PTR>() { return static_cast<UINT_PTR>(ev_long > -1 ? ev_long : ev_real); }
-	void* Ptr() { return reinterpret_cast<void*>(ev_long > -1 ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
+	inline UINT_PTR Ptr<UINT_PTR>() { return static_cast<UINT_PTR>(ev_long > -1 ? ev_long : ev_real); }
+	inline void* Ptr() { return reinterpret_cast<void*>(ev_long > -1 ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
 #endif
 	template<typename T>
-	T DynamicPtr() const { return reinterpret_cast<T>(ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
+	inline T DynamicPtr() const { return reinterpret_cast<T>(ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real)); }
 	template<>
-	UINT_PTR DynamicPtr<UINT_PTR>() const { return ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real); }
+	inline UINT_PTR DynamicPtr<UINT_PTR>() const { return ev_type == 'I' ? static_cast<UINT_PTR>(ev_long) : static_cast<UINT_PTR>(ev_real); }
 
-	void SetNull() { ev_type = '0'; }
-	char Vartype() const { return ev_type; }
-	bool Binary() const { return ev_width > 0; }
-	bool Numeric() const { return ev_type == 'I' || ev_type == 'N'; }
+	inline void SetNull() { ev_type = '0'; }
+	inline char Vartype() const { return ev_type; }
+	inline bool Binary() const { return ev_width > 0; }
+	inline bool Numeric() const { return ev_type == 'I' || ev_type == 'N'; }
 	template<typename T>
-	T NumericCast() const { return ev_type == 'I' ? static_cast<T>(ev_long) : static_cast<T>(ev_real); }
+	inline T NumericCast() const { return ev_type == 'I' ? static_cast<T>(ev_long) : static_cast<T>(ev_real); }
 
-	unsigned int Len() const { return ev_length; }
+	inline unsigned int Len() const { return ev_length; }
 
-	bool AllocHandle(int nBytes)
+	bool AllocHandle(unsigned int nBytes)
 	{
 		assert(ev_type == 'C' && ev_handle == 0); 
 		ev_handle = _AllocHand(nBytes); 
@@ -123,56 +133,56 @@ typedef struct ValueEx : public Value
 		}
 	}
 	
-	char* HandleToPtr()
+	inline char* HandleToPtr()
 	{
 		assert(ev_type == 'C' && ev_handle != 0);
 		return reinterpret_cast<char*>(_HandToPtr(ev_handle));
 	}
 
 	template<typename T>
-	T HandleToPtr() 
+	inline T HandleToPtr()
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0);
 		return reinterpret_cast<T>(_HandToPtr(ev_handle));
 	}
 
-	bool ValidHandle() const
+	inline bool ValidHandle() const
 	{ 
 		assert(ev_type == 'C'); 
 		return ev_handle > 0;
 	}
 
-	void LockHandle() 
+	inline void LockHandle()
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0);  
 		_HLock(ev_handle);
 	}
 
-	void UnlockHandle() 
+	inline void UnlockHandle()
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0);  
 		_HUnLock(ev_handle);
 	}
 
-	unsigned long GetHandleSize() const
+	inline unsigned long GetHandleSize() const
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0);
 		return _GetHandSize(ev_handle);
 	}
 
-	bool SetHandleSize(unsigned long nSize) 
+	inline bool SetHandleSize(unsigned long nSize)
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0); 
 		return _SetHandSize(ev_handle, nSize) > 0;
 	}
 
-	bool ExpandHandleSize(int nBytes) 
+	inline bool ExpandHandleSize(unsigned int nBytes)
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0); 
 		return _SetHandSize(ev_handle, ev_length + nBytes) > 0;
 	}
 
-	bool NullTerminate() 
+	inline bool NullTerminate()
 	{ 
 		assert(ev_type == 'C' && ev_handle != 0);
 		return _SetHandSize(ev_handle, ev_length + 1) > 0;
@@ -208,12 +218,12 @@ typedef struct ValueEx : public Value
 		}
 	}
 
-	void Return() {
+	inline void Return() {
 		assert(ev_type != 'R');
 		_RetVal(*this);
 	}
 
-	int Evaluate(const char* pExpression)
+	inline int Evaluate(const char* pExpression)
 	{
 		int retval = _Evaluate(*this, (char*)pExpression);
 #if defined(_DEBUGALLOCATIONS)
@@ -223,7 +233,7 @@ typedef struct ValueEx : public Value
 		return retval;
 	}
 
-	int Evaluate(char* pExpression)
+	inline int Evaluate(char* pExpression)
 	{
 		int retval = _Evaluate(*this, pExpression);
 #if defined(_DEBUGALLOCATIONS)
@@ -235,8 +245,8 @@ typedef struct ValueEx : public Value
 
 	void ObjectRelease()
 	{
-		int nErrorNo;
-		if (nErrorNo = _ObjectRelease(*this))
+		int nErrorNo = _ObjectRelease(*this);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 
@@ -244,15 +254,13 @@ typedef struct ValueEx : public Value
 	static void ReleaseObjectRef(char* pName, NTI nVarNti);
 
 	// casting operators
-	operator Value& () { return static_cast<Value&>(*this); }
-	operator Value* () { return static_cast<Value*>(this); }
+	// inline operator Value& () { return static_cast<Value&>(*this); }
+	inline operator Value* () { return static_cast<Value*>(this); }
 
-	// easy initialization to zero for handle based values
-	ValueEx& operator=(int nInit) { assert(nInit == 0); ev_type = '0'; ev_handle = 0; ev_object = 0; return *this; }
 	ValueEx& operator=(Locator& pLoc)
 	{
-		int nErrorNo;
-		if (nErrorNo = _Load(&pLoc, *this))
+		int nErrorNo = _Load(&pLoc, *this);
+		if (nErrorNo)
 			throw nErrorNo;
 #if defined(_DEBUGALLOCATIONS)
 		if (ev_type == 'C')
@@ -260,6 +268,8 @@ typedef struct ValueEx : public Value
 #endif
 		return *this;
 	};
+
+	ValueEx& operator<<(FoxObject& pObject);
 /*
 	char				ev_type;
 	char				ev_padding;
@@ -275,14 +285,13 @@ typedef struct ValueEx : public Value
 
 typedef struct LocatorEx : public Locator
 {
-	bool IsVariable() { return l_type == 'R' && l_where == -1; }
-	bool IsField() { return l_type == 'R' && l_where != -1; }
+	bool IsVariable() const { return l_type == 'R' && l_where == -1; }
+	bool IsField() const { return l_type == 'R' && l_where != -1; }
 
 	NTI NewVar(char* pVarname, bool bPublic)
 	{
 		l_subs = 0;
-		NTI nVarNti;
-		nVarNti = _NewVar(pVarname, *this, bPublic ? NV_PUBLIC : NV_PRIVATE);
+		NTI nVarNti = _NewVar(pVarname, *this, bPublic ? NV_PUBLIC : NV_PRIVATE);
 		if (nVarNti < 0)
 		{
 			int nErrorNo = (int)-nVarNti;
@@ -293,8 +302,7 @@ typedef struct LocatorEx : public Locator
 
 	NTI FindVar(char* pVarname)
 	{
-		NTI nVarNti;
-		nVarNti = _NameTableIndex(pVarname);
+		NTI nVarNti = _NameTableIndex(pVarname);
 		if (nVarNti == -1)
 			throw E_VARIABLENOTFOUND;
 		FindVar(nVarNti);
@@ -309,8 +317,7 @@ typedef struct LocatorEx : public Locator
 
 	static NTI FindVarStatic(char* pVarname)
 	{
-		NTI nVarNti;
-		nVarNti = _NameTableIndex(pVarname);
+		NTI nVarNti = _NameTableIndex(pVarname);
 		if (nVarNti == -1)
 			throw E_VARIABLENOTFOUND;
 		return nVarNti;
@@ -318,8 +325,8 @@ typedef struct LocatorEx : public Locator
 
 	static void ReleaseVarStatic(NTI nVarNti)
 	{
-		int nErrorNo;
-		if (nErrorNo = _Release(nVarNti))
+		int nErrorNo = _Release(nVarNti);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 
@@ -337,15 +344,15 @@ typedef struct LocatorEx : public Locator
 
 	void Store(ValueEx& sValue)
 	{
-		int nErrorNo;
-		if (nErrorNo = _Store(*this, sValue))
+		int nErrorNo = _Store(*this, sValue);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 
 	void Load(ValueEx& sValue)
 	{
-		int nErrorNo;
-		if (nErrorNo = _Load(*this, sValue))
+		int nErrorNo = _Load(*this, sValue);
+		if (nErrorNo)
 			throw nErrorNo;
 #if defined(_DEBUGALLOCATIONS)
 		if (sValue.ev_type == 'C')
@@ -355,8 +362,7 @@ typedef struct LocatorEx : public Locator
 
 	long ALen(int mode)
 	{
-		int nSubscript;
-		nSubscript = _ALen(l_NTI, mode);
+		int nSubscript = _ALen(l_NTI, mode);
 		if (nSubscript == -1)
 			throw E_NOTANARRAY;
 		return nSubscript;
@@ -364,8 +370,7 @@ typedef struct LocatorEx : public Locator
 
 	long AElements()
 	{
-		long nSubscript;
-		nSubscript = _ALen(l_NTI, AL_ELEMENTS);
+		long nSubscript = _ALen(l_NTI, AL_ELEMENTS);
 		if (nSubscript == -1)
 			throw E_NOTANARRAY;
 		return nSubscript;
@@ -373,8 +378,7 @@ typedef struct LocatorEx : public Locator
 
 	long ARows()
 	{
-		long nSubscript;
-		nSubscript = _ALen(l_NTI, AL_SUBSCRIPT1);
+		long nSubscript = _ALen(l_NTI, AL_SUBSCRIPT1);
 		if (nSubscript == -1)
 			throw E_NOTANARRAY;
 		return nSubscript;
@@ -382,8 +386,7 @@ typedef struct LocatorEx : public Locator
 
 	long ADims()
 	{
-		int nSubscript;
-		nSubscript = _ALen(l_NTI, AL_SUBSCRIPT2);
+		int nSubscript = _ALen(l_NTI, AL_SUBSCRIPT2);
 		if (nSubscript == -1)
 			throw E_NOTANARRAY;
 		return nSubscript;
@@ -407,10 +410,10 @@ typedef struct LocatorEx : public Locator
 		l_sub2 = pLoc.l_sub2;
 	}
 
-	operator Locator& () { return static_cast<Locator&>(*this); }
-	operator Locator* () { return static_cast<Locator*>(this); }
-	LocatorEx& operator()(int nRow) { l_sub1 = (short)nRow; return *this; }
-	LocatorEx& operator()(int nRow, int nDim) { l_sub1 = (short)nRow; l_sub2 = (short)nDim; return *this; }
+	// inline operator Locator& () { return static_cast<Locator&>(*this); }
+	inline operator Locator* () { return static_cast<Locator*>(this); }
+	inline LocatorEx& operator()(int nRow) { l_sub1 = (short)nRow; return *this; }
+	inline LocatorEx& operator()(int nRow, int nDim) { l_sub1 = (short)nRow; l_sub2 = (short)nDim; return *this; }
 
 	LocatorEx& operator<<(FoxObject& pObject);
 	LocatorEx& operator=(FoxValue& pValue);
@@ -419,15 +422,13 @@ typedef struct LocatorEx : public Locator
 	{
 		int nErrorNo;
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, &pValue))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, &pValue);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, &pValue))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, &pValue);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -435,15 +436,13 @@ typedef struct LocatorEx : public Locator
 	{
 		int nErrorNo;
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, pValue))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, pValue);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, pValue))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, pValue);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -451,25 +450,18 @@ typedef struct LocatorEx : public Locator
 	{
 		int nErrorNo;
 		ValueEx pValue;
-		pValue = 0;
+		pValue.SetNull();
 		pValue = pLoc;
+
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, pValue))
-			{
-				pValue.Release();
-				throw nErrorNo;
-			}
-		}
+			nErrorNo = _Store(*this, pValue);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, pValue))
-			{
-				pValue.Release();
-				throw nErrorNo;
-			}
-		}
+			nErrorNo = _DBReplace(*this, pValue);
+
 		pValue.Release();
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -479,15 +471,29 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetInt(nValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
+		return *this;
+	}
+
+	LocatorEx& operator=(long nValue)
+	{
+		int nErrorNo;
+		ValueEx vTmp;
+		vTmp.SetInt(nValue);
+		if (l_where == -1)
+			nErrorNo = _Store(*this, vTmp);
+		else
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -497,15 +503,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetUInt(nValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -515,15 +519,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetUInt(nValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -533,15 +535,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetPointer(pPointer);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -551,15 +551,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetDouble(nValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -569,15 +567,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetInt64(nValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -587,15 +583,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetUInt64(nValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 
@@ -605,15 +599,13 @@ typedef struct LocatorEx : public Locator
 		ValueEx vTmp;
 		vTmp.SetLogical(bValue);
 		if (l_where == -1)
-		{
-			if (nErrorNo = _Store(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _Store(*this, vTmp);
 		else
-		{
-			if (nErrorNo = _DBReplace(*this, vTmp))
-				throw nErrorNo;
-		}
+			nErrorNo = _DBReplace(*this, vTmp);
+
+		if (nErrorNo)
+			throw nErrorNo;
+
 		return *this;
 	}
 /*
@@ -633,110 +625,117 @@ typedef struct VarLocatorEx : public LocatorEx
 
 	VarLocatorEx& operator=(Value& pValue)
 	{
-		int nErrorNo;
-		if (nErrorNo = _Store(*this, &pValue))
+		int nErrorNo = _Store(*this, &pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(ValueEx& pValue)
 	{
-		int nErrorNo;
-		if (nErrorNo = _Store(*this, pValue))
+		int nErrorNo = _Store(*this, pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(LocatorEx& pLoc)
 	{
-		int nErrorNo;
 		ValueEx pValue;
 		pValue = pLoc;
-		if (nErrorNo = _Store(*this, pValue))
-		{
-			pValue.Release();
-			throw nErrorNo;
-		}
+		int nErrorNo = _Store(*this, pValue);
 		pValue.Release();
+		if (nErrorNo)
+			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(int nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetInt(nValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(unsigned int nValue)
-	{
-		int nErrorNo;
+	{		
 		ValueEx vTmp;
 		vTmp.SetUInt(nValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
+			throw nErrorNo;
+		return *this;
+	}
+
+	VarLocatorEx& operator=(long nValue)
+	{
+		ValueEx vTmp;
+		vTmp.SetInt(nValue);
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(unsigned long nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetUInt(nValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(void* pPointer)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetPointer(pPointer);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(double nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetDouble(nValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(__int64 nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetInt64(nValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(unsigned __int64 nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetUInt64(nValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	VarLocatorEx& operator=(bool bValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetLogical(bValue);
-		if (nErrorNo = _Store(*this, vTmp))
+		int nErrorNo = _Store(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
@@ -750,110 +749,117 @@ typedef struct FieldLocatorEx : public LocatorEx
 
 	FieldLocatorEx& operator=(Value& pValue)
 	{
-		int nErrorNo;
-		if (nErrorNo = _DBReplace(*this, &pValue))
+		int nErrorNo = _DBReplace(*this, &pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(ValueEx& pValue)
 	{
-		int nErrorNo;
-		if (nErrorNo = _DBReplace(*this, pValue))
+		int nErrorNo = _DBReplace(*this, pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(LocatorEx& pLoc)
 	{
-		int nErrorNo;
 		ValueEx pValue;
 		pValue = pLoc;
-		if (nErrorNo = _DBReplace(*this, pValue))
-		{
-			pValue.Release();
-			throw nErrorNo;
-		}
+		int nErrorNo = _DBReplace(*this, pValue);
 		pValue.Release();
+		if (nErrorNo)
+			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(int nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetInt(nValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
+			throw nErrorNo;
+		return *this;
+	}
+
+	FieldLocatorEx& operator=(long nValue)
+	{
+		ValueEx vTmp;
+		vTmp.SetInt(nValue);
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(unsigned int nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetUInt(nValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(unsigned long nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetUInt(nValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(void* pPointer)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetPointer(pPointer);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(double nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetDouble(nValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(__int64 nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetInt64(nValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(unsigned __int64 nValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetUInt64(nValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
 
 	FieldLocatorEx& operator=(bool bValue)
 	{
-		int nErrorNo;
 		ValueEx vTmp;
 		vTmp.SetLogical(bValue);
-		if (nErrorNo = _DBReplace(*this, vTmp))
+		int nErrorNo = _DBReplace(*this, vTmp);
+		if (nErrorNo)
 			throw nErrorNo;
 		return *this;
 	}
@@ -866,12 +872,12 @@ typedef union _FoxParamterEx
 	ValueEx		val;
 	Locator		loc;
 
-	bool IsVariableRef() { return loc.l_type == 'R' && loc.l_where == -1; }
-	bool IsMemoRef() { return loc.l_type == 'R' && loc.l_where != -1; }
+	inline bool IsVariableRef() const { return loc.l_type == 'R' && loc.l_where == -1; }
+	inline bool IsMemoRef() const { return loc.l_type == 'R' && loc.l_where != -1; }
 
-	ValueEx* operator->() { return static_cast<ValueEx*>(&val); }
-	operator ValueEx& () { return val; }
-	operator LocatorEx& () { return static_cast<LocatorEx&>(loc); }
+	inline ValueEx* operator->() { return static_cast<ValueEx*>(&val); }
+	inline operator ValueEx& () { return val; }
+	inline operator LocatorEx& () { return static_cast<LocatorEx&>(loc); }
 } FoxParameterEx;
 
 /* extended ParamBlkEx struct with operator() for easy parameter access */
@@ -879,8 +885,8 @@ typedef struct _ParamBlkEx
 {
 	short 		pCount;			/* Number of Parameters PASSED.			*/
 	FoxParameterEx	p[1];		/* pCount Parameters.					*/
-	FoxParameterEx& operator()(int nIndex) { return p[nIndex - 1]; }
-	short PCount() { return pCount; }
+	inline FoxParameterEx& operator()(int nIndex) { return p[nIndex - 1]; }
+	inline short PCount() const { return pCount; }
 } ParamBlkEx;
 
 #endif // _VFP2CTYPES_H__

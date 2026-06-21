@@ -7,7 +7,6 @@
 #endif
 #include "vfp2c32.h"
 #include "vfp2cwindows.h"
-#include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
 
 void _fastcall GetWindowTextEx(ParamBlkEx& parm)
@@ -34,7 +33,7 @@ try
 
 	nLen += 2;
 	pRetVal.Size(nLen);
-	nApiRet = SendMessageTimeout(hHwnd,WM_GETTEXT,(WPARAM)nLen,(LPARAM)(char*)pRetVal,SMTO_BLOCK,1000,&nLen);
+	nApiRet = SendMessageTimeout(hHwnd, WM_GETTEXT, (WPARAM)nLen, pRetVal.Ptr<LPARAM>(), SMTO_BLOCK, 1000, &nLen);
 	if (!nApiRet)
 	{
 		nLastError = GetLastError();
@@ -192,15 +191,16 @@ try
 	FoxString pCaption(parm, 3);
 	FoxString pIcon(parm, 5);
 
-	MSGBOXPARAMS sParms = {0};
-	sParms.cbSize = sizeof(MSGBOXPARAMS);
-	sParms.lpszText = pText;
+	MSGBOXPARAMS sParms;
+	RtlZeroMemory(&sParms, sizeof(MSGBOXPARAMS));
+	sParms.cbSize = sizeof(sParms);
+	sParms.lpszText = pText.Ptr<LPCSTR>();
 	sParms.dwStyle = parm.PCount() >= 2 ? parm(2)->ev_long : 0;
 
 	if (parm.PCount() >= 3)
 	{
 		if (parm(3)->Vartype() == 'C')
-			sParms.lpszCaption = pCaption;
+			sParms.lpszCaption = pCaption.Ptr<LPCSTR>();
 		else if (parm(3)->Vartype() != '0')
 			throw E_INVALIDPARAMS;
 	}
@@ -228,7 +228,7 @@ try
 		else if (parm(5)->Vartype() == 'N')
 			sParms.lpszIcon = MAKEINTRESOURCE(static_cast<DWORD>(parm(5)->ev_real));
 		else if (parm(5)->Vartype() == 'C')
-			sParms.lpszIcon = pIcon;
+			sParms.lpszIcon = pIcon.Ptr<LPCSTR>();
 		else if (parm(5)->Vartype() == '0')
 		{
 			dwStyleAdd = 0;

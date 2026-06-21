@@ -58,7 +58,7 @@ class RasNotifyThread : public CThread
 {
 public:
 	RasNotifyThread(CThreadManager &pPool) : CThread(pPool), m_Conn(0), m_Flags(0) { }
-	~RasNotifyThread() { }
+	virtual ~RasNotifyThread() { }
 
 	virtual void SignalThreadAbort();
 	virtual DWORD Run();
@@ -78,7 +78,7 @@ private:
 extern "C" {
 #endif
 
-void _stdcall SaveRas32Error(char *pFunction, DWORD nErrorNo);
+void _stdcall SaveRas32Error(const char *pFunction, DWORD nErrorNo);
 
 bool _stdcall VFP2C_Init_Ras(VFP2CTls& tls);
 

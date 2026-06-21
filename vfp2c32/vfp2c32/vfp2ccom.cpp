@@ -1,11 +1,8 @@
 #define _WINSOCKAPI_ // we're using winsock2 .. so this is neccessary to exclude winsock.h 
 #define _WIN32_DCOM
 
-#include <stdio.h>
-
 #include "vfp2c32.h"
 #include "vfp2ccom.h"
-#include "vfp2ccomcall.h"
 
 IDispatch* _stdcall GetIDispatch(IDispatch *pObject)
 {
@@ -70,8 +67,8 @@ try
 		pGuid = parm(1)->DynamicPtr<LPGUID>();
 	else
 	{
-		SaveCustomError("ProgIDFromCLSID", "Invalid type '%s' for parameter 2", parm(2)->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("ProgIDFromCLSID", "Invalid type '%s' for parameter 2", E_VFP_INVALIDPARAMS, parm(2)->Vartype());
+		throw E_APIERROR;
 	}
 
 	hr = ProgIDFromCLSID((REFCLSID)*pGuid, &pWideProgId);
@@ -80,7 +77,7 @@ try
 		SaveWin32Error("ProgIDFromCLSID", hr);
 		throw E_APIERROR;
 	}
-	pProgId = pWideProgId;
+	pProgId = CWideStringView(pWideProgId);
 	CoTaskMemFree(pWideProgId);
 	pProgId.Return();
 }
@@ -132,13 +129,14 @@ try
 		pGuid = parm(1)->DynamicPtr<LPGUID>();
 	else
 	{
-		SaveCustomError("StringFromCLSID","Invalid type '%s' for parameter 1", parm(1)->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("StringFromCLSID","Invalid type '%s' for parameter 1", E_VFP_INVALIDPARAMS, parm(1)->Vartype());
+		throw E_APIERROR;
 	}
 
 	nRetVal = StringFromGUID2((REFGUID)*pGuid,aGuidString,GUID_STRING_LEN);
-
-	pString = aGuidString;
+	
+	CWideStringView pWideGuid(aGuidString, nRetVal - 1);
+	pString = pWideGuid;
 	pString.Return();
 }
 catch(int nErrorNo)
@@ -180,8 +178,8 @@ try
 		pGuid1 = parm(1)->DynamicPtr<LPGUID>();
 	else
 	{
-		SaveCustomError("IsEqualGUID", "Invalid type '%s' for parameter 1", parm(1)->Vartype());	
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("IsEqualGUID", "Invalid type '%s' for parameter 1", E_VFP_INVALIDPARAMS, parm(1)->Vartype());
+		throw E_APIERROR;
 	}
 
 	// convert GUID2
@@ -207,8 +205,8 @@ try
 		pGuid2 = parm(2)->DynamicPtr<LPGUID>();
 	else
 	{
-		SaveCustomError("IsEqualGUID", "Invalid type '%s' for parameter 2", parm(2)->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("IsEqualGUID", "Invalid type '%s' for parameter 2", E_VFP_INVALIDPARAMS, parm(2)->Vartype());
+		throw E_APIERROR;
 	}
 
 	bRetVal = !memcmp(pGuid1,pGuid2,sizeof(GUID));
@@ -241,13 +239,13 @@ try
 	if (parm.PCount() == 0 || parm(1)->ev_long == CREATE_GUID_ANSI)
 	{
 		pGuidString.Size(GUID_STRING_LEN);
-		nRetVal = StringFromGUID2((REFGUID)*pGuid,aGuidString,GUID_STRING_LEN);
-		pGuidString = aGuidString;
+		nRetVal = StringFromGUID2((REFGUID)*pGuid, aGuidString, GUID_STRING_LEN);
+		pGuidString = CWideStringView(aGuidString, nRetVal - 1);
 	}
 	else if (parm(1)->ev_long == CREATE_GUID_UNICODE)
 	{
 		pGuidString.Size(GUID_STRING_LEN*sizeof(wchar_t));
-		nRetVal = StringFromGUID2((REFGUID)*pGuid,(LPOLESTR)(char*)pGuidString,GUID_STRING_LEN);
+		nRetVal = StringFromGUID2((REFGUID)*pGuid, pGuidString.Ptr<LPOLESTR>(), GUID_STRING_LEN);
 		pGuidString.Len((nRetVal - 1) * sizeof(wchar_t));
 	}
 	else if (parm(1)->ev_long == CREATE_GUID_BINARY)
@@ -608,7 +606,7 @@ catch(int nErrorNo)
 /*
 void _fastcall CoRegisterComDll(ParamBlkEx& parm)
 {
-	RegisteredComDll *pDll = new RegisteredComDll();
+	RegisteredComDll *pDll = new(std::nothrow) RegisteredComDll();
 try
 {
 	FoxString pDllName(parm(1));
@@ -872,7 +870,7 @@ try
 	vUnk.Evaluate(aCommand);
 	pUnk = reinterpret_cast<IUnknown*>(vUnk->ev_long);
 
-	pCall = new ComCall;
+	pCall = new(std::nothrow) ComCall;
 	if (!pCall)
 		throw E_INSUFMEMORY;
 

@@ -1,5 +1,5 @@
 #include <windows.h>
-#include <math.h>
+#include <cmath>
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -7,10 +7,11 @@
 #include "pro_ext64.h"
 #endif
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
+// #include "vfp2cutil.h"
 #include "vfp2cprint.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
+
 
 void _fastcall APrintersEx(ParamBlkEx& parm)
 {
@@ -46,13 +47,13 @@ try
 	if (dwDest != APRINT_DEST_ARRAY && dwDest != APRINT_DEST_OBJECTARRAY)
 		throw E_INVALIDPARAMS;
 
-	if (!EnumPrinters(dwFlags,pName,dwLevel,pBuffer,pBuffer.Size(),&dwBytes,&dwCount))
+	if (!EnumPrinters(dwFlags,pName.Ptr<LPSTR>(),dwLevel, pBuffer.Ptr<LPBYTE>(), pBuffer.Size(), &dwBytes, &dwCount))
 	{
 		DWORD nLastError = GetLastError();
 		if (nLastError == ERROR_INSUFFICIENT_BUFFER)
 		{
 			pBuffer.Size(dwBytes);
-			if (!EnumPrinters(dwFlags,pName,dwLevel,pBuffer,pBuffer.Size(),&dwBytes,&dwCount))
+			if (!EnumPrinters(dwFlags,pName.Ptr<LPSTR>(), dwLevel, pBuffer.Ptr<LPBYTE>(), pBuffer.Size(), &dwBytes, &dwCount))
 			{
 				SaveWin32Error("EnumPrinters", nLastError);
 				throw E_APIERROR;
@@ -74,7 +75,7 @@ try
 	switch(dwLevel)
 	{
 		case 1:
-			pInfo1 = reinterpret_cast<LPPRINTER_INFO_1>(pBuffer.Address());
+			pInfo1 = pBuffer.Ptr<LPPRINTER_INFO_1>();
 			if (dwDest == APRINT_DEST_ARRAY)
 			{
 				pArray.Dimension(dwCount,4);
@@ -104,7 +105,7 @@ try
 			break;
 
 		case 2:
-			pInfo2 = reinterpret_cast<LPPRINTER_INFO_2>(pBuffer.Address());
+			pInfo2 = pBuffer.Ptr<LPPRINTER_INFO_2>();
 			if (dwDest == APRINT_DEST_ARRAY)
 			{
 				pArray.Dimension(dwCount,19);
@@ -164,7 +165,7 @@ try
 			break;
 
 		case 4:
-			pInfo4 = reinterpret_cast<LPPRINTER_INFO_4>(pBuffer.Address());
+			pInfo4 = pBuffer.Ptr<LPPRINTER_INFO_4>();
 			if (dwDest == APRINT_DEST_ARRAY)
 			{
 				pArray.Dimension(dwCount,3);
@@ -192,7 +193,7 @@ try
 			break;
 
 		case 5:
-			pInfo5 = reinterpret_cast<LPPRINTER_INFO_5>(pBuffer.Address());
+			pInfo5 = pBuffer.Ptr<LPPRINTER_INFO_5>();
 			if (dwDest == APRINT_DEST_ARRAY)
 			{
 				pArray.Dimension(dwCount,5);
@@ -221,6 +222,9 @@ try
 					pInfo5++;
 				}
 			}
+
+		default:
+			break;
 	}
 
 	pArray.ReturnRows();
@@ -255,7 +259,7 @@ try
 	if (dwDest != APRINT_DEST_ARRAY && dwDest != APRINT_DEST_OBJECTARRAY)
 		throw E_INVALIDPARAMS;
 
-	if(!OpenPrinter(pPrinter, hPrinter, NULL))
+	if(!OpenPrinter(pPrinter.Ptr<LPSTR>(), hPrinter, NULL))
 	{
 		SaveWin32Error("OpenPrinter", GetLastError());
 		throw E_APIERROR;
@@ -280,7 +284,7 @@ try
 
 	CBuffer pBuffer(dwBytes);
 
-	if(!EnumJobs(hPrinter, 0, 0xFFFFFFFF, dwLevel, pBuffer, dwBytes, &dwBytes, &dwJobs))
+	if(!EnumJobs(hPrinter, 0, 0xFFFFFFFF, dwLevel, pBuffer.Ptr<LPBYTE>(), dwBytes, &dwBytes, &dwJobs))
 	{
 		SaveWin32Error("EnumJobs", GetLastError());
 		throw E_APIERROR;
@@ -288,7 +292,7 @@ try
 
 	if (dwLevel == 1)
 	{
-		pJobInfo = reinterpret_cast<LPJOB_INFO_1>(pBuffer.Address());
+		pJobInfo = pBuffer.Ptr<LPJOB_INFO_1>();
 		if (dwDest == APRINT_DEST_ARRAY)
 		{
 			pArray.Dimension(dwJobs,13);
@@ -336,7 +340,7 @@ try
 	}
 	else
 	{
-		pJobInfo2 = reinterpret_cast<LPJOB_INFO_2>(pBuffer.Address());
+		pJobInfo2 = pBuffer.Ptr<LPJOB_INFO_2>();
 		if (dwDest == APRINT_DEST_ARRAY)
 		{
 			pArray.Dimension(dwJobs,21);
@@ -417,7 +421,7 @@ try
 	DWORD dwBytes, dwForms;
 	PFORM_INFO_1 pFormInfo;
 
-	if(!OpenPrinter(pPrinter, hPrinter, 0))
+	if(!OpenPrinter(pPrinter.Ptr<LPSTR>(), hPrinter, 0))
 	{
 		SaveWin32Error("OpenPrinter", GetLastError());
 		throw E_APIERROR;
@@ -440,7 +444,7 @@ try
 	}
 
 	CBuffer pBuffer(dwBytes);
-	if (!EnumForms(hPrinter, 1, pBuffer, dwBytes, &dwBytes, &dwForms))
+	if (!EnumForms(hPrinter, 1, pBuffer.Ptr<LPBYTE>(), dwBytes, &dwBytes, &dwForms))
 	{
 		SaveWin32Error("EnumForms", GetLastError());
 		throw E_APIERROR;
@@ -453,7 +457,7 @@ try
 	}
 
 	pArray.Dimension(dwForms,8);
-	pFormInfo = reinterpret_cast<PFORM_INFO_1>(pBuffer.Address());
+	pFormInfo = pBuffer.Ptr<PFORM_INFO_1>();
 
 	for (unsigned int xj = 1; xj <= dwForms; xj++)
 	{
@@ -490,12 +494,18 @@ try
 		throw E_INVALIDPARAMS;
 
 	FoxString pPapernameTmp(65);
-	DWORD dwCount;
+	int dwCount;
 
-	dwCount = DeviceCapabilities(pPrinter, pPort, DC_PAPERS, 0, 0);
-	if (dwCount == 0)
+	dwCount = DeviceCapabilities(pPrinter.Ptr<LPCSTR>(), pPort.Ptr<LPCSTR>(), DC_PAPERS, 0, 0);
+	if (dwCount <= 0)
 	{
-		Return(0);
+		if (dwCount == 0)
+			Return(0);
+		else
+		{
+			SaveWin32Error("DeviceCapabilities", GetLastError());
+			throw E_APIERROR;
+		}
 		return;
 	}
 
@@ -503,17 +513,31 @@ try
 	CBuffer pPapernamesBuffer(dwCount * 64);
 	CBuffer pPapersizeBuffer(dwCount * sizeof(POINT));
 	
-	dwCount = DeviceCapabilities(pPrinter, pPort, DC_PAPERS, pPapersBuffer, 0);
-	dwCount = DeviceCapabilities(pPrinter, pPort, DC_PAPERNAMES, pPapernamesBuffer, 0);
-	dwCount = DeviceCapabilities(pPrinter, pPort, DC_PAPERSIZE, pPapersizeBuffer, 0);
-   
+	if (DeviceCapabilities(pPrinter.Ptr<LPCSTR>(), pPort.Ptr<LPCSTR>(), DC_PAPERS, pPapersBuffer.Ptr<LPSTR>(), 0) == -1)
+	{
+		SaveWin32Error("DeviceCapabilities", GetLastError());
+		throw E_APIERROR;
+	}
+
+	if (DeviceCapabilities(pPrinter.Ptr<LPCSTR>(), pPort.Ptr<LPCSTR>(), DC_PAPERNAMES, pPapernamesBuffer.Ptr<LPSTR>(), 0) == -1)
+	{
+		SaveWin32Error("DeviceCapabilities", GetLastError());
+		throw E_APIERROR;
+	}
+
+	if (DeviceCapabilities(pPrinter.Ptr<LPCSTR>(), pPort.Ptr<LPCSTR>(), DC_PAPERSIZE, pPapersizeBuffer.Ptr<LPSTR>(), 0) == -1)
+	{
+		SaveWin32Error("DeviceCapabilities", GetLastError());
+		throw E_APIERROR;
+	}
+
 	pArray.Dimension(dwCount, 4);
 
-	WORD *pPapers = reinterpret_cast<WORD*>(pPapersBuffer.Address());
-	char *pPapernames = reinterpret_cast<char*>(pPapernamesBuffer.Address());
-	POINT *pPapersize = reinterpret_cast<POINT*>(pPapersizeBuffer.Address());
+	WORD *pPapers = pPapersBuffer.Ptr<WORD*>();
+	char* pPapernames = pPapernamesBuffer.Ptr<char*>();
+	POINT* pPapersize = pPapersizeBuffer.Ptr<POINT*>();
 
-	for (unsigned int xj = 1; xj <= dwCount; xj++)
+	for (int xj = 1; xj <= dwCount; xj++)
 	{
 		pArray(xj,1) = *pPapers;
 		pArray(xj,2) = pPapernameTmp.StrnCpy(pPapernames, 64);
@@ -531,6 +555,8 @@ try
 			case PAPERSIZE_UNIT_POINT:
 				pArray(xj,3) = pDouble = (floor(pPapersize->x * POINTS_PER_MM + 0.49) / 10);
 				pArray(xj,4) = pDouble = (floor(pPapersize->y * POINTS_PER_MM + 0.49) / 10);
+				break;
+			default:
 				break;
 		}
 
@@ -555,12 +581,12 @@ try
 	FoxString pPrinter(parm(2));
 	FoxString pPort(parm(3));
 	FoxString pBinName(PRINT_TRAY_BUFFER);
-	DWORD nBins;
+	int nBins;
 	LPWORD pBinPtr;
 	char *pBinNamesPtr;
 	
 	// get the number of bins
-	nBins = DeviceCapabilities(pPrinter,pPort,DC_BINS,0,0);
+	nBins = DeviceCapabilities(pPrinter.Ptr<LPCSTR>(),pPort.Ptr<LPCSTR>(),DC_BINS,0,0);
 	if (nBins == -1)
 	{
 		SaveWin32Error("DeviceCapabilities", GetLastError());
@@ -575,8 +601,8 @@ try
 	CBuffer pBins(nBins * sizeof(WORD));
 	CBuffer pNames(nBins * PRINT_TRAY_BUFFER);
 
-	if (DeviceCapabilities(pPrinter,pPort,DC_BINS,pBins,0) == -1 ||
-		DeviceCapabilities(pPrinter,pPort,DC_BINNAMES,pNames,0) == -1)
+	if (DeviceCapabilities(pPrinter.Ptr<LPCSTR>(),pPort.Ptr<LPCSTR>(),DC_BINS, pBins.Ptr<LPSTR>(), 0) == -1 ||
+		DeviceCapabilities(pPrinter.Ptr<LPCSTR>(),pPort.Ptr<LPCSTR>(),DC_BINNAMES,pNames.Ptr<LPSTR>(), 0) == -1)
 	{
 		SaveWin32Error("DeviceCapabilities", GetLastError());
 		throw E_APIERROR;
@@ -584,10 +610,10 @@ try
 
 	pArray.Dimension(nBins,2);
 
-	pBinPtr = reinterpret_cast<LPWORD>(pBins.Address());
-	pBinNamesPtr = pNames;
+	pBinPtr = pBins.Ptr<LPWORD>();
+	pBinNamesPtr = pNames.Ptr<char*>();
 
-	for (unsigned int xj = 1; xj <= nBins; xj++)
+	for (int xj = 1; xj <= nBins; xj++)
 	{
 		pArray(xj,1) = pBinName = pBinNamesPtr;
 		pArray(xj,2) = *pBinPtr;

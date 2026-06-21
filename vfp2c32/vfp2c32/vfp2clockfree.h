@@ -1,7 +1,6 @@
 #ifndef _VFP2CLOCKFREE_H__
 #define _VFP2CLOCKFREE_H__
 
-#include <malloc.h>
 // #include <syncapi.h>
 
 extern "C" void _ReadWriteBarrier(void);
@@ -56,7 +55,7 @@ template<class T, int nCount>
 class CBoundSPSCQueue
 {
 public:
-	CBoundSPSCQueue() : m_Head(0), m_Tail(0), m_HeadCache(0), m_TailCache(0)
+	CBoundSPSCQueue() : m_Head(0), m_TailCache(0), m_Tail(0), m_HeadCache(0)
 	{
 
 	}
@@ -151,7 +150,7 @@ private:
 public:
 	CUnboundSPSCQueue()
 	{
-		Node* node = new Node()
+		Node* node = new(std::nothrow) Node()
 			pNode->next.Store(0);
 		m_Head.Store(node);
 		m_Tail.Store(node);
@@ -167,7 +166,7 @@ public:
 
 	void Push(const T& pItem)
 	{
-		Node* node = new Node();
+		Node* node = new(std::nothrow) Node();
 		node->value = pItem;
 		Node* tail = m_Tail.Load();
 		tail->next.Store(node);
@@ -232,6 +231,9 @@ public:
 	CUnboundBlockSPSCQueue()
 	{
 		Node* node = new Node();
+		if (node == 0)
+			throw E_INSUFMEMORY;
+
 		node->next.Store(0);
 		m_Head.Store(node);
 		m_Tail.Store(node);
@@ -253,6 +255,9 @@ public:
 			return;
 
 		Node* node = new Node();
+		if (node == 0)
+			throw E_INSUFMEMORY;
+
 		node->next.Store(0);
 		node->queue.Push(pItem);
 
@@ -278,7 +283,7 @@ public:
 	bool Peek()
 	{
 		Node* head = m_Head.Load();
-		return head->queue.Peek() || head->next.Load() > 0;
+		return head->queue.Peek() || head->next.Load() > (Node*)0;
 	}
 
 	void* operator new(size_t sz)

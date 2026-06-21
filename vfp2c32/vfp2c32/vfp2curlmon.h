@@ -3,7 +3,6 @@
 #ifndef _VFP2CINET_H__
 #define _VFP2CINET_H__
 
-#include "urlmon.h"
 #include "vfp2chelpers.h"
 
 const int BINDSTATUS_DOWNLOAD_FINISHED	= 99;

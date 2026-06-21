@@ -12,17 +12,30 @@ ELSE
 SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
-LOCAL loItem, loDescList, loDesc, lcProperty, lPropValue, loStore
+LOCAL loItem, loDescList, loDesc, lcProperty, lPropValue, loStore, xj
 
-m.loItem = SHGetShellItem(ADDBS(m.lcPath) + 'test2.jpg')
+m.loItem = SHGetShellItem(ADDBS(m.lcPath) + 'strawberry.jpg')
 m.loStore = m.loItem.GetPropertyStore() && IPropertyStore - when accessing more than one property using the store is more efficient, otherwise the file is opened and closed for each property access
 m.loDescList = m.loItem.GetPropertyDescriptionList() && IPropertyDescriptionList
+
+FOR m.xj = 0 TO m.loDescList.GetCount() - 1
+	m.loDesc = m.loDescList.GetAt(m.xj)
+	m.lcProperty = m.loDesc.GetCanonicalName() && m.loDesc -> IPropertyDescription
+	m.lPropValue = m.loStore.GetValue(m.lcProperty)
+	? m.lcProperty, TYPE('m.lPropValue'), m.lPropValue
+ENDFOR
+
+INKEY(2, 'H')
+
 FOR EACH m.loDesc IN m.loDescList
 	m.lcProperty = m.loDesc.GetCanonicalName() && m.loDesc -> IPropertyDescription
 	m.lPropValue = m.loStore.GetValue(m.lcProperty)
 	? m.lcProperty, TYPE('m.lPropValue'), m.lPropValue
 ENDFOR
 
+INKEY(2, 'H')
+
+RETURN
 LOCAL laLatitude, laLongitude
 m.laLatitude = m.loStore.GetValue('System.GPS.Latitude')
 ?m.laLatitude[1]

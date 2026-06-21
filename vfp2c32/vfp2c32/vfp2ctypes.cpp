@@ -7,7 +7,7 @@ void ValueEx::StoreObjectRef(char* pName, NTI& nVarNti)
 	if (nVarNti)
 	{
 		ValueEx vTmpObject;
-		vTmpObject = 0;
+		vTmpObject.SetNull();
 		// FindVar(nVarNti, lVar);
 		lVar.FindVar(nVarNti),
 		// increment reference count by calling evaluate
@@ -32,7 +32,7 @@ void ValueEx::StoreObjectRef(char* pName, NTI& nVarNti)
 void ValueEx::ReleaseObjectRef(char* pName, NTI nVarNti)
 {
 	ValueEx vObject;
-	vObject = 0;
+	vObject.SetNull();
 	int nErrorNo;
 	if (nVarNti)
 	{
@@ -45,6 +45,22 @@ void ValueEx::ReleaseObjectRef(char* pName, NTI nVarNti)
 	}
 }
 
+ValueEx& ValueEx::operator<<(FoxObject& pObject)
+{
+	int nErrorNo = _GetObjectProperty(*this, pObject, pObject.Property());
+	if (nErrorNo)
+	{
+		if (nErrorNo == E_PROPERTYNOTFOUND)
+			ev_type = '0';
+		else
+			throw nErrorNo;
+	}
+#if defined(_DEBUGALLOCATIONS)
+	if (ev_type == 'C')
+		VfpAllocationCount++;
+#endif
+	return *this;
+}
 
 LocatorEx& LocatorEx::operator<<(FoxObject& pObject)
 {
@@ -53,12 +69,14 @@ LocatorEx& LocatorEx::operator<<(FoxObject& pObject)
 	pValue << pObject;
 	if (l_where == -1)
 	{
-		if (nErrorNo = _Store(*this, pValue))
+		nErrorNo = _Store(*this, pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 	else
 	{
-		if (nErrorNo = _DBReplace(*this, pValue))
+		nErrorNo = _DBReplace(*this, pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 	return *this;
@@ -69,12 +87,14 @@ LocatorEx& LocatorEx::operator=(FoxValue& pValue)
 	int nErrorNo;
 	if (l_where == -1)
 	{
-		if (nErrorNo = _Store(*this, pValue))
+		nErrorNo = _Store(*this, pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 	else
 	{
-		if (nErrorNo = _DBReplace(*this, pValue))
+		nErrorNo = _DBReplace(*this, pValue);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 	return *this;
@@ -82,39 +102,36 @@ LocatorEx& LocatorEx::operator=(FoxValue& pValue)
 
 VarLocatorEx& VarLocatorEx::operator<<(FoxObject& pObject)
 {
-	int nErrorNo;
 	FoxValue pValue;
 	pValue << pObject;
-	if (nErrorNo = _Store(*this, pValue))
+	int nErrorNo = _Store(*this, pValue);
+	if (nErrorNo)
 		throw nErrorNo;
 	return *this;
 }
 
-
 VarLocatorEx& VarLocatorEx::operator=(FoxValue& pValue)
 {
-	int nErrorNo;
-	if (nErrorNo = _Store(*this, pValue))
+	int nErrorNo = _Store(*this, pValue);
+	if (nErrorNo)
 		throw nErrorNo;
 	return *this;
 }
 
 FieldLocatorEx& FieldLocatorEx::operator<<(FoxObject& pObject)
 {
-	int nErrorNo;
 	FoxValue pValue;
 	pValue << pObject;
-	if (nErrorNo = _DBReplace(*this, pValue))
+	int nErrorNo = _DBReplace(*this, pValue);
+	if (nErrorNo)
 		throw nErrorNo;
 	return *this;
 }
-
 
 FieldLocatorEx& FieldLocatorEx::operator=(FoxValue& pValue)
 {
-	int nErrorNo;
-	if (nErrorNo = _DBReplace(*this, pValue))
+	int nErrorNo = _DBReplace(*this, pValue);
+	if (nErrorNo)
 		throw nErrorNo;
 	return *this;
 }
-

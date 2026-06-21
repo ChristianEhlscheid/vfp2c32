@@ -86,7 +86,7 @@ class SqlParameterArray
 public:
 	SqlParameterArray();
 	CStringView pCursor;
-	int nWorkArea;
+	SHORT nWorkArea;
 	long nRecCount;
 	long nBatchSize;
 	long nMaxBatchSize;
@@ -142,7 +142,7 @@ public:
 
 	// callback
 	bool InfoCallbackOrStore();
-	void ProgressCallback(int nRowsFetched, bool* bAbort);
+	void ProgressCallback(SQLLEN nRowsFetched, bool* bAbort);
 	
 	// descriptors
 	void SetApplicationParameterDescriptorField(SQLSMALLINT nRecNo, SQLSMALLINT nField, SQLPOINTER pValue, SQLINTEGER nBufferLen);
@@ -200,7 +200,7 @@ private:
 	void LoadInMemoryParameterArray();
 	void FreeInMemoryParameterArray();
 	void SetParameterArrayAttributes(bool bInMemory);
-	void SaveParameterArrayErrorsToCursor(CArray<SQLINTEGER>& pErrorMap);
+	void SaveParameterArrayErrorsToCursor(CArray<SQLLEN>& pErrorMap);
 	SqlParameter* FindParameter(CStringView pField);
 	bool MatchLength(CStringMatcher& pMatcher, SqlParameter* lpSC);
 	bool MatchPrecision(CStringMatcher& pMatcher, SqlParameter* lpSC);
@@ -236,7 +236,7 @@ public:
 	FoxString pCursorName;
 	AutoRecNoRestore pRecNoRestore;
 	SQLLEN nRowsFetched;
-	int nWorkArea;
+	SHORT nWorkArea;
 	bool bStoreInfoAsError;
 	bool bRowSetFetchCapable;
 
@@ -245,8 +245,8 @@ private:
 	void FreeColumnBinding();
 	void ReleaseColumnBuffers();
 	SqlColumn* FindColumn(CStringView pColName);
-	void AllocateColumnBuffer(SqlColumn* lpSC, int nLen, bool bBindColumn);
-	void AllocateColumnBufferSet(SqlColumn* lpSC, int nLen);
+	void AllocateColumnBuffer(SqlColumn* lpSC, unsigned int nLen, bool bBindColumn);
+	void AllocateColumnBufferSet(SqlColumn* lpSC, unsigned int nLen);
 };
 
 // holds data for each column in a SQL resultset
@@ -364,7 +364,7 @@ public:
 	SQLSMALLINT nSQLTypeCode;	// subtype for SQL_DATETIME, SQL_TYPE_TIMESTAMP, SQL_TIME, SQL_INTERVAL etc...
 	SQLSMALLINT nCType;			// the C datatype for the parameter
 	SQLSMALLINT nScale;			// scale of numeric types
-	int nWorkArea;				// workarea of cursor if it's a table valued parameter
+	SHORT nWorkArea;				// workarea of cursor if it's a table valued parameter
 	SqlTableType* pTableType; // sql server table type
 	CPtrArray<SqlTableTypeParameter> pTableTypeParameters;	// parameters for table valued parameter 
 	char cVFPType;				// static Foxtype for use in parameter arrays

@@ -1,10 +1,7 @@
-#include <stdio.h>
-#include <stdarg.h>
-#include <math.h>
-#include <string.h>
-#include <mmintrin.h>
-
-#include "vfp2c32.h"
+#include <cstring>
+#include <cmath>
+#include "vfp2cstring.h"
+#include "vfp2cutil.h"
 
 // returns position of first occurrence of character in some string
 // to map character positions to an array dimension (e.g. in AWindowsEx) 
@@ -25,7 +22,7 @@ unsigned short _fastcall CharPosN(const char* pString, const char pSearched, uns
 // determine len up to nMaxLen characters of a unicode string
 unsigned int _fastcall wstrnlen(const wchar_t* pString, unsigned int nMaxLen)
 {
-	register const wchar_t* pStart = pString;
+	const wchar_t* pStart = pString;
 	while (nMaxLen--)
 	{
 		if (*pString)
@@ -35,19 +32,12 @@ unsigned int _fastcall wstrnlen(const wchar_t* pString, unsigned int nMaxLen)
 	}
 	return pString - pStart;
 }
-// copies null terminated source string to a buffer
-// returns count characters copied NOT including the terminating null character
-unsigned int _fastcall strcpyex(char* pBuffer, const char* pSource)
-{
-	register const char* pStart = pSource;
-	while (*pBuffer++ = *pSource++);
-	return pSource - pStart - 1;
-}
+
 // copies up to nMaxLen characters from source string to a buffer
 // returns count characters copied NOT including the terminating null character
 unsigned int _fastcall strncpyex(char* pBuffer, const char* pSource, unsigned int nMaxLen)
 {
-	register const char* pStart = pBuffer;
+	const char* pStart = pBuffer;
 	while ((*pBuffer++ = *pSource++) && --nMaxLen);
 	if (nMaxLen)
 		return pBuffer - pStart - 1;
@@ -55,22 +45,6 @@ unsigned int _fastcall strncpyex(char* pBuffer, const char* pSource, unsigned in
 		return pBuffer - pStart;
 }
 
-
-// returns the no. of tokens in 'pString' which are seperated by 'pSeperator'
-unsigned int _fastcall GetWordCount(const char* pString, const char pSeperator)
-{
-	unsigned int nTokens = 1;
-	const char* pSource = pString;
-	while (*pString)
-	{
-		if (*pString++ == pSeperator)
-			nTokens++;
-	}
-	if (pSource != pString)
-		return nTokens;
-	else
-		return 0;
-}
 
 // copies the Nth Token from a string seperated by 'pSeperator' to the location pointed to by pBuffer,
 // nMaxLen should be the size of the buffer
@@ -100,68 +74,6 @@ TokenCopy:
 	return pBuffer - pBuffPtr;
 }
 
-// trims all spaces from string, the string is modified where it is which is save since it can only shrink
-void _fastcall Alltrim(char* pString)
-{
-	char* pStart;
-	char* pEnd;
-
-	if (*pString == '\0') /* empty string */
-		return;
-
-	pStart = pEnd = pString;
-
-	while (*pStart == ' ') pStart++; /* find start position */
-
-	while (*++pEnd); /* find end of string */
-
-	if (pStart == pEnd) /* entire string consisted of spaces */
-	{
-		*pString = '\0';
-		return;
-	}
-
-	while (*--pEnd == ' '); /* find end of valid characters */
-
-	if (pStart != pString) /* need to move string back */
-	{
-		while (pString != pEnd)
-			*pString++ = *pStart++;
-		*pString = '\0';
-	}
-	else				  /* just set nullterminator */
-		*++pEnd = '\0';
-	/* else string was empty anyway */
-}
-
-char* _fastcall AtEx(char* pString, char pSearch, int nOccurence)
-{
-	int nToken = 0;
-	if (nOccurence == 0)
-		return pString;
-
-SearchToken:
-	while (*pString && *pString != pSearch) pString++;
-
-	if (*pString == pSearch)
-	{
-		nToken++;
-		if (nToken == nOccurence)
-			return pString + 1;
-		else
-			goto SearchToken;
-	}
-	else
-		return 0;
-}
-
-char* _fastcall ReplicateEx(char* pBuffer, char pExpr, int nCount)
-{
-	while (nCount--)
-		*pBuffer++ = pExpr;
-	return pBuffer;
-}
-
 char* _fastcall strend(char* pString)
 {
 	while ((*pString)) pString++;
@@ -178,6 +90,7 @@ char* _fastcall ShortToStr(char* pString, short nNumber)
 	if (nNumber < 0)
 	{
 		*pString++ = '-';
+		// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 		nNumber = -nNumber;
 	}
 
@@ -186,6 +99,7 @@ char* _fastcall ShortToStr(char* pString, short nNumber)
 		unsigned short nNum = (unsigned short)nNumber;
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + nNum % 10;
 			nNum /= 10;
 		} while (nNum != 0);
@@ -198,9 +112,10 @@ char* _fastcall ShortToStr(char* pString, short nNumber)
 	return pString;
 }
 
+// NOLINTBEGIN(bugprone-narrowing-conversions)
 char* _fastcall ShortToHex(char* pString, short nNumber)
 {
-	register char c;
+	char c;
 	unsigned short nValue;
 
 	if (nNumber < 0)
@@ -237,10 +152,12 @@ char* _fastcall ShortToHex(char* pString, short nNumber)
 
 	return pString + 5;
 }
+// NOLINTEND(bugprone-narrowing-conversions)
 
+// NOLINTBEGIN(bugprone-narrowing-conversions)
 char* _fastcall UShortToHex(char* pString, unsigned short nValue)
 {
-	register char c;
+	char c;
 	*pString++ = '0';
 	*pString = 'x';
 	pString += 4;
@@ -266,6 +183,7 @@ char* _fastcall UShortToHex(char* pString, unsigned short nValue)
 
 	return pString + 5;
 }
+// NOLINTEND(bugprone-narrowing-conversions)
 
 char* _fastcall IntToStr(char* pString, int nNumber)
 {
@@ -283,6 +201,7 @@ char* _fastcall IntToStr(char* pString, int nNumber)
 		unsigned int nNum = (unsigned int)nNumber;
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + nNum % 10;
 			nNum /= 10;
 		} while (nNum != 0);
@@ -295,9 +214,10 @@ char* _fastcall IntToStr(char* pString, int nNumber)
 	return pString;
 }
 
+// NOLINTBEGIN(bugprone-narrowing-conversions)
 char* _fastcall IntToHex(char* pString, int nNumber)
 {
-	register char c;
+	char c;
 	unsigned int nValue;
 	char* pEnd;
 
@@ -364,6 +284,7 @@ char* _fastcall IntToHex(char* pString, int nNumber)
 
 	return pEnd + 1;
 }
+// NOLINTEND(bugprone-narrowing-conversions)
 
 char* _fastcall UIntToStr(char* pString, unsigned int nNumber)
 {
@@ -374,6 +295,7 @@ char* _fastcall UIntToStr(char* pString, unsigned int nNumber)
 	{
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + nNumber % 10;
 			nNumber /= 10;
 		} while (nNumber != 0);
@@ -386,9 +308,10 @@ char* _fastcall UIntToStr(char* pString, unsigned int nNumber)
 	return pString;
 }
 
+// NOLINTBEGIN(bugprone-narrowing-conversions)
 char* _fastcall UIntToHex(char* pString, unsigned int nValue)
 {
-	register char c;
+	char c;
 	char* pEnd;
 
 	*pString++ = '0';
@@ -444,7 +367,7 @@ char* _fastcall UIntToHex(char* pString, unsigned int nValue)
 
 	return pEnd + 1;
 }
-
+// NOLINTEND(bugprone-narrowing-conversions)
 
 char* _fastcall Int64ToStr(char* pString, __int64 nNumber)
 {
@@ -462,6 +385,7 @@ char* _fastcall Int64ToStr(char* pString, __int64 nNumber)
 		unsigned __int64 nNum = (unsigned __int64)nNumber;
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + (char)(nNum % 10);
 			nNum /= 10;
 		} while (nNum != 0);
@@ -474,9 +398,10 @@ char* _fastcall Int64ToStr(char* pString, __int64 nNumber)
 	return pString;
 }
 
+// NOLINTBEGIN(bugprone-narrowing-conversions)
 char* _fastcall Int64ToHex(char* pString, __int64 nNumber)
 {
-	register char c;
+	char c;
 	char* pEnd;
 	unsigned __int64 nValue;
 
@@ -607,6 +532,7 @@ char* _fastcall Int64ToHex(char* pString, __int64 nNumber)
 
 	return pEnd + 1;
 }
+// NOLINTEND(bugprone-narrowing-conversions)
 
 union __Int64ToVarbinary
 {
@@ -620,9 +546,9 @@ char* _fastcall Int64ToVarbinary(char* pString, __int64 nNumber)
 	nInt.nNumber = nNumber;
 
 	const char* HexTable = "0123456789ABCDEF";
-	register char* pSource = nInt.aBinary;
-	register int xj;
-	register char c;
+	char* pSource = nInt.aBinary;
+	int xj;
+	char c;
 
 	*pString++ = '0';
 	*pString = 'h';
@@ -661,11 +587,12 @@ char* _fastcall Int64ToCurrency(char* pString, __int64 nNumber)
 		unsigned __int64 nNum = (unsigned __int64)nNumber;
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + (char)(nNum % 10);
 			nNum /= 10;
 		} while (nNum != 0);
 
-		int nLen = pTmp - aBuffer;
+		int nLen = (int)(pTmp - aBuffer);
 		if (nLen <= 4)
 		{
 			*pString++ = '0';
@@ -698,6 +625,7 @@ char* _fastcall UInt64ToStr(char* pString, unsigned __int64 nNumber)
 	{
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + (char)(nNumber % 10);
 			nNumber /= 10;
 		} while (nNumber != 0);
@@ -710,9 +638,10 @@ char* _fastcall UInt64ToStr(char* pString, unsigned __int64 nNumber)
 	return pString;
 }
 
+// NOLINTBEGIN(bugprone-narrowing-conversions)
 char* _fastcall UInt64ToHex(char* pString, unsigned __int64 nValue)
 {
-	register char c;
+	char c;
 	char* pEnd;
 	*pString++ = '0';
 	*pString = 'x';
@@ -831,6 +760,8 @@ char* _fastcall UInt64ToHex(char* pString, unsigned __int64 nValue)
 
 	return pEnd;
 }
+// NOLINTEND(bugprone-narrowing-conversions)
+
 /*
 char* _fastcall UInt64ToHexSSE(char* pString, __int64 nNumber)
 {
@@ -966,6 +897,7 @@ void _fastcall Int64ToStrBuffer(char* pString, __int64 nNumber)
 		unsigned __int64 nNum = (unsigned __int64)nNumber;
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + (char)(nNum % 10);
 			nNum /= 10;
 		} while (nNum != 0);
@@ -1077,6 +1009,7 @@ void _fastcall UInt64ToStrBuffer(char* pString, unsigned __int64 nNumber)
 	{
 		do
 		{
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*pTmp++ = '0' + (char)(nNumber % 10);
 			nNumber /= 10;
 		} while (nNumber != 0);
@@ -1157,9 +1090,9 @@ unsigned __int64 _fastcall StringToUInt64(char* pString, unsigned int nLen) thro
 #pragma warning(default : 4290)
 
 #if !defined(_WIN64)
-#define PtrToStr(pString, pPtr)	UIntToStr(pString, (UINT_PTR)pPtr);
+#define PtrToStr(pString, pPtr)	UIntToStr((pString), (UINT_PTR)(pPtr));
 #else
-#define PtrToStr(pString, pPtr) UInt64ToStr(pString, (UINT_PTR)pPtr);
+#define PtrToStr(pString, pPtr) UInt64ToStr((pString), (UINT_PTR)(pPtr));
 #endif
 
 #if !defined(_WIN64)
@@ -1191,7 +1124,7 @@ Strchk:
 unsigned int _fastcall strdblcount(const char* pString, unsigned long nMaxLen)
 {
 	unsigned int nStringCnt = 0;
-	while (1)
+	while (true)
 	{
 		while (*pString != '\0' && nMaxLen--) ++pString;
 		nStringCnt++;
@@ -1227,7 +1160,6 @@ char* _stdcall cvt(double arg, int ndigits, int* decpt, int* sign, char* buf, in
 		arg = -arg;
 	}
 	arg = modf(arg, &fi);
-	pTmp = &buf[CVTBUFSIZE];
 
 	if (fi != 0)
 	{
@@ -1235,6 +1167,7 @@ char* _stdcall cvt(double arg, int ndigits, int* decpt, int* sign, char* buf, in
 		while (fi != 0)
 		{
 			fj = modf(fi / 10, &fi);
+			// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 			*--pTmp = (int)((fj + .03) * 10) + '0';
 			rTmp++;
 		}
@@ -1260,6 +1193,7 @@ char* _stdcall cvt(double arg, int ndigits, int* decpt, int* sign, char* buf, in
 	{
 		arg *= 10;
 		arg = modf(arg, &fj);
+		// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 		*p++ = (int)fj + '0';
 	}
 	if (pTmp >= &buf[CVTBUFSIZE])
@@ -1319,7 +1253,8 @@ unsigned int _stdcall printfex(char* lpBuffer, const char* lpFormat, va_list lpA
 
 		lpFormat++;
 
-		if (nUseLength = IsDigit(*lpFormat))
+		nUseLength = IsDigit(*lpFormat);
+		if (nUseLength)
 			nPrecision = skip_atoi(&lpFormat);
 		else
 			nPrecision = 6;
@@ -1381,7 +1316,7 @@ unsigned int _stdcall printfex(char* lpBuffer, const char* lpFormat, va_list lpA
 			pWideStringView = va_arg(lpArgs, CWideStringView*);
 			if (pWideStringView && pWideStringView->Len > 0)
 			{
-				nChars = WideCharToMultiByte(CP_ACP, 0, pWideStringView->Data, pWideStringView->Len, lpString, pWideStringView->Len, 0, 0);
+				nChars = WideCharToMultiByte(CP_ACP, 0, pWideStringView->Data, (int)pWideStringView->Len, lpString, (int)pWideStringView->Len, 0, 0);
 				lpString += nChars;
 			}
 			continue;
@@ -1461,7 +1396,8 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 
 		lpFormat++;
 
-		if (nUseLength = IsDigit(*lpFormat))
+		nUseLength = IsDigit(*lpFormat);
+		if (nUseLength)
 			nPrecision = skip_atoi(&lpFormat);
 		else
 			nPrecision = 0;
@@ -1472,7 +1408,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_INT_LITERAL > 0)
 			{
 				lpStringEnd = IntToStr(lpString, va_arg(lpArgs, int));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1485,7 +1421,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_INT_LITERAL > 0)
 			{
 				lpStringEnd = UIntToStr(lpString, va_arg(lpArgs, unsigned int));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1502,7 +1438,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 #endif
 			{
 				lpStringEnd = PtrToStr(lpString, va_arg(lpArgs, void*));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1519,7 +1455,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 				{
 					memcpy(lpString, pStringView->Data, pStringView->Len);
 					lpString += pStringView->Len;
-					nBufferSize -= pStringView->Len;
+					nBufferSize -= (int)pStringView->Len;
 				}
 				else
 				{
@@ -1534,7 +1470,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			{
 				if (nBufferSize - pWideStringView->Len > 0)
 				{
-					nChars = WideCharToMultiByte(CP_ACP, 0, pWideStringView->Data, pWideStringView->Len, lpString, nBufferSize, 0, 0);
+					nChars = WideCharToMultiByte(CP_ACP, 0, pWideStringView->Data, (int)pWideStringView->Len, lpString, nBufferSize, 0, 0);
 					lpString += nChars;
 					nBufferSize -= nChars;
 				}
@@ -1572,7 +1508,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_BIGINT_LITERAL > 0)
 			{
 				lpStringEnd = Int64ToStr(lpString, va_arg(lpArgs, __int64));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1585,7 +1521,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_BIGINT_LITERAL > 0)
 			{
 				lpStringEnd = UInt64ToStr(lpString, va_arg(lpArgs, unsigned __int64));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1598,7 +1534,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_BOOL_LITERAL > 0)
 			{
 				lpStringEnd = BoolToStr(lpString, va_arg(lpArgs, int));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1611,7 +1547,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_DOUBLE_LITERAL > 0)
 			{
 				lpStringEnd = DoubleToStr(lpString, va_arg(lpArgs, double), nUseLength ? nPrecision : 6);
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1625,7 +1561,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			{
 				nDouble = (double)va_arg(lpArgs, float);
 				lpStringEnd = DoubleToStr(lpString, nDouble, nUseLength ? nPrecision : 6);
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1638,7 +1574,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_SHORT_LITERAL > 0)
 			{
 				lpStringEnd = ShortToStr(lpString, va_arg(lpArgs, short));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1651,7 +1587,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_SHORT_LITERAL > 0)
 			{
 				lpStringEnd = UIntToStr(lpString, va_arg(lpArgs, unsigned short));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1664,7 +1600,7 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 			if (nBufferSize - VFP2C_MAX_HEX_LITERAL > 0)
 			{
 				lpStringEnd = UIntToHex(lpString, va_arg(lpArgs, unsigned int));
-				nBufferSize -= lpStringEnd - lpString;
+				nBufferSize -= (int)(lpStringEnd - lpString);
 				lpString = lpStringEnd;
 			}
 			else
@@ -1694,6 +1630,13 @@ unsigned int _stdcall nprintfex(char* lpBuffer, const char* lpFormat, int nBuffe
 
 	*lpString = '\0';
 	return lpString - lpBuffer;
+}
+
+CStringMatcher::CStringMatcher(char* pString)
+{
+	m_String = pString;
+	m_Length = pString ? (unsigned int)strlen(pString) : 0;
+	m_CurrentPos = 0;
 }
 
 CStringMatcher::CStringMatcher(CStringView pString)
@@ -1942,6 +1885,7 @@ bool CStringMatcher::MatchInteger(int* nInt)
 {
 	char aBuffer[VFP2C_MAX_INT_LITERAL];
 	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_INT_LITERAL;
+	bool bNegative = false;
 
 	SkipWhitespace();
 	if (End())
@@ -1953,6 +1897,7 @@ bool CStringMatcher::MatchInteger(int* nInt)
 		*pTmp++ = m_String[nPos];
 		nPos++;
 		nBuffLen--;
+		bNegative = true;
 	}
 
 	if (nPos == m_Length || !IsDigit(m_String[nPos]))
@@ -1965,8 +1910,9 @@ bool CStringMatcher::MatchInteger(int* nInt)
 	}
 	if (nBuffLen == 0)
 		return false;
+
 	*pTmp = '\0';
-	*nInt = atoi(aBuffer);
+	Convert(aBuffer, nInt, bNegative);
 	m_CurrentPos = nPos;
 	return true;
 }
@@ -1991,8 +1937,9 @@ bool CStringMatcher::MatchUInteger(unsigned int* nUInt)
 	}
 	if (nBuffLen == 0)
 		return false;
+
 	*pTmp = '\0';
-	*nUInt = strtoul(aBuffer, 0, 10);
+	Convert(aBuffer, nUInt);
 	m_CurrentPos = nPos;
 	return true;
 }
@@ -2005,6 +1952,7 @@ bool CStringMatcher::MatchULong(unsigned long* nULong)
 	SkipWhitespace();
 	if (End())
 		return false;
+
 	unsigned int nPos = m_CurrentPos;
 
 	if (!IsDigit(m_String[nPos]))
@@ -2017,8 +1965,9 @@ bool CStringMatcher::MatchULong(unsigned long* nULong)
 	}
 	if (nBuffLen == 0)
 		return false;
+
 	*pTmp = '\0';
-	*nULong = strtoul(aBuffer, 0, 10);
+	Convert(aBuffer, nULong);
 	m_CurrentPos = nPos;
 	return true;
 }
@@ -2044,8 +1993,9 @@ bool CStringMatcher::MatchULong(unsigned long* nULong, int* nLen)
 	if (nBuffLen == 0)
 		return false;
 	*pTmp = '\0';
-	*nULong = strtoul(aBuffer, 0, 10);
-	*nLen = nPos - m_CurrentPos;
+
+	Convert(aBuffer, nULong);
+	*nLen = (int)(nPos - m_CurrentPos);
 	m_CurrentPos = nPos;
 	return true;
 }
@@ -2054,6 +2004,7 @@ bool CStringMatcher::MatchShort(short* nShort)
 {
 	char aBuffer[VFP2C_MAX_SHORT_LITERAL];
 	char* pTmp = aBuffer, nBuffLen = VFP2C_MAX_SHORT_LITERAL;
+	bool bNegative = false;
 
 	SkipWhitespace();
 
@@ -2066,6 +2017,7 @@ bool CStringMatcher::MatchShort(short* nShort)
 		*pTmp++ = m_String[nPos];
 		nPos++;
 		nBuffLen--;
+		bNegative = true;
 	}
 
 	if (nPos == m_Length || !IsDigit(m_String[nPos]))
@@ -2076,10 +2028,12 @@ bool CStringMatcher::MatchShort(short* nShort)
 		*pTmp++ = m_String[nPos];
 		nPos++;
 	}
+	
 	if (nBuffLen == 0)
 		return false;
+	
 	*pTmp = '\0';
-	*nShort = (short)atoi(aBuffer);
+	Convert(aBuffer, nShort, bNegative);
 	m_CurrentPos = nPos;
 	return true;
 }
@@ -2105,10 +2059,56 @@ bool CStringMatcher::MatchUShort(unsigned short* nShort)
 	}
 	if (nBuffLen == 0)
 		return false;
+
 	*pTmp = '\0';
-	*nShort = (unsigned short)atoi(aBuffer);
+	Convert(aBuffer, nShort);
 	m_CurrentPos = nPos;
 	return true;
+}
+
+void CStringMatcher::Convert(const char* pDigits, short* nValue, bool bNegative)
+{
+	int number = 0;
+	while (*pDigits) {
+		number *= 10 + *pDigits++ - '0';
+	}
+	*nValue = bNegative ? (short)-number : (short)number;
+}
+
+void CStringMatcher::Convert(const char* pDigits, unsigned short* nValue)
+{
+	unsigned short number = 0;
+	while (*pDigits) {
+		number *= 10 + *pDigits++ - '0';
+	}
+	*nValue = number;
+}
+
+void CStringMatcher::Convert(const char* pDigits, int* nValue, bool bNegative)
+{
+	int number = 0;
+	while (*pDigits) {
+		number *= 10 + *pDigits++ - '0';
+	}
+	*nValue = bNegative ? -number : number;
+}
+
+void CStringMatcher::Convert(const char* pDigits, unsigned int* nValue)
+{
+	unsigned int number = 0;
+	while (*pDigits) {
+		number *= 10 + *pDigits++ - '0';
+	}
+	*nValue = number;
+}
+
+void CStringMatcher::Convert(const char* pDigits, unsigned long* nValue)
+{
+	unsigned long number = 0;
+	while (*pDigits) {
+		number *= 10 + *pDigits++ - '0';
+	}
+	*nValue = number;
 }
 
 inline bool CStringMatcher::End()
@@ -2127,29 +2127,4 @@ void CStringMatcher::SkipWhitespace()
 	{
 		m_CurrentPos++;
 	}
-}
-
-// appends a string to the start of the string
-// and returns the new end of the string 
-// to speed up many strcat operations in succession
-char* _fastcall str_append(char* pBuffer, char* pString)
-{
-	while (*pString)
-		*pBuffer++ = *pString++;
-
-	*pBuffer = '\0';
-	return pBuffer;
-}
-
-// returns the number of occurences of the character pChar in pString
-int _fastcall str_charcount(char* pString, char pChar)
-{
-	int nCount = 0;
-	while (*pString)
-	{
-		if (*pString == pChar)
-			nCount++;
-		pString++;
-	}
-	return nCount;
 }

@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Hyperscan_scan_files</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">Hyperscan_scan_files</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Executes a hyperscan operation on a set of files.</p>
+
+<div class="block"><pre>Hyperscan_scan_files(<a href="#p1">nDb</a>, <a href="#p2">nScratch</a>, <a href="#p3">nMode</a>, <a href="#p4">cnSource</a>, <a href="#p5">cnResult</a>[, <a href="#p6">cContextField</a>[, <a href="#p7">nBuffersize</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">nDb</a></dt>
+<dd><p>A handle to a hyperscan database previously compiled with <a href="/pages/hyperscan_compile.html">Hyperscan_compile</a>.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">nScratch</a></dt>
+<dd><p>A handle to scratch memory previously allocated with <a href="/pages/hyperscan_alloc_scratch.html">Hyperscan_alloc_scratch</a>.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>If you pass 0 the function will allocate and free the needed scratch memory internally.<br />
+If you call this function many times in succession it's more performant to manually allocate and free <br />
+the scratch memory with <a href="/pages/hyperscan_alloc_scratch.html">Hyperscan_alloc_scratch</a> and <a href="/pages/hyperscan_free_scratch.html">Hyperscan_free_scratch</a>.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">nMode</a></dt>
+<dd><p>The mode that was used to compile the regular expression.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">cnSource</a></dt>
+<dd><p>The alias or workarea number of the source cursor of files.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>The source cursor has to have the following fields <em>filename</em> and optionally <em>fileattribs</em>, <em>filesize</em>.<br />
+If the <em>fileattribs</em> field is present rows with the attribute FILE_ATTRIBUTE_DIRECTORY are skipped.<br />
+If the <em>filesize</em> field is present rows with a size of 0 are filtered out.<br />
+The <em>filename</em> field has to be a full path to the files. <br />
+If the source cursor is to be created by the ADIREX function, specify the ADIREX_FULLPATH option.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">cnResult</a></dt>
+<dd><p>The alias or workarea number of the result cursor.<br />
+<br />
+If an alias is passed a result cursor according to the specified <em>nMode</em> and </em>cContextField</em> is created.<br />
+<br />
+When passing a workarea number the result cursor is reused and results are just appended.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p6">cContextField</a></dt>
+<dd><p>An additional field definition to add to the result cursor, e.g. "fileid I NOT NULL".<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>The field has to be present in the <em>cnSource</em> cursor.<br />
+If the source cursor was created with ADIREX and the ADIREX_FILEID flag, the <em>fileid</em> field can be passed to uniquely identify <br />
+the records in the resulting cursor forming a parent child relationship.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p7">nBufferSize (optional)</a></dt>
+<dd><p>In streaming mode this specifies the buffer size in bytes used.<br />
+Two buffers of size <em>nBuffersize</em> are used alternativly to execute the hyperscan operation.<br />
+<br />
+If omitted the default buffer size in streaming mode is dependant an the supplied scan horizon passed in the <em>nMode</em> parameter.<br />
+HS_MODE_SOM_HORIZON_SMALL = 64 Kb<br />
+HS_MODE_SOM_HORIZON_MEDIUM or HS_MODE_SOM_HORIZON_LARGE = 256 Kb<br />
+<br />
+Bigger buffers allow more tracking ability when matching large expressions and reduce IO and transition overhead into kernel functions.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>If a match can not be fully tracked, it will get truncated and the <em>match_from</em> field in the result cursor is set to -1.
+</p></div>
+<p><br />
+In block mode this specifies a maximum allowed filesize, files bigger than this will be skipped.<br />
+This allows to prevent too large memory allocations to occur since one obviously cannot load really large files (multiple gigabytes) into RAM at once.<br />
+<br />
+If ommitted in block mode the default maximum of 16MB is used.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>If the <em>nMode</em> flag HS_MODE_EX_STORE_SKIPPED is passed in block mode<br />
+one record for any file that is bigger then the supplied buffersize is stored in the result cursor.<br />
+The record will have a match_id of -1 and match_from and match_to of 0 to indicate this condition.
+</p></div>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A hyperscan return code.<br />
+HS_SUCCESS (0) on success otherwise the errorcode.</p>
+
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/hyperscan_alloc_scratch.html">Hyperscan_alloc_scratch</a><br />
+<a href="/pages/hyperscan_compile.html">Hyperscan_compile</a><br />
+<a href="/pages/hyperscan_free_database.html">Hyperscan_free_database</a><br />
+<a href="/pages/hyperscan_free_scratch.html">Hyperscan_free_scratch</a><br />
+<a href="/pages/hyperscan_platform.html">Hyperscan_platform</a><br />
+<a href="/pages/hyperscan_scan.html">Hyperscan_scan</a><br />
+<a href="/pages/hyperscan_scan_cursor.html">Hyperscan_scan_cursor</a><br />
+</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

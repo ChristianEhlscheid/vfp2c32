@@ -2,9 +2,9 @@
 #include "vfp2cshell.h"
 #include "vfp2cfile.h"
 
-#include <propidl.h>
+// #include <propidl.h>
 #include <propkey.h>
-#include <propvarutil.h>
+// #include <propvarutil.h>
 
 // dynamic function pointers for runtime linking
 static PGETSPECIALFOLDER fpGetSpecialFolder = 0;
@@ -63,11 +63,11 @@ void _fastcall SHSpecialFolder(ParamBlkEx& parm)
 
 		FoxString pFolder(MAX_PATH);
 		LocatorEx& pRef = parm(2);
-		BOOL bCreateDir = parm.PCount() >= 3 ? parm(3)->ev_length : FALSE;
+		BOOL bCreateDir = parm.PCount() >= 3 ? (BOOL)parm(3)->ev_length : FALSE;
 
-		if (fpGetSpecialFolder(WTopHwnd(), pFolder, parm(1)->ev_long, bCreateDir))
+		if (fpGetSpecialFolder(WTopHwnd(), pFolder.Ptr<LPSTR>(), parm(1)->ev_long, bCreateDir))
 		{
-			pFolder.Len((unsigned int)strlen(pFolder));
+			pFolder.Len((unsigned int)strlen(pFolder.Ptr<const char*>()));
 			pRef = pFolder;
 			Return(true);
 		}
@@ -88,7 +88,8 @@ void _fastcall SHCopyFiles(ParamBlkEx& parm)
 		FoxString pTo;
 		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		FoxString pTitle(parm, 4);
-		SHFILEOPSTRUCT sFileOp = { 0 };
+		SHFILEOPSTRUCT sFileOp;
+		RtlZeroMemory(&sFileOp, sizeof(SHFILEOPSTRUCT));
 		bool bMapToArray = false;
 
 		if (wFlags & FOF_RENAMEONCOLLISION && parm.PCount() >= 5)
@@ -136,13 +137,13 @@ void _fastcall SHCopyFiles(ParamBlkEx& parm)
 		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
-		sFileOp.pFrom = pFrom;
-		sFileOp.pTo = pTo;
+		sFileOp.pFrom = pFrom.Ptr<LPCSTR>();
+		sFileOp.pTo = pTo.Ptr<LPCSTR>();
 
 		if (pTitle.Len())
 		{
 			sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-			sFileOp.lpszProgressTitle = pTitle;
+			sFileOp.lpszProgressTitle = pTitle.Ptr<LPCSTR>();
 		}
 
 		int nRet = SHFileOperation(&sFileOp);
@@ -172,7 +173,8 @@ void _fastcall SHDeleteFiles(ParamBlkEx& parm)
 		FoxString pFiles;
 		DWORD wFlags = parm.PCount() >= 2 ? (DWORD)parm(2)->ev_long : 0;
 		FoxString pTitle(parm, 3);
-		SHFILEOPSTRUCT sFileOp = { 0 };
+		SHFILEOPSTRUCT sFileOp;
+		RtlZeroMemory(&sFileOp, sizeof(SHFILEOPSTRUCT));
 
 		if (wFlags & FOF_SOURCE_CURSOR)
 		{
@@ -194,12 +196,12 @@ void _fastcall SHDeleteFiles(ParamBlkEx& parm)
 		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
-		sFileOp.pFrom = pFiles;
+		sFileOp.pFrom = pFiles.Ptr<LPCSTR>();
 
 		if (pTitle.Len())
 		{
 			sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-			sFileOp.lpszProgressTitle = pTitle;
+			sFileOp.lpszProgressTitle = pTitle.Ptr<LPCSTR>();
 		}
 
 		int nRet = SHFileOperation(&sFileOp);
@@ -225,7 +227,8 @@ void _fastcall SHMoveFiles(ParamBlkEx& parm)
 		FoxString pTo;
 		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
 		FoxString pTitle(parm, 4);
-		SHFILEOPSTRUCT sFileOp = { 0 };
+		SHFILEOPSTRUCT sFileOp;
+		RtlZeroMemory(&sFileOp, sizeof(SHFILEOPSTRUCT));
 		bool bMapToArray = false;
 
 		if (wFlags & FOF_RENAMEONCOLLISION && parm.PCount() >= 5)
@@ -273,13 +276,13 @@ void _fastcall SHMoveFiles(ParamBlkEx& parm)
 		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
-		sFileOp.pFrom = pFrom;
-		sFileOp.pTo = pTo;
+		sFileOp.pFrom = pFrom.Ptr<LPCSTR>();
+		sFileOp.pTo = pTo.Ptr<LPCSTR>();
 
 		if (pTitle.Len())
 		{
 			sFileOp.fFlags |= FOF_SIMPLEPROGRESS;
-			sFileOp.lpszProgressTitle = pTitle;
+			sFileOp.lpszProgressTitle = pTitle.Ptr<LPCSTR>();
 		}
 
 		int nRet = SHFileOperation(&sFileOp);
@@ -310,7 +313,8 @@ void _fastcall SHRenameFiles(ParamBlkEx& parm)
 		FoxString pFrom;
 		FoxString pTo;
 		DWORD wFlags = parm.PCount() >= 3 ? (DWORD)parm(3)->ev_long : 0;
-		SHFILEOPSTRUCT sFileOp = { 0 };
+		SHFILEOPSTRUCT sFileOp;
+		RtlZeroMemory(&sFileOp, sizeof(SHFILEOPSTRUCT));
 
 		pFrom.Attach(parm(1), 2);
 		pTo.Attach(parm(2), 2);
@@ -319,8 +323,8 @@ void _fastcall SHRenameFiles(ParamBlkEx& parm)
 		sFileOp.fFlags = (FILEOP_FLAGS)wFlags;
 		sFileOp.hwnd = WTopHwnd();
 
-		sFileOp.pFrom = pFrom;
-		sFileOp.pTo = pTo;
+		sFileOp.pFrom = pFrom.Ptr<LPCSTR>();
+		sFileOp.pTo = pTo.Ptr<LPCSTR>();
 
 		int nRet = SHFileOperation(&sFileOp);
 
@@ -350,7 +354,7 @@ void _fastcall SHCreateFileListCursor(FoxString& pSource, FoxString& pFileList)
 	}
 	else
 	{
-		pCursor.Attach(pSource, "filename");
+		pCursor.Attach(pSource, __sv("filename"));
 	}
 	if (pCursor.Bof() && pCursor.Eof())
 	{
@@ -382,7 +386,7 @@ void _fastcall SHCreateFileListCursor(FoxString& pSource, FoxString& pFileList)
 			{
 				pFileList.Size(pFileList.Len() + pMemo.Size() + 1);
 			}
-			pMemo.ReadTo(pFileList.Ptr<char*>() + pFileList.Len(), pMemo.Size());
+			pMemo.Read(pFileList.Ptr<char*>() + pFileList.Len(), pMemo.Size());
 			pFileList.Len(pFileList.Len() + pMemo.Size());
 			pFileList += '\0';
 			pCursor.Skip();
@@ -399,7 +403,7 @@ void _fastcall SHCreateFileListCursor(FoxString& pSource, FoxString& pFileList)
 
 void _fastcall SHCreateFileListArray(FoxParameterEx& pSource, FoxString& pFileList)
 {
-	FoxArray pArray(pSource, true);
+	FoxArray pArray(pSource, FoxArray::RaiseErrorIfNotExists);
 	FoxString pFile;
 	UINT nRows = pArray.ARows();
 	DWORD nBufferSize = nRows * MAX_PATH;
@@ -437,7 +441,7 @@ void _fastcall SHSaveFileMapping(SHFILEOPSTRUCT& sFileOp, FoxString& pParm, bool
 		else
 		{
 			FoxCursor pCursor;
-			pCursor.Create(pParm, "old_name M, new_name M", false);
+			pCursor.Create(pParm, __sv("old_name M NOT NULL, new_name M NOT NULL"));
 			for (UINT xj = 1; xj <= lpMappings->uNumberOfMappings; xj++)
 			{
 				pCursor.AppendBlank();
@@ -470,8 +474,8 @@ void _fastcall SHBrowseFolder(ParamBlkEx& parm)
 
 		if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 		{
-			SaveCustomError("SHBrowseFolder", "Callback function length is greater than maximum length of 1024.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("SHBrowseFolder", "Callback function length is greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 
 		if (pRootFolder)
@@ -504,14 +508,14 @@ void _fastcall SHBrowseFolder(ParamBlkEx& parm)
 		sBrow.iImage = 0;
 		sBrow.hwndOwner = WTopHwnd();
 		sBrow.pszDisplayName = aDisplayName;
-		sBrow.lpszTitle = pTitle;
+		sBrow.lpszTitle = pTitle.Ptr<LPCSTR>();
 		sBrow.ulFlags = parm(2)->ev_long;
 
 		pIdl = SHBrowseForFolder(&sBrow);
 
 		if (pIdl)
 		{
-			if (!SHGetPathFromIDList(pIdl, pFolder))
+			if (!SHGetPathFromIDList(pIdl, pFolder.Ptr<LPSTR>()))
 			{
 				SaveCustomError("SHGetPathFromIDList", "Function failed.");
 				throw E_APIERROR;
@@ -540,7 +544,7 @@ int _stdcall SHBrowseCallback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData
 		if (vRetVal.Vartype() == 'I')
 			nRetVal = vRetVal->ev_long;
 		else if (vRetVal.Vartype() == 'L')
-			nRetVal = vRetVal->ev_length;
+			nRetVal = static_cast<int>(vRetVal->ev_length);
 		else if (vRetVal.Vartype() == 'N')
 			nRetVal = static_cast<int>(vRetVal->ev_real);
 	}
@@ -564,7 +568,9 @@ void _fastcall SHGetShellItem(ParamBlkEx& parm)
 			throw E_APIERROR;
 		}
 
-		CShellItem* pItem = new CShellItem(pShellItem);
+		CShellItem* pItem = new(std::nothrow) CShellItem(pShellItem);
+		if (!pItem)
+			throw E_INSUFMEMORY;
 		ReturnIDispatch(pItem);
 	}
 	catch (int nErrorNo)
@@ -644,6 +650,9 @@ STDMETHODIMP CPropertyDescription::Invoke(DISPID dispidMember, REFIID riid, LCID
 		else
 			hr = DISP_E_BADPARAMCOUNT;
 		break;
+	
+	default:
+		break;
 	}
 	return hr;
 }
@@ -683,7 +692,9 @@ STDMETHODIMP CPropertyDescriptionList::Invoke(DISPID dispidMember, REFIID riid, 
 			if (SUCCEEDED(hr))
 			{
 				pvarResult->vt = VT_DISPATCH;
-				pvarResult->pdispVal = new CPropertyDescription(pPD);
+				pvarResult->pdispVal = new(std::nothrow) CPropertyDescription(pPD);
+				if (pvarResult->pdispVal == 0)
+					hr = E_OUTOFMEMORY;
 			}
 		}
 		break;
@@ -700,49 +711,59 @@ STDMETHODIMP CPropertyDescriptionList::Invoke(DISPID dispidMember, REFIID riid, 
 		}
 		else
 			hr = DISP_E_BADPARAMCOUNT;
-		break;
+		break; 
 
 	case DISPID_NEWENUM:
 		pvarResult->vt = VT_UNKNOWN;
-		pvarResult->punkVal = new CPropertyDescriptionListEnumerator(m_List);
+		hr = CPropertyDescriptionListEnumerator::Create(m_List, &pvarResult->punkVal);
+		break;
+	default:
 		break;
 	}
 	return hr;
 }
 
-CPropertyDescriptionListEnumerator::CPropertyDescriptionListEnumerator(IPropertyDescriptionList* pList) : m_RefCount(2)
+HRESULT CPropertyDescriptionListEnumerator::Create(IPropertyDescriptionList* pPropList, IUnknown** pUnk)
 {
-	m_List = pList;
-	m_Index = 0;
-	pList->AddRef();
+	CPropertyDescriptionListEnumerator *listenum = new(std::nothrow) CPropertyDescriptionListEnumerator();
+	if (listenum)
+	{
+		listenum->m_List = pPropList;
+		listenum->m_Index = 0;
+		listenum->m_RefCount = 2;
+		pPropList->AddRef();
+		*pUnk = listenum;
+		return S_OK;
+	}
+	return E_OUTOFMEMORY;
 }
 
-CPropertyDescriptionListEnumerator::CPropertyDescriptionListEnumerator(CPropertyDescriptionListEnumerator& pEnum) : m_RefCount(2)
+HRESULT CPropertyDescriptionListEnumerator::Create(CPropertyDescriptionListEnumerator& pPropList, IUnknown** pUnk)
 {
-	m_List = pEnum.m_List;
-	m_Index = pEnum.m_Index;
-	pEnum.m_List->AddRef();
+	CPropertyDescriptionListEnumerator* listenum = new(std::nothrow) CPropertyDescriptionListEnumerator();
+	if (listenum)
+	{
+		listenum->m_List = pPropList.m_List;
+		listenum->m_Index = pPropList.m_Index;
+		listenum->m_RefCount = 2;
+		pPropList.m_List->AddRef();
+		*pUnk = listenum;
+		return S_OK;
+	}
+	return E_OUTOFMEMORY;
 }
 
 STDMETHODIMP CPropertyDescriptionListEnumerator::QueryInterface(REFIID riid, void** ppvObject)
 {
-	*ppvObject = NULL;
-	HRESULT hr;
-
+	HRESULT hr = S_OK;
 	// IUnknown
-	if (::IsEqualIID(riid, __uuidof(IUnknown)))
-	{
+	if (::IsEqualIID(riid, __uuidof(IUnknown)) || ::IsEqualIID(riid, __uuidof(IEnumVARIANT)))
 		*ppvObject = this;
-		hr = S_OK;
-	}
-	else if (::IsEqualIID(riid, __uuidof(IEnumVARIANT)))
-	{
-		*ppvObject = this;
-		hr = S_OK;
-	}
 	else
+	{
+		*ppvObject = NULL;
 		hr = E_NOINTERFACE;
-
+	}
 	return hr;
 }
 
@@ -767,24 +788,21 @@ STDMETHODIMP CPropertyDescriptionListEnumerator::Next(ULONG celt, VARIANT* rgVar
 {
 	HRESULT hr = S_OK;
 	IPropertyDescription* pPD;
-	for (ULONG xj = 0; xj < celt; xj++)
+	hr = m_List->GetAt(m_Index++, IID_IPropertyDescription, (void**)&pPD);
+	if (SUCCEEDED(hr))
 	{
-		hr = m_List->GetAt(m_Index++, IID_IPropertyDescription, (void**)&pPD);
-		if (SUCCEEDED(hr))
-		{
-			rgVar[xj].vt = VT_DISPATCH;
-			rgVar[xj].pdispVal = new CPropertyDescription(pPD);
-		}
-		else
-		{
-			for (ULONG xi = 0; xi = xj; xi++)
-				VariantClear(&rgVar[xi]);
-			if (hr == TYPE_E_OUTOFBOUNDS)
-				hr = S_FALSE;
-			break;
-		}
+		rgVar[0].vt = VT_DISPATCH;
+		rgVar[0].pdispVal = new(std::nothrow) CPropertyDescription(pPD);
+		if (rgVar[0].pdispVal == 0)
+			hr = E_OUTOFMEMORY;
+		*pCeltFetched = 1;
 	}
-	*pCeltFetched = SUCCEEDED(hr) ? celt : 0;
+	else
+	{
+		VariantClear(&rgVar[0]);
+		if (hr == TYPE_E_OUTOFBOUNDS)
+			hr = S_FALSE;
+	}
 	return hr;
 }
 
@@ -795,7 +813,7 @@ STDMETHODIMP CPropertyDescriptionListEnumerator::Skip(ULONG celt)
 	hr = m_List->GetCount(&nCount);
 	if (SUCCEEDED(hr))
 	{
-		nIndex = m_Index += celt;
+		nIndex = m_Index += (int)celt;
 		if (nIndex < nCount)
 		{
 			m_Index = nIndex;
@@ -803,7 +821,6 @@ STDMETHODIMP CPropertyDescriptionListEnumerator::Skip(ULONG celt)
 		}
 		else
 		{
-			m_Index = nCount - 1;
 			hr = S_FALSE;
 		}
 	}
@@ -818,8 +835,7 @@ STDMETHODIMP CPropertyDescriptionListEnumerator::Reset()
 
 STDMETHODIMP CPropertyDescriptionListEnumerator::Clone(IEnumVARIANT** ppEnum)
 {
-	*ppEnum = new CPropertyDescriptionListEnumerator(*this);
-	return S_OK;
+	return CPropertyDescriptionListEnumerator::Create(*this, (IUnknown**)ppEnum);
 }
 
 CPropertyStore::CPropertyStore(IPropertyStore* pStore)
@@ -904,6 +920,9 @@ STDMETHODIMP CPropertyStore::Invoke(DISPID dispidMember, REFIID riid, LCID lcid,
 			hr = m_Store->Commit();
 		else
 			hr = DISP_E_BADPARAMCOUNT;
+
+	default:
+		break;
 	}
 	return hr;
 }
@@ -983,7 +1002,9 @@ STDMETHODIMP CShellItem::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WOR
 			if (SUCCEEDED(hr))
 			{
 				pvarResult->vt = VT_DISPATCH;
-				pvarResult->pdispVal = new CPropertyDescriptionList(pPropList);
+				pvarResult->pdispVal = new(std::nothrow) CPropertyDescriptionList(pPropList);
+				if (pvarResult->pdispVal == 0)
+					hr = E_OUTOFMEMORY;
 			}
 		}
 		break;
@@ -999,11 +1020,16 @@ STDMETHODIMP CShellItem::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WOR
 			if (SUCCEEDED(hr))
 			{
 				pvarResult->vt = VT_DISPATCH;
-				pvarResult->pdispVal = new CPropertyStore(pPropStore);
+				pvarResult->pdispVal = new(std::nothrow) CPropertyStore(pPropStore);
+				if (pvarResult->pdispVal == 0)
+					hr = E_OUTOFMEMORY;
 			}
 		}
 		else
 			hr = DISP_E_BADPARAMCOUNT;
+		break;
+
+	default:
 		break;
 	}
 	return hr;

@@ -27,13 +27,14 @@ const UINT WM_ASYNCCALLBACK	= WM_USER + 1;
 class WindowMessageCallback
 {
 public:
-	WindowMessageCallback(UINT uMsg = 0);
+	WindowMessageCallback(UINT msg = 0);
 	void Release(WindowSubclass* pSubclass);
+
 	UINT m_Msg;
 	NTI m_Object;
 	void* m_CallbackThunk;
 	char* m_CallbackFunction;
-	bool m_ReturnValue;
+	BOOL m_ReturnValue;
 };
 
 class WindowSubclass
@@ -41,11 +42,13 @@ class WindowSubclass
 public:
 	WindowSubclass();
 	~WindowSubclass();
+	
 	void SubclassWindow(HWND hHwnd, bool bClassProc);
 	WindowMessageCallback* AddMessageCallback(UINT uMsg);
 	bool RemoveMessageCallback(UINT uMsg);
 	void CreateSubclassThunkProc();
 	void CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CStringView pCallback, CStringView pParameterList, DWORD nFlags, BOOL bObjectCall);
+
 	static WindowMessageCallback* _stdcall FindMessageCallback(WindowSubclass* pSubclass, UINT uMsg);
 	static WindowSubclass* _stdcall FindWindowSubclass(HWND hHwnd, bool bClassProc);
 	static void _stdcall ReleaseWindowSubclasses();
@@ -53,14 +56,14 @@ public:
 	HWND m_Hwnd;
 	WNDPROC m_DefaultWndProc;
 	void* m_WindowThunk;
-	CArray<WindowMessageCallback> m_BoundMessages;
 	bool m_ClassProc;
+	CArray<WindowMessageCallback> m_BoundMessages;
 	char m_CallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
 
 private:
 	void UnsubclassWindow();
-	static void UnsubclassWindowClassCallback(HWND hHwnd, LPARAM lParam);
-	static void UnsubclassWindowClassCallbackChild(HWND hHwnd, LPARAM lParam);
+	static BOOL _stdcall UnsubclassWindowClassCallback(HWND hHwnd, LPARAM lParam);
+	static BOOL _stdcall UnsubclassWindowClassCallbackChild(HWND hHwnd, LPARAM lParam);
 };
 
 class CallbackFunction {
@@ -68,9 +71,9 @@ public:
 	CallbackFunction();
 	~CallbackFunction();
 	static void ReleaseCallbackFuncs();
-	char m_CallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
+	void* m_FuncAddress;
 	NTI m_Object;
-	void *m_FuncAddress;
+	char m_CallbackBuffer[VFP2C_MAX_CALLBACK_BUFFER];
 };
 
 #ifdef __cplusplus

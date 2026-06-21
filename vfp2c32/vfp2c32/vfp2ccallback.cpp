@@ -1,7 +1,6 @@
 #ifndef _THREADSAFE
 
 #include <windows.h>
-#include <stddef.h>
 #include <malloc.h>
 
 #if !defined(_WIN64)
@@ -10,7 +9,6 @@
 #include "pro_ext64.h"
 #endif
 #include "vfp2c32.h"
-#include "vfp2cutil.h"
 #include "vfp2cassembly.h"
 #include "vfp2chelpers.h"
 #include "vfp2ccppapi.h"
@@ -26,10 +24,14 @@ static ATOM gnCallbackAtom = 0;
 int _stdcall VFP2C_Init_Callback()
 {
 	const char* CALLBACK_WINDOW_CLASS = "__VFP2C_CBWC";
+	if (gnCallbackAtom && ghCallbackHwnd)
+		return 0;
 
 	if (gnCallbackAtom == 0)
 	{
-		WNDCLASSEX wndClass = {0}; /* MO - message only */
+		/* message only window */
+		WNDCLASSEX wndClass;
+		RtlZeroMemory(&wndClass, sizeof(WNDCLASSEX));
 		wndClass.cbSize = sizeof(WNDCLASSEX);
 		gnCallbackAtom = (ATOM)GetClassInfoEx(ghModule, CALLBACK_WINDOW_CLASS, &wndClass);
 		if (!gnCallbackAtom)
@@ -83,7 +85,8 @@ void _fastcall BindEventsEx(ParamBlkEx& parm)
 	WindowSubclass* lpSubclass = 0;
 	WindowMessageCallback* lpMsg = 0;
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pObjectName;
-	UINT uMsg = static_cast<UINT>(parm(2)->ev_long);
+	UINT uMsg = parm(2)->NumericCast<UINT>();
+	VFP2CTls& tls = VFP2CTls::Tls();
 	try
 	{
 		int nErrorNo = VFP2C_Init_Callback();
@@ -99,20 +102,20 @@ void _fastcall BindEventsEx(ParamBlkEx& parm)
 
 		if (pCallback.Len() > VFP2C_MAX_CALLBACK_FUNCTION || pCallback.Len() == 0)
 		{
-			SaveCustomError("BindEventsEx", "Callback function length is zero or greater than maximum length of 1024.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("BindEventsEx", "Callback function length is zero or greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 
 		if (parm(3)->Vartype() != 'O' && parm(3)->Vartype() != '0')
 		{
-			SaveCustomError("BindEventsEx", "Invalid parameter type '%s' for parameter 3", parm(3)->Vartype());
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("BindEventsEx", "Invalid parameter type '%s' for parameter 3", E_VFP_INVALIDPARAMS, parm(3)->Vartype());
+			throw E_APIERROR;
 		}
 
 		if (parm.PCount() >= 5 && parm(5)->Vartype() != 'C' && parm(5)->Vartype() != '0')
 		{
-			SaveCustomError("BindEventsEx", "Invalid parameter type '%s' for parameter 5", parm(5)->Vartype());
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("BindEventsEx", "Invalid parameter type '%s' for parameter 5", E_VFP_INVALIDPARAMS, parm(5)->Vartype());
+			throw E_APIERROR;
 		}
 		if (parm.PCount() >= 6 && parm(6)->ev_long)
 		{
@@ -124,8 +127,8 @@ void _fastcall BindEventsEx(ParamBlkEx& parm)
 				((nFlags & BINDEVENTSEX_CALL_AFTER) && (nFlags & (BINDEVENTSEX_CALL_BEFORE | BINDEVENTSEX_RETURN_VALUE))) ||
 				((nFlags & BINDEVENTSEX_RETURN_VALUE) && (nFlags & (BINDEVENTSEX_CALL_AFTER | BINDEVENTSEX_CALL_BEFORE))))
 			{
-				SaveCustomError("BindEventsEx", "Invalid nFlags combination - BINDEVENTSEX_CALL_BEFORE, BINDEVENTSEX_CALL_AFTER and BINDEVENTSEX_RETURN_VALUE are mutually exclusive.");
-				throw E_INVALIDPARAMS;
+				SaveCustomErrorEx("BindEventsEx", "Invalid nFlags combination - BINDEVENTSEX_CALL_BEFORE, BINDEVENTSEX_CALL_AFTER and BINDEVENTSEX_RETURN_VALUE are mutually exclusive.", E_VFP_INVALIDPARAMS);
+				throw E_APIERROR;
 			}
 		}
 		else
@@ -136,9 +139,11 @@ void _fastcall BindEventsEx(ParamBlkEx& parm)
 		lpSubclass = WindowSubclass::FindWindowSubclass(hHwnd, bClassProc);
 		if (!lpSubclass)
 		{
-			lpSubclass = new WindowSubclass();
+			lpSubclass = new(std::nothrow) WindowSubclass();
 			if (!lpSubclass)
 				throw E_INSUFMEMORY;
+
+			tls.WindowSubclasses.Add(lpSubclass);
 			lpSubclass->SubclassWindow(hHwnd, bClassProc);
 		}
 
@@ -153,6 +158,7 @@ void _fastcall BindEventsEx(ParamBlkEx& parm)
 			pObjectName.Format(BINDEVENTSEX_OBJECT_SCHEME, bClassProc, hHwnd, uMsg);
 			parm(3)->StoreObjectRef(pObjectName, lpMsg->m_Object);
 		}
+		
 		Return(reinterpret_cast<void*>(lpSubclass->m_DefaultWndProc));
 	}
 	catch (int nErrorNo)
@@ -166,6 +172,7 @@ void _fastcall BindEventsEx(ParamBlkEx& parm)
 			if (lpSubclass->m_BoundMessages.GetCount() == 0)
 			{
 				delete lpSubclass;
+				tls.WindowSubclasses.Remove(lpSubclass);
 			}
 		}
 		RaiseError(nErrorNo);
@@ -184,13 +191,14 @@ try
 	UINT uMsg = static_cast<UINT>(parm(2)->ev_long);
 	WindowSubclass* lpSubclass = 0;
 	bool bClassProc = parm.PCount() == 3 && parm(3)->ev_length;
+	VFP2CTls& tls = VFP2CTls::Tls();
 
 	// get reference to struct for the hWnd, if none is found - the window was not subclassed
 	lpSubclass = WindowSubclass::FindWindowSubclass(hHwnd, bClassProc);
 
 	if (!lpSubclass)
 	{
-		SaveCustomError("UnbindEventsEx", "There are no message bindings for window %I", hHwnd);
+		SaveCustomError("UnbindEventsEx", "There are no message bindings for window %I.", hHwnd);
 		throw E_APIERROR;
 	}
 
@@ -206,11 +214,13 @@ try
 		if (lpSubclass->m_BoundMessages.GetCount() == 0)
 		{
 			delete lpSubclass;
+			tls.WindowSubclasses.Remove(lpSubclass);
 		}
 	}
 	else // unsubclass window and free all hooks
 	{
 		delete lpSubclass;
+		tls.WindowSubclasses.Remove(lpSubclass);
 	}
 }
 catch(int nErrorNo)
@@ -221,23 +231,18 @@ catch(int nErrorNo)
 
 WindowMessageCallback::WindowMessageCallback(UINT msg)
 {
-	m_ReturnValue = false;
+	m_Msg = msg;
 	m_Object = 0;
 	m_CallbackThunk = 0;
-	m_Msg = msg;
-	m_CallbackFunction = (char*)malloc(VFP2C_MAX_CALLBACKBUFFER);
+	m_ReturnValue = FALSE;
+	m_CallbackFunction = new(std::nothrow) char[VFP2C_MAX_CALLBACKBUFFER];
 	if (!m_CallbackFunction)
-	{
 		throw E_INSUFMEMORY;
-	}
 }
 
 void WindowMessageCallback::Release(WindowSubclass* pSubclass)
 {
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pObjectName;
-
-	if (m_CallbackFunction)
-		free(m_CallbackFunction);
 
 	if (m_CallbackThunk)
 	{
@@ -250,6 +255,9 @@ void WindowMessageCallback::Release(WindowSubclass* pSubclass)
 		pObjectName.Format(BINDEVENTSEX_OBJECT_SCHEME, pSubclass->m_ClassProc, pSubclass->m_Hwnd, m_Msg);
 		ValueEx::ReleaseObjectRef(pObjectName, m_Object);
 	}
+
+	if (m_CallbackFunction)
+		delete[] m_CallbackFunction;
 }
 
 WindowSubclass::WindowSubclass()
@@ -258,13 +266,12 @@ WindowSubclass::WindowSubclass()
 	m_Hwnd = 0;
 	m_DefaultWndProc = 0;
 	m_WindowThunk = 0;
-	VFP2CTls::Tls().WindowSubclasses.Add(this);
 }
 
 WindowSubclass::~WindowSubclass()
 {
-	int nCount = m_BoundMessages.GetCount();
-	for (int xj = 0; xj < nCount; xj++)
+	unsigned int nCount = m_BoundMessages.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		m_BoundMessages[xj].Release(this);
 	}
@@ -277,14 +284,13 @@ WindowSubclass::~WindowSubclass()
 		RuntimeAssembler::UnregisterUnwindInfo(m_WindowThunk);
 		RuntimeAssembler::FreeMemory(m_WindowThunk);
 	}
-	VFP2CTls::Tls().WindowSubclasses.Remove(this);
 }
 
 WindowSubclass* WindowSubclass::FindWindowSubclass(HWND hHwnd, bool bClassProc)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
-	int nCount = tls.WindowSubclasses.GetCount();
-	for (int xj = 0; xj < nCount; xj++)
+	unsigned int nCount = tls.WindowSubclasses.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		if (tls.WindowSubclasses[xj]->m_Hwnd == hHwnd && tls.WindowSubclasses[xj]->m_ClassProc == bClassProc)
 		{
@@ -296,9 +302,9 @@ WindowSubclass* WindowSubclass::FindWindowSubclass(HWND hHwnd, bool bClassProc)
 
 WindowMessageCallback* WindowSubclass::AddMessageCallback(UINT uMsg)
 {
-	WindowMessageCallback pMsgCallback(uMsg);
-	int nIndex = -1;
-	for (unsigned int xj = 0; xj < m_BoundMessages.GetCount(); xj++)
+	unsigned int nIndex = m_BoundMessages.INVALID_INDEX;
+	unsigned int nCount = m_BoundMessages.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		if (m_BoundMessages[xj].m_Msg == uMsg)
 		{
@@ -306,8 +312,9 @@ WindowMessageCallback* WindowSubclass::AddMessageCallback(UINT uMsg)
 			break;
 		}
 	}
-	if (nIndex == -1)
+	if (nIndex == m_BoundMessages.INVALID_INDEX)
 	{
+		WindowMessageCallback pMsgCallback(uMsg);
 		nIndex = m_BoundMessages.Add(pMsgCallback);
 	}
 	return &m_BoundMessages[nIndex];
@@ -315,8 +322,9 @@ WindowMessageCallback* WindowSubclass::AddMessageCallback(UINT uMsg)
 
 bool WindowSubclass::RemoveMessageCallback(UINT uMsg)
 {
-	int nIndex = -1;
-	for (unsigned int xj = 0; xj < m_BoundMessages.GetCount(); xj++)
+	unsigned int nIndex = m_BoundMessages.INVALID_INDEX;
+	unsigned int nCount = m_BoundMessages.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		if (m_BoundMessages[xj].m_Msg == uMsg)
 		{
@@ -324,10 +332,10 @@ bool WindowSubclass::RemoveMessageCallback(UINT uMsg)
 			break;
 		}
 	}
-	if (nIndex == -1)
+	if (nIndex == m_BoundMessages.INVALID_INDEX)
 		return false;
 
-	WindowMessageCallback pMsgCallback = m_BoundMessages[nIndex];
+	WindowMessageCallback pMsgCallback(m_BoundMessages[nIndex]);
 	m_BoundMessages.Remove(nIndex);
 	pMsgCallback.Release(this);
 	return true;
@@ -335,8 +343,8 @@ bool WindowSubclass::RemoveMessageCallback(UINT uMsg)
 
 WindowMessageCallback* _stdcall WindowSubclass::FindMessageCallback(WindowSubclass* pSubclass, UINT uMsg)
 {
-	int nCount = pSubclass->m_BoundMessages.GetCount();
-	for (int xj = 0; xj < nCount; xj++)
+	unsigned int nCount = pSubclass->m_BoundMessages.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		if (pSubclass->m_BoundMessages[xj].m_Msg == uMsg)
 			return &pSubclass->m_BoundMessages[xj];
@@ -394,7 +402,6 @@ void WindowSubclass::UnsubclassWindow()
 		if (!SetWindowLongPtr(m_Hwnd,GWLP_WNDPROC,(LONG_PTR)m_DefaultWndProc))
 		{
 			SaveWin32Error("SetWindowLongPtr", GetLastError());
-			throw E_APIERROR;
 		}
 	}
 	else
@@ -402,13 +409,12 @@ void WindowSubclass::UnsubclassWindow()
 		if (!SetClassLongPtr(m_Hwnd,GCLP_WNDPROC,(LONG_PTR)m_DefaultWndProc))
 		{
 			SaveWin32Error("SetClassLongPtr", GetLastError());
-			throw E_APIERROR;
 		}
-		EnumThreadWindows(GetCurrentThreadId(), (WNDENUMPROC)UnsubclassWindowClassCallback, (LPARAM)this);
+		EnumThreadWindows(GetCurrentThreadId(), UnsubclassWindowClassCallback, (LPARAM)this);
 	}
 }
 
-void WindowSubclass::UnsubclassWindowClassCallback(HWND hHwnd, LPARAM lParam)
+BOOL _stdcall WindowSubclass::UnsubclassWindowClassCallback(HWND hHwnd, LPARAM lParam)
 {
 	WindowSubclass* lpSubclass = (WindowSubclass*)lParam;
 	void* nProc;
@@ -419,21 +425,21 @@ void WindowSubclass::UnsubclassWindowClassCallback(HWND hHwnd, LPARAM lParam)
 		if (!SetWindowLongPtr(hHwnd,GWLP_WNDPROC,(LONG_PTR)lpSubclass->m_DefaultWndProc))
 		{
 			SaveWin32Error("SetWindowLongPtr", GetLastError());
-			throw E_APIERROR;
 		}
 	}
 
-	if (!EnumChildWindows(hHwnd,(WNDENUMPROC)WindowSubclass::UnsubclassWindowClassCallbackChild,(LPARAM)lpSubclass))
+	if (!EnumChildWindows(hHwnd, UnsubclassWindowClassCallbackChild,(LPARAM)lpSubclass))
 	{
 		if (GetLastError() != NO_ERROR)
 		{
 			SaveWin32Error("EnumChildWindows", GetLastError());
-			throw E_APIERROR;
 		}
 	}
+
+	return TRUE;
 }
 
-void WindowSubclass::UnsubclassWindowClassCallbackChild(HWND hHwnd, LPARAM lParam)
+BOOL _stdcall WindowSubclass::UnsubclassWindowClassCallbackChild(HWND hHwnd, LPARAM lParam)
 {
 	WindowSubclass* lpSubclass = (WindowSubclass*)lParam;
 	void* nProc;
@@ -444,9 +450,10 @@ void WindowSubclass::UnsubclassWindowClassCallbackChild(HWND hHwnd, LPARAM lPara
 		if (!SetWindowLongPtr(hHwnd,GWLP_WNDPROC,(LONG_PTR)lpSubclass->m_DefaultWndProc))
 		{
 			SaveWin32Error("SetWindowLongPtr", GetLastError());
-			throw E_APIERROR;
 		}
 	}
+	
+	return TRUE;
 }
 
 void WindowSubclass::CreateSubclassThunkProc()
@@ -458,25 +465,23 @@ void WindowSubclass::CreateSubclassThunkProc()
 	AsmVariable& varUmsg = rasm.Parameter<UINT>();
 	AsmVariable& varWparam = rasm.Parameter<WPARAM>();
 	AsmVariable& varLparam = rasm.Parameter<LPARAM>();
-	AsmVariable& bReturn = rasm.LocalVar<bool>();
+	AsmVariable& bReturn = rasm.LocalVar<BOOL>();
 	const char* pLabelWndProc = "lWinProc";
 	const char* pLabelEnd = "lEnd";
-	// rasm.BreakPoint();
-	rasm.CallConv(thiscall).Call(&WindowSubclass::FindMessageCallback, this, varUmsg);
+	rasm.CallConv(stdcall).Call(&WindowSubclass::FindMessageCallback, this, varUmsg);
 	rasm.Cmp(nReturnReg,0);
 	rasm.Je(pLabelWndProc);
-	AsmVariable pVar;
-	pVar = AsmVariable::Var<bool>(nReturnReg, offsetof(WindowMessageCallback, m_ReturnValue));
-	rasm.Mov(bReturn, pVar);
-	AsmVariable pVar2;
-	pVar2 = AsmVariable::Var<void*>(nReturnReg, offsetof(WindowMessageCallback, m_CallbackThunk));
-	rasm.Mov(nReturnReg, pVar2);
+	// rasm.BreakPoint();
+	AsmVariable pReturnVar = AsmVariable::Var<BOOL>(nReturnReg, offsetof(WindowMessageCallback, m_ReturnValue));
+	rasm.Mov(bReturn, pReturnVar);
+	AsmVariable pCallbackVar = AsmVariable::Var<void*>(nReturnReg, offsetof(WindowMessageCallback, m_CallbackThunk));
+	rasm.Mov(nReturnReg, pCallbackVar);
 	rasm.CallConv(stdcall).Call(nReturnReg, varHwnd, varUmsg, varWparam, varLparam); // call thunk
-	rasm.Mov(RCX, bReturn);
-	rasm.Cmp(RCX, 0);
+	rasm.Mov(ECX, bReturn);
+	rasm.Cmp(ECX, 0);
 	rasm.Je(pLabelEnd);
 	rasm.Label(pLabelWndProc);
-	rasm.CallConv(stdcall).Call(CallWindowProc, m_DefaultWndProc, varHwnd, varUmsg, varWparam, varLparam);
+	rasm.CallConv(stdcall).Call(CallWindowProc, (UINT_PTR)m_DefaultWndProc, varHwnd, varUmsg, varWparam, varLparam);
 	rasm.Label(pLabelEnd);
 	rasm.Finish();
 	m_WindowThunk = rasm.AllocateMemory(rasm.CodeSize());
@@ -499,7 +504,7 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 		varAutoYield = rasm.LocalVar<Value>();
 
 	AsmRegister nReg = rasm.ReturnRegister();
-	int nParmCount = 6, nParmNo = 0, xj;
+	unsigned int nParmCount, nParmNo = 0, xj;
 	CStrBuilder<VFP2C_MAX_CALLBACK_PARAMETERS> pConvertFlags;
 
 	if (bObjectCall)
@@ -518,7 +523,7 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 
 	if (nFlags & BINDEVENTSEX_CALL_AFTER)
 	{
-		rasm.CallConv(stdcall).Call(CallWindowProc, m_DefaultWndProc, varHwnd, varUmsg, varWparam, varLparam);
+		rasm.CallConv(stdcall).Call(CallWindowProc, (UINT_PTR)m_DefaultWndProc, varHwnd, varUmsg, varWparam, varLparam);
 	}
 
 	if (nFlags & BINDEVENTSEX_NO_RECURSION)
@@ -528,8 +533,7 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 
 		// if (vAutoYield.ev_length)
 		//  _Execute("_VFP.AutoYield = .F.")
-		AsmVariable pVar;
-		pVar = rasm.Var<unsigned int>(varAutoYield, offsetof(Value, ev_length));
+		AsmVariable pVar = rasm.Var<unsigned int>(varAutoYield, offsetof(Value, ev_length));
 		rasm.Mov(nReg, pVar);
 		rasm.Cmp(nReg,0);
 		rasm.Je("AutoYieldFalse");
@@ -537,12 +541,18 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 		rasm.Label("AutoYieldFalse");
 	}
 
+	
+
 	if (!pParameterList)
 	{
-		rasm.StackMode(true);
+		nParmCount = 6;
 #pragma warning(disable : 4996)
 		strcat(lpMsg->m_CallbackFunction, "(%U,%U,%I,%I)");
 #pragma warning(default : 4996)
+		rasm.CallConv(cdeclaration);
+		rasm.StackMode(true);
+		rasm.PassParameter(m_CallbackBuffer, nParmNo);
+		rasm.PassParameter(lpMsg->m_CallbackFunction, nParmNo);
 		rasm.PassParameter(varHwnd, nParmNo);
 		rasm.PassParameter(varUmsg, nParmNo);
 		rasm.PassParameter(varWparam, nParmNo);
@@ -551,122 +561,124 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 	}
 	else
 	{
-		rasm.StackMode(true);
-		rasm.PassParameter(m_CallbackBuffer, nParmNo);
-		rasm.PassParameter(lpMsg->m_CallbackFunction, nParmNo);
-
 		nParmCount = pParameterList.GetWordCount(',');
-		
 		if (nParmCount > VFP2C_MAX_CALLBACK_PARAMETERS)
 		{
-			SaveCustomError("BindEventsEx", "Parameter count greater than maximum of 27.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("BindEventsEx", "Parameter count greater than maximum of 27.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
+		}
+		else if (nParmCount > 0)
+		{
+			rasm.CallConv(cdeclaration);
+			rasm.StackMode(true);
+			rasm.PassParameter(m_CallbackBuffer, nParmNo);
+			rasm.PassParameter(lpMsg->m_CallbackFunction, nParmNo);
 		}
 
 		for (xj = 1; xj <= nParmCount; xj++)
 		{
 			CStringView pParamater = pParameterList.GetWordNum(xj, ',').Alltrim();
 
-			if (pParamater.ICompare("wparam"))
+			if (pParamater.ICompare(__sv("wparam")))
 			{
 				pConvertFlags.Append('I');
 				rasm.PassParameter(varWparam, nParmNo);
 			}
-			else if (pParamater.ICompare("lparam"))
+			else if (pParamater.ICompare(__sv("lparam")))
 			{
 				pConvertFlags.Append('I');
 				rasm.PassParameter(varLparam, nParmNo);
 			}
-			else if (pParamater.ICompare("umsg"))
+			else if (pParamater.ICompare(__sv("umsg")))
 			{
 				pConvertFlags.Append('U');
 				rasm.PassParameter(varUmsg, nParmNo);
 			}
-			else if (pParamater.ICompare("hwnd"))
+			else if (pParamater.ICompare(__sv("hwnd")))
 			{
 				pConvertFlags.Append('U');
 				rasm.PassParameter(varHwnd, nParmNo);
 			}
-			else if (pParamater.ICompare("unsigned(wparam)"))
+			else if (pParamater.ICompare(__sv("unsigned(wparam)")))
 			{
 				pConvertFlags.Append('U');
 				rasm.PassParameter(varWparam, nParmNo);
 			}
-			else if (pParamater.ICompare("unsigned(lparam)"))
+			else if (pParamater.ICompare(__sv("unsigned(lparam)")))
 			{
 				pConvertFlags.Append('U');
 				rasm.PassParameter(varLparam, nParmNo);
 			}
-			else if (pParamater.ICompare("hiword(wparam)"))
+			else if (pParamater.ICompare(__sv("hiword(wparam)")))
 			{
 				pConvertFlags.Append('i');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.Shr(nReg, 16);
 				rasm.Mov(nReg, varWparam);
 			}
-			else if (pParamater.ICompare("loword(wparam)"))
+			else if (pParamater.ICompare(__sv("loword(wparam)")))
 			{
 				pConvertFlags.Append('i');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.And(nReg, MAX_USHORT);
 				rasm.Mov(nReg, varWparam);
 			}
-			else if (pParamater.ICompare("hiword(lparam)"))
+			else if (pParamater.ICompare(__sv("hiword(lparam)")))
 			{
 				pConvertFlags.Append('i');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.Shr(nReg, 16);
 				rasm.Mov(nReg, varLparam);
 			}
-			else if (pParamater.ICompare("loword(lparam)"))
+			else if (pParamater.ICompare(__sv("loword(lparam)")))
 			{
 				pConvertFlags.Append('i');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.And(nReg, MAX_USHORT);
 				rasm.Mov(nReg, varLparam);
 			}
-			else if (pParamater.ICompare("unsigned(hiword(wparam))"))
+			else if (pParamater.ICompare(__sv("unsigned(hiword(wparam))")))
 			{
 				pConvertFlags.Append('u');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.Shr(nReg, 16);
 				rasm.Mov(nReg, varWparam);
 			}
-			else if (pParamater.ICompare("unsigned(loword(wparam))"))
+			else if (pParamater.ICompare(__sv("unsigned(loword(wparam))")))
 			{
 				pConvertFlags.Append('u');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.And(nReg, MAX_USHORT);
 				rasm.Mov(nReg, varWparam);
 			}
-			else if (pParamater.ICompare("unsigned(hiword(lparam))"))
+			else if (pParamater.ICompare(__sv("unsigned(hiword(lparam))")))
 			{
 				pConvertFlags.Append('u');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.Shr(nReg, 16);
 				rasm.Mov(nReg, varLparam);
 			}
-			else if (pParamater.ICompare("unsigned(loword(lparam))"))
+			else if (pParamater.ICompare(__sv("unsigned(loword(lparam))")))
 			{
 				pConvertFlags.Append('u');
 				rasm.PassParameter(nReg, nParmNo);
 				rasm.And(nReg, MAX_USHORT);
 				rasm.Mov(nReg, varLparam);
 			}
-			else if (pParamater.ICompare("bool(wparam)"))
+			else if (pParamater.ICompare(__sv("bool(wparam)")))
 			{
 				pConvertFlags.Append('L');
 				rasm.PassParameter(varWparam, nParmNo);
 			}
-			else if (pParamater.ICompare("bool(lparam)"))
+			else if (pParamater.ICompare(__sv("bool(lparam)")))
 			{
 				pConvertFlags.Append('L');
 				rasm.PassParameter(varLparam, nParmNo);
 			}
 			else
 			{
-				SaveCustomError("BindEventsEx", "Invalid parameter type '%V'", &pParamater);
-				throw E_INVALIDPARAMS;
+				SaveCustomErrorEx("BindEventsEx", "Invalid parameter type '%V'", E_VFP_INVALIDPARAMS, &pParamater);
+				throw E_APIERROR;
 			}
 		}
 
@@ -684,14 +696,17 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 		*pCallbackTmp = '\0';
 
 		// two parameters are always passed to sprintfex ..
-		nParmCount += 2;
-		rasm.StackMode(false, nParmCount <= 2);
+		if (nParmCount > 0)
+		{
+			nParmCount += 2;
+			rasm.StackMode(false);
+		}
 	}
 
 	// if any parameters should be passed we need to call sprintfex
 	if (nParmCount > 2)
 	{
-		rasm.CallConv(cdeclaration).ManualCall(sprintfex);
+		rasm.ManualCall(sprintfex);
 	}
 
 	if (nFlags & BINDEVENTSEX_CALL_BEFORE)
@@ -744,8 +759,8 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 
 	if (lpMsg->m_CallbackThunk)
 	{
-		RuntimeAssembler::FreeMemory(lpMsg->m_CallbackThunk);
 		RuntimeAssembler::UnregisterUnwindInfo(lpMsg->m_CallbackThunk);
+		RuntimeAssembler::FreeMemory(lpMsg->m_CallbackThunk);
 		lpMsg->m_CallbackThunk = 0;
 	}
 
@@ -757,24 +772,23 @@ void WindowSubclass::CreateSubclassMsgThunkProc(WindowMessageCallback* lpMsg, CS
 void _stdcall WindowSubclass::ReleaseWindowSubclasses()
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
-	int nCount = tls.WindowSubclasses.GetIndex();
-	for (int xj = nCount; xj >= 0; xj--)
+	unsigned int nCount = tls.WindowSubclasses.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
-		delete tls.WindowSubclasses[xj];
+		WindowSubclass* lpSubclass = tls.WindowSubclasses[xj];
+		delete lpSubclass;
 	}
 }
 
 CallbackFunction::CallbackFunction()
 {
-	m_CallbackBuffer[0] = '\0';
 	m_FuncAddress = 0;
 	m_Object = 0;
-	VFP2CTls::Tls().CallbackFunctions.Add(this);
+	m_CallbackBuffer[0] = '\0';
 }
 
 CallbackFunction::~CallbackFunction()
 {
-	VFP2CTls::Tls().CallbackFunctions.Remove(this);
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pObjectName;
 	if (m_Object != 0)
 	{
@@ -783,18 +797,19 @@ CallbackFunction::~CallbackFunction()
 	}
 	if (m_FuncAddress != 0)
 	{
-		RuntimeAssembler::FreeMemory(m_FuncAddress);
 		RuntimeAssembler::UnregisterUnwindInfo(m_FuncAddress);
+		RuntimeAssembler::FreeMemory(m_FuncAddress);
 	}
 }
 
 void CallbackFunction::ReleaseCallbackFuncs()
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
-	int nCount = tls.CallbackFunctions.GetIndex();
-	for (int xj = nCount; xj >= 0; xj--)
+	unsigned int nCount = tls.CallbackFunctions.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
-		delete tls.CallbackFunctions[xj];
+		CallbackFunction* pFunc = tls.CallbackFunctions[xj];
+		delete pFunc;
 	}
 }
 
@@ -812,7 +827,7 @@ try
 	FoxString pParameterlist(parm(3));
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pObjectName;
 
-	DWORD nSyncFlag = parm.PCount() == 5 ? parm(5)->ev_long : CALLBACK_SYNCRONOUS | CALLBACK_STDCALL;
+	DWORD nSyncFlag = parm.PCount() == 5 ? parm(5)->ev_long : (CALLBACK_SYNCRONOUS | CALLBACK_STDCALL);
 	AsmCallingConvention nCallConv;
 	if ((nSyncFlag & CALLBACK_CDECL) > 0)
 		nCallConv = cdeclaration;
@@ -824,19 +839,20 @@ try
 	nSyncFlag &= ~(CALLBACK_CDECL | CALLBACK_FASTCALL | CALLBACK_STDCALL);
 	nSyncFlag = nSyncFlag ? nSyncFlag : CALLBACK_SYNCRONOUS; // set nSyncFlag to default CALLBACK_SYNCRONOUS if it is 0
 
-	RuntimeAssembler rasm(nCallConv, false, false);
+	RuntimeAssembler rasm(nCallConv, false);
 	AsmRegister ReturnReg = rasm.ReturnRegister();
 	AsmVariable pVar;
 
-	int nParmCount, nParmNo, nWordCount, nPrecision;
+	int nPrecision;
+	unsigned int nParmNo, nParmCount, nWordCount;
 	CStringView pParm;
 	CStringView pParmType;
 	CStringView pParmPrec;
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACK_FUNCTION)
 	{
-		SaveCustomError("CreateCallbackFunc", "Callback function length greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("CreateCallbackFunc", "Callback function length greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 		
 
@@ -844,11 +860,11 @@ try
 		nSyncFlag != CALLBACK_ASYNCRONOUS_POST &&
 		nSyncFlag != CALLBACK_ASYNCRONOUS_SEND)
 	{
-		SaveCustomError("CreateCallbackFunc", "Invalid nFlags parameter '%U'.", nSyncFlag);
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("CreateCallbackFunc", "Invalid nFlags parameter '%U'.", E_VFP_INVALIDPARAMS, nSyncFlag);
+		throw E_APIERROR;
 	}
 		
-	pFunc = new CallbackFunction();
+	pFunc = new(std::nothrow) CallbackFunction();
 	if (!pFunc)
 		throw E_INSUFMEMORY;
 
@@ -863,22 +879,22 @@ try
 		}
 		else if (parm(4)->Vartype() != '0')
 		{
-			SaveCustomError("CreateCallbackFunc", "Invalid type '%s' for parameter oObject, should be an object or .NULL.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("CreateCallbackFunc", "Invalid type '%s' for parameter oObject, should be an object or .NULL.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 	}
  
 	nParmCount = pParameterlist.GetWordCount(',');
 	if (nParmCount > VFP2C_MAX_CALLBACK_PARAMETERS)
 	{
-		SaveCustomError("CreateCallbackFunc", "Parameter count greater than maximum of 27.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("CreateCallbackFunc", "Parameter count greater than maximum of 27.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	
-	AsmVariable pReturnVar, pBufferVar;
+	AsmVariable pReturnVar, pBufferVar = AsmVariable::Init();
 
 	// return value needed?
-	if (pRetVal.Len() > 0 && !pRetVal.ICompare("void"))
+	if (pRetVal.Len() > 0 && !pRetVal.ICompare(__sv("void")))
 	{
 		pReturnVar = rasm.LocalVar<Value>();
 	}
@@ -888,7 +904,7 @@ try
 		pBufferVar = rasm.LocalVar<void*>();
 	}
 
-	if (nSyncFlag & (CALLBACK_ASYNCRONOUS_POST|CALLBACK_ASYNCRONOUS_SEND))
+	if (nSyncFlag & (CALLBACK_ASYNCRONOUS_POST | CALLBACK_ASYNCRONOUS_SEND))
 	{
 		rasm.CallConv(cdeclaration).Call(malloc, VFP2C_MAX_CALLBACK_BUFFER);
 		rasm.Cmp(ReturnReg,0);
@@ -899,9 +915,9 @@ try
 	if (nParmCount)
 	{
 		// fill static part of buffer
-		strcat(pFunc->m_CallbackBuffer,pCallback);
+		strcat(pFunc->m_CallbackBuffer,pCallback.Ptr<LPCSTR>());
 		strcat(pFunc->m_CallbackBuffer,"(");
-		if (nSyncFlag & (CALLBACK_ASYNCRONOUS_POST|CALLBACK_ASYNCRONOUS_SEND))
+		if (nSyncFlag & (CALLBACK_ASYNCRONOUS_POST | CALLBACK_ASYNCRONOUS_SEND))
 		{
 			rasm.CallConv(cdeclaration).Call(memcpy, pBufferVar, pFunc->m_CallbackBuffer, strlen(pFunc->m_CallbackBuffer));
 			rasm.Mov(ReturnReg, pBufferVar);
@@ -912,7 +928,7 @@ try
 	}
 	else
 	{
-		strcat(pFunc->m_CallbackBuffer,pCallback);
+		strcat(pFunc->m_CallbackBuffer,pCallback.Ptr<LPCSTR>());
 		strcat(pFunc->m_CallbackBuffer,"()");
 		if (nSyncFlag & (CALLBACK_ASYNCRONOUS_POST|CALLBACK_ASYNCRONOUS_SEND))
 		{
@@ -934,35 +950,35 @@ try
 		}
 		else if (nWordCount > 2)
 		{
-			SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V'.", &pParmType);
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V'.", E_VFP_INVALIDPARAMS, &pParmType);
+			throw E_APIERROR;
 		}
 
 		if (nParmNo >= 1)
 		{
-			pVar = AsmVariable(ReturnReg, 0);
+			pVar = AsmVariable::Var(ReturnReg, 0);
 			rasm.Mov(pVar, ',');
 			rasm.Add(ReturnReg, 1);
 		}
 #if !defined(_WIN64)
-		if (pParmType.ICompare("integer") || pParmType.ICompare("long"))
+		if (pParmType.ICompare(__sv("integer")) || pParmType.ICompare(__sv("long")))
 #else
-		if (pParmType.ICompare("integer"))
+		if (pParmType.ICompare(__sv("integer")))
 #endif
 		{
 			AsmVariable& pParameter = rasm.Parameter<int>();
 			rasm.CallConv(fastcall).Call(IntToHex, ReturnReg, pParameter);
 		}
 #if !defined(_WIN64)
-		else if (pParmType.ICompare("uinteger") || pParmType.ICompare("ulong"))
+		else if (pParmType.ICompare(__sv("uinteger")) || pParmType.ICompare(__sv("ulong")))
 #else
-		else if (pParmType.ICompare("uinteger"))
+		else if (pParmType.ICompare(__sv("uinteger")))
 #endif
 		{
 			AsmVariable& pParameter = rasm.Parameter<unsigned int>();
 			rasm.CallConv(fastcall).Call(UIntToHex, ReturnReg, pParameter);
 		}
-		else if (pParmType.ICompare("string"))
+		else if (pParmType.ICompare(__sv("string")))
 		{
 			AsmVariable& pParameter = rasm.Parameter<void*>();
 			if (nWordCount == 1)
@@ -971,15 +987,15 @@ try
 			}
 			else
 			{
-				char *pFunc;
-				if (pParmPrec.ICompare("ansi"))
+				const char *pFunc;
+				if (pParmPrec.ICompare(__sv("ansi")))
 					pFunc = "ReadCString";
-				else if (pParmPrec.ICompare("unicode"))
+				else if (pParmPrec.ICompare(__sv("unicode")))
 					pFunc = "ReadWString";
 				else
 				{
-					SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V %V'.", &pParmType, &pParmPrec);
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V %V'.", E_VFP_INVALIDPARAMS, &pParmType, &pParmPrec);
+					throw E_APIERROR;
 				}
 				
 				// copy function name into buffer
@@ -989,7 +1005,7 @@ try
 				// adjust EAX (end of string)
 				rasm.Add(ReturnReg, nStringLen);
 				// copy '(' to end of buffer
-				pVar = AsmVariable(ReturnReg, 0);
+				pVar = AsmVariable::Var(ReturnReg, 0);
 				rasm.Mov(pVar, '(');
 				rasm.Add(ReturnReg,1);
 
@@ -1000,22 +1016,22 @@ try
 				rasm.Add(ReturnReg,1);
 			}
 		}
-		else if (pParmType.ICompare("short"))
+		else if (pParmType.ICompare(__sv("short")))
 		{
 			AsmVariable& pParameter = rasm.Parameter<short>();
 			rasm.CallConv(fastcall).Call(ShortToHex, ReturnReg, pParameter);
 		}
-		else if (pParmType.ICompare("ushort"))
+		else if (pParmType.ICompare(__sv("ushort")))
 		{
 			AsmVariable& pParameter = rasm.Parameter<unsigned short>();
 			rasm.CallConv(fastcall).Call(UShortToHex, ReturnReg, pParameter);
 		}
-		else if (pParmType.ICompare("bool"))
+		else if (pParmType.ICompare(__sv("bool")))
 		{
 			AsmVariable& pParameter = rasm.Parameter<int>();
 			rasm.CallConv(fastcall).Call(BoolToStr, ReturnReg, pParameter);
 		}
-		else if (pParmType.ICompare("single"))
+		else if (pParmType.ICompare(__sv("single")))
 		{
 			AsmVariable& pParameter = rasm.Parameter<float>();
 
@@ -1024,8 +1040,8 @@ try
 				nPrecision = atoi(pParmPrec.Data);
 				if (nPrecision < 0 || nPrecision > 6)
 				{
-					SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V %V'.", &pParmType, &pParmPrec);
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V %V'.", E_VFP_INVALIDPARAMS, &pParmType, &pParmPrec);
+					throw E_APIERROR;
 				}
 			}
 			else
@@ -1033,7 +1049,7 @@ try
 
 			rasm.CallConv(fastcall).Call(FloatToStr, ReturnReg, pParameter, nPrecision);
 		}
-		else if (pParmType.ICompare("double"))
+		else if (pParmType.ICompare(__sv("double")))
 		{
 			AsmVariable& pParameter = rasm.Parameter<double>();
 
@@ -1042,8 +1058,8 @@ try
 				nPrecision = atoi(pParmPrec.Data);
 				if (nPrecision < 0 || nPrecision > 16)
 				{
-					SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V %V'.", &pParmType, &pParmPrec);
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V %V'.", E_VFP_INVALIDPARAMS, &pParmType, &pParmPrec);
+					throw E_APIERROR;
 				}
 			}
 			else
@@ -1052,9 +1068,9 @@ try
 			rasm.CallConv(fastcall).Call(DoubleToStr, ReturnReg, pParameter, nPrecision);
 		}
 #if !defined(_WIN64)
-		else if (pParmType.ICompare("int64"))
+		else if (pParmType.ICompare(__sv("int64")))
 #else
-		else if (pParmType.ICompare("int64") || pParmType.ICompare("long"))
+		else if (pParmType.ICompare(__sv("int64")) || pParmType.ICompare(__sv("long")))
 #endif
 		{
 			AsmVariable& pParameter = rasm.Parameter<__int64>();
@@ -1064,35 +1080,35 @@ try
 			}
 			else
 			{
-				if (pParmPrec.ICompare("binary"))
+				if (pParmPrec.ICompare(__sv("binary")))
 				{
 					rasm.CallConv(fastcall).Call(Int64ToVarbinary, ReturnReg, pParameter);
 				}
-				else if (pParmPrec.ICompare("literal"))
+				else if (pParmPrec.ICompare(__sv("literal")))
 				{
-					pVar = AsmVariable(ReturnReg, 0);
+					pVar = AsmVariable::Var(ReturnReg, 0);
 					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 					rasm.CallConv(fastcall).Call(Int64ToStr, ReturnReg, pParameter);
 					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 				}
-				else if (pParmPrec.ICompare("currency"))
+				else if (pParmPrec.ICompare(__sv("currency")))
 				{
 					rasm.CallConv(fastcall).Call(Int64ToCurrency, ReturnReg, pParameter);
 				}
 				else
 				{
-					SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V %V'.", &pParmType, &pParmPrec);
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V %V'.", E_VFP_INVALIDPARAMS, &pParmType, &pParmPrec);
+					throw E_APIERROR;
 				}
 					
 			}
 		}
 #if !defined(_WIN64)
-		else if (pParmType.ICompare("int64"))
+		else if (pParmType.ICompare(__sv("int64")))
 #else
-		else if (pParmType.ICompare("uint64") || pParmType.ICompare("ulong"))
+		else if (pParmType.ICompare(__sv("uint64")) || pParmType.ICompare(__sv("ulong")))
 #endif
 		{
 			AsmVariable& pParameter = rasm.Parameter<unsigned __int64>();
@@ -1102,34 +1118,34 @@ try
 			}
 			else
 			{
-				if (pParmPrec.ICompare("binary"))
+				if (pParmPrec.ICompare(__sv("binary")))
 				{
 					rasm.CallConv(fastcall).Call(Int64ToVarbinary, ReturnReg, pParameter);
 				}
-				else if (pParmPrec.ICompare("literal"))
+				else if (pParmPrec.ICompare(__sv("literal")))
 				{
-					pVar = AsmVariable(ReturnReg, 0);
+					pVar = AsmVariable::Var(ReturnReg, 0);
 					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 					rasm.CallConv(fastcall).Call(UInt64ToStr, ReturnReg, pParameter);
 					rasm.Mov(pVar, '"');
 					rasm.Add(ReturnReg, 1);
 				}
-				else if (pParmPrec.ICompare("currency"))
+				else if (pParmPrec.ICompare(__sv("currency")))
 				{
 					rasm.CallConv(fastcall).Call(Int64ToCurrency, ReturnReg, pParameter);
 				}
 				else
 				{
-					SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V %V'.", &pParmType, &pParmPrec);
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V %V'.", E_VFP_INVALIDPARAMS, &pParmType, &pParmPrec);
+					throw E_APIERROR;
 				}
 			}
 		}
 		else
 		{
-			SaveCustomError("CreateCallbackFunc", "Invalid parameter type '%V'.", &pParmType);
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("CreateCallbackFunc", "Invalid parameter type '%V'.", E_VFP_INVALIDPARAMS, &pParmType);
+			throw E_APIERROR;
 		}
 
 		pParameters = pParameters + (pParm.Len + 1);
@@ -1138,7 +1154,7 @@ try
 	// add ')' and nullterminate
 	if (nParmCount)
 	{
-		pVar = AsmVariable(ReturnReg, 0);
+		pVar = AsmVariable::Var(ReturnReg, 0);
 		rasm.Mov(pVar, ')');
 		rasm.Add(ReturnReg,1);
 		rasm.Mov(pVar, '\0');
@@ -1150,9 +1166,9 @@ try
 		if (nSyncFlag & CALLBACK_ASYNCRONOUS_POST)
 			rasm.CallConv(stdcall).Call(PostMessage, ghCallbackHwnd, WM_ASYNCCALLBACK, pBufferVar, 0);
 		else
-			rasm.CallConv(stdcall).Call(PostMessage, ghCallbackHwnd, WM_ASYNCCALLBACK, pBufferVar, 0);
+			rasm.CallConv(stdcall).Call(SendMessage, ghCallbackHwnd, WM_ASYNCCALLBACK, pBufferVar, 0);
 	}
-	else if (pRetVal.Len() == 0 || pRetVal.ICompare("void"))
+	else if (pRetVal.Len() == 0 || pRetVal.ICompare(__sv("void")))
 	{
 		/* EXECUTE(pFunc->aCallbackBuffer); */
 		rasm.CallConv(fastcall).Call(_Execute, pFunc->m_CallbackBuffer);
@@ -1166,9 +1182,9 @@ try
 
 		// return value
 #if !defined(_WIN64)
-		if (pRetType.ICompare("integer") || pRetType.ICompare("long"))
+		if (pRetType.ICompare(__sv("integer")) || pRetType.ICompare(__sv("long")))
 #else
-		if (pRetType.ICompare("integer"))
+		if (pRetType.ICompare(__sv("integer")))
 #endif
 		{
 			AsmVariable pVar;
@@ -1184,7 +1200,7 @@ try
 			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
-		else if (pRetType.ICompare("uinteger") || pRetType.ICompare("ulong"))
+		else if (pRetType.ICompare(__sv("uinteger")) || pRetType.ICompare(__sv("ulong")))
 		{
 			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
 			rasm.Mov(AL, pVar);
@@ -1198,17 +1214,17 @@ try
 			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
-		else if (pRetType.ICompare("short"))
+		else if (pRetType.ICompare(__sv("short")))
 		{
 			pVar = rasm.Var<int>(pReturnVar, offsetof(Value, ev_long));
 			rasm.Mov(AX, pVar);
 		}
-		else if (pRetType.ICompare("ushort"))
+		else if (pRetType.ICompare(__sv("ushort")))
 		{
 			pVar = rasm.Var<unsigned int>(pReturnVar, offsetof(Value, ev_long));
 			rasm.Mov(AX, pVar);
 		}
-		else if (pRetType.ICompare("single") || pRetType.ICompare("double"))
+		else if (pRetType.ICompare(__sv("single")) || pRetType.ICompare(__sv("double")))
 		{
 #if !defined(_WIN64)
 			pVar = rasm.Var<double>(pReturnVar, offsetof(Value, ev_real));
@@ -1218,15 +1234,15 @@ try
 			rasm.Mov(XMM0, pVar);
 #endif
 		}
-		else if (pRetType.ICompare("bool"))
+		else if (pRetType.ICompare(__sv("bool")))
 		{
 			pVar = rasm.Var<unsigned int>(pReturnVar, offsetof(Value, ev_length));
 			rasm.Mov(EAX, pVar);
 		}
 #if !defined(_WIN64)
-		else if (pRetType.ICompare("int64"))
+		else if (pRetType.ICompare(__sv("int64")))
 #else
-		else if (pRetType.ICompare("int64") || pRetType.ICompare("long"))
+		else if (pRetType.ICompare(__sv("int64")) || pRetType.ICompare(__sv("long")))
 #endif
 		{
 			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
@@ -1242,7 +1258,7 @@ try
 			rasm.CvttSd2Si(ReturnReg, pVar);
 			rasm.Label("End");
 		}
-		else if (pRetType.ICompare("uint64"))
+		else if (pRetType.ICompare(__sv("uint64")))
 		{
 			pVar = rasm.Var<char>(pReturnVar, offsetof(Value, ev_type));
 			rasm.Mov(AL, pVar);
@@ -1261,8 +1277,8 @@ try
 		}
 		else
 		{
-			SaveCustomError("CreateCallbackFunc", "Invalid return value type '%V'.", &pRetType);
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("CreateCallbackFunc", "Invalid return value type '%V'.", E_VFP_INVALIDPARAMS, &pRetType);
+			throw E_APIERROR;
 		}
 	}
 
@@ -1285,14 +1301,15 @@ catch(int nErrorNo)
 void _fastcall DestroyCallbackFunc(ParamBlkEx& parm)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
-	int nCount = tls.CallbackFunctions.GetCount();
 	void* pFunc = parm(1)->Ptr<void*>();
-	for (int xj = 0; xj < nCount; xj++)
+	unsigned int nCount = tls.CallbackFunctions.GetCount();
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		if (tls.CallbackFunctions[xj]->m_FuncAddress == pFunc)
 		{
 			CallbackFunction* pFunc = tls.CallbackFunctions[xj];
 			delete pFunc;
+			tls.CallbackFunctions.Remove(xj);
 			Return(true);
 		}
 	}

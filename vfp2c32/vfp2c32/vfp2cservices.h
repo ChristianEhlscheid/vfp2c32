@@ -3,6 +3,8 @@
 
 #include "vfp2chelpers.h"
 
+typedef DWORD(_stdcall* PNOTIFYYSERVICESTATUSCHANGE)(SC_HANDLE hService, DWORD dwNotifyMask, PSERVICE_NOTIFYA pNotifyBuffer);
+
 // EnumDependentServices
 const int SERVICE_ENUM_BUFFER		= 8192;
 const int SERVICE_MAX_ENUM_BUFFER	= 32768;
@@ -28,7 +30,7 @@ private:
 class Service
 {
 public:
-	Service() : m_Handle(NULL), m_Owner(true) {}
+	Service() : m_Handle(NULL), m_Owner(true) { m_Status.dwCurrentState = 0; }
 	Service(SC_HANDLE hService) { m_Handle = hService; m_Owner = false; }
 	Service(SC_HANDLE hSCM, const char* pServiceName, DWORD dwAccess);
 	~Service();
@@ -38,7 +40,7 @@ public:
 	int Start(DWORD nNumberOfArgs, LPCSTR *pArgs, int nTimeout);
 	int Pause(int nTimeout);
 	int Continue(int nTimeout);
-	int Control(DWORD nControlCode);
+	void Control(DWORD nControlCode);
 	void QueryStatus(LPSERVICE_STATUS pStatus);
 	void QueryConfig(CBuffer &pBuffer);
 	void StopDependantServices(SC_HANDLE hSCM);
@@ -52,6 +54,7 @@ public:
 	int WaitForServiceStatus(DWORD dwState, int nTimeout);
 
 private:
+	static void _stdcall ServiceNotifyCallback(PVOID pServiceNotify);
 	SC_HANDLE m_Handle;
 	bool m_Owner;
 	SERVICE_STATUS m_Status;
@@ -61,6 +64,7 @@ private:
 extern "C" {
 #endif
 
+void _fastcall VFP2C_Init_Services();
 void _fastcall OpenServiceEx(ParamBlkEx& parm);
 void _fastcall CloseServiceHandleEx(ParamBlkEx& parm);
 void _fastcall StartServiceEx(ParamBlkEx& parm);
@@ -80,4 +84,4 @@ void _fastcall DeleteServiceEx(ParamBlkEx& parm);
 }
 #endif
 
-#endif _VFP2CSERVICES_H__
+#endif // _VFP2CSERVICES_H__

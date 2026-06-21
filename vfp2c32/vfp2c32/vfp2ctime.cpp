@@ -1,5 +1,5 @@
 #include <windows.h>
-#include <math.h>
+#include <cmath>
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -11,7 +11,6 @@
 #include "vfp2ctime.h"
 #include "vfp2ccppapi.h"
 #include "vfp2chelpers.h"
-
 
 static PGETDYNAMICTIMEZONEINFORMATION fpGetDynamicTimeZoneInformation = 0;
 static PGETTIMEZONEINFORMATIONFORYEAR fpGetTimeZoneInformationForYear = 0;
@@ -45,7 +44,7 @@ try
 	if (parm.PCount() == 1 || !parm(2)->ev_length)
 		pTime.ToLocal();
 
-	pTime.Return();
+	Return(pTime);
 }
 catch(int nErrorNo)
 {
@@ -87,7 +86,7 @@ try
 	if (parm.PCount() == 1 || !parm(2)->ev_length)
 		pDateTime.ToLocal();
 
-	pDateTime.Return();
+	Return(pDateTime);
 }
 catch(int nErrorNo)
 {
@@ -98,13 +97,13 @@ catch(int nErrorNo)
 void _fastcall DT2UTC(ParamBlkEx& parm)
 {
 	FoxDateTime pTime(parm(1));
-	pTime.ToUTC().Return();
+	Return(pTime.ToUTC());
 }
 
 void _fastcall UTC2DT(ParamBlkEx& parm)
 {
 	FoxDateTime pTime(parm(1));
-	pTime.ToLocal().Return();
+	Return(pTime.ToLocal());
 }
 
 void _fastcall DT2Timet(ParamBlkEx& parm)
@@ -178,11 +177,13 @@ void _fastcall Timet2DT(ParamBlkEx& parm)
 			RaiseWin32Error("FileTimeToLocalFileTime", GetLastError());
 
 		nFileTime.QuadPart /= 10000000; // gives us seconds since 1601/01/01
+		// NOLINTNEXTLINE(bugprone-integer-division)
 		vTime.ev_real = 2305814.0 + (double)(nFileTime.QuadPart / 86400); // 1601/01/01 + number of seconds / 86400 (= number of days)
 		vTime.ev_real += ((double)(nFileTime.QuadPart % 86400)) / 86400;
 	}
 	else
 	{
+		// NOLINTNEXTLINE(bugprone-integer-division)
 		vTime.ev_real = ((double)(2440588 + parm(1)->ev_long / 86400));
 		vTime.ev_real += ((double)(parm(1)->ev_long % 86400)) / 86400.0;
 	}
@@ -198,7 +199,7 @@ void _fastcall DT2Double(ParamBlkEx& parm)
 void _fastcall Double2DT(ParamBlkEx& parm)
 {
 	FoxDateTime pTime(parm(1)->ev_real);
-	pTime.Return();
+	Return(pTime);
 }
 
 void _fastcall SetSystemTimeLib(ParamBlkEx& parm)
@@ -244,7 +245,7 @@ void _fastcall GetSystemTimeLib(ParamBlkEx& parm)
 		GetSystemTime(&sSysTime);
 
 	pTime = sSysTime;
-	pTime.Return();
+	Return(pTime);
 }
 
 void _fastcall ATimeZones(ParamBlkEx& parm)
@@ -266,7 +267,7 @@ try
 	pArray.Dimension(nSubKeys,15);
 
 	nLen = VFP2C_MAX_TIMEZONE_NAME;
-	bRet = hRegKey.EnumFirstKey(pTimeZone,&nLen);
+	bRet = hRegKey.EnumFirstKey(pTimeZone.Ptr<LPSTR>(),&nLen);
 
 	unsigned int nRow = 0;
 	while(bRet)
@@ -274,18 +275,18 @@ try
 		nRow++;
 		pArray(nRow,1) = pTimeZone.Len(nLen);
 
-		hTZKey = hRegKey.OpenSubKey(pTimeZone,KEY_QUERY_VALUE);
+		hTZKey = hRegKey.OpenSubKey(pTimeZone.Ptr<LPCSTR>(),KEY_QUERY_VALUE);
 
 		nLen = VFP2C_MAX_TIMEZONE_NAME;
-		hTZKey.QueryValue("Display",pTimeZone,&nLen);
+		hTZKey.QueryValue("Display",pTimeZone.Ptr<LPBYTE>(),&nLen);
 		pArray(nRow,2) = pTimeZone.Len(nLen);
 
 		nLen = VFP2C_MAX_TIMEZONE_NAME;
-		hTZKey.QueryValue("Std",pTimeZone,&nLen);
+		hTZKey.QueryValue("Std",pTimeZone.Ptr<LPBYTE>(),&nLen);
 		pArray(nRow,3) = pTimeZone.Len(nLen);
 
 		nLen = VFP2C_MAX_TIMEZONE_NAME;
-		hTZKey.QueryValue("Dlt",pTimeZone,&nLen);
+		hTZKey.QueryValue("Dlt",pTimeZone.Ptr<LPBYTE>(),&nLen);
 		pArray(nRow,4) = pTimeZone.Len(nLen);
 
 		nMaxLen = sizeof(sTZInfo);
@@ -304,7 +305,7 @@ try
 		pArray(nRow,15) = sTZInfo.DayligthDate.wHour;
 
 		nLen = VFP2C_MAX_TIMEZONE_NAME;
-		bRet = hRegKey.EnumNextKey(pTimeZone,&nLen);
+		bRet = hRegKey.EnumNextKey(pTimeZone.Ptr<LPSTR>(), &nLen);
 	}
 
 	pArray.ReturnRows();
@@ -325,7 +326,7 @@ TimeZoneInfo& TimeZoneInfo::GetTsi()
 TimeZoneInfo::TimeZoneInfo() : m_Hwnd(0), m_Atom(0)
 {
 	WNDCLASSEX wndClass = { 0 };
-	char* lpClass = "__VFP2C_TZWC";
+	const char* lpClass = "__VFP2C_TZWC";
 
 	m_Atom = (ATOM)GetClassInfoEx(ghModule, lpClass, &wndClass);
 	if (!m_Atom)

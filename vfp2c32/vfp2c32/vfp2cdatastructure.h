@@ -1,7 +1,7 @@
 #ifndef _VFP2CDATASTRUCTURE_H__
 #define _VFP2CDATASTRUCTURE_H__
 
-#include <malloc.h>
+#include <cassert>
 
 #if _MSC_VER < 1400
 extern "C" unsigned char _BitScanForward(unsigned long* Index, unsigned long Mask);
@@ -131,6 +131,9 @@ public:
 			return;
 
 		Node* node = new Node();
+		if (node == 0)
+			throw E_INSUFMEMORY;
+
 		node->next = 0;
 		node->queue.Enqueue(pItem);
 
@@ -157,16 +160,6 @@ public:
 	bool Empty()
 	{
 		return m_Bottom == 0 || m_Bottom->queue.Empty() || m_Bottom->next > 0;
-	}
-
-	void* operator new(size_t sz)
-	{
-		return _aligned_malloc(sz, __alignof(Node));
-	}
-
-	void operator delete(void* p)
-	{
-		_aligned_free(p);
 	}
 
 private:
@@ -316,7 +309,7 @@ public:
 		if (m_Top->Enqueue(pItem))
 			return;
 
-		Node* node = new Node();
+		Node* node = new(std::nothrow) Node();
 		if (node == 0)
 			throw E_INSUFMEMORY;
 		
@@ -381,7 +374,7 @@ private:
 
 	void Initialize()
 	{
-		Node* node = new Node();
+		Node* node = new(std::nothrow) Node();
 		if (node == 0)
 			throw E_INSUFMEMORY;
 		node->next = 0;
@@ -546,7 +539,7 @@ public:
 		if (m_Top->Enqueue(pItem))
 			return;
 
-		Node* node = new Node();
+		Node* node = new(std::nothrow) Node();
 		if (node == 0)
 			throw E_INSUFMEMORY;
 
@@ -631,7 +624,7 @@ public:
 private:
 	void Initialize()
 	{
-		Node* node = new Node();
+		Node* node = new(std::nothrow) Node();
 		if (node == 0)
 			throw E_INSUFMEMORY;
 		node->next = 0;
@@ -643,24 +636,27 @@ private:
 	Node* m_Top;
 };
 
-// very simple array class, use only with blittable (struct's with custom constructor/destructor) types
+// very simple array class, use only with blittable (struct's without custom constructor/destructor) types
+// NOLINTBEGIN(bugprone-sizeof-expression)
 template<typename T>
 class CArray
 {
 public:
-	CArray() : m_Index(-1), m_MaxElements(0), m_AutoGrow(0), m_Array(0) {}
+	static const unsigned int INVALID_INDEX = 0xFFFFFFFF;
+
+	CArray() : m_Index(INVALID_INDEX), m_MaxElements(0), m_AutoGrow(0), m_Array(0) {}
 	~CArray()
 	{
 		if (m_Array)
-			free(m_Array);
+			free((void*)m_Array);
 	}
 
-	void AutoGrow(int nAutoGrow)
+	void AutoGrow(unsigned int nAutoGrow)
 	{
 		m_AutoGrow = nAutoGrow;
 	}
 
-	int Reserve(unsigned int nMaxElements, bool bZeroMemory = false, bool bSetMaxIndex = false)
+	unsigned int Reserve(unsigned int nMaxElements, bool bZeroMemory = false, bool bSetMaxIndex = false)
 	{
 		if (nMaxElements <= m_MaxElements)
 			return m_MaxElements;
@@ -670,14 +666,14 @@ public:
 			throw E_INSUFMEMORY;
 		if (m_Array != 0)
 		{
-			memcpy(newArray, m_Array, sizeof(T) * m_MaxElements);
+			memcpy((void*)newArray, (const void*)m_Array, sizeof(T) * m_MaxElements);
 			if (bZeroMemory)
-				memset(newArray + m_MaxElements, 0, sizeof(T) * (nMaxElements - m_MaxElements));
-			free(m_Array);
+				memset((void*)(newArray + m_MaxElements), 0, sizeof(T) * (nMaxElements - m_MaxElements));
+			free((void*)m_Array);
 		}
 		else if (bZeroMemory)
 		{
-			memset(newArray, 0, sizeof(T) * nMaxElements);
+			memset((void*)newArray, 0, sizeof(T) * nMaxElements);
 		}
 		m_Array = newArray;
 		m_MaxElements = nMaxElements;
@@ -686,7 +682,7 @@ public:
 		return m_MaxElements;
 	}
 
-	unsigned int Truncate(int nElements)
+	unsigned int Truncate(unsigned int nElements)
 	{
 		if (nElements >= m_MaxElements)
 			return m_MaxElements;
@@ -696,7 +692,7 @@ public:
 			throw E_INSUFMEMORY;
 		if (m_Array != 0)
 		{
-			memcpy(newArray, m_Array, sizeof(T) * nElements);
+			memcpy((void*)newArray, m_Array, sizeof(T) * nElements);
 			free(m_Array);
 		}
 		m_Array = newArray;
@@ -706,7 +702,7 @@ public:
 
 	bool Empty() const
 	{
-		return m_Index == -1;
+		return m_Index == INVALID_INDEX;
 	}
 
 	unsigned int GetCount() const
@@ -714,20 +710,25 @@ public:
 		return m_Index + 1;
 	}
 
-	int GetIndex() const
+	unsigned int GetIndex() const
 	{
 		return m_Index;
 	}
 
-	void SetIndex(int nIndex)
+	void ResetIndex()
 	{
-		assert(nIndex == -1 || (nIndex >= 0 && (unsigned int)nIndex < m_MaxElements));
+		m_Index = INVALID_INDEX;
+	}
+
+	void SetIndex(unsigned int nIndex)
+	{
+		assert(nIndex == INVALID_INDEX || nIndex < m_MaxElements);
 		m_Index = nIndex;
 	}
 
-	int Add(const T& element)
+	unsigned int Add(const T& element)
 	{	
-		if ((unsigned int)(m_Index + 1) >= m_MaxElements)
+		if ((m_Index + 1) >= m_MaxElements)
 		{
 			int nMaxElements = m_MaxElements + 
 				(m_AutoGrow == 0 && m_MaxElements > 0 ? m_MaxElements : m_AutoGrow > 0 ? m_AutoGrow : 16);
@@ -737,9 +738,9 @@ public:
 		return m_Index;
 	}
 
-	void Remove(int nIndex)
+	void Remove(unsigned int nIndex)
 	{
-		assert(nIndex >= 0 && nIndex <= m_Index);
+		assert(nIndex <= m_Index);
 		if (m_Index == nIndex)
 		{
 			m_Index--;
@@ -747,71 +748,81 @@ public:
 		}
 		void* pDest = (void*)&m_Array[nIndex];
 		void* pSource = (void*)&m_Array[nIndex + 1];
-		size_t nSize = (m_Index - (nIndex + 1)) * sizeof(T);
+		size_t nSize = (m_Index - nIndex) * sizeof(T);
 		memmove(pDest, pSource, nSize);
 		m_Index--;
 	}
 
 	void Remove(const T& element)
 	{
-		int nIndex = Find(element);
-		if (nIndex != -1)
+		unsigned int nIndex = Find(element);
+		if (nIndex != INVALID_INDEX)
 			Remove(nIndex);
 	}
 
-	T& operator[](int nIndex) const
+	T& operator[](unsigned int nIndex) const
 	{
-		assert(nIndex >= 0 && (unsigned int)nIndex < m_MaxElements);
+		assert(nIndex < m_MaxElements);
+		// NOLINTNEXTLINE(clang-analyzer-core.uninitialized.UndefReturn)
 		return m_Array[nIndex];
 	}
 
-	int Find(const T& element)
+	unsigned int Find(const T& element)
 	{
-		int nCount = GetCount();
-		for (int xj = 0; xj < nCount; xj++)
+		unsigned int nCount = GetCount();
+		for (unsigned int xj = 0; xj < nCount; xj++)
 		{
 			if (m_Array[xj] == element)
 				return xj;
 		}
-		return -1;
+		return INVALID_INDEX;
 	}
 
 private:
-	int m_Index;
+	unsigned int m_Index;
 	unsigned int m_MaxElements;
 	unsigned int m_AutoGrow;
 	T* m_Array;
-};
+}; 
+// NOLINTEND(bugprone-sizeof-expression)
 
 // very simple fixed array class, use only with blittable (struct's with custom constructor/destructor) types
-template<typename T, int nSize>
+template<typename T, unsigned int nSize>
 class CFixedArray
 {
 public:
+	static const unsigned int INVALID_INDEX = 0xFFFFFFFF;
 	CFixedArray() {}
 
-	T& operator[](int nIndex)
+	T& operator[](unsigned int nIndex)
 	{
-		assert(nIndex >= 0 && nIndex < nSize);
+		assert(nIndex < nSize);
 		return m_Array[nIndex];
 	}
 
-	int Find(const T& element)
+	unsigned int Find(const T& element)
 	{
-		for (int xj = 0; xj < nSize; xj++)
+		for (unsigned int xj = 0; xj < nSize; xj++)
 		{
 			if (m_Array[xj] == element)
 				return xj;
 		}
-		return -1;
+		return INVALID_INDEX;
 	}
 
-	void Copy(const T* pArray, int nCount)
+	void SetAll(const T& element)
 	{
-		memcpy(&m_Array[0], pArray, nCount * sizeof(T));
+		for (unsigned int xj = 0; xj < nSize; xj++)
+			m_Array[xj] = element;
 	}
 
-	int GetCount()
+	void Copy(const T& pArray, unsigned int nCount)
+	{
+		assert(nCount < nSize);
+		memcpy(&m_Array[0], &pArray, nCount * sizeof(T));
+	}
+
+	unsigned int GetCount()
 	{
 		return nSize;
 	}
@@ -843,15 +854,15 @@ public:
 	void Allocate(unsigned int nCount)
 	{
 		assert(m_Array == 0);
-		m_Array = new T[nCount];
+		m_Array = new(std::nothrow) T[nCount];
 		if (m_Array == 0)
 			throw E_INSUFMEMORY;
 		m_Count = nCount;
 	}
 
-	T* operator[](int nIndex)
+	T* operator[](unsigned int nIndex)
 	{
-		assert(nIndex >= 0 && (unsigned int)nIndex < m_Count);
+		assert(nIndex < m_Count);
 		return &m_Array[nIndex];
 	}
 
@@ -869,7 +880,7 @@ template<typename T>
 class CDynamicPtrArray
 {
 public:
-	CDynamicPtrArray() : m_Array(0), m_Size(0), m_Elements(0), m_GrowBy(4)  {}
+	CDynamicPtrArray() : m_Array(0), m_Elements(0), m_Size(0), m_GrowBy(4)  {}
 	~CDynamicPtrArray()
 	{
 		for (unsigned int xj = 0; xj < m_Elements; xj++)
@@ -892,7 +903,7 @@ public:
 	{
 		assert(m_Array == 0);
 		int xj;
-		m_Array = new T*[nCount];
+		m_Array = new(std::nothrow) T*[nCount];
 		if (m_Array == 0)
 			throw E_INSUFMEMORY;
 		m_Size = nCount;
@@ -900,7 +911,7 @@ public:
 			m_Array[xj] = 0;
 		for (xj = 0; xj < m_Size; xj++)
 		{
-			T *newobj = new T();
+			T *newobj = new(std::nothrow) T();
 			if (newobj == 0)
 				throw E_INSUFMEMORY;
 			m_Array[xj] = newobj;
@@ -914,7 +925,7 @@ public:
 		unsigned int nextIndex = m_Elements;
 		if (nextIndex >= m_Size)
 		{
-			T** newarray = new T*[m_Size + m_GrowBy];
+			T** newarray = new(std::nothrow) T*[m_Size + m_GrowBy];
 			if (newarray == 0)
 				throw E_INSUFMEMORY;
 			for (xj = 0; xj < m_Elements; xj++)
@@ -930,7 +941,7 @@ public:
 			m_Array = newarray;
 			m_Size = m_Size + m_GrowBy;
 		}
-		T* newobj = new T();
+		T* newobj = new(std::nothrow) T();
 		if (newobj == 0)
 			throw E_INSUFMEMORY;
 		m_Array[nextIndex] = newobj;
@@ -938,9 +949,9 @@ public:
 		return newobj;
 	}
 
-	T* operator[](int nIndex)
+	T* operator[](unsigned int nIndex)
 	{
-		assert(nIndex >= 0 && (unsigned int)nIndex < m_Size);
+		assert(nIndex < m_Size);
 		return m_Array[nIndex];
 	}
 
@@ -971,16 +982,27 @@ private:
 	unsigned int m_GrowBy;
 };
 
+/*
 template<class T, unsigned int nSize>
 class CFastItemPool
 {
 public:
 	CFastItemPool()
 	{
-		assert(nSize % 64 == 0);
+		assert(nSize % 32 == 0);
 #ifdef _WIN64
-		for (unsigned int xj = 0; xj < countof(m_Slots); xj++)
-			m_Slots[xj].BitSet64 = ~0ui64;
+		if (nSize == 64)
+		{
+			for (unsigned int xj = 0; xj < countof(m_Slots); xj++)
+			{
+				m_Slots[xj].BitSet32_1 = ~0u;
+			}
+		}
+		else
+		{
+			for (unsigned int xj = 0; xj < countof(m_Slots); xj++)
+				m_Slots[xj].BitSet64 = ~0ui64;
+		}
 #else
 		for (unsigned int xj = 0; xj < countof(m_Slots); xj++)
 		{
@@ -1153,7 +1175,7 @@ public:
 	}
 
 private:
-	typedef union Slots
+	union Slots
 	{
 		struct {
 			unsigned int BitSet32_1;
@@ -1163,6 +1185,75 @@ private:
 	};
 	Slots m_Slots[nSize / 64];
 	T m_Elements[nSize];
+};
+*/
+
+template<class T>
+class CFastItemPool32
+{
+public:
+	CFastItemPool32()
+	{
+		m_BitSet32 = ~0u;
+	}
+
+	unsigned int Size()
+	{
+		return 32;
+	}
+
+	unsigned int FreeCount()
+	{
+		return __popcnt(m_BitSet32);
+	}
+
+	T* GetItem()
+	{
+		DWORD nIndex;
+		if (_BitScanForward(&nIndex, m_BitSet32))
+		{
+			m_BitSet32 &= ~(1 << nIndex);
+			return &m_Elements[nIndex];
+		}
+		return 0;
+	}
+
+	typedef bool(_stdcall comparefunc)(T* item, DWORD compare);
+	T* FindUsedItem(comparefunc func, DWORD compare)
+	{
+		DWORD nIndex;
+		unsigned int slots;
+		slots = ~m_BitSet32;
+		for (unsigned int xt = 0; xt < 32; xt++)
+		{
+			if (_BitScanForward(&nIndex, slots))
+			{
+				if (func(&m_Elements[nIndex], compare))
+					return &m_Elements[nIndex];
+				else
+					slots &= ~(1 << nIndex);
+			}
+			else
+				break;
+		}
+		return 0;
+	}
+
+	void ReleaseItem(T* element)
+	{
+		unsigned int nIndex = (unsigned int)(element - &m_Elements[0]);
+		m_BitSet32 |= (1 << nIndex);
+	}
+
+	T* operator[](unsigned int nIndex)
+	{
+		assert(nIndex < 32);
+		return &m_Elements[nIndex];
+	}
+
+private:
+	unsigned int m_BitSet32;
+	T m_Elements[32];
 };
 
 template<class T, class TCompare, unsigned int nSize>
@@ -1337,10 +1428,20 @@ public:
 	{
 		if (m_Count == m_Size)
 		{
+			
+#if _MSC_VER < 1400
+			unsigned int newsize = (m_Size ? m_Size * 2 : 64);
+			m_Elements = (T**)realloc(m_Elements, newsize * sizeof(T*));
+			if (m_Elements == 0)
+				throw E_INSUFMEMORY;
+			memset(&m_Elements[m_Size], 0, sizeof(T*));
+			m_Size = newsize;
+#else
 			m_Size = (m_Size ? m_Size * 2 : 64);
 			m_Elements = (T**)_recalloc(m_Elements, m_Size, sizeof(T*));
 			if (m_Elements == 0)
 				throw E_INSUFMEMORY;
+#endif
 		}
 		m_Elements[m_Count] = item;
 		m_Count++;
@@ -1360,7 +1461,7 @@ template<typename T, int nPages>
 class CUnboundBlockArray
 {
 private:
-	enum _ { BlockSize = (nPages * 4096) - (nPages * (sizeof(void*) + sizeof(char*) * 2)) };
+	enum _ { BlockSize = (nPages * 4096) - (nPages * (int)(sizeof(void*) + sizeof(char*) * 2)) };
 
 	class Node {
 	public:
@@ -1443,7 +1544,7 @@ public:
 		Node* node = m_Top->next;
 		if (node == 0)
 		{
-			node = new Node();
+			node = new(std::nothrow) Node();
 			if (node == 0)
 				throw E_INSUFMEMORY;
 			m_Top->next = node;
@@ -1475,7 +1576,7 @@ public:
 private:
 	void Initialize()
 	{
-		Node* node = new Node();
+		Node* node = new(std::nothrow) Node();
 		if (node == 0)
 			throw E_INSUFMEMORY;
 		m_Top = node;
@@ -1487,18 +1588,19 @@ private:
 	Node* m_First;
 };
 
-template<class T, int nSize, int nMaxSize>
+template<class T, unsigned int nSize, unsigned int nMaxSize>
 class StaggeredArray
 {
 public:
-	StaggeredArray() 
-	{ 
-		memset(m_Array, 0, sizeof(m_Array));
+	StaggeredArray()
+	{
+		assert(nMaxSize % nSize == 0);
+		memset((void*)m_Array, 0, sizeof(m_Array));
 	}
 
 	~StaggeredArray()
 	{
-		for (int xj = 0; xj < countof(m_Array); xj++)
+		for (unsigned int xj = 0; xj < countof(m_Array); xj++)
 		{
 			if (m_Array[xj])
 				delete[] m_Array[xj];
@@ -1513,7 +1615,7 @@ public:
 		if (m_Array[nIdx])
 			return m_Array[nIdx][nIdx2];
 
-		m_Array[nIdx] = new T[nSize]();
+		m_Array[nIdx] = new(std::nothrow) T[nSize]();
 		if (m_Array[nIdx] == 0)
 			throw E_INSUFMEMORY;
 		return m_Array[nIdx][nIdx2];
@@ -1524,8 +1626,107 @@ public:
 		return nMaxSize - 1;
 	}
 
-	private:
-		T* m_Array[nMaxSize / nSize];
+private:
+	T* m_Array[nMaxSize / nSize];
+};
+
+/*
+template<unsigned int nValue>
+const unsigned int sqrt()
+{
+	static_assert(nValue != );
+	DWORD dwIndex;
+	if (nValue == 1)
+	if (_BitScanForward() & dwIndex, nValue))
+	{
+
+	}
+	sqrt<nValue-1>
+}
+*/
+
+template<typename T, unsigned int nStageCount>
+class UnboundStaggeredArray
+{
+public:
+	static const unsigned int INVALID_INDEX = 0xFFFFFFFF;
+
+	UnboundStaggeredArray() : m_Index(INVALID_INDEX), m_MaxElements(0), m_Stages(0), m_Array(0) {}
+	~UnboundStaggeredArray()
+	{
+		if (m_Array)
+		{
+			for (unsigned int xj = 0; xj < m_Stages; xj++)
+			{
+				if (m_Array[xj])
+					free(m_Array[xj]);
+			}
+		}
+	}
+
+	unsigned int Reserve(unsigned int nMaxElements)
+	{
+		unsigned int nStages = nMaxElements / nStageCount + (nMaxElements % nStageCount ? 1 : 0);
+		if (nStages <= m_Stages)
+			return m_Stages;
+
+		T** newArray = static_cast<T**>(_recalloc(m_Array, nStages, sizeof(T*)));
+		if (newArray == 0)
+			throw E_INSUFMEMORY;
+		newArray[nStages - 1] = static_cast<T*>(calloc(nStageCount, sizeof(T)));
+		m_Array = newArray;
+		m_Stages = nStages;
+		m_MaxElements = nStages * nStageCount;
+		return m_MaxElements;
+	}
+
+	bool Empty() const
+	{
+		return m_Index == INVALID_INDEX;
+	}
+
+	unsigned int GetCount() const
+	{
+		return m_Index + 1;
+	}
+
+	unsigned int GetIndex() const
+	{
+		return m_Index;
+	}
+
+	void SetIndex(unsigned int nIndex)
+	{
+		assert(nIndex == INVALID_INDEX || nIndex < m_MaxElements);
+		m_Index = nIndex;
+	}
+
+	int Add(const T& element)
+	{
+		if ((m_Index + 1) >= m_MaxElements)
+		{
+			Reserve(m_MaxElements + 1);
+		}
+		m_Index++;
+		unsigned int nIdx = m_Index / nStageCount;
+		unsigned int nIdx2 = m_Index % nStageCount;
+		m_Array[nIdx][nIdx2] = element;
+		return m_Index;
+	}
+
+	T& operator[](unsigned int nIndex)
+	{
+		assert(nIndex >= 0 && (unsigned int)nIndex < m_MaxElements);
+		unsigned int nIdx = nIndex / nStageCount;
+		unsigned int nIdx2 = nIndex % nStageCount;
+		return m_Array[nIdx][nIdx2];
+	}
+
+private:
+	unsigned int m_Index;
+	unsigned int m_MaxElements;
+	unsigned int m_Stages;
+	T** m_Array;
 };
 
 #endif // _VFP2CDATASTRUCTURE_H__

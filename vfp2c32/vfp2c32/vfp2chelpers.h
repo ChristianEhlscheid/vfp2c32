@@ -119,13 +119,11 @@ public:
 
 	void Size(unsigned int nSize);
 	unsigned int Size() const {	return m_Size; }
-	void* Address() { return static_cast<void*>(m_Pointer); }
 	void Detach(CBuffer &buf);
 	void Detach() { m_Pointer = 0; m_Size = 0; }
 
-	operator void*() const { return static_cast<void*>(m_Pointer); }
-	operator char*() const { return m_Pointer; }
-	operator unsigned char*() const { return reinterpret_cast<unsigned char*>(m_Pointer); }
+	template<typename T>
+	T Ptr() { return reinterpret_cast<T>(m_Pointer); }
 
 private:
 	char *m_Pointer;
@@ -189,7 +187,7 @@ public:
 class RegistryKey
 {
 public:
-	RegistryKey() : m_Handle(0), m_Owner(true), m_ValueIndex(0), m_KeyIndex(0) { }
+	RegistryKey() : m_Handle(0), m_Owner(true), m_KeyIndex(0), m_ValueIndex(0)  { }
 	~RegistryKey() { if (m_Handle != 0 && m_Owner) RegCloseKey(m_Handle); }
 
 	bool Create(HKEY hKey, LPCSTR lpKey, LPSTR lpClass = 0, DWORD nOptions = REG_OPTION_NON_VOLATILE,
@@ -204,7 +202,7 @@ public:
 				  LPDWORD lpcbMaxValueLen = 0, LPDWORD lpcbSecurityDescriptor = 0,
 				  PFILETIME lpftLastWriteTime = 0);
 	DWORD QueryValueInfo(LPSTR lpValue, DWORD &lpType);
-	void QueryValue(LPSTR lpValue, LPBYTE lpData, LPDWORD lpDataLen, LPDWORD lpType = 0);
+	void QueryValue(LPCSTR lpValue, LPBYTE lpData, LPDWORD lpDataLen, LPDWORD lpType = 0);
 	void SetValue(LPCSTR lpValueName, LPBYTE lpData, DWORD dwDataLen, DWORD dwType);
 	bool EnumFirstKey(LPSTR lpKey, LPDWORD lpKeyLen, LPSTR lpClass = 0, LPDWORD lpClassLen = 0,
 							   PFILETIME lpftLastWriteTime = 0);
@@ -237,7 +235,7 @@ public:
 	operator LPVOID() { return m_Pointer; }
 	operator CWideStringView() { return CWideStringView(reinterpret_cast<wchar_t*>(m_Pointer)); }
 	void operator=(LPITEMIDLIST pList) { if (m_Pointer) CoTaskMemFree(m_Pointer); m_Pointer = pList; }
-	operator bool() { return m_Pointer > 0; }
+	operator bool() { return m_Pointer > (void*)0; }
 
 private:
 	void* m_Pointer;
@@ -304,8 +302,8 @@ class CThreadManager;
 class CThread
 {
 public:
-	CThread(CThreadManager &pManager) : m_ThreadManager(&pManager), m_ThreadHandle(0), m_AbortFlag(0) { }
-	~CThread();
+	CThread(CThreadManager &pManager) : m_AbortFlag(0), m_ThreadHandle(0), m_ThreadManager(&pManager)  { }
+	virtual ~CThread();
 	void WaitForThreadShutdown();
 	void WaitForThreadShutdown(DWORD nTimeout);
 	void StartThread();
@@ -382,7 +380,7 @@ public:
 		assert(m_Threads == 0);
 		m_WorkItemCount = 0;
 		m_FinishedWorkItemCount = 0;
-		m_Threads = new HANDLE[nThreadCount];
+		m_Threads = new(std::nothrow) HANDLE[nThreadCount];
 		if (m_Threads == 0)
 			throw E_INSUFMEMORY;
 		memset(m_Threads, 0, sizeof(HANDLE) * nThreadCount);
@@ -485,14 +483,14 @@ inline __int64 PerformanceCounter::GetMillisecondsSince(LARGE_INTEGER &refcounte
 
 inline __int64 PerformanceCounter::CountsPerMillisecond()
 {
-	static LARGE_INTEGER counts = {0};
-	if (counts.QuadPart)
-		return counts.QuadPart;
+	static __int64 countsperms = { 0 };
+	if (countsperms)
+		return countsperms;
 
 	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
-    counts.QuadPart = frequency.QuadPart / 1000;
-	return counts.QuadPart;
+	countsperms = frequency.QuadPart / 1000;
+	return countsperms;
 }
 
 #endif // _VFP2CHELPERS_H__

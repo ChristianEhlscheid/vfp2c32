@@ -38,6 +38,8 @@ _SCREEN.Cls()
 CURSORSETPROP("MapBinary", 1, 0)
 CURSORSETPROP("MapVarchar", 1, 0)
 
+SQLSETPROP(0, "DispLogin", 1)
+
 CLOSE DATABASES ALL
 
 *!*	TRY
@@ -204,8 +206,13 @@ CLOSE DATABASES ALL
 
 TRY
 
-	m.lnCon = SQLSTRINGCONNECT('Driver={ODBC Driver 18 for SQL Server};Server=DESKTOP-O83K0AE\SQLEXPRESS;UID=sa;PWD=iYV0eLDKmiQZ4RS6CRhs;Encrypt=no;',.F.)
-*!*		&& m.lnCon = SQLSTRINGCONNECT('Driver={SQL Server Native Client 11.0};Server=DESKTOP-O83K0AE\SQLEXPRESS;UID=sa;PWD=iYV0eLDKmiQZ4RS6CRhs',.F.)
+*!*		m.lnCon = SQLSTRINGCONNECT('Driver={SQL Server};Server=DESKTOP-O83K0AE\SQLEXPRESS;UID=sa;PWD=iYV0eLDKmiQZ4RS6CRhs',.F.)
+	m.lnCon = SQLSTRINGCONNECT('Driver={ODBC Driver 18 for SQL Server};Server=DESKTOP-O83K0AE\SQLEXPRESS;UID=sa;PWD=iYV0eLDKmiQZ4RS6CRhs;Database=sakila;Encrypt=no;',.F.)
+	IF m.lnCon = -1
+		THROW
+	ENDIF
+	? m.lnCon
+	
 *!*		&& m.lnCon = SQLSTRINGCONNECT('Driver={ODBC Driver 13 for SQL Server};Server=MYULTRABOOK\SQLEXPRESS;UID=sa;PWD=pwd#4#sql',.F.)
 *!*		&& m.lnCon = SQLSTRINGCONNECT('Driver={ODBC Driver 17 for SQL Server};Server=MYULTRABOOK\SQLEXPRESS;UID=sa;PWD=pwd#4#sql',.F.)
 *!*		&& m.lnCon = SQLSTRINGCONNECT('Driver={ODBC Driver 18 for SQL Server};Server=MYULTRABOOK\SQLEXPRESS;UID=sa;PWD=pwd#4#sql;Encrypt=no;',.F.)
@@ -213,10 +220,10 @@ TRY
 *!*			THROW
 *!*		ENDIF
 
-	m.lnRet = SQLEXECEX(m.lnCon,'USE sakila')
-	IF m.lnRet = -1
-		THROW
-	ENDIF
+*!*		m.lnRet = SQLEXECEX(m.lnCon,'USE sakila')
+*!*		IF m.lnRet = -1
+*!*			RETURN
+*!*		ENDIF
 
 *!*		? 13
 *!*		m.lcParm = '2023-01-02 08:03:24.12345'
@@ -225,7 +232,23 @@ TRY
 *!*			THROW
 *!*		ENDIF
 *!*		
-*!*		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT * FROM sakila.typetest', 'c_typetest', 'laInfo')
+
+*!*		m.lnRet = SQLIDLEDISCONNECT(m.lnCon)
+*!*		IF m.lnRet = -1
+*!*			RETURN
+*!*		ENDIF
+	
+	m.lnRet = SQLEXECEX(2, 'SELECT id, column3, CONVERT(varchar(MAX),column3) AS column4 FROM dbo.testtable', 'c_typetest', 'laInfo')
+	IF m.lnRet = -1
+		THROW
+	ENDIF
+		
+*!*		m.lnRet = SQLEXECEX(m.lnCon, 'SELECT id, column3, CONVERT(varchar(MAX),column3) AS column4 FROM dbo.testtable', 'c_typetest', 'laInfo')
+*!*		IF m.lnRet = -1
+*!*			THROW
+*!*		ENDIF
+
+*!*		m.lnRet = SQLEXECEX(m.lnCon, 'UPDATE dbo.testtable SET column4 = column3 WHERE id = 1')
 *!*		IF m.lnRet = -1
 *!*			THROW
 *!*		ENDIF
@@ -235,20 +258,20 @@ TRY
 *!*			THROW
 *!*		ENDIF
 
-	m.lnRet = SQLTablesEx(m.lnCon, .NULL., .NULL., .NULL., .NULL., 'c_tables', 0)
-	IF m.lnRet = -1
-		THROW
-	ENDIF
-	
-	m.lnRet = SQLTablesEx(m.lnCon, .NULL., .NULL., .NULL., 'TABLE', 'c_tables2', 0)
-	IF m.lnRet = -1
-		THROW
-	ENDIF
-	
-	m.lnRet = SQLTablesEx(m.lnCon, '%', "", "", .NULL., 'c_tables3', 0)
-	IF m.lnRet = -1
-		THROW
-	ENDIF
+*!*		m.lnRet = SQLTablesEx(m.lnCon, .NULL., .NULL., .NULL., .NULL., 'c_tables', 0)
+*!*		IF m.lnRet = -1
+*!*			THROW
+*!*		ENDIF
+*!*		
+*!*		m.lnRet = SQLTablesEx(m.lnCon, .NULL., .NULL., .NULL., 'TABLE', 'c_tables2', 0)
+*!*		IF m.lnRet = -1
+*!*			THROW
+*!*		ENDIF
+*!*		
+*!*		m.lnRet = SQLTablesEx(m.lnCon, '%', "", "", .NULL., 'c_tables3', 0)
+*!*		IF m.lnRet = -1
+*!*			THROW
+*!*		ENDIF
 
 *!*	m.lnRet = SQLColumnsEx(m.lnCon, 'sakila', 'sakila', c_tabletypes.table_name, '%', 'c_tabletypecolumns', 0, SQL_SS_NAME_SCOPE_TABLE_TYPE)
 *!*	IF m.lnRet = -1
@@ -992,8 +1015,8 @@ FINALLY
 	IF m.lnSqlHandle != -1
 		SQLCANCELEX(m.lnSqlHandle)
 	ENDIF
-	IF lnCon != -1
-		SQLDISCONNECT(lnCon)
+	IF m.lnCon != -1
+		SQLDISCONNECT(m.lnCon)
 	ENDIF
 ENDTRY
 

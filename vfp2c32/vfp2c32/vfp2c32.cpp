@@ -1,5 +1,5 @@
-#include <windows.h> /* no comment .. */
-#include <stdio.h>
+#include <winsock2.h>
+#include <windows.h>
 
 #if defined(_DEBUGALLOCATIONS)
 #include "vld.h" // Visual Memory Leak Detector
@@ -14,8 +14,7 @@
 /* VFP2C specific includes */
 #include "vfp2c32.h"  /* VFP2C32 specific types & defines */
 #include "vfp2carray.h" /* array functions */
-#include "vfp2casync.h" /* asynchronous functions */
-#include "vfp2cassembly.h" /* runtime assembler */
+ #include "vfp2casync.h" /* asynchronous functions */
 #include "vfp2cconv.h" /* misc data conversion functions */
 #include "vfp2cenum.h" /* window, process, thread, module enumeration functions */
 #include "vfp2cfile.h" /* filesystem related functions */
@@ -37,10 +36,10 @@
 #include "vfp2cras.h" /* RAS (dialup management) wrappers (rasapi32.dll) */
 #include "vfp2ciphelper.h" /* IP Helper (iphlpapi.dll) wrappers */
 #include "vfp2cfont.h" /* Font functions  */
-#include "vfp2cutil.h" /* common utility functions */
 #include "vfp2cstring.h" /* common string functions */
 #include "vfp2ccppapi.h" /* C++ class library over LCK */
 #include "vfp2ctls.h" /* VFP2C32 thread local storage */
+#include "vfp2chyperscan.h" /* Intel hyperscan - high performance regular expression matching */
 
 /* Global variables: module handle for this DLL */
 HMODULE ghModule = 0;
@@ -63,6 +62,7 @@ void _fastcall OnLoad()
 
 	VFP2CTls& tls = VFP2CTls::Tls();
 	VFP2C_Init_File(tls);
+	VFP2C_Init_Services();
 
 	TimeZoneInfo::GetTsi();
 
@@ -71,7 +71,7 @@ void _fastcall OnLoad()
 		FoxVariable pTempVar("__VFP2C_FLL_FILENAME", false);
 		FoxString pFllFileName(MAX_PATH);
 
-		pFllFileName.Len(GetModuleFileName(ghModule, pFllFileName, pFllFileName.Size()));
+		pFllFileName.Len(GetModuleFileName(ghModule, pFllFileName.Ptr<LPSTR>(), pFllFileName.Size()));
 		if (!pFllFileName.Len())
 		{
 			AddWin32Error("GetModuleFileName", GetLastError());
@@ -164,7 +164,7 @@ void _stdcall CustomErrorHandler(const char *pFunction, const char* pErrorMessag
 		_UserError(pError->aErrorMessage);
 }
 
-void _stdcall CustomErrorHandlerEx(const char *pFunction, const char *pErrorMessage, int nErrorNo, bool bAddError, bool bRaise, va_list lpArgs)
+void _stdcall CustomErrorHandlerEx(const char *pFunction, const char *pErrorMessage, unsigned long nErrorNo, bool bAddError, bool bRaise, va_list lpArgs)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (bAddError)
@@ -209,7 +209,7 @@ void _cdecl RaiseCustomError(const char *pFunction, const char *pMessage, ...)
 	va_end(lpArgs);
 }
 
-void _cdecl SaveCustomErrorEx(const char *pFunction, const char *pMessage, int nErrorNo, ...)
+void _cdecl SaveCustomErrorEx(const char *pFunction, const char *pMessage, unsigned long nErrorNo, ...)
 {
 	va_list lpArgs;
 	va_start(lpArgs, nErrorNo);
@@ -217,7 +217,7 @@ void _cdecl SaveCustomErrorEx(const char *pFunction, const char *pMessage, int n
 	va_end(lpArgs);
 }
 
-void _cdecl AddCustomErrorEx(const char *pFunction, const char *pMessage, int nErrorNo, ...)
+void _cdecl AddCustomErrorEx(const char *pFunction, const char *pMessage, unsigned long nErrorNo, ...)
 { 
 	va_list lpArgs;
 	va_start(lpArgs, nErrorNo);
@@ -225,7 +225,7 @@ void _cdecl AddCustomErrorEx(const char *pFunction, const char *pMessage, int nE
 	va_end(lpArgs);
 }
 
-void _cdecl RaiseCustomErrorEx(const char *pFunction, const char *pMessage, int nErrorNo, ...)
+void _cdecl RaiseCustomErrorEx(const char *pFunction, const char *pMessage, unsigned long nErrorNo, ...)
 { 
 	va_list lpArgs;
 	va_start(lpArgs, nErrorNo);
@@ -243,18 +243,20 @@ try
 			if (parm.PCount() == 2)
 			{
 				SaveCustomError("VFP2CSys", "Too many parameters.");
-				throw E_INVALIDPARAMS;
+				throw E_APIERROR;
 			}
 			Return(ghModule);
 			break;
+
 		case 2: /* library heap HANDLE */
 			if (parm.PCount() == 2)
 			{
 				SaveCustomError("VFP2CSys", "Too many parameters.");
-				throw E_INVALIDPARAMS;
+				throw E_APIERROR;
 			}
 			Return(VFP2CTls::Heap);
 			break;
+
 		case 3: /* set or return Unicode conversion codepage */
 			if (parm.PCount() == 2)
 			{
@@ -268,14 +270,14 @@ try
 					}
 					else
 					{
-						SaveCustomError("VFP2CSys", "Parameter 2 was an invalid codepage");
+						SaveCustomError("VFP2CSys", "Parameter 2 was an invalid codepage.");
 						Return(false);
 					}
 				}
 				else
 				{
-					SaveCustomError("VFP2CSys", "Parameter 2 should be of type I or N.");
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("VFP2CSys", "Parameter 2 should be of type I or N.", E_VFP_INVALIDPARAMS);
+					throw E_APIERROR;
 				}
 			}
 			else
@@ -292,8 +294,8 @@ try
 				}
 				else
 				{
-					SaveCustomError("VFP2CSys", "Parameter 2 should be of type L.");
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("VFP2CSys", "Parameter 2 should be of type L.", E_VFP_INVALIDPARAMS);
+					throw E_APIERROR;
 				}
 			}
 			else
@@ -310,8 +312,8 @@ try
 				}
 				else
 				{
-					SaveCustomError("VFP2CSys", "Parameter 2 should be of type L.");
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("VFP2CSys", "Parameter 2 should be of type L.", E_VFP_INVALIDPARAMS);
+					throw E_APIERROR;
 				}
 			}
 			else
@@ -328,8 +330,8 @@ try
 				}
 				else
 				{
-					SaveCustomError("VFP2CSys", "Parameter 2 should be of type L.");
-					throw E_INVALIDPARAMS;
+					SaveCustomErrorEx("VFP2CSys", "Parameter 2 should be of type L.", E_VFP_INVALIDPARAMS);
+					throw E_APIERROR;
 				}
 			}
 			else
@@ -338,8 +340,8 @@ try
 
 		default: /* else wrong parameter */
 		{
-			SaveCustomError("VFP2CSys", "Parameter 1 unknown.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("VFP2CSys", "Invalid parameter 1.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 	}
 }
@@ -367,7 +369,7 @@ try
 		nFlags |= FORMAT_MESSAGE_FROM_HMODULE;
 	}
 
-	pMessage.Len(FormatMessage(nFlags, lpModule, parm(1)->ev_long, nLanguage, pMessage, pMessage.Size(), 0));
+	pMessage.Len(FormatMessage(nFlags, lpModule, parm(1)->ev_long, nLanguage, pMessage.Ptr<LPSTR>(), pMessage.Size(), 0));
 
 	if (pMessage.Len())
 		pMessage.Return();
@@ -635,7 +637,7 @@ FoxInfo VFP2CFuncs[] =
 	{"SetFileTimes", (FPFI) SetFileTimes, 5, "??.?.?.L"},
 	{"GetFileSizeEx2", (FPFI) GetFileSizeExLib, 1, "?"},
 	{"GetFileAttributesEx2", (FPFI) GetFileAttributesEx2, 2, "?.L"},
-	{"SetFileAttributesEx", (FPFI) SetFileAttributesEx, 4, "??.I.L"},
+	{"SetFileAttributesEx", (FPFI) SetFileAttributesEx, 4, "??.I.I"},
 	{"GetFileOwner", (FPFI) GetFileOwner, 4, "?R.R.R"},
 	{"GetLongPathNameEx", (FPFI) GetLongPathNameEx, 1, "?"},
 	{"GetShortPathNameEx", (FPFI) GetShortPathNameEx, 1, "?"},
@@ -753,11 +755,11 @@ FoxInfo VFP2CFuncs[] =
 	{"AbortUrlDownloadToFileEx", (FPFI) AbortUrlDownloadToFileEx, 1, "I"},
 #endif
 	/* winsock functions */
-	{"AIPAddresses", (FPFI) AIPAddresses, 1, "C"},
-	{"ResolveHostToIp", (FPFI) ResolveHostToIp, 2, "C.C"},
-	/* IP Helper */
+	{"AIPAddresses", (FPFI) AIPAddresses, 2, "C.I"},
+	{"ResolveHostToIp", (FPFI) ResolveHostToIp, 3, "C.C.I"},
+	/* IP Helper */ 
 	{"Ip2MacAddress", (FPFI) Ip2MacAddress, 1, "C"},
-	{"IcmpPing", (FPFI) IcmpPing, 8, "CC.I.I.I.I.L.I"},
+	{"IcmpPing", (FPFI) IcmpPing, 10, "CC.I.I.I.I.L.I.I.C"},
 
 	/* service functions */
 	{"OpenServiceEx", (FPFI) OpenServiceEx, 4, "C.I.C.C"},
@@ -822,7 +824,17 @@ FoxInfo VFP2CFuncs[] =
 
 	/* error handling routines */
 	{"FormatMessageEx", (FPFI) FormatMessageEx, 3, "I.I.I"},
-	{"AErrorEx", (FPFI) AErrorEx, 1, "C"}
+	{"AErrorEx", (FPFI) AErrorEx, 1, "C"},
+
+	/* Intel Hyperscan regular expression library integration */
+	{ "Hyperscan_platform", (FPFI)Hyperscan_platform, 1, "R" },
+	{ "Hyperscan_compile", (FPFI)Hyperscan_compile, 6, "?R.?.I.?.O" },
+	{ "Hyperscan_free_database", (FPFI)Hyperscan_free_database, 1, "I" },
+	{ "Hyperscan_alloc_scratch", (FPFI)Hyperscan_alloc_scratch, 2, "IR" },
+	{ "Hyperscan_free_scratch", (FPFI)Hyperscan_free_scratch, 1, "I" },
+	{ "Hyperscan_scan", (FPFI)Hyperscan_scan, 6, "III.?.C.?" },
+	{ "Hyperscan_scan_cursor", (FPFI)Hyperscan_scan_cursor, 9, "III?C?.C.?.I" },
+	{ "Hyperscan_scan_files", (FPFI)Hyperscan_scan_files, 7, "IIICC.C.I" }
 
 #ifdef _DEBUG
 	,{"AMemLeaks", (FPFI) AMemLeaks, 1, "C"}

@@ -5,7 +5,7 @@ CD (FULLPATH(JUSTPATH(SYS(16))))
 IF TYPE('_WIN64') == 'L' AND _WIN64
 SET LIBRARY TO vfp2c64.fll ADDITIVE
 ELSE
-SET LIBRARY TO vfp2c32d.fll ADDITIVE
+SET LIBRARY TO vfp2c32.fll ADDITIVE
 ENDIF
 
 _SCREEN.Cls()
@@ -14,22 +14,44 @@ _SCREEN.Cls()
 && ADIREX examples
 && ---------------
 LOCAL lcPath, lnStart, lnEnd, lnFlags, lnAttribs
-IF !SHBROWSEFOLDER('Select a path to search', BIF_RETURNONLYFSDIRS + BIF_NEWDIALOGSTYLE, @lcPath)
-	RETURN
-ENDIF
-m.lcPath = ADDBS(m.lcPath) + '*.bat'
-*!*	m.lcPath = 'C:\*.bat'
-? m.lcPath
+*!*	IF !SHBROWSEFOLDER('Select a path to search', BIF_RETURNONLYFSDIRS + BIF_NEWDIALOGSTYLE, @lcPath)
+*!*		RETURN
+*!*	ENDIF
 
-USE IN SELECT('cFiles')
- 
-m.lnFlags = ADIREX_DEST_CURSOR + ADIREX_RECURSE + ADIREX_INCLUDE_REPARSE_POINT && + ADIREX_JUSTFNAME
-m.lnAttribs = '-H'
+m.lcPath = 'C:\Users\*.*'
+*!*	m.lcPath = 'C:\Projects\imagezip\*.jpg|*.bmp|*.gif|*.jpeg|*.png'
 
+USE IN SELECT('cFiles1')
+m.lnFlags = ADIREX_DEST_CURSOR + ADIREX_INCLUDE_REPARSE_POINT + ADIREX_FULLPATH + ADIREX_RECURSE && + ADIREX_JUSTFNAME
+m.lnAttribs = ''
 m.lnStart = SECONDS()
-? ADIREX('cFiles', m.lcPath, m.lnAttribs, m.lnFlags, 0, 'fileid,filename,dosfilename,filesize,fileattribs')
+? ADIREX('cFiles1', m.lcPath, m.lnAttribs, m.lnFlags, 0, 'fileid,filename,creationtime,filesize,fileattribs')
 m.lnEnd = SECONDS()
 ? m.lnEnd - m.lnStart
+
+*!*	LOCAL ldCreation
+*!*	SELECT cFiles1
+*!*	SCAN
+*!*	GETFILETIMES(@cFiles1.filename, @ldCreation)
+*!*	ENDSCAN
+
+*!*	USE IN SELECT('cFiles2')
+*!*	SET LIBRARY TO 
+*!*	SET LIBRARY TO vfp2c32_rel.fll ADDITIVE
+*!*	m.lnFlags = ADIREX_DEST_CURSOR + ADIREX_INCLUDE_REPARSE_POINT + ADIREX_FULLPATH + ADIREX_RECURSE && ADIREX_RECURSE  + ADIREX_JUSTFNAME
+*!*	m.lnAttribs = ''
+*!*	m.lnStart = SECONDS()
+*!*	? ADIREX('cFiles2', m.lcPath, m.lnAttribs, m.lnFlags, 0, 'fileid,filename,creationtime,filesize,fileattribs')
+*!*	m.lnEnd = SECONDS()
+*!*	? m.lnEnd - m.lnStart
+
+*!*	SET LIBRARY TO 
+
+*!*	? CompareCursors('cFiles1', 'cFiles2')
+
+*!*	SetFileAttributesEx(m.lcPath, '-R', 0, 0)
+*!*	m.lnAttribs = '-R'
+*!*	? ADIREX('cFiles2', m.lcPath, m.lnAttribs, m.lnFlags, 0, 'fileid,filename,filesize,fileattribs')
 
 *!*	? ADIREX('cFiles', m.lcPath, '-A-R', ADIREX_DEST_CURSOR + ADIREX_FULLPATH, 0, 'Filename,Creationtime,Accesstime,Filesize,Fileattribs,cfileattribs')
 *!*	? ADIREX('cFiles2', m.lcPath, FILE_ATTRIBUTE_ARCHIVE, ADIREX_DEST_CURSOR + ADIREX_FULLPATH + ADIREX_FILTER_NONE, 0, 'Filename,Creationtime,Accesstime,Filesize,Fileattribs,cfileattribs')
@@ -100,3 +122,27 @@ ENDFUNC
 FUNCTION AdirExCallback5(nFileId,nParentId,cFileName,nFileSize,cFileAttribs)
 	?nFileId,nParentId,cFilename,nFileSize,cFileAttribs
 ENDFUNC
+
+FUNCTION CompareCursors(lcCursor1, lcCursor2)
+	LOCAL lbEqual
+	m.lbEqual = .T.
+	GO TOP IN (m.lcCursor2)
+	SELECT (m.lcCursor1)
+	SCAN
+		IF EVALUATE(m.lcCursor1 + '.fileid') != EVALUATE(m.lcCursor2 + '.fileid') OR ;
+			!(EVALUATE(m.lcCursor1 + '.filename') == EVALUATE(m.lcCursor2 + '.filename')) OR ;
+			EVALUATE(m.lcCursor1 + '.creationtime') != EVALUATE(m.lcCursor2 + '.creationtime') OR ;
+			EVALUATE(m.lcCursor1 + '.filesize') != EVALUATE(m.lcCursor2 + '.filesize') OR ;
+			EVALUATE(m.lcCursor1 + '.fileattribs') != EVALUATE(m.lcCursor2 + '.fileattribs')
+
+			? RECNO(m.lcCursor1), EVALUATE(m.lcCursor1 + '.fileid'), EVALUATE(m.lcCursor1 + '.filename'), EVALUATE(m.lcCursor2 + '.filename')
+			? EVALUATE(m.lcCursor1 + '.filesize'), EVALUATE(m.lcCursor2 + '.filesize')
+			? EVALUATE(m.lcCursor1 + '.fileattribs'), EVALUATE(m.lcCursor2 + '.fileattribs')
+			m.lbEqual = .F.
+			RETURN .F.
+		ENDIF
+		SKIP 1 IN (m.lcCursor2)
+	ENDSCAN
+	RETURN m.lbEqual
+ENDFUNC
+

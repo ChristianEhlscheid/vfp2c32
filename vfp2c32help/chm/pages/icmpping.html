@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Sends an IPv4 ICMP echo request, also known as ping, and returns any echo response replies.</p>
 
-<div class="block"><pre>IcmpPing(<a href="#p1">cArrayName</a>, <a href="#p2">cHost</a> [, <a href="#p3">nTTL</a> [, <a href="#p4">nTOS</a> [, <a href="#p5">nTimeout</a> [, <a href="#p6">nDatasize</a> [, <a href="#p7">bDontFragment</a> [, <a href="#p8">nPingCount</a>]]]]]])</pre></div>
+<div class="block"><pre>IcmpPing(<a href="#p1">cArrayName</a>, <a href="#p2">cHost</a> [, <a href="#p3">nTTL</a> [, <a href="#p4">nTOS</a> [, <a href="#p5">nTimeout</a> [, <a href="#p6">nDatasize</a> [, <a href="#p7">bDontFragment</a> [, <a href="#p8">nPingCount</a> [, <a href="#p9">nIPType</a> [, <a href="#p10">cSource</a>]]]]]]]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cArrayname</a></dt>
 <dd><p>On return the array contains the following information:<br />
@@ -69,6 +69,21 @@ May the packet be fragmented?</p>
 <dd><p>default = 1<br />
 <br />
 The number of pings to send, each ping result will be stored into a new row of the array.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p9">nIPType  (optional)</a></dt>
+<dd><p>default = 1<br />
+</p>
+<table>
+<caption>One or a combination of the following values</caption>
+<tr><th>Value</th><th></th></tr>
+<tr><td>0</td><td>Unspecified - uses the first IP (either IPv4 or IPv6) returned by getaddrinfo</td></tr>
+<tr><td>1</td><td>IPv4 - uses the first IPv4 address</td></tr>
+<tr><td>2</td><td>IPv6  - uses the first IPv6 address</td></tr>
+<tr><td>3</td><td>IPv46 - uses the first IPv4 address or if no IPv4 addresses are returned the first IPv6 address</td></tr>
+<tr><td>4</td><td>IPv64 - uses the first IPv6 address or if no IPv6 addresses are returned the first IPv4 address</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p10">cSource (optional)</a></dt>
+<dd><p>The IP of the local network interface to use, if the device has multiple network interfaces this allows the selection of a particular interface.</p>
 </dd></dl>
 <h2>Return Value</h2>
 <p>The number of executed pings.</p>

@@ -43,16 +43,22 @@ template<class T>
 inline T AdvancePtr(T ptr, unsigned __int64 nBytes) { return reinterpret_cast<T>((reinterpret_cast<char*>(ptr) + nBytes)); }
 
 template<class T>
-inline T* IndexPtr(void* ptr, int nIndex) { return &reinterpret_cast<T*>(ptr)[nIndex]; }
+inline T IndexPtr(void* ptr, int nIndex) { return &reinterpret_cast<T>(ptr)[nIndex]; }
 
 inline bool StrEqual(char *pString, char *pString2) { return strcmp(pString, pString2) == 0; }
 inline bool StrIEqual(char *pString, char *pString2) { return _stricmp(pString, pString2) == 0; }
 
-inline bool IsDigit(char pChar) { return pChar >= '0' && pChar <= '9'; }
-inline bool IsCharacter(char pChar) { return (pChar >= 'a' && pChar <= 'z') || (pChar >= 'A' && pChar <= 'Z'); }
+template<typename T>
+inline bool IsDigit(T pChar) { return pChar >= '0' && pChar <= '9'; }
 
-inline char ToUpper(char pChar) { return pChar >= 97 && pChar <= 122 ? pChar - 32 : pChar; }
-inline char ToLower(char pChar) { return pChar >= 65 && pChar <= 90 ? pChar + 32 : pChar; }
+template<typename T>
+inline bool IsCharacter(T pChar) { return (pChar >= 'a' && pChar <= 'z') || (pChar >= 'A' && pChar <= 'Z'); }
+
+template<typename T>
+inline char ToUpper(T pChar) { return (pChar >= 'a' && pChar <= 'z') ? (T)(pChar - ' ') /* 32 */ : pChar; }
+
+template<typename T>
+inline char ToLower(T pChar) { return (pChar >= 'A' && pChar <= 'Z') ? (T)(pChar + ' ') /* 32 */ : pChar; }
 
 inline int SwapEndian(int nValue)
 {

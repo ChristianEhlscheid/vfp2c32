@@ -1,19 +1,16 @@
-#include <atlbase.h>
-
 #include "vfp2c32.h"
 #include "vfp2ctls.h"
-#include "vfp2ccallback.h"
-
-const SIZE_T JITHEAP_MAXIMUM_SIZE = 1024 * 1024 * 8; // 8MB should suffice for dynamic code
 
 #if defined(_WIN64)
+const SIZE_T JITHEAP_MAXIMUM_SIZE = (SIZE_T)(1024 * 1024 * 8); // 8MB should suffice for dynamic code
+
 PRUNTIME_FUNCTION VFP2C64FunctionTableCallback(DWORD64 ControlPc, PVOID Context)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	DWORD VirtualAddress = (ControlPc - tls.JitBaseAddress);
-	int nCount = tls.RuntimeFunctions.GetCount();
+	unsigned int nCount = tls.RuntimeFunctions.GetCount();
 	PRUNTIME_FUNCTION rf;
-	for (int xj = 0; xj < nCount; xj++)
+	for (unsigned int xj = 0; xj < nCount; xj++)
 	{
 		rf = &tls.RuntimeFunctions[xj];
 		if (VirtualAddress >= rf->BeginAddress && VirtualAddress <= rf->EndAddress)
@@ -26,6 +23,7 @@ PRUNTIME_FUNCTION VFP2C64FunctionTableCallback(DWORD64 ControlPc, PVOID Context)
 #ifdef _THREADSAFE
 DWORD VFP2CTls::TlsIndex = TLS_OUT_OF_INDEXES;
 LONG VFP2CTls::ThreadCount = 0;
+CRITICAL_SECTION VFP2CTls::CritSection = { 0 };
 #endif
 
 HANDLE VFP2CTls::Heap = 0;
@@ -35,6 +33,8 @@ HMODULE VFP2CTls::IpHlpApi = 0;
 HMODULE VFP2CTls::Icmp = 0;
 HMODULE VFP2CTls::NetApi32 = 0;
 HMODULE VFP2CTls::Propsys = 0;
+HMODULE VFP2CTls::HsDll = 0;
+bool VFP2CTls::HyperScanInitialized = false;
 
 VFP2CTls::VFP2CTls()
 {
@@ -77,6 +77,8 @@ void VFP2CTls::OnLoad()
 	LONG Count = InterlockedIncrement(&ThreadCount);
 	if (Count == 1) // first thread that loads VFP2C32
 	{
+		InitCriticalSection();
+
 		TlsIndex = TlsAlloc();
 		if (TlsIndex == TLS_OUT_OF_INDEXES)
 		{
@@ -85,7 +87,7 @@ void VFP2CTls::OnLoad()
 		}
 	}
 
-	VFP2CTls *tls = new VFP2CTls();
+	VFP2CTls *tls = new(std::nothrow) VFP2CTls();
 	if (!tls)
 	{
 		SaveWin32Error("VFP2CTls::OnLoad", E_INSUFMEMORY);
@@ -99,8 +101,8 @@ void VFP2CTls::OnLoad()
 	}
 #else
 	// this call will initialize the static version for nonthreadsafe usage
-
 	VFP2CTls& tls = VFP2CTls::Tls();
+	unused(tls);
 #endif
 }
 #pragma warning( default : 4189)
@@ -120,7 +122,9 @@ void VFP2CTls::OnUnload()
 	{
 		if (TlsIndex != TLS_OUT_OF_INDEXES)
 			TlsFree(TlsIndex);
+
 		FreeGlobalResources();
+		FreeCriticalSection();
 	}
 #else
 	FreeGlobalResources();
@@ -142,9 +146,10 @@ void VFP2CTls::FreeGlobalResources()
 		FreeLibrary(NetApi32);
 	if (Propsys)
 		FreeLibrary(Propsys);
+	if (HsDll)
+		FreeLibrary(HsDll);
 	if (Heap)
 		HeapDestroy(Heap);
-
 }
 
 VFP2CTls& _stdcall VFP2CTls::Tls()
@@ -157,6 +162,23 @@ VFP2CTls& _stdcall VFP2CTls::Tls()
 	return tls;
 #endif
 }
+
+#ifdef _THREADSAFE
+void VFP2CTls::InitCriticalSection()
+{
+	InitializeCriticalSection(&VFP2CTls::CritSection);
+}
+
+void VFP2CTls::FreeCriticalSection()
+{
+	DeleteCriticalSection(&VFP2CTls::CritSection);
+}
+
+CriticalSectionGuard VFP2CTls::Guard()
+{
+	return CriticalSectionGuard(VFP2CTls::CritSection);
+}
+#endif
 
 HANDLE VFP2CTls::GetJitHeap()
 {
@@ -173,7 +195,8 @@ HANDLE VFP2CTls::GetJitHeap()
 		DWORD nHeapOptions = HEAP_CREATE_ENABLE_EXECUTE | HEAP_NO_SERIALIZE;
 		DWORD nHeapSize = JITHEAP_MAXIMUM_SIZE;
 #endif
-		if ((JitHeap = HeapCreate(nHeapOptions, 1024 * 16, nHeapSize)) == 0)
+		JitHeap = HeapCreate(nHeapOptions, (SIZE_T)(1024 * 16), nHeapSize);
+		if (JitHeap == 0)
 		{
 			SaveWin32Error("HeapCreate", GetLastError());
 			throw E_APIERROR;

@@ -1,8 +1,10 @@
 #include <windows.h>
-#include <stdio.h>
+#include <cmath>
 
-#include <stdarg.h>
-#include <math.h>
+#if MSVC_VER < 1400
+#include <cstdio>
+#include <cstdarg>
+#endif
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -12,7 +14,6 @@
 #include "vfp2c32.h"
 #include "vfp2cutil.h"
 #include "vfp2cstring.h"
-#include "vfp2ctime.h"
 
 // some helper functions for common tasks
 
@@ -23,7 +24,7 @@ void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, double& pDateTime)
 	// 86400 secs a day, 10000000 "100 nanosecond intervals" in one second
     LARGE_INTEGER sTime;
 	sTime.LowPart = pFileTime->dwLowDateTime;
-	sTime.HighPart = pFileTime->dwHighDateTime;
+	sTime.HighPart = (LONG)pFileTime->dwHighDateTime;
 
 	if (sTime.QuadPart > MAXVFPFILETIME) //if bigger than max DATETIME - 9999/12/12 23:59:59
 		sTime.QuadPart = MAXVFPFILETIME; //set to max date ..
@@ -34,6 +35,7 @@ void _stdcall FileTimeToDateTime(LPFILETIME pFileTime, double& pDateTime)
 	}
 
 	sTime.QuadPart /= NANOINTERVALSPERSECOND; // gives us seconds since 1601/01/01
+	// NOLINTNEXTLINE(bugprone-integer-division)
 	pDateTime = VFPFILETIMEBASE + (double)(sTime.QuadPart / SECONDSPERDAY); // 1601/01/01 + number of seconds / 86400 (= number of days)
 	pDateTime += ((double)(sTime.QuadPart % SECONDSPERDAY)) / SECONDSPERDAY; 
 }
@@ -108,7 +110,7 @@ void _stdcall DateTimeToSystemTime(double pDateTime, LPSYSTEMTIME pSysTime)
 	dSecs = modf(pDateTime, &dDays);
 	lnDays = static_cast<DWORD>(dDays);
 
-	lnA = lnDays + 32044;
+	lnA = (int)(lnDays + 32044);
 	lnB = (4 * lnA + 3) / 146097;
 	lnC = lnA - (lnB * 146097) / 4;
 
@@ -121,9 +123,9 @@ void _stdcall DateTimeToSystemTime(double pDateTime, LPSYSTEMTIME pSysTime)
 	pSysTime->wYear = (WORD) lnB * 100 + lnD - 4800 + lnM / 10;
 
 	lnSecs = (int)floor(dSecs * 86400.0 + 0.1);
-	pSysTime->wHour = (WORD)lnSecs / 3600;
+	pSysTime->wHour = (WORD)(lnSecs / 3600);
 	lnSecs %= 3600;
-	pSysTime->wMinute = (WORD)lnSecs / 60;
+	pSysTime->wMinute = (WORD)(lnSecs / 60);
 	lnSecs %= 60;
 	pSysTime->wSecond = (WORD)lnSecs;
 

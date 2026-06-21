@@ -3,7 +3,6 @@
 #define _WINSOCKAPI_ // we're using winsock2 .. so this is neccessary to exclude winsock.h 
 
 #include <windows.h>
-#include <stdio.h>
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -12,13 +11,12 @@
 #endif
 #include "vfp2c32.h"
 #include "vfp2curlmon.h"
-#include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 #include "vfp2casync.h"
 
 static CThreadManager goUrlThreads;
 
-UrlDownload::UrlDownload() : m_bCallback(false), m_bAsync(false), m_nAborted(0), m_ulObjRefCount(0)
+UrlDownload::UrlDownload() : m_nAborted(0), m_nTickCount(0), m_bCallback(false), m_bAsync(false), m_ulObjRefCount(0)
 {
 
 }
@@ -40,8 +38,8 @@ void UrlDownloadThread::Release()
 
 void UrlDownloadThread::SetParams(char *pUrl, char *pFile, CStringView pCallback)
 {
-	m_Download.pUrl = pUrl;
-	m_Download.pFile = pFile;
+	m_Download.pUrl = CStringView(pUrl);
+	m_Download.pFile = CStringView(pFile);
 	m_Download.SetCallBack(pCallback);
 	m_Download.SetAsync(true);
 }
@@ -99,36 +97,43 @@ STDMETHODIMP UrlDownload::OnProgress(ULONG ulProgress,
 {
 	if (m_bCallback)
 	{
-		if (!m_bAsync)
+		try
 		{
-			ValueEx vRetVal;
-			if (m_Callback.Evaluate(vRetVal, ulProgress, ulProgressMax, ulStatusCode) == 0)
+			if (!m_bAsync)
 			{
-				if (vRetVal.Vartype() == 'L')
-					return vRetVal.ev_length ? S_OK : E_ABORT;
-				else if (vRetVal.Vartype() == 'I')
-					return vRetVal.ev_long ? S_OK : E_ABORT;
-				else if (vRetVal.Vartype() == 'N')
-					return vRetVal.ev_real != 0.0 ? S_OK : E_ABORT;
-				else
-					vRetVal.Release();
-			}
-			return E_ABORT;
-		}
-		else
-		{
-			if (!m_nAborted)
-			{
-				DWORD nCount = GetTickCount();
-				if (nCount - m_nTickCount > 500 || nCount < m_nTickCount)
+				ValueEx vRetVal;
+				if (m_Callback.Evaluate(vRetVal, ulProgress, ulProgressMax, ulStatusCode) == 0)
 				{
-					m_nTickCount = nCount;
-					m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, ulProgress, ulProgressMax, ulStatusCode);
+					if (vRetVal.Vartype() == 'L')
+						return vRetVal.ev_length ? S_OK : E_ABORT;
+					else if (vRetVal.Vartype() == 'I')
+						return vRetVal.ev_long ? S_OK : E_ABORT;
+					else if (vRetVal.Vartype() == 'N')
+						return vRetVal.ev_real != 0.0 ? S_OK : E_ABORT;
+					else
+						vRetVal.Release();
 				}
-				return S_OK;
+				return E_ABORT;
 			}
 			else
-				return E_ABORT;
+			{
+				if (!m_nAborted)
+				{
+					DWORD nCount = GetTickCount();
+					if (nCount - m_nTickCount > 500 || nCount < m_nTickCount)
+					{
+						m_nTickCount = nCount;
+						m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, ulProgress, ulProgressMax, ulStatusCode);
+					}
+					return S_OK;
+				}
+				else
+					return E_ABORT;
+			}
+		}
+		catch (int)
+		{
+			return E_ABORT;
 		}
 	}
 	else
@@ -139,16 +144,23 @@ STDMETHODIMP UrlDownload::OnStopBinding(HRESULT hr, LPCWSTR lpStatus)
 {
 	if (m_bCallback)
 	{
-		if (!m_bAsync)
+		try
 		{
-			m_Callback.Execute(0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
-		}
-		else
-		{
-			if (!m_nAborted)
-				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
+			if (!m_bAsync)
+			{
+				m_Callback.Execute(0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
+			}
 			else
-				m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0, 0, BINDSTATUS_DOWNLOAD_ABORTED);
+			{
+				if (!m_nAborted)
+					m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0, 0, BINDSTATUS_DOWNLOAD_FINISHED);
+				else
+					m_Callback.AsyncExecute(ghAsyncHwnd, WM_CALLBACK, 0, 0, BINDSTATUS_DOWNLOAD_ABORTED);
+			}
+		}
+		catch (int)
+		{
+			return E_ABORT;
 		}
 	}
 	return S_OK;
@@ -201,9 +213,7 @@ int _stdcall VFP2C_Init_Urlmon()
 	if (goUrlThreads.Initialized() == false)
 	{
 		if (goUrlThreads.Initialize() == false)
-		{
 			return E_APIERROR;
-		}		
 	}
 	return 0;
 }
@@ -233,8 +243,8 @@ try
 
 	if (pCallback.Len() > VFP2C_MAX_CALLBACKFUNCTION)
 	{
-		SaveCustomError("UrlDownloadToFileEx", "Callback function length is greater than maximum length of 1024.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("UrlDownloadToFileEx", "Callback function length is greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	if (!bAsync)
@@ -242,7 +252,7 @@ try
 		HRESULT hr;
 		UrlDownload pStatus;
 		pStatus.SetCallBack(pCallback);
-		hr = URLDownloadToFile(0,pUrl,pFile,0,&pStatus);
+		hr = URLDownloadToFile(0, pUrl.Ptr<LPCSTR>(), pFile.Ptr<LPCSTR>(), 0, &pStatus);
 
 		if (FAILED(hr) && hr != E_ABORT)
 			SaveWin32Error("UrlDownloadToFile", hr);			
@@ -251,11 +261,11 @@ try
 	}
 	else
 	{
-		pDownload = new UrlDownloadThread(goUrlThreads);
+		pDownload = new(std::nothrow) UrlDownloadThread(goUrlThreads);
 		if (!pDownload)
 			throw E_INSUFMEMORY;
 
-		pDownload->SetParams(pUrl,pFile,pCallback);
+		pDownload->SetParams(pUrl.Ptr<char*>(), pFile.Ptr<char*>(), pCallback);
 		pDownload->StartThread();
 
 		Return(pDownload);

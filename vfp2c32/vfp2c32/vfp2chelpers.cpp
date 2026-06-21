@@ -5,7 +5,7 @@
 #include "vfp2chelpers.h"
 
 WindowsVersion COs::m_Version;
-OSVERSIONINFOEX COs::m_osver = {0};
+OSVERSIONINFOEX COs::m_osver = {0, 0};
 
 void COs::Init()
 {
@@ -54,9 +54,15 @@ void COs::Init()
 							break;
 						case 90:
 							m_Version = WindowsMillennium;
-							break;       
+							break;
+						default:
+							m_Version = Windows;
+							break;
 					}
 				}
+				default:
+					m_Version = Windows;
+					break;
 			}
 		}
 		else if (m_osver.dwPlatformId == VER_PLATFORM_WIN32_NT)
@@ -75,6 +81,8 @@ void COs::Init()
 							break;
 						case 3:
 							m_Version = WindowsNT40Server;
+							break;
+						default:
 							break;
 					}
 					break;
@@ -95,6 +103,8 @@ void COs::Init()
 								m_Version = WindowsXPProfessionalx64;
 							else
 								m_Version = GetSystemMetrics(89) == 0 ? WindowsServer2003 : WindowsServer2003R2;
+							break;
+						default:
 							break;
 					}
 					break;
@@ -138,7 +148,7 @@ void COs::Init()
 
 CStr::CStr(unsigned int nSize)
 {
-	m_String = new char[nSize];
+	m_String = new(std::nothrow) char[nSize];
 	if (m_String == 0)
 		throw E_INSUFMEMORY;
 	
@@ -159,7 +169,7 @@ void CStr::Size(unsigned int nSize)
 	{
 		if (nSize == 0)
 			nSize = 1;
-		m_String = new char[nSize];
+		m_String = new(std::nothrow) char[nSize];
 		if (m_String == 0)
 			throw E_INSUFMEMORY;
 		*m_String = '\0';
@@ -169,7 +179,7 @@ void CStr::Size(unsigned int nSize)
 	else if (nSize > m_Size)
 	{
 		char *pTmp;
-		pTmp =  new char[nSize];
+		pTmp =  new(std::nothrow) char[nSize];
 		if (pTmp == 0)
 			throw E_INSUFMEMORY;
 
@@ -230,13 +240,13 @@ CStr& CStr::AddLastPath(const CStringView pPath)
 	if (!pPath)
 		return *this;
 
-	int nStrLen = pPath.Len + 1;
+	int nStrLen = (int)pPath.Len + 1;
 	const char *pLastBS = strrchr(pPath.Data,'\\');
 	AddBs();
 
 	if (pLastBS)
 	{
-		int nPathLen = nStrLen - (++pLastBS - pPath.Data);
+		int nPathLen = nStrLen - (int)(++pLastBS - pPath.Data);
 		Size(m_Length + nPathLen);
 		memcpy(&m_String[m_Length], pLastBS, nPathLen);
 		m_Length += nPathLen - 1;
@@ -259,7 +269,7 @@ CStr& CStr::Justpath()
 bool CStr::IsWildcardPath() const
 {
 	assert(m_String);
-	return strchr(m_String,'*') > 0 || strchr(m_String,'?') > 0;
+	return strchr(m_String,'*') > (char*)0 || strchr(m_String,'?') > (char*)0;
 }
 
 CStr& CStr::PrependIfNotPresent(const CStringView pString)
@@ -280,7 +290,7 @@ CStr& CStr::PrependIfNotPresent(const CStringView pString)
 char* CStr::Strdup() const
 {
 	assert(m_String);
-	char *pString = (char*)new char[m_Length+1];
+	char *pString = new(std::nothrow) char[m_Length+1];
 	if (pString)
 		memcpy(pString, m_String, m_Length+1);
     return pString;
@@ -351,7 +361,8 @@ unsigned int CStr::Format(const char *lpFormat,...)
                   
     lpFormat++; 
 
-	if (nUseLength = IsDigit(*lpFormat))
+	nUseLength = IsDigit(*lpFormat);
+	if (nUseLength)
 		nPrecision = skip_atoi(&lpFormat);
 	else
 		nPrecision = 6;
@@ -415,7 +426,7 @@ unsigned int CStr::Format(const char *lpFormat,...)
 			nPrecision = va_arg(lpArgs,int);
 			if (nPrecision > 0)
 			{
-				nChars = WideCharToMultiByte(VFP2CTls::Tls().ConvCP, 0, lpWStringParm, nPrecision, lpString, (m_Size - (lpString - m_String)), 0, 0);
+				nChars = WideCharToMultiByte(VFP2CTls::Tls().ConvCP, 0, lpWStringParm, nPrecision, lpString, (int)(m_Size - (lpString - m_String)), 0, 0);
 				lpString += nChars;
 			}
 			continue;
@@ -440,6 +451,8 @@ unsigned int CStr::Format(const char *lpFormat,...)
 
 CStr& CStr::operator=(const CStr &pString)
 {
+	if (pString == this)
+		return *this;
 	unsigned int nSize = pString.Size();
 	Size(nSize);
 	m_Length = pString.Len();
@@ -488,7 +501,7 @@ bool CStr::operator==(const CStringView pString) const
 
 CBuffer::CBuffer(unsigned int nSize)
 {
-	m_Pointer = new char[nSize];
+	m_Pointer = new(std::nothrow) char[nSize];
 	if (m_Pointer == 0)
 		throw E_INSUFMEMORY;
 	m_Size = nSize;
@@ -505,7 +518,7 @@ void CBuffer::Size(unsigned int nSize)
 	if (m_Pointer != 0)
 		delete[] m_Pointer;
 
-	m_Pointer = new char[nSize];
+	m_Pointer = new(std::nothrow) char[nSize];
 	if (m_Pointer == 0)
 		throw E_INSUFMEMORY;
     m_Size = nSize;
@@ -599,7 +612,8 @@ bool RegistryKey::Delete(HKEY hKey, LPCSTR lpKeyName, bool bShellVersion)
 
 	if (!bShellVersion)
 	{
-		if ((nApiRet = RegDeleteKey(hKey,lpKeyName)) != ERROR_SUCCESS)
+		nApiRet = RegDeleteKey(hKey, lpKeyName);
+		if (nApiRet != ERROR_SUCCESS)
 		{
 			SaveWin32Error("RegDeleteKey", nApiRet);
 			return false;
@@ -607,7 +621,8 @@ bool RegistryKey::Delete(HKEY hKey, LPCSTR lpKeyName, bool bShellVersion)
 	}
 	else
 	{
-		if ((nApiRet = SHDeleteKey(hKey,lpKeyName)) != ERROR_SUCCESS)
+		nApiRet = SHDeleteKey(hKey, lpKeyName);
+		if (nApiRet != ERROR_SUCCESS)
 		{
 			SaveWin32Error("SHDeleteKey", nApiRet);
 			return false;
@@ -726,7 +741,7 @@ DWORD RegistryKey::QueryValueInfo(LPSTR lpValue, DWORD &lpType)
 	return dwLen;
 }
 
-void RegistryKey::QueryValue(LPSTR lpValue, LPBYTE lpData, LPDWORD lpDataLen, LPDWORD lpType)
+void RegistryKey::QueryValue(LPCSTR lpValue, LPBYTE lpData, LPDWORD lpDataLen, LPDWORD lpType)
 {
 	LONG nApiRet;
 	DWORD dwType;

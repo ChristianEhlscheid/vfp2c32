@@ -9,9 +9,9 @@ const int HEAP_INITIAL_SIZE	= 1024 * 1024;	// 1 MB
 // debugging macros and types
 #ifdef _DEBUG
 
-#define ADDDEBUGALLOC(pPointer,nSize) AddDebugAlloc((void*)pPointer,nSize)
-#define REMOVEDEBUGALLOC(pPointer) RemoveDebugAlloc((void*)pPointer)
-#define REPLACEDEBUGALLOC(pOrig,pNew,nSize) ReplaceDebugAlloc((void*)pOrig,(void*)pNew,nSize)
+#define ADDDEBUGALLOC(pPointer,nSize) AddDebugAlloc((void*)(pPointer),(nSize))
+#define REMOVEDEBUGALLOC(pPointer) RemoveDebugAlloc((void*)(pPointer))
+#define REPLACEDEBUGALLOC(pOrig,pNew,nSize) ReplaceDebugAlloc((void*)(pOrig),(void*)(pNew),(nSize))
 
 #else
 

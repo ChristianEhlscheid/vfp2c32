@@ -7,16 +7,13 @@
 
 #define SL_RESTART_SCAN 0x1
 #define STATUS_SUCCESS 0x0
-
-#define ERRORSTATE_WIN32				0x01
-#define ERRORSTATE_VFP					0x02
-#define ERRORSTATE_POSTCOMPLETION		0x04
+#define STATUS_OBJECT_PATH_INVALID 0xC0000039 
 
 typedef enum _FILE_INFORMATION_CLASSEX {
 	FileDirectoryInformationEx = 1,
 	FileFullDirectoryInformationEx = 2,
-	FileBothDirectoryInformationEx = 3,
-	FileReparsePointInformationEx = 33
+	FileBothDirectoryInformationEx = 3
+	// FileReparsePointInformationEx = 33
 } FILE_INFORMATION_CLASSEX;
 
 /*
@@ -50,55 +47,63 @@ typedef enum _FILE_INFO_BY_HANDLE_CLASS {
 } FILE_INFO_BY_HANDLE_CLASS, * PFILE_INFO_BY_HANDLE_CLASS;
 */
 
+typedef struct _RTL_BUFFER
+{
+	PUCHAR Buffer;
+	PUCHAR StaticBuffer;
+	SIZE_T Size;
+	SIZE_T StaticSize;
+	SIZE_T ReservedForAllocatedSize;
+	PVOID ReservedForIMalloc;
+} RTL_BUFFER, * PRTL_BUFFER;
+
+typedef struct _RTL_UNICODE_STRING_BUFFER
+{
+	UNICODE_STRING String;
+	RTL_BUFFER ByteBuffer;
+	UCHAR MinimumStaticBufferForTerminalNul[sizeof(WCHAR)];
+} RTL_UNICODE_STRING_BUFFER, * PRTL_UNICODE_STRING_BUFFER;
+
+typedef	struct	_RTLP_CURDIR_REF
+{
+	LONG	RefCount;
+	HANDLE	Handle;
+} RTLP_CURDIR_REF, * LPRTLP_CURDIR_REF, * PRTLP_CURDIR_REF;
+
+typedef	struct	_RTL_RELATIVE_NAME_U
+{
+	UNICODE_STRING	RelativeName;
+	HANDLE		ContainingDirectory;
+	RTLP_CURDIR_REF* CurDirRef;
+} RTL_RELATIVE_NAME_U, * LPRTL_RELATIVE_NAME_U, * PRTL_RELATIVE_NAME_U;
+
 typedef NTSTATUS(_stdcall* PNTQUERYDIRECTORYFILE)(HANDLE FileHandle, HANDLE Event, PVOID ApcRoutine, PVOID ApcContext, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
 	ULONG Length, DWORD FileInformationClass, BOOLEAN ReturnSingleEntry, PUNICODE_STRING FileName, BOOLEAN RestartScan); // NtQueryDirectoryFile
 
 typedef NTSTATUS(_stdcall* PNTQUERYDIRECTORYFILEEX)(HANDLE FileHandle, HANDLE Event, PVOID ApcRoutine, PVOID ApcContext, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
 	ULONG Length, DWORD FileInformationClass, ULONG QueryFlags, PUNICODE_STRING FileName); // NtQueryDirectoryFileEx
 
+typedef NTSTATUS(_stdcall* PNTCLOSE)(HANDLE FileHandle);
+typedef NTSTATUS(_stdcall* PNTOPENFILE)(PHANDLE FileHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, ULONG ShareAccess, ULONG OpenOptions);
+
+typedef BOOLEAN (_stdcall* PRTLDOSPATHNAMETONTPATHNAME_U)(PCWSTR DosName, PUNICODE_STRING NtName, PCWSTR *PartName, PRTL_RELATIVE_NAME_U RelativeName);
+typedef NTSTATUS(_stdcall* PRTLDOSPATHNAMETONTPATHNAME_U_WITHSTATUS)(PCWSTR DosFileName, PUNICODE_STRING NtFileName, PWSTR* FilePart, PVOID Reserved);
+typedef NTSTATUS(_stdcall* PRTLDOSLONGPATHNAMETONTPATHNAME_U_WITHSTATUS)(LPCWSTR DosName, UNICODE_STRING* NtName, LPCWSTR* PartName, RTL_RELATIVE_NAME_U* RelativeName);
+
 typedef void(_stdcall* PRTLINITUNICODESTRING)(PUNICODE_STRING DestinationString, PCWSTR SourceString);
+typedef void(_stdcall* PRTLFREEUNICODESTRING)(PUNICODE_STRING String);
 typedef ULONG(_stdcall* PRTLNTSTATUSTODOSERROR)(LONG status);
 
 typedef BOOL(_stdcall* PGETVOLUMEPATHNAMESFORVOLUMENAME)(LPCTSTR, LPTSTR, DWORD, PDWORD); // GetVolumePathNamesForVolumeName
+
 // Wow64DisableWow64FsRedirection & Wow64RevertWow64FsRedirection
 typedef BOOL(_stdcall* PWOW64FSREDIRECTION)(PVOID* OldValue);
 typedef BOOL(_stdcall* PGETFILEINFORMATIONBYHANDLEEX)(HANDLE hFile, int FileInformationClass, LPVOID lpFileInformation, DWORD dwBufferSize);
 
-/*
-typedef PTP_POOL(_stdcall* PCREATETHREADPOOL)(PVOID reserved);
-typedef VOID(_stdcall* PCLOSETHREADPOOL)(PTP_POOL ptpp);
-typedef VOID(_stdcall* PSETTHREADPOOLTHREADMAXIMUM)(PTP_POOL ptpp,DWORD cthrdMost);
-typedef BOOL(_stdcall* PSETTHREADPOOLTHREADMINIMUM)(PTP_POOL ptpp, DWORD cthrdMic);
-
-typedef VOID(_stdcall* PINITIALIZETHREADPOOLENVIRONMENT)(PTP_CALLBACK_ENVIRON pcbe);
-typedef VOID(_stdcall* PDESTROYTHREADPOOLENVIRONMENT)(PTP_CALLBACK_ENVIRON pcbe);
-
-typedef VOID(_stdcall* PSETTHREADPOOLCALLBACKCLEANUPGROUP)(PTP_CALLBACK_ENVIRON pcbe, PTP_CLEANUP_GROUP ptpcg, PTP_CLEANUP_GROUP_CANCEL_CALLBACK pfng);
-typedef VOID(_stdcall* PSETTHREADPOOLCALLBACKLIBRARY)(PTP_CALLBACK_ENVIRON pcbe, PVOID mod);
-typedef VOID(_stdcall* PSETTHREADPOOLCALLBACKPOOL)(PTP_CALLBACK_ENVIRON pcbe, PTP_POOL ptpp);
-typedef VOID(_stdcall* PSETTHREADPOOLCALLBACKPRIORITY)(PTP_CALLBACK_ENVIRON pcbe, TP_CALLBACK_PRIORITY Priority);
-typedef VOID(_stdcall* PSETTHREADPOOLCALLBACKRUNSLONG)(PTP_CALLBACK_ENVIRON pcbe);
-
-typedef PTP_CLEANUP_GROUP(_stdcall* PCREATETHREADPOOLCLEANUPGROUP)();
-typedef VOID(_stdcall* PCLOSETHREADPOOLCLEANUPGROUP)(PTP_CLEANUP_GROUP ptpcg);
-typedef VOID(_stdcall* PCLOSETHREADPOOLCLEANUPGROUPMEMBERS)(PTP_CLEANUP_GROUP ptpcg, BOOL fCancelPendingCallbacks, PVOID pvCleanupContext);
-
-typedef PTP_IO(_stdcall* PCREATETHREADPOOLIO)(HANDLE fl, PTP_WIN32_IO_CALLBACK pfnio, PVOID pv, PTP_CALLBACK_ENVIRON  pcbe);
-typedef VOID(_stdcall* PSTARTTHREADPOOLIO)(PTP_IO pio);
-typedef VOID(_stdcall* PCANCELTHREADPOOLIO)(PTP_IO pio);
-typedef VOID(_stdcall* PCLOSETHREADPOOLIO)(PTP_IO pio);
-typedef VOID(_stdcall* PWAITFORTHREADPOOLIOCALLBACKS)(PTP_IO pio, BOOL fCancelPendingCallbacks);
-
-typedef PTP_WORK(_stdcall* PCREATETHREADPOOLWORK)(PTP_WORK_CALLBACK pfnwk, PVOID pv, PTP_CALLBACK_ENVIRON pcbe);
-typedef VOID(_stdcall* PCLOSETHREADPOOLWORK)(PTP_WORK pwk);
-typedef VOID(_stdcall* PSUBMITTHREADPOOLWORK)(PTP_WORK pwk);
-typedef BOOL(_stdcall* PTRYSUBMITTHREADPOOLCALLBACK)(PTP_SIMPLE_CALLBACK pfns, PVOID pv, PTP_CALLBACK_ENVIRON pcbe);
-typedef VOID(_stdcall* PWAITFORTHREADPOOLWORKCALLBACKS)(PTP_WORK pwk, BOOL fCancelPendingCallbacks);
-*/
-
-// See the handy table linked on the page below to learn where these values comes from.
-const NTSTATUS STATUS_NO_MORE_FILES = 0x80000006;
-const NTSTATUS STATUS_NO_SUCH_FILE = 0xC000000F;
+const NTSTATUS STATUS_NO_MORE_FILES		= (NTSTATUS)0x80000006;
+const NTSTATUS STATUS_NO_SUCH_FILE		= (NTSTATUS)0xC000000F;
+const NTSTATUS STATUS_ACCESS_DENIED		= (NTSTATUS)0xC0000022;
+const NTSTATUS STATUS_SHARING_VIOLATION	= (NTSTATUS)0xC0000043;
 
 // AdirEx flags
 const int ADIREX_DEST_ARRAY				= 0x01;
@@ -119,7 +124,7 @@ const int ADIREX_PARENTID				= 0x4000;
 const int ADIREX_JUSTFNAME				= 0x8000;
 const int ADIREX_PARENT_JUSTFNAME		= 0x10000;
 const int ADIREX_PARENT_FULLPATH		= 0x20000;
-const int ADIREX_FILTER_MATCH			= 0x80000000;
+const int ADIREX_FILTER_MATCH			= (int)0x80000000;
 
 // not defined in the old VS 6
 #if !defined(FIND_FIRST_EX_LARGE_FETCH)
@@ -155,6 +160,8 @@ const int VFP2C_FILE_LINE_BUFFER	= 32;
 
 #define FILE_UNICODE_EXTENSION	"\\\\?\\"
 #define LFILE_UNICODE_EXTENSION	L"\\\\?\\"
+#define LDOSFILE_UNICODE_EXTENSION	L"\\??\\"
+
 
 // additional file attribute to filter "." & ".." directory's
 const unsigned int FILE_ATTRIBUTE_FAKEDIRECTORY	= 0x80000000;
@@ -212,10 +219,12 @@ typedef struct _FILE_REPARSE_POINT_INFORMATION
 	DWORD Tag;
 } FILE_REPARSE_POINT_INFORMATION;
 
+#ifndef __clang__
 typedef struct _FILE_ID_INFO {
 	ULONGLONG   VolumeSerialNumber;
 	BYTE FileId[16];
 } FILE_ID_INFO, * PFILE_ID_INFO;
+#endif
 
 typedef struct _PathIdentifier
 {
@@ -243,25 +252,19 @@ typedef struct _PathIdentifier
 typedef struct _FileSearchEntry
 {
 	DWORD		Attributes;
-	DWORD		RecursionLevel;
-	DWORD		DirectoryId;
 	CStringView Path;
 
-	unsigned int BlockSize()
+	unsigned int BlockSize() const
 	{
-		return sizeof(Attributes) + sizeof(RecursionLevel) + sizeof(DirectoryId) + sizeof(Path) + Path.DataSize();
+		return sizeof(Attributes) + sizeof(Path) + Path.DataSize();
 	}
 
 	void ToBlock(char* pAddress)
 	{
 		char* pStruct = pAddress;
 		*reinterpret_cast<DWORD*>(pAddress) = Attributes;
-		pAddress = pStruct + offsetof(FileSearchEntry, RecursionLevel);
-		*reinterpret_cast<DWORD*>(pAddress) = RecursionLevel;
-		pAddress = pStruct + offsetof(FileSearchEntry, DirectoryId);
-		*reinterpret_cast<DWORD*>(pAddress) = DirectoryId;
-		pAddress = pStruct + offsetof(FileSearchEntry, Path);
-		char* data = pStruct + sizeof(FileSearchEntry);
+		pAddress = pStruct + offsetof(_FileSearchEntry, Path);
+		char* data = pStruct + sizeof(_FileSearchEntry);
 		Path.ToBlock(pAddress, data);
 	}
 
@@ -269,11 +272,7 @@ typedef struct _FileSearchEntry
 	{
 		char* pStruct = pAddress;
 		Attributes = *reinterpret_cast<DWORD*>(pAddress);
-		pAddress = pStruct + offsetof(FileSearchEntry, RecursionLevel);
-		RecursionLevel = *reinterpret_cast<DWORD*>(pAddress);
-		pAddress = pStruct + offsetof(FileSearchEntry, DirectoryId);
-		DirectoryId = *reinterpret_cast<DWORD*>(pAddress);
-		pAddress = pStruct + offsetof(FileSearchEntry, Path);
+		pAddress = pStruct + offsetof(_FileSearchEntry, Path);
 		Path.FromBlock(pAddress);
 	}
 } FileSearchEntry;
@@ -294,8 +293,8 @@ enum DirectoryState : int
 typedef struct _PathSearchEntry
 {
 	DWORD		m_Attributes;
-	DWORD		m_PathId;
-	DWORD		m_ParentId;
+	int			m_PathId;
+	int			m_ParentId;
 	DirectoryState	m_State;
 	FILETIME	m_CreationTime;
 	FILETIME	m_LastAccessTime;
@@ -303,7 +302,7 @@ typedef struct _PathSearchEntry
 	CWideStringView m_Name;
 	CWideStringView m_DosName;
 
-	unsigned int BlockSize()
+	unsigned int BlockSize() const
 	{
 		return sizeof(m_Attributes) + sizeof(m_PathId) + sizeof(m_ParentId) + sizeof(m_State) + sizeof(m_CreationTime) + sizeof(m_LastAccessTime) + sizeof(m_LastWriteTime) + sizeof(m_Name) + sizeof(m_DosName) + m_Name.DataSize() + m_DosName.DataSize();
 	}
@@ -313,29 +312,29 @@ typedef struct _PathSearchEntry
 		char* pStruct = pAddress;
 		*reinterpret_cast<DWORD*>(pAddress) = m_Attributes;
 		
-		pAddress = pStruct + offsetof(PathSearchEntry, m_PathId);
-		*reinterpret_cast<DWORD*>(pAddress) = m_PathId;
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_PathId);
+		*reinterpret_cast<int*>(pAddress) = m_PathId;
 		
-		pAddress = pStruct + offsetof(PathSearchEntry, m_ParentId);
-		*reinterpret_cast<DWORD*>(pAddress) = m_ParentId;
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_ParentId);
+		*reinterpret_cast<int*>(pAddress) = m_ParentId;
 		
-		pAddress = pStruct + offsetof(PathSearchEntry, m_State);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_State);
 		*reinterpret_cast<DirectoryState*>(pAddress) = m_State;
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_CreationTime);;
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_CreationTime);;
 		*reinterpret_cast<FILETIME*>(pAddress) = m_CreationTime;
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_LastAccessTime);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_LastAccessTime);
 		*reinterpret_cast<FILETIME*>(pAddress) = m_LastAccessTime;
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_LastWriteTime);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_LastWriteTime);
 		*reinterpret_cast<FILETIME*>(pAddress) = m_LastWriteTime;
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_Name);
-		char* data = pStruct + sizeof(PathSearchEntry);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_Name);
+		char* data = pStruct + sizeof(_PathSearchEntry);
 		data = m_Name.ToBlock(pAddress, data);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_DosName);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_DosName);
 		m_DosName.ToBlock(pAddress, data);
 	}
 
@@ -344,28 +343,28 @@ typedef struct _PathSearchEntry
 		char* pStruct = pAddress;
 		m_Attributes = *reinterpret_cast<DWORD*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_PathId);
-		m_PathId = *reinterpret_cast<DWORD*>(pAddress);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_PathId);
+		m_PathId = *reinterpret_cast<int*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_ParentId);
-		m_ParentId = *reinterpret_cast<DWORD*>(pAddress);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_ParentId);
+		m_ParentId = *reinterpret_cast<int*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_State);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_State);
 		m_State = *reinterpret_cast<DirectoryState*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_CreationTime);;
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_CreationTime);;
 		m_CreationTime = *reinterpret_cast<FILETIME*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_LastAccessTime);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_LastAccessTime);
 		m_LastAccessTime = *reinterpret_cast<FILETIME*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_LastWriteTime);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_LastWriteTime);
 		m_LastWriteTime = *reinterpret_cast<FILETIME*>(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_Name);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_Name);
 		m_Name.FromBlock(pAddress);
 
-		pAddress = pStruct + offsetof(PathSearchEntry, m_DosName);
+		pAddress = pStruct + offsetof(_PathSearchEntry, m_DosName);
 		m_DosName.FromBlock(pAddress);
 	}
 
@@ -383,95 +382,6 @@ typedef struct _PathSearchEntry
 
 typedef CAlignedBuffer<8> CFileSearchBuffer;
 
-class CPathBuilder : public FoxString
-{
-public:
-	CPathBuilder() : FoxString(MAX_WIDE_PATH)
-	{
-		m_PathIndex = 0xFFFF;
-		m_PathIndices[0] = 0;
-	};
-
-	void AddPath(CWideStringView pPath)
-	{
-		unsigned short nCurrentLen = m_PathIndex != 0xFFFF ? m_PathIndices[m_PathIndex] : 0;
-		if (pPath.Len == 0 || pPath.Data == 0)
-		{
-			m_PathIndex++;
-			m_PathIndices[m_PathIndex] = nCurrentLen;
-			return;
-		}
-
-		int nLen = WideCharToMultiByte(CP_ACP, 0, pPath.Data, pPath.Len, &m_String[nCurrentLen], MAX_WIDE_PATH - m_Value.ev_length, 0, 0);
-		if (!nLen)
-		{
-			SaveWin32Error("MultiByteToWideChar", GetLastError());
-			throw E_APIERROR;
-		}
-		
-		if (pPath.Data[pPath.Len - 1] != '\\')
-		{
-			nLen += nCurrentLen + 1;
-			m_String[nLen - 1] = '\\';
-		}
-		else
-			nLen += nCurrentLen;
-
-		m_PathIndex++;
-		m_PathIndices[m_PathIndex] = nLen;
-		m_Value.ev_length = nLen;
-	}
-
-	void ReplacePath(CWideStringView pPath, unsigned short nIndex)
-	{
-		m_PathIndex = nIndex;
-		unsigned short nCurrentLen = m_PathIndices[nIndex - 1];
-		int nLen = WideCharToMultiByte(CP_ACP, 0, pPath.Data, pPath.Len, &m_String[nCurrentLen], MAX_WIDE_PATH - m_Value.ev_length, 0, 0);
-		if (!nLen)
-		{
-			SaveWin32Error("MultiByteToWideChar", GetLastError());
-			throw E_APIERROR;
-		}
-		nLen += nCurrentLen + 1;
-		m_PathIndices[nIndex] = nLen;
-		m_Value.ev_length = nLen;
-		m_String[nLen - 1] = '\\';
-	}
-
-	void ReplaceFilename(CWideStringView pFilename)
-	{
-		unsigned short nCurrentLen = m_PathIndex != 0xFFFF ? m_PathIndices[m_PathIndex] : 0;
-		int nLen = WideCharToMultiByte(CP_ACP, 0, pFilename.Data, pFilename.Len, &m_String[nCurrentLen], MAX_WIDE_PATH - m_Value.ev_length, 0, 0);
-		if (!nLen)
-		{
-			SaveWin32Error("MultiByteToWideChar", GetLastError());
-			throw E_APIERROR;
-		}
-		m_Value.ev_length = nLen + nCurrentLen;
-	}
-
-	CStringView GetPath(int nLevel, bool bIncludeBackSlash = false)
-	{
-		return CStringView(m_String, m_PathIndices[nLevel] - (bIncludeBackSlash ? 0 : 1));
-	}
-
-	void RemovePath()
-	{
-		m_PathIndex--;
-		m_Value.ev_length = m_PathIndices[m_PathIndex];
-	}
-
-	CPathBuilder& operator=(const CWideStringView& pString)
-	{
-		FoxString::operator = (pString);
-		return *this;
-	}
-
-private:
-	unsigned short m_PathIndex;
-	unsigned short m_PathIndices[512];
-};
-
 template<int nMaxDepth>
 class CWidePathBuilder : public CWideStrBuilder<MAX_WIDE_PATH>
 {
@@ -486,51 +396,39 @@ public:
 	{
 		assert(m_PathIndex == 0xFFFF || m_PathIndex < (nMaxDepth - 1));
 		unsigned short nCurrentLen = m_PathIndex != 0xFFFF ? m_PathIndices[m_PathIndex] : 0;
-		if (pPath.Len == 0 || pPath.Data == 0)
+		if (!pPath)
 		{
 			m_PathIndex++;
 			m_PathIndices[m_PathIndex] = nCurrentLen;
 			return;
 		}
 			
-		unsigned short nLen = pPath.Len + nCurrentLen;
-		if (pPath.Data[pPath.Len - 1] != L'\\')
-			nLen += 1;
-
+		unsigned short nLen = pPath.Len + nCurrentLen + (pPath.Data[pPath.Len - 1] != L'\\' ? 1 : 0);
 		m_PathIndex++;
-		m_PathIndices[m_PathIndex] = nLen;
+		m_Length = m_PathIndices[m_PathIndex] = nLen;
 		memcpy((void*)(&m_String[nCurrentLen]), pPath.Data, pPath.Len * sizeof(wchar_t));
-		m_Length = nLen;
 		if (m_String[nLen - 1] != L'\\')
-		{
 			m_String[nLen - 1] = L'\\';
-			m_String[nLen] = L'\0';
-		}
-		else
-		{
-			m_String[nLen] = L'\0';
-		}
+		m_String[nLen] = L'\0';
 	}
 
 	void ReplacePath(CWideStringView pPath, unsigned short nLevel)
 	{
 		m_PathIndex = nLevel;
 		unsigned short nCurrentLen = m_PathIndices[nLevel - 1];
-		unsigned short nLen = pPath.Len + nCurrentLen;
-		m_PathIndices[nLevel] = nLen + 1;
+		unsigned short nLen = pPath.Len + nCurrentLen + 1;
+		m_Length = m_PathIndices[nLevel] = nLen;
 		memcpy((void*)(&m_String[nCurrentLen]), pPath.Data, pPath.Len * sizeof(wchar_t));
-		m_Length = nLen + 1;
-		m_String[nLen] = L'\\';
-		m_String[nLen + 1] = L'\0';
+		m_String[nLen - 1] = L'\\';
+		m_String[nLen] = L'\0';
 	}
 
 	void ReplaceFilename(CWideStringView pFileName)
 	{
 		unsigned short nCurrentLen = m_PathIndex != 0xFFFF ? m_PathIndices[m_PathIndex] : 0;
-		unsigned short nLen = pFileName.Len + nCurrentLen;
+		m_Length = pFileName.Len + nCurrentLen;
 		memcpy((void*)(&m_String[nCurrentLen]), pFileName.Data, pFileName.Len * sizeof(wchar_t));
-		m_Length = nLen;
-		m_String[nLen] = L'\0';
+		m_String[m_Length] = L'\0';
 	}
 
 	CWideStringView GetPath(int nRoot, int nLevel, bool bIncludeBackSlash = false)
@@ -545,6 +443,29 @@ public:
 		nLevel = nLevel == -1 ? m_PathIndex : nLevel;
 		unsigned int offset = nRoot == 0 ? (countof(FILE_UNICODE_EXTENSION) - 1) : m_PathIndices[nRoot - 1];
 		return CWideStringView(m_String + offset, m_PathIndices[nLevel] - (bIncludeBackSlash ? 0 : 1) - offset);
+	}
+
+	NTSTATUS DosPathToNtPath()
+	{
+		UNICODE_STRING ntpath = {0,0,0};
+		NTSTATUS status;
+
+		if (fpRtlDosLongPathNameToNtPathName_U_WithStatus)
+			status = fpRtlDosLongPathNameToNtPathName_U_WithStatus(m_String, &ntpath, 0, 0);
+		else if (fpRtlDosPathNameToNtPathName_U_WithStatus)
+			status = fpRtlDosPathNameToNtPathName_U_WithStatus(m_String, &ntpath, 0, 0);
+		else
+			status = fpRtlDosPathNameToNtPathName_U(m_String, &ntpath, 0, 0) ? STATUS_SUCCESS : STATUS_OBJECT_PATH_INVALID;
+
+		if (status == STATUS_SUCCESS)
+		{
+			memcpy(m_String, ntpath.Buffer, ntpath.MaximumLength);
+			m_Length = m_PathIndices[m_PathIndex] = ntpath.Length / 2;
+			m_String[m_Length] = L'\0';
+			fpRtlFreeUnicodeString(&ntpath);
+		}
+
+		return status;
 	}
 
 	void RemovePath()
@@ -562,16 +483,40 @@ private:
 template<class Derived>
 class FileSearchData
 {
-public:
-	FileSearchData()
+private:
+	FileSearchData() : m_Flags(0), m_PathId(0), m_PathId_Filename(0), m_Path_Filename_Len(0), m_WildcardsCount(0), m_Wildcards(0)
 	{
-		m_PathId = 0;
-		m_PathId_Filename = 0;
-	};
-	~FileSearchData() {};
+		m_Filename.ExtendBuffer(MAX_WIDE_PATH);
+	}
+	friend Derived;
 
-	void SetWildCard(CWideStringView pWildCard) { m_Wildcard = pWildCard; }
-	CWideStringView GetWildCard() { return m_Wildcard; };
+public:
+	~FileSearchData()
+	{
+		if (m_Wildcards)
+			delete[] m_Wildcards;
+	};
+
+	void SetWildCard(CWideStringView pWildCard)
+	{ 
+		m_WildcardsCount = pWildCard.GetWordCount(L'|');
+		m_Wildcards = new(std::nothrow) CWideStrBuilder<MAX_PATH>[m_WildcardsCount];
+		if (m_Wildcards == 0)
+			throw E_INSUFMEMORY;
+		for (unsigned int xj = 0; xj < m_WildcardsCount; xj++)
+			m_Wildcards[xj] = pWildCard.GetWordNum(xj + 1, L'|');
+	}
+	
+	CWideStringView GetWildCard()
+	{
+		return m_Wildcards[0];
+	};
+
+	unsigned int GetWildCardCount()
+	{
+		return m_WildcardsCount;
+	}
+
 	inline void SetStoreFlags(DWORD nFlags) { m_Flags = nFlags;	};
 	inline int PathId() const { return m_PathId; }
 
@@ -590,6 +535,26 @@ public:
 		m_Path.AddPath(pEntry.Filename());
 	}
 
+	void AddPath(CWideStringView pPath)
+	{
+		m_Path.AddPath(pPath);
+	}
+
+	void DosToNtPrefix()
+	{
+		m_Path[1] = '\\';
+	}
+
+	void NtToDosPrefix()
+	{
+		m_Path[1] = '?';
+	}
+
+	void RemovePath()
+	{
+		m_Path.RemovePath();
+	}
+
 	void ReplacePath(PathSearchEntry& pEntry, unsigned short nLevel)
 	{
 		m_PathId = pEntry.PathId();
@@ -601,73 +566,58 @@ public:
 		return m_Path.StringView();
 	}
 
+	CWideStringView Path(int nLevel)
+	{
+		return m_Path.GetPath(nLevel, nLevel, false);
+	}
+
 	CStringView GetPath(int nRoot, int nLevel)
 	{
 		SyncPath(nRoot, nLevel);
 		return m_Filename;
 	}
 
-	bool GetPathIdentifier(PathIdentifier& pid)
+	NTSTATUS DosPathToNtPath()
+	{
+		return m_Path.DosPathToNtPath();
+	}
+
+	bool GetPathIdentifier(PathIdentifier& pid, HANDLE dirHandle)
 	{
 		BY_HANDLE_FILE_INFORMATION by_handle_info;
 		FILE_ID_INFO file_id_info;
 		DWORD nLastError;
-		CWideStringView dirname = static_cast<Derived*>(this)->JustFName();
-		bool retval = true;
-
-		m_Path.AddPath(dirname);
-		HANDLE dir = CreateFileW(m_Path, FILE_LIST_DIRECTORY, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
-		m_Path.RemovePath();
-
-		if (dir == INVALID_HANDLE_VALUE)
-		{
-			nLastError = GetLastError();
-			if (nLastError == ERROR_ACCESS_DENIED)
-				return false;
-
-			SaveWin32Error("CreateFile", nLastError);
-			throw E_APIERROR;
-		}
 
 		if (fpGetFileInformationByHandleEx)
 		{
-			if (fpGetFileInformationByHandleEx(dir, 18 /*FileIdInfo*/, &file_id_info, sizeof(file_id_info)))
+			if (fpGetFileInformationByHandleEx(dirHandle, 18 /*FileIdInfo*/, &file_id_info, sizeof(file_id_info)))
 			{
 				pid.dwVolumeSerialNumber = file_id_info.VolumeSerialNumber;
 				memcpy(&pid.FileId, &file_id_info.FileId, sizeof(pid.FileId));
-				goto close;
+				return true;
 			}
 
 			nLastError = GetLastError();
 			if (nLastError != ERROR_INVALID_PARAMETER)
 			{
 				SaveWin32Error("GetFileInformationByHandleEx", nLastError);
-				retval = false;
-				goto close;
+				throw E_APIERROR;
 			}
 		}
 
-		if (GetFileInformationByHandle(dir, &by_handle_info))
-		{
-			pid.dwVolumeSerialNumber = by_handle_info.dwVolumeSerialNumber;
-			pid.dwFileIndexLow = by_handle_info.nFileIndexLow;
-			pid.dwFileIndexHigh = by_handle_info.nFileIndexHigh;
-			pid.dwFileIdLow = 0;
-			pid.dwFileIdHigh = 0;
-		}
-		else
+		if (!GetFileInformationByHandle(dirHandle, &by_handle_info))
 		{
 			nLastError = GetLastError();
 			SaveWin32Error("GetFileInformationByHandle", nLastError);
-			retval = false;
+			throw E_APIERROR;
 		}
 
-	close:
-		CloseHandle(dir);
-		if (retval)
-			return retval;
-		else
-			throw E_APIERROR;
+		pid.dwVolumeSerialNumber = by_handle_info.dwVolumeSerialNumber;
+		pid.dwFileIndexLow = by_handle_info.nFileIndexLow;
+		pid.dwFileIndexHigh = by_handle_info.nFileIndexHigh;
+		pid.dwFileIdLow = 0;
+		pid.dwFileIdHigh = 0;
+		return true;
 	}
 
 	CStringView StringFileAttributes(DWORD dwAttributes)
@@ -720,7 +670,7 @@ protected:
 		}
 		else
 		{
-			// path hasn't changed, but reset to last known size (removes the filename part)
+			// path hasn't changed, reset to last known size (removes the filename part)
 			m_Filename.Len(m_Path_Filename_Len);
 		}
 	}
@@ -729,11 +679,12 @@ protected:
 	int							m_PathId;
 	int							m_PathId_Filename;
 	unsigned int				m_Path_Filename_Len;
-	CStrBuilder<16>				m_StringFileAttributes;
-	CWideStrBuilder<MAX_PATH>	m_Wildcard;
-	FoxString					m_JustFName;
+	unsigned int				m_WildcardsCount;
+	CWideStrBuilder<MAX_PATH>*	m_Wildcards;
 	FoxString					m_AlternateName;
 	FoxString					m_Filename;
+	FoxString					m_JustFName;
+	CStrBuilder<16>				m_StringFileAttributes;
 	CWidePathBuilder<4096>		m_Path;
 };
 
@@ -753,21 +704,24 @@ public:
 	FILETIME CreationTime() const;
 	FILETIME LastAccessTime() const;
 	FILETIME LastWriteTime() const;
-
 	bool MatchFile() const;
 	WIN32_FIND_DATAW* Ptr() { return &m_FileData; } const
 
 	CWideStringView JustFName() const
 	{
 		if (m_FileData.cFileName[0] != '\0')
-			return m_FileData.cFileName;
+			return CWideStringView(m_FileData.cFileName);
 		else
-			return m_FileData.cAlternateFileName;
+			return CWideStringView(m_FileData.cAlternateFileName);
 	}
 
 	CWideStringView SearchPattern(CWideStringView pPattern = 0)
 	{
-		m_Path.ReplaceFilename(pPattern.Data == 0 ? m_Wildcard : pPattern);
+		if (pPattern)
+			m_Path.ReplaceFilename(pPattern);
+		else
+			m_Path.ReplaceFilename(m_WildcardsCount == 1 ? m_Wildcards[0].StringView() : __wsv(L"*"));
+		
 		return m_Path.StringView();
 	}
 
@@ -826,13 +780,13 @@ public:
 	{
 		WCHAR* filename = FileNamePtr();
 		return CWideStringView(filename, m_FileInfo->FileNameLength / 2);
-	} 
+	}
 
 private:
 	inline WCHAR* FileNamePtr() const
 	{ 
 		return (WCHAR*)((unsigned char*)m_FileInfo + m_FileNameOffset);
-	} 
+	}
 
 	FILE_INFORMATION_CLASSEX		m_FileInfoClass;
 	PFILE_BOTH_DIR_INFORMATION		m_FileInfo;
@@ -946,8 +900,10 @@ public:
 template<class TBase, class TData>
 class FileSearch : public FileSearchBase<>
 {
-	friend class FileSearchBase<>;
-public:
+	friend FileSearchBase<>;
+	friend TBase;
+
+private:
 	FileSearch(CStringView pSearchPath = 0, DWORD nFileFilter = 0, DWORD nFilterMatch = 0, CStringView pDestination = 0,
 		DWORD nFlags = 0, int nMaxRecursion = 0, CStringView pFields = 0)
 	{
@@ -956,6 +912,7 @@ public:
 		m_FilterFakePath = (nFileFilter & FILE_ATTRIBUTE_FAKEDIRECTORY) == 0;
 		m_Flags = nFlags;
 		m_Storage = 0;
+		m_RecursionLevel = 0;
 		m_MaxRecursion = nMaxRecursion;
 		m_Path = pSearchPath;
 		m_WildCard = m_Path;
@@ -973,17 +930,17 @@ public:
 
 		if (nFlags & ADIREX_DEST_ARRAY)
 		{
-			m_Storage = new FileSearchStorageArray<TData>();
+			m_Storage = new(std::nothrow) FileSearchStorageArray<TData>();
 			m_Storage->Initialize(pDestination, m_Flags, pFields);
 		}
 		else if (nFlags & ADIREX_DEST_CURSOR)
 		{
-			m_Storage = new FileSearchStorageCursor<TData>();
+			m_Storage = new(std::nothrow) FileSearchStorageCursor<TData>();
 			m_Storage->Initialize(pDestination, m_Flags, pFields);
 		}
 		else if (nFlags & ADIREX_DEST_CALLBACK)
 		{
-			m_Storage = new FileSearchStorageCallback<TData>();
+			m_Storage = new(std::nothrow) FileSearchStorageCallback<TData>();
 			m_Storage->Initialize(pDestination, m_Flags, pFields);
 		}
 
@@ -1021,6 +978,7 @@ public:
 		m_ReparsePoints.AutoGrow(16);
 	}
 
+public:
 	~FileSearch()
 	{
 		if (m_Storage)
@@ -1044,7 +1002,6 @@ public:
 
 			do
 			{
-				// (m_FileSearchData.FileAttributes() & FILE_ATTRIBUTE_DIRECTORY)
 				if (!m_FilterFunc(m_FileSearchData.FileAttributes(), m_FilterAttributes, m_FilterMatch) || !m_FileSearchData.MatchFile())
 					continue;
 
@@ -1091,15 +1048,13 @@ public:
 
 			do
 			{
-				if (m_FilterFunc(m_FileSearchData.FileAttributes(), m_FilterAttributes, m_FilterMatch))
-				{
-					if ((m_Flags & ADIREX_RECURSIVE) && !m_FileSearchData.MatchFile())
-						continue;
+				if (!m_FilterFunc(m_FileSearchData.FileAttributes(), m_FilterAttributes, m_FilterMatch) || !m_FileSearchData.MatchFile())
+					continue;
 
-					m_FileCount++;
-					m_StrBuilder = m_FileSearchData.Filename();
-					(*pCallback)(m_StrBuilder, m_FileSearchData.FileAttributes(), pParam);
-				}
+				m_FileCount++;
+				m_StrBuilder = m_FileSearchData.Filename();
+				(*pCallback)(m_StrBuilder, m_FileSearchData.FileAttributes(), pParam);
+
 			} while ((static_cast<TBase&>(*this).*findnext)());
 		}
 		catch (int nErrorNo)
@@ -1129,7 +1084,6 @@ public:
 		CUnboundBlockStack<FileSearchEntry, 36864, 36864 / 64>  pDirectories;
 		CUnboundBlockStack<FileSearchEntry, 36864, 36864 / 64>  pFiles;
 		FileSearchEntry pSearchEntry;
-		pSearchEntry.RecursionLevel = 0;
 
 		try
 		{
@@ -1210,11 +1164,12 @@ protected:
 	{
 		PathSearchEntry pPathEntry;
 		PathIdentifier pid;
+		// filter out reparse points who occur more than once
 		if (m_FileSearchData.FileAttributes() & FILE_ATTRIBUTE_REPARSE_POINT)
 		{
-			if (m_FileSearchData.GetPathIdentifier(pid))
+			if (static_cast<TBase*>(this)->GetPathIdentifier(pid))
 			{
-				if (m_ReparsePoints.Find(pid) == -1)
+				if (m_ReparsePoints.Find(pid) == m_ReparsePoints.INVALID_INDEX)
 					m_ReparsePoints.Add(pid);
 				else
 					return;
@@ -1338,7 +1293,8 @@ protected:
 	bool FindNextRecurse();
 	bool FindFirstReverse();
 	bool FindNextReverse();
-	
+	bool GetPathIdentifier(PathIdentifier& pid);
+
 	static DWORD GetFindFirstFlags();
 	static void SetFindFirstFlags(DWORD dwFlags);
 	static DWORD FindFirstFlags;
@@ -1363,6 +1319,7 @@ protected:
 	bool FindNextRecurse();
 	bool FindFirstReverse();
 	bool FindNextReverse();
+	bool GetPathIdentifier(PathIdentifier& pid);
 	bool SkipFakeDirectories();
 
 	enum
@@ -1370,12 +1327,12 @@ protected:
 		NTQUERYDIRECTORY_BUFFERSIZE = 1024 * 64
 	};
 
-	HANDLE						m_DirectoryHandle;
 	NTSTATUS					m_IoResult;
 	IO_STATUS_BLOCK				m_IoStatusBlock;
 	FILE_INFORMATION_CLASSEX	m_FileInfoClass;
 	PFILE_BOTH_DIR_INFORMATION	m_FileInfo;
-	CAlignedBlob<NTQUERYDIRECTORY_BUFFERSIZE>		m_FileInfoBuffer;
+	HANDLE						m_PathHandles[2048];
+	CAlignedBlob<NTQUERYDIRECTORY_BUFFERSIZE>	m_FileInfoBuffer;
 };
 
 class SwitchErrorMode
@@ -1402,7 +1359,7 @@ inline SwitchErrorMode::~SwitchErrorMode()
 class VolumeSearch
 {
 public:
-	VolumeSearch() : m_Handle(INVALID_HANDLE_VALUE), m_Volume(VFP2C_MAX_VOLUME_NAME) { }
+	VolumeSearch() : m_Volume(VFP2C_MAX_VOLUME_NAME), m_Handle(INVALID_HANDLE_VALUE) { }
 	~VolumeSearch();
 
 	bool FindFirst();
@@ -1437,7 +1394,7 @@ typedef class FILEPROGRESSPARAM
 		FILEPROGRESSPARAM()
 		{
 			nStatus = 0;
-			vRetVal = 0;
+			vRetVal.SetNull();
 		}
 		void ConvertRetVal();
 
@@ -1457,7 +1414,7 @@ typedef struct _FILEATTRIBUTEINFO {
 class OpenfileCallback
 {
 public:
-	OpenfileCallback() { vRetVal = 0; }
+	OpenfileCallback() { nErrorNo = 0; vRetVal.SetNull(); }
 	int nErrorNo;
 	ValueEx vRetVal;
 	CFoxCallback pCallback;

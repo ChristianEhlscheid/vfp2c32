@@ -20,15 +20,15 @@ laServiceStatus[5] = 'CONTINUE PENDING'
 laServiceStatus[6] = 'PAUSE PENDING'
 laServiceStatus[7] = 'PAUSED'
 
-lnServiceHandle = OpenServiceEx('Dhcp')
-IF AServiceStatus('laStatus',lnServiceHandle)
-	? "Service is in : " + laServiceStatus[laStatus[3]] + " state"
-ELSE
-	AERROREX('laError')
-	DISPLAY MEMORY LIKE laError
-ENDIF
+*!*	lnServiceHandle = OpenServiceEx('Dhcp')
+*!*	IF AServiceStatus('laStatus',lnServiceHandle)
+*!*		? "Service is in : " + laServiceStatus[laStatus[3]] + " state"
+*!*	ELSE
+*!*		AERROREX('laError')
+*!*		DISPLAY MEMORY LIKE laError
+*!*	ENDIF
 
-CloseServiceHandleEx(lnServiceHandle)
+*!*	CloseServiceHandleEx(lnServiceHandle)
 
 lnCount = ASERVICES("laServs")
 IF lnCount > 0
@@ -67,13 +67,13 @@ lnCount = ASERVICES("laServs","","",SERVICE_INACTIVE)
 *!*	lnRet = STARTSERVICEEX('MSSQLSERVER',@laArgs)
 
 && starting a service with no parameters & wait up to 5 seconds for complete initialization
-*!*	lnRet = STARTSERVICEEX("MSSQLSERVER",NULL,5)
-*!*	DO CASE
-*!*		CASE lnRet = 1
-*!*			? "Service started & running"
-*!*		CASE lnRet = 0
-*!*			? "Service started & still initializing"
-*!*	ENDCASE
+lnRet = STARTSERVICEEX("MSSQL$SQLEXPRESS",NULL,5)
+DO CASE
+	CASE lnRet = 1
+		? "Service started & running"
+	CASE lnRet = 0
+		? "Service started & still initializing"
+ENDCASE
 
 && by using a timeout of 0 you can start a service and don't care about initialization state
 *!*	lnRet = STARTSERVICEEX("MSSQLSERVER",NULL,0)

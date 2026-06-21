@@ -1,28 +1,9 @@
-#define _WINSOCKAPI_ // we're using winsock2 .. so this is neccessary to exclude winsock.h 
-
 #include "vfp2c32.h"
 #include "vfp2cassembly.h"
-#include "vfp2ctls.h"
-#include "vfp2ccallback.h"
 #include "vfp2cdatastructure.h"
-#include "vfp2casmfuncs.h"
-#include "vfp2cutil.h"
+#include "vfp2ctls.h"
 
-const int AsmTypes[10][3] =  // size, alignment & sign of C types
-{
-	{ sizeof(char), __alignof(char), TRUE },
-	{ sizeof(unsigned char), __alignof(unsigned char), FALSE },
-	{ sizeof(short),__alignof(short), TRUE },
-	{ sizeof(unsigned short), __alignof(unsigned short), FALSE },
-	{ sizeof(int), __alignof(int), TRUE },
-	{ sizeof(unsigned int), __alignof(unsigned int), FALSE },
-	{ sizeof(__int64), __alignof(__int64), TRUE },
-	{ sizeof(unsigned __int64), __alignof(unsigned __int64), FALSE },
-	{ sizeof(float), __alignof(float), FALSE },
-	{ sizeof(double), __alignof(double), FALSE }
-};
-
-AsmByte* AsmInstruction::Write(AsmByte* pAddress, AsmByte* pDataSegmentAddress)
+AsmByte* AsmInstruction::Write(AsmByte* pAddress, AsmByte* pDataSegmentAddress) const
 {
 	AsmByte* pInstructionAddress = pAddress;
 	if (Prefix)
@@ -52,29 +33,32 @@ AsmByte* AsmInstruction::Write(AsmByte* pAddress, AsmByte* pDataSegmentAddress)
 	return pAddress;
 }
 
-
-AsmVariable::_AsmVariable(_AsmVariable& pVar)
+_AsmVariable AsmVariable::Init()
 {
-	Location = pVar.Location;
-	Type = pVar.Type;
-	Size = pVar.Size;
-	Alignment = pVar.Alignment;
-	Signed = pVar.Signed;
-	Fixed = pVar.Fixed;
-	Offset = pVar.Offset;
-	Register = pVar.Register;
+	AsmVariable var;
+	var.Location = Memory;
+	var.Type = T_BOOL;
+	var.Size = 4;
+	var.Alignment = 4;
+	var.Signed = false;
+	var.Fixed = false;
+	var.Offset = 0;
+	var.Register = EAX;
+	return var;
 }
 
-_AsmVariable::_AsmVariable(AsmRegister nReg, int nOffset, bool fixed)
+_AsmVariable AsmVariable::Var(AsmRegister nReg, int nOffset, bool fixed)
 {
-	Location = Memory;
-	Register = nReg;
-	Size = RegisterBitCount(nReg) / 8;
-	Alignment = Size;
-	Type = Size == 1 ? T_UCHAR : Size == 2 ? T_USHORT : Size == 4 ? T_UINT : Size == 8 ? T_UINT64 : T_STRUCT;
-	Signed = false;
-	Offset = nOffset;
-	Fixed = fixed;
+	AsmVariable var;
+	var.Location = Memory;
+	var.Register = nReg;
+	var.Size = RegisterBitCount(nReg) / 8;
+	var.Alignment = var.Size;
+	var.Type = var.Size == 1 ? T_UCHAR : var.Size == 2 ? T_USHORT : var.Size == 4 ? T_UINT : var.Size == 8 ? T_UINT64 : T_STRUCT;
+	var.Signed = false;
+	var.Offset = nOffset;
+	var.Fixed = fixed;
+	return var;
 }
 
 void* RuntimeAssembler::AllocateMemory(size_t nSize)
@@ -100,9 +84,9 @@ void RuntimeAssembler::FreeMemory(void* pAddress)
 }
 
 /* pointer to codesection */
-RuntimeAssembler::RuntimeAssembler(AsmCallingConvention nCallConv, bool bSpillParameters, bool bUseFramePointer)
+RuntimeAssembler::RuntimeAssembler(AsmCallingConvention nCallConv, bool bSpillParameters)
 {
-	Reset(nCallConv, bSpillParameters, bUseFramePointer);
+	Reset(nCallConv, bSpillParameters);
 }
 
 void RuntimeAssembler::WriteCode(void *lpCodeAddress)
@@ -149,6 +133,8 @@ void RuntimeAssembler::RegisterUnwindInfo(void* lpCodeAddress)
 	rf.EndAddress = pStartAddress + m_DataSegmentOffset - tls.JitBaseAddress;
 	rf.UnwindData = pStartAddress + m_UnwindInfoOffset - tls.JitBaseAddress;
 	tls.RuntimeFunctions.Add(rf);
+#else
+	unused(lpCodeAddress);
 #endif
 }
 
@@ -185,34 +171,34 @@ int RuntimeAssembler::CodeSize()
 	}
 	nCodeSize += (nCodeSize % 8); // align datasegment on 8 byte boundary
 	m_DataSegmentOffset = nCodeSize;
-	nCodeSize += m_DataSegment.GetCount() * 8;
+	nCodeSize += (int)m_DataSegment.GetCount() * 8;
 #if defined(_WIN64)
 	nCodeSize += (nCodeSize % 8); // align UNWIND_INFO on 8 byte boundary
 	m_UnwindInfoOffset = nCodeSize;
-	nCodeSize += m_UnwindData.GetCount() * 2;
+	nCodeSize += (int)m_UnwindData.GetCount() * 2;
 #endif
 	m_CachedCodeSize = nCodeSize;
 	return nCodeSize;
 }
 
-void RuntimeAssembler::Reset(AsmCallingConvention nCallConv, bool bSpillParameters, bool bUseFramePointer)
+void RuntimeAssembler::Reset(AsmCallingConvention nCallConv, bool bSpillParameters)
 {
 	m_CodeSegment.Reserve(256);
-	m_CodeSegment.SetIndex(-1);
+	m_CodeSegment.ResetIndex();
 	m_DataSegment.Reserve(32);
-	m_DataSegment.SetIndex(-1);
+	m_DataSegment.ResetIndex();
 	m_PrologSegment.Reserve(32);
-	m_PrologSegment.SetIndex(-1);
-	m_Jumps.Reserve(32);
-	m_Jumps.SetIndex(-1);
-	m_Labels.Reserve(32);
-	m_Labels.SetIndex(-1);
+	m_PrologSegment.ResetIndex();
+	m_Jumps.Reserve(16);
+	m_Jumps.ResetIndex();
+	m_Labels.Reserve(16);
+	m_Labels.ResetIndex();
 	m_Variables.Reserve(32);
-	m_Variables.SetIndex(-1);
+	m_Variables.ResetIndex();
 	m_Parameters.Reserve(32);
-	m_Parameters.SetIndex(-1);
-	m_CodeStack.Reserve(32);
-	m_CodeStack.SetIndex(-1);
+	m_Parameters.ResetIndex();
+	m_CodeStack.Reserve(64);
+	m_CodeStack.ResetIndex();
 	m_Code = &m_CodeSegment;
 	m_UsedRegisters = 0;
 	m_SavedRegisterSpace = 0;
@@ -220,11 +206,13 @@ void RuntimeAssembler::Reset(AsmCallingConvention nCallConv, bool bSpillParamete
 	m_CachedPrologSize = 0;
 	m_DataSegmentOffset = 0;
 	m_ParameterCount = 0;
+#if defined(_WIN64)
 	m_SubFunctionParameterSize = 32;
-	m_InPrologEpilog = false;
 	m_SpillParameters = bSpillParameters;
-	m_UseFramePointer = bUseFramePointer;
-	m_FrameOffset = bUseFramePointer ? 8 : 0;
+#else
+	unused(bSpillParameters);
+#endif
+	m_InPrologEpilog = false;
 	m_CallConv = nCallConv;
 	m_Finished = false;
 }
@@ -234,7 +222,9 @@ void RuntimeAssembler::MarkRegister(AsmRegister nReg)
 	if (m_InPrologEpilog)
 		return;
 	m_UsedRegisters |= RegisterMask(nReg);
+#if defined(_WIN64)
 	SpillRegister(nReg);
+#endif
 }
 
 bool RuntimeAssembler::IsRegisterMarked(AsmRegister nReg)
@@ -309,25 +299,25 @@ void RuntimeAssembler::Prolog()
 #else
 	if (m_SpillParameters)
 	{
-		int nCount = m_Parameters.GetCount();
+		unsigned int nCount = m_Parameters.GetCount();
 		if (nCount >= 1)
 		{
-			AsmVariable pVar(RSP, 8);
+			AsmVariable pVar = AsmVariable::Var(RSP, 8);
 			Mov(pVar, RCX);
 		}
 		if (nCount >= 2)
 		{
-			AsmVariable pVar(RSP, 16);
+			AsmVariable pVar = AsmVariable::Var(RSP, 16);
 			Mov(pVar, RDX);
 		}
 		if (nCount >= 3)
 		{
-			AsmVariable pVar(RSP, 24);
+			AsmVariable pVar = AsmVariable::Var(RSP, 24);
 			Mov(pVar, R8);
 		}
 		if (nCount >= 4)
 		{
-			AsmVariable pVar(RSP, 32);
+			AsmVariable pVar = AsmVariable::Var(RSP, 32);
 			Mov(pVar, R9);
 		}
 	}
@@ -335,38 +325,42 @@ void RuntimeAssembler::Prolog()
 	{
 		if (IsRegisterMarked(RCX))
 		{
-			AsmVariable pVar(RSP, 8);
+			AsmVariable pVar = AsmVariable::Var(RSP, 8);
 			Mov(pVar, RCX);
 		}
 		if (IsRegisterMarked(RDX))
 		{
-			AsmVariable pVar(RSP, 16);
+			AsmVariable pVar = AsmVariable::Var(RSP, 16);
 			Mov(pVar, RDX);
 		}
 		if (IsRegisterMarked(R8))
 		{
-			AsmVariable pVar(RSP, 24);
+			AsmVariable pVar = AsmVariable::Var(RSP, 24);
 			Mov(pVar, R8);
 		}
 		if (IsRegisterMarked(R9))
 		{
-			AsmVariable pVar(RSP, 32);
+			AsmVariable pVar = AsmVariable::Var(RSP, 32);
 			Mov(pVar, R9);
 		}
 	}
 
+	/*
 	if (m_UseFramePointer)
 	{
 		m_SavedRegisterSpace += 8;
 		Push(RBP);
 		Mov(RBP, RSP);
 	}
+	*/
 
 	// save all non volatile registers used in the function
+	/*
 	AsmRegister FrameRegister = m_UseFramePointer ? RBP : RSP;
+	*/
 	for (AsmRegister nReg = RAX; nReg <= R15; ++nReg)
 	{
-		if (nReg == RSP || nReg == FrameRegister)
+		if (nReg == RSP /* || nReg == FrameRegister*/)
 			continue;
 		if (IsRegisterMarked(nReg) && IsRegisterNonVolatile(nReg))
 		{
@@ -400,10 +394,10 @@ void RuntimeAssembler::Epilog()
 	Pop(EBP);
 	Ret(m_CallConv == cdeclaration ? 0 : ParameterSize());
 #else
-	Add(RSP, StackSize());
+	Add(RSP, StackSize()); 
 	for (AsmRegister nReg = R15; nReg >= RAX; --nReg)
 	{
-		if (nReg == RSP || (m_UseFramePointer && nReg == RBP))
+		if (nReg == RSP /* || (m_UseFramePointer && nReg == RBP) */)
 			continue;
 		if (IsRegisterMarked(nReg) && IsRegisterNonVolatile(nReg))
 		{
@@ -411,10 +405,12 @@ void RuntimeAssembler::Epilog()
 			Pop(nReg);
 		}
 	}
+	/*
 	if (m_UseFramePointer)
 	{
 		Pop(RBP);
 	}
+	*/
 	Ret(0);
 #endif
 	m_InPrologEpilog = false;
@@ -422,7 +418,7 @@ void RuntimeAssembler::Epilog()
 
 int RuntimeAssembler::ParameterSize()
 {
-	int nCount = m_Parameters.GetCount();
+	unsigned int nCount = m_Parameters.GetCount();
 #if !defined(_WIN64)
 	if (nCount > 0)
 	{
@@ -444,7 +440,7 @@ int RuntimeAssembler::ParameterSize()
 
 int RuntimeAssembler::StackSize()
 {
-	int nCount = m_Variables.GetCount();
+	unsigned int nCount = m_Variables.GetCount();
 #if !defined(_WIN64)
 	if (nCount > 0)
 	{
@@ -473,7 +469,7 @@ int RuntimeAssembler::StackSize()
 #if defined(_WIN64)
 void RuntimeAssembler::CreateUnwindInfo()
 {
-	m_UnwindData.SetIndex(-1);
+	m_UnwindData.ResetIndex();
 	CArray<unsigned short> pUnwindCodes;
 	pUnwindCodes.Reserve(m_PrologSegment.GetCount());
 	unsigned short nOpinfo;
@@ -481,11 +477,7 @@ void RuntimeAssembler::CreateUnwindInfo()
 	for (unsigned int xj = 0; xj < m_PrologSegment.GetCount(); xj++)
 	{
 		AsmInstruction& ins = m_PrologSegment[xj];
-		if (ins.Opcode == OP_MOV_R32_RM32 && ins.ModRM.Reg == RBP && ins.ModRM.Rm == RSP)
-		{
-			nInstructionOffset += ins.Size();
-		}
-		else if (ins.Opcode == OP_MOV_RM32_R32)
+		if (ins.Opcode == OP_MOV_RM32_R32 || (ins.Opcode == OP_MOV_R32_RM32 && ins.ModRM.Reg == RBP && ins.ModRM.Rm == RSP))
 		{
 			nInstructionOffset += ins.Size();
 		}
@@ -522,17 +514,18 @@ void RuntimeAssembler::CreateUnwindInfo()
 		}
 	}
 
-	unsigned short nVersion = 1, nFlags = 0, nFrameRegister = 0, nFrameOffset = 0;
+	unsigned short nVersion = 1, nFlags = 0, nFrameRegister = 0;
 	unsigned short sizeOfProlog = (unsigned short)nInstructionOffset;
 	unsigned short nCodeCount = (unsigned short)pUnwindCodes.GetCount();
+	/*
 	if (m_UseFramePointer)
 	{
 		nFrameRegister = Make_Reg_Code(RBP);
-		nFrameOffset = 0; // TODO
 	}
+	*/
 	m_UnwindData.Add(nVersion | (nFlags << 3) | (sizeOfProlog << 8));
 	m_UnwindData.Add(nCodeCount | (nFrameRegister << 8) | (nFrameRegister << 12));
-	for (int xj = pUnwindCodes.GetIndex(); xj >= 0; xj--)
+	for (unsigned int xj = pUnwindCodes.GetIndex(); xj != pUnwindCodes.INVALID_INDEX; xj--)
 	{
 		m_UnwindData.Add(pUnwindCodes[xj]);
 	}
@@ -597,8 +590,9 @@ bool RuntimeAssembler::IsRegisterNonVolatile(AsmRegister nReg)
 		case XMM14:
 		case XMM15:
 			return true;
+		default:
+			return false;
 	}
-	return false;
 }
 
 void RuntimeAssembler::Label(const char* pLabel)
@@ -610,19 +604,19 @@ void RuntimeAssembler::Label(const char* pLabel)
 	m_Labels.Add(label);
 }
 
-RuntimeAssembler& RuntimeAssembler::AddJump(AsmInstruction& ins, const char* pLabel)
+void RuntimeAssembler::AddJump(AsmInstruction& ins, const char* pLabel)
 {
 	AsmLabel label;
 	label.Name = pLabel;
 	label.InstructionIndex = m_Code->Add(ins);
 	label.LabelIndex = 0;
 	m_Jumps.Add(label);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Jump(const char *pLabel)
+void RuntimeAssembler::Jump(const char *pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_JMP_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
@@ -632,11 +626,6 @@ void RuntimeAssembler::Patch()
 {
 #if defined(_WIN64)
 	// patch all stack relative instructions
-	int nFrameOffset;
-	if (m_UseFramePointer)
-	{
-		nFrameOffset = m_FrameOffset + StackSize();
-	}
 	AsmByte nFramePtrCode = Make_Reg_Code(StackFrameRegister());
 	int nParameterAdjust = StackSize() + m_SavedRegisterSpace;
 	int nLocalVariableAdjust = ParameterSize();
@@ -688,14 +677,14 @@ void RuntimeAssembler::Patch()
 		nInstructionDistance = 0;
 		if (pJump.InstructionIndex < pLabel->InstructionIndex)
 		{
-			for (int xj = pJump.InstructionIndex + 1; xj <= pLabel->InstructionIndex; xj++)
+			for (unsigned int xj = pJump.InstructionIndex + 1; xj <= pLabel->InstructionIndex; xj++)
 			{
 				nInstructionDistance += m_CodeSegment[xj].Size();
 			}
 		}
 		else
 		{
-			for (int xj = pJump.InstructionIndex - 1; xj >= pLabel->InstructionIndex; xj--)
+			for (unsigned int xj = pJump.InstructionIndex - 1; xj >= pLabel->InstructionIndex; xj--)
 			{
 				nInstructionDistance += m_CodeSegment[xj].Size();
 			}
@@ -725,14 +714,14 @@ void RuntimeAssembler::Patch()
 		nInstructionDistance = 0;
 		if (pJump.InstructionIndex < pJump.LabelIndex)
 		{
-			for (int xj = pJump.InstructionIndex + 1; xj <= pJump.LabelIndex; xj++)
+			for (unsigned int xj = pJump.InstructionIndex + 1; xj <= pJump.LabelIndex; xj++)
 			{
 				nInstructionDistance += m_CodeSegment[xj].Size();
 			}
 		}
 		else
 		{
-			for (int xj = pJump.InstructionIndex - 1; xj >= pJump.LabelIndex; xj--)
+			for (unsigned int xj = pJump.InstructionIndex - 1; xj >= pJump.LabelIndex; xj--)
 			{
 				nInstructionDistance += m_CodeSegment[xj].Size();
 			}
@@ -762,25 +751,26 @@ void* RuntimeAssembler::LabelAddress(const char *pLabel, void* pCodeAddress)
 	LPAsmLabel lpLabel = LabelRef(pLabel);
 	assert(lpLabel);
 	int nLabelOffset = m_CachedPrologSize;
-	for (int xj = 0; xj <= lpLabel->InstructionIndex; xj++)
+	for (unsigned int xj = 0; xj <= lpLabel->InstructionIndex; xj++)
 	{
 		nLabelOffset += m_CodeSegment[xj].Size();
 	}
 	return ((AsmByte*)pCodeAddress) + nLabelOffset;
 }
 
-RuntimeAssembler& RuntimeAssembler::BreakPoint()
+void RuntimeAssembler::BreakPoint()
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_BREAKPOINT;
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* push a register onto the stack */
-RuntimeAssembler& RuntimeAssembler::Push(AsmRegister nReg)
+void RuntimeAssembler::Push(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = RegisterBitCount(nReg);
 #if !defined(_WIN64)
 	if (nBitCount == 8)
@@ -795,12 +785,12 @@ RuntimeAssembler& RuntimeAssembler::Push(AsmRegister nReg)
 	ins.Opcode = Make_Op(OP_PUSH_R32, nReg);
 #endif
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(AsmImmediate nValue)
+void RuntimeAssembler::Push(AsmImmediate nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 #if !defined(_WIN64)
 	if (nValue.ByteLen == 2)
 		ins.Prefix = PREFIX_ADR_SIZE;
@@ -837,13 +827,13 @@ RuntimeAssembler& RuntimeAssembler::Push(AsmImmediate nValue)
 		m_Code->Add(ins);
 	}
 #endif
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(const char* pValue)
+void RuntimeAssembler::Push(const char* pValue)
 {
 #if !defined(_WIN64)
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_PUSH_IMM32;
 	ins.Immediate.Immediate32((INT_PTR)pValue);
 	m_Code->Add(ins);
@@ -860,12 +850,12 @@ RuntimeAssembler& RuntimeAssembler::Push(const char* pValue)
 		Mov(RAX, im);
 	}
 #endif
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(int nValue)
+void RuntimeAssembler::Push(int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (In8BitRange(nValue))
 	{
 		ins.Opcode = OP_PUSH_IMM8;
@@ -877,12 +867,12 @@ RuntimeAssembler& RuntimeAssembler::Push(int nValue)
 		ins.Immediate.Immediate32(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(unsigned int nValue)
+void RuntimeAssembler::Push(unsigned int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (InU8BitRange(nValue))
 	{
 		ins.Opcode = OP_PUSH_IMM8;
@@ -894,15 +884,15 @@ RuntimeAssembler& RuntimeAssembler::Push(unsigned int nValue)
 		ins.Immediate.Immediate32(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(AsmVariable& pVar)
+void RuntimeAssembler::Push(AsmVariable& pVar)
 {
 	if (pVar.Location == Register)
 		return Push(pVar.Register);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Size);
 	if (nBitCount <= 16)
 	{
@@ -911,6 +901,14 @@ RuntimeAssembler& RuntimeAssembler::Push(AsmVariable& pVar)
 		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVar);
 		m_Code->Add(ins);
 	}
+#if defined(_WIN64)
+	else if (nBitCount >= 32 && pVar.Type != T_DOUBLE)
+	{
+		ins.Opcode = OP_PUSH_RM32;
+		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVar);
+		m_Code->Add(ins);
+	}
+#else
 	else if (nBitCount == 32)
 	{
 		ins.Opcode = OP_PUSH_RM32;
@@ -919,11 +917,9 @@ RuntimeAssembler& RuntimeAssembler::Push(AsmVariable& pVar)
 	}
 	else if (nBitCount == 64 && pVar.Type != T_DOUBLE)
 	{
-#if !defined(_WIN64)
 		// push upper 32 bit
 		ins.Opcode = OP_PUSH_RM32;
-		AsmVariable pVarOffset;
-		pVarOffset = AsmVariable::Var<unsigned int>(pVar, 4);
+		AsmVariable pVarOffset = AsmVariable::Var<unsigned int>(pVar, 4);
 		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVarOffset);
 		m_Code->Add(ins);
 
@@ -932,27 +928,23 @@ RuntimeAssembler& RuntimeAssembler::Push(AsmVariable& pVar)
 		pVarOffset = AsmVariable::Var<unsigned int>(pVar, 0);
 		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVarOffset);
 		m_Code->Add(ins);
-#else
-		ins.Opcode = OP_PUSH_RM32;
-		ModRm_Op_Var(ins, MODRM_OP_PUSH, pVar);
-		m_Code->Add(ins);
-#endif
 	}
-	return *this;
+#endif
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(float nValue)
+void RuntimeAssembler::Push(float nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_PUSH_IMM32;
 	ins.Immediate = AsmImmediate(nValue);
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Push(double nValue)
+void RuntimeAssembler::Push(double nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	size_t nIndex = Data(nValue);
 	ins.Opcode = OP_PUSH_IMM32;
 	ins.ModRM.Mod = ins.Displacement.DataDisplacement(nIndex);
@@ -962,13 +954,13 @@ RuntimeAssembler& RuntimeAssembler::Push(double nValue)
 	ins.ModRM.Rm = MODRM_RM_RIP_RELATIVE;
 #endif
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* pop a value from the stack into a register */
-RuntimeAssembler& RuntimeAssembler::Pop(AsmRegister nReg)
+void RuntimeAssembler::Pop(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = RegisterBitCount(nReg);
 	if (nBitCount >= 32)
 	{
@@ -982,14 +974,14 @@ RuntimeAssembler& RuntimeAssembler::Pop(AsmRegister nReg)
 		ins.Opcode = Make_Op(OP_POP_R32, nReg);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nReg, int nBytes)
+void RuntimeAssembler::Sub(AsmRegister nReg, int nBytes)
 {
 	if (nBytes == 0)
-		return *this;
+		return;
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	if (nBitCount == 64)
@@ -1074,21 +1066,21 @@ RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nReg, int nBytes)
 		ins.Immediate.Immediate8(nBytes);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nReg, unsigned int nBytes)
+void RuntimeAssembler::Sub(AsmRegister nReg, unsigned int nBytes)
 {
 	assert(In32BitRange(nBytes));
 	return Sub(nReg, static_cast<int>(nBytes));
 }
 
-RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nReg, __int64 nBytes)
+void RuntimeAssembler::Sub(AsmRegister nReg, __int64 nBytes)
 {
 	assert(RegisterBitCount(nReg) == 64);
 	if (nBytes == 0)
-		return *this;
+		return;
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	if (In8BitRange(nBytes))
 	{
@@ -1128,18 +1120,18 @@ RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nReg, __int64 nBytes)
 		ins.Immediate.Immediate64(nBytes);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nReg, unsigned __int64 nBytes)
+void RuntimeAssembler::Sub(AsmRegister nReg, unsigned __int64 nBytes)
 {
 	assert(In64BitRange(nBytes));
 	return Sub(nReg, static_cast<__int64>(nBytes));
 }
 
-RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Sub(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
 	if (nBitCount == 32)
@@ -1176,15 +1168,15 @@ RuntimeAssembler& RuntimeAssembler::Sub(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegDest;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Add ?! :) */
-RuntimeAssembler& RuntimeAssembler::Add(AsmRegister nReg, int nBytes)
+void RuntimeAssembler::Add(AsmRegister nReg, int nBytes)
 {
 	if (nBytes == 0)
-		return *this;
+		return;
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	if (nBitCount == 64)
@@ -1264,14 +1256,14 @@ RuntimeAssembler& RuntimeAssembler::Add(AsmRegister nReg, int nBytes)
 		ins.Immediate.Immediate8(nBytes);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Add(AsmRegister nReg, unsigned int nBytes)
+void RuntimeAssembler::Add(AsmRegister nReg, unsigned int nBytes)
 {
 	if (nBytes == 0)
-		return *this;
+		return;
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	if (nBitCount == 64)
@@ -1355,25 +1347,30 @@ RuntimeAssembler& RuntimeAssembler::Add(AsmRegister nReg, unsigned int nBytes)
 		ins.Immediate.Immediate8(nBytes);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Add(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Add(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
-	if (nBitCount == 32)
+#if defined(_WIN64)
+	if (nBitCount == 64)
 	{
-		ins.Prefix = Rex_Prefix_RB(nRegDest, nRegSource);
+		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
 		ins.Opcode = OP_ADD_R32_RM32;
 		ins.ModRM.Mod = MODRM_MOD_REGISTER;
 		ins.ModRM.Reg = nRegDest;
 		ins.ModRM.Rm = nRegSource;
 	}
-	else if (nBitCount == 64)
+	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
 	{
-		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
+		ins.Prefix = Rex_Prefix_RB(nRegDest, nRegSource);
 		ins.Opcode = OP_ADD_R32_RM32;
 		ins.ModRM.Mod = MODRM_MOD_REGISTER;
 		ins.ModRM.Reg = nRegDest;
@@ -1397,12 +1394,12 @@ RuntimeAssembler& RuntimeAssembler::Add(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Adcx(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Adcx(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
 	if (nBitCount == 32)
@@ -1426,13 +1423,13 @@ RuntimeAssembler& RuntimeAssembler::Adcx(AsmRegister nRegDest, AsmRegister nRegS
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Dec ?! :) decrement; someRegister--; */
-RuntimeAssembler& RuntimeAssembler::Dec(AsmRegister nReg)
+void RuntimeAssembler::Dec(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 #if !defined(_WIN64)
@@ -1491,12 +1488,12 @@ RuntimeAssembler& RuntimeAssembler::Dec(AsmRegister nReg)
 	}
 #endif
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Inc(AsmRegister nReg)
+void RuntimeAssembler::Inc(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 #if !defined(_WIN64)
@@ -1548,12 +1545,12 @@ RuntimeAssembler& RuntimeAssembler::Inc(AsmRegister nReg)
 #endif
 
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::And(AsmRegister nReg, int nValue)
+void RuntimeAssembler::And(AsmRegister nReg, int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	if (nBitCount == 64)
@@ -1642,14 +1639,15 @@ RuntimeAssembler& RuntimeAssembler::And(AsmRegister nReg, int nValue)
 		}
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::And(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::And(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
+#if defined(_WIN64)
 	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
@@ -1659,6 +1657,10 @@ RuntimeAssembler& RuntimeAssembler::And(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
 	{
 		ins.Prefix = Rex_Prefix_RB(nRegDest, nRegSource);
 		ins.Opcode = OP_AND_R32_RM32;
@@ -1684,17 +1686,16 @@ RuntimeAssembler& RuntimeAssembler::And(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-
-
-RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nReg, int nValue)
+void RuntimeAssembler::Or(AsmRegister nReg, int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
-	if (nBitCount == 64)
+#if defined(_WIN64)
+	if (nBitCount >= 32)
 	{
 		ins.Prefix = Rex_Prefix_R(nReg);
 		ins.Immediate.Immediate32(nValue);
@@ -1709,6 +1710,8 @@ RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nReg, int nValue)
 			ins.ModRM.Rm = nReg;
 		}
 	}
+#else
+	assert(nBitCount <= 32);
 	if (nBitCount == 32)
 	{
 		ins.Prefix = Rex_Prefix_R(nReg);
@@ -1724,6 +1727,7 @@ RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nReg, int nValue)
 			ins.ModRM.Rm = nReg;
 		}
 	}
+#endif
 	else if (nBitCount == 16)
 	{
 		ins.Prefix = PREFIX_OP_SIZE;
@@ -1756,12 +1760,12 @@ RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nReg, int nValue)
 		}
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nReg, __int64 nValue)
+void RuntimeAssembler::Or(AsmRegister nReg, __int64 nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	assert(RegisterBitCount(nReg) == 64);
 	MarkRegister(nReg);
 	ins.Prefix = Rex_Prefix_R(nReg);
@@ -1777,14 +1781,25 @@ RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nReg, __int64 nValue)
 		ins.ModRM.Rm = nReg;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Or(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
+#if defined(_WIN64)
+	if (nBitCount >= 32)
+	{
+		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
+		ins.Opcode = OP_OR_R32_RM32;
+		ins.ModRM.Mod = MODRM_MOD_REGISTER;
+		ins.ModRM.Reg = nRegDest;
+		ins.ModRM.Rm = nRegSource;
+	}
+#else
+	assert(nBitCount <= 32);
 	if (nBitCount == 32)
 	{
 		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
@@ -1793,14 +1808,7 @@ RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nRegDest, AsmRegister nRegSou
 		ins.ModRM.Reg = nRegDest;
 		ins.ModRM.Rm = nRegSource;
 	}
-	else if (nBitCount == 64)
-	{
-		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
-		ins.Opcode = OP_OR_R32_RM32;
-		ins.ModRM.Mod = MODRM_MOD_REGISTER;
-		ins.ModRM.Reg = nRegDest;
-		ins.ModRM.Rm = nRegSource;
-	}
+#endif
 	else if (nBitCount == 16)
 	{
 		ins.Prefix = PREFIX_OP_SIZE;
@@ -1819,15 +1827,16 @@ RuntimeAssembler& RuntimeAssembler::Or(AsmRegister nRegDest, AsmRegister nRegSou
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nReg, int nValue)
+void RuntimeAssembler::Xor(AsmRegister nReg, int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
-	if (nBitCount == 64)
+#if defined(_WIN64)
+	if (nBitCount >= 32)
 	{
 		ins.Prefix = Rex_Prefix_R(nReg);
 		ins.Immediate.Immediate32(nValue);
@@ -1843,7 +1852,9 @@ RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nReg, int nValue)
 			ins.ModRM.Rm = nReg;
 		}
 	}
-	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
 	{
 		ins.Prefix = Rex_Prefix_R(nReg);
 		ins.Immediate.Immediate32(nValue);
@@ -1859,6 +1870,7 @@ RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nReg, int nValue)
 			ins.ModRM.Rm = nReg;
 		}
 	}
+#endif
 	else if (nBitCount == 16)
 	{
 		ins.Prefix = PREFIX_OP_SIZE;
@@ -1894,14 +1906,15 @@ RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nReg, int nValue)
 		}
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Xor(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
+#if defined(_WIN64)
 	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
@@ -1911,6 +1924,10 @@ RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
 	{
 		ins.Prefix = Rex_Prefix_RB(nRegDest, nRegSource);
 		ins.Opcode = OP_XOR_R32_RM32;
@@ -1936,21 +1953,20 @@ RuntimeAssembler& RuntimeAssembler::Xor(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-
-RuntimeAssembler& RuntimeAssembler::Cdq()
+void RuntimeAssembler::Cdq()
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_CDQ;
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1959,25 +1975,24 @@ RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmRegister n
 	ins.ModRM.Reg = nRegDest;
 	ins.ModRM.Rm = nRegSource;
 	m_Code->Add(ins);
-	return *this;
-
 }
 
-RuntimeAssembler& RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmVariable pVar)
+void RuntimeAssembler::CvtSd2Si(AsmRegister nRegDest, AsmVariable pVar)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_CVTSD2SI;
 	ModRm_Reg_Var(ins, nRegDest, pVar);
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -1986,25 +2001,24 @@ RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmRegister 
 	ins.ModRM.Reg = nRegDest;
 	ins.ModRM.Rm = nRegSource;
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmVariable pVar)
+void RuntimeAssembler::CvttSd2Si(AsmRegister nRegDest, AsmVariable pVar)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Prefix = PREFIX_SSE_F2;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_CVTTSD2SI;
 	ModRm_Reg_Var(ins, nRegDest, pVar);
 	m_Code->Add(ins);
-	return *this;
 }
 
-
-RuntimeAssembler& RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Prefix = PREFIX_SSE_F3;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
@@ -2013,26 +2027,27 @@ RuntimeAssembler& RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmRegister n
 	ins.ModRM.Reg = nRegDest;
 	ins.ModRM.Rm = nRegSource;
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmVariable pVar)
+void RuntimeAssembler::CvtSi2Sd(AsmRegister nRegDest, AsmVariable pVar)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Prefix = PREFIX_SSE_F3;
 	ins.Prefix2 = Rex_Prefix_WR(nRegDest);
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_CVTSI2SD;
 	ModRm_Reg_Var(ins, nRegDest, pVar);
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Shift_Ex(AsmRegister nReg, int nBits, int nOpcode)
+void RuntimeAssembler::Shift_Ex(AsmRegister nReg, int nBits, int nOpcode)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
+#if defined(_WIN64)
 	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WB(nReg);
@@ -2053,6 +2068,10 @@ RuntimeAssembler& RuntimeAssembler::Shift_Ex(AsmRegister nReg, int nBits, int nO
 		}
 	}
 	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
 	{
 		ins.Prefix = Rex_Prefix_B(nReg);
 		if (nBits == 1)
@@ -2111,57 +2130,62 @@ RuntimeAssembler& RuntimeAssembler::Shift_Ex(AsmRegister nReg, int nBits, int nO
 		ins.Immediate.Immediate8(nBits);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Sal(AsmRegister nReg, int nBits)
+void RuntimeAssembler::Sal(AsmRegister nReg, int nBits)
 {
 	return Shift_Ex(nReg,nBits,MODRM_OP_SAL);
 }
 
-RuntimeAssembler& RuntimeAssembler::Sar(AsmRegister nReg, int nBits)
+void RuntimeAssembler::Sar(AsmRegister nReg, int nBits)
 {
 	return Shift_Ex(nReg,nBits,MODRM_OP_SAR);
 }
 
-RuntimeAssembler& RuntimeAssembler::Shl(AsmRegister nReg, int nBits)
+void RuntimeAssembler::Shl(AsmRegister nReg, int nBits)
 {
 	return Shift_Ex(nReg,nBits,MODRM_OP_SHL);
 }
 
-RuntimeAssembler& RuntimeAssembler::Shr(AsmRegister nReg, int nBits)
+void RuntimeAssembler::Shr(AsmRegister nReg, int nBits)
 {
 	return Shift_Ex(nReg,nBits,MODRM_OP_SHR);
 }
 
-RuntimeAssembler& RuntimeAssembler::Lea(AsmRegister nRegDest, AsmVariable& pSource)
+void RuntimeAssembler::Lea(AsmRegister nRegDest, AsmVariable& pSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegDest);
-	if (nBitCount == 32)
-	{
-		ins.Prefix = Rex_Prefix_R(nRegDest);
-		ins.Opcode = OP_LEA_R32_M;
-		ModRm_Reg_Var(ins, nRegDest, pSource);
-	}
-	else if (nBitCount == 64)
+#if defined(_WIN64)
+	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WR(nRegDest);
 		ins.Opcode = OP_LEA_R32_M;
 		ModRm_Reg_Var(ins, nRegDest, pSource);
 	}
+	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
+	{
+		ins.Prefix = Rex_Prefix_R(nRegDest);
+		ins.Opcode = OP_LEA_R32_M;
+		ModRm_Reg_Var(ins, nRegDest, pSource);
+	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Move declared Parameter/Local variable from stack into a register */
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, AsmVariable& pVar)
+void RuntimeAssembler::Mov(AsmRegister nReg, AsmVariable& pVar)
 {
 	if (pVar.Location == Register)
 		return Mov(nReg, pVar.Register);
 
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	int nTypeBitCount = TypeBitCount(pVar.Type);
@@ -2230,26 +2254,31 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, AsmVariable& pVar)
 		ModRm_Reg_Var(ins, nReg, pVar);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Move direct value into a register */
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, char nValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, char nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
-	if (nBitCount == 32)
-	{
-		ins.Prefix = Rex_Prefix_R(nReg);
-		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
-		ins.Immediate.Immediate32(nValue);
-	}
-	else if (nBitCount == 64)
+#if defined(_WIN64)
+	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WR(nReg);
 		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
 		ins.Immediate.Immediate64(nValue);
+	}
+	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
+	{
+		ins.Prefix = Rex_Prefix_R(nReg);
+		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
+		ins.Immediate.Immediate32(nValue);
 	}
 	else if (nBitCount == 16)
 	{
@@ -2265,27 +2294,21 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, char nValue)
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, char pValue)
+void RuntimeAssembler::Mov(AsmVariable& pVar, char pValue)
 {
 	if (pVar.Location == Register)
 		return Mov(pVar.Register, pValue);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Type);
-	if (nBitCount == 32)
+	if (nBitCount >= 32)
 	{
 #if defined(_WIN64)
 		ins.Prefix = PREFIX_OP_SIZE;
 #endif
-		ins.Opcode = OP_MOV_RM64_IMM32;
-		ModRm_Var(ins, pVar);
-		ins.Immediate.Immediate32(pValue);
-	}
-	else if (nBitCount == 64)
-	{
 		ins.Opcode = OP_MOV_RM64_IMM32;
 		ModRm_Var(ins, pVar);
 		ins.Immediate.Immediate32(pValue);
@@ -2304,26 +2327,31 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, char pValue)
 		ins.Immediate.Immediate8(pValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Move direct value into a register */
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, int nValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
-	if (nBitCount == 32)
-	{
-		ins.Prefix = Rex_Prefix_R(nReg);
-		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
-		ins.Immediate.Immediate32(nValue);
-	}
-	else if (nBitCount == 64)
+#if defined(_WIN64)
+	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WR(nReg);
 		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
 		ins.Immediate.Immediate64(nValue);
+	}
+	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
+	{
+		ins.Prefix = Rex_Prefix_R(nReg);
+		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
+		ins.Immediate.Immediate32(nValue);
 	}
 	else if (nBitCount == 16)
 	{
@@ -2339,23 +2367,17 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, int nValue)
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, int nValue)
+void RuntimeAssembler::Mov(AsmVariable& pVar, int nValue)
 {
 	if (pVar.Location == Register)
 		return Mov(pVar.Register, nValue);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Type);
-	if (nBitCount == 32)
-	{
-		ins.Opcode = OP_MOV_RM64_IMM32;
-		ModRm_Var(ins, pVar);
-		ins.Immediate.Immediate32(nValue);
-	}
-	else if (nBitCount == 64)
+	if (nBitCount >= 32)
 	{
 		ins.Opcode = OP_MOV_RM64_IMM32;
 		ModRm_Var(ins, pVar);
@@ -2375,15 +2397,26 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, int nValue)
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, unsigned int nValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, unsigned int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
+#if defined(_WIN64)
+	if (nBitCount == 64)
+	{
+		ins.Prefix = Rex_Prefix_WR(nReg);
+		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
+		ins.Immediate.Immediate64(nValue);
+	}
+	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
 	if (nBitCount == 32)
+#endif
 	{
 #if defined(_WIN64)
 		ins.Prefix = PREFIX_OP_SIZE;
@@ -2391,12 +2424,6 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, unsigned int nValue)
 #endif
 		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
 		ins.Immediate.Immediate32(nValue);
-	}
-	else if (nBitCount == 64)
-	{
-		ins.Prefix = Rex_Prefix_WR(nReg);
-		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
-		ins.Immediate.Immediate64(nValue);
 	}
 	else if (nBitCount == 16)
 	{
@@ -2412,30 +2439,25 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, unsigned int nValue)
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, unsigned int nValue)
-{
+void RuntimeAssembler::Mov(AsmVariable& pVar, unsigned int nValue)
+{ 
 	if (pVar.Location == Register)
 		return Mov(pVar.Register, nValue);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Type);
-	if (nBitCount == 32)
+	if (nBitCount >= 32)
 	{
 #if defined(_WIN64)
-		ins.Prefix = PREFIX_OP_SIZE;
+		if (nBitCount == 32)
+			ins.Prefix = PREFIX_OP_SIZE;
 #endif
 		ins.Opcode = OP_MOV_RM64_IMM32;
 		ModRm_Var(ins, pVar);
 		ins.Immediate.Immediate32(nValue);
-	}
-	else if (nBitCount == 64)
-	{
-		ins.Opcode = OP_MOV_RM64_IMM32;
-		ModRm_Var(ins, pVar);
-		ins.Immediate.Immediate(nValue);
 	}
 	else if (nBitCount == 16)
 	{
@@ -2451,25 +2473,30 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, unsigned int nValue)
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, unsigned __int64 nValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, unsigned __int64 nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
-	if (nBitCount == 32)
-	{
-		ins.Prefix2 = Rex_Prefix_R(nReg);
-		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
-		ins.Immediate.Immediate32(nValue);
-	}
-	else if (nBitCount == 64)
+#if defined(_WIN64)
+	if (nBitCount == 64)
 	{
 		ins.Prefix = Rex_Prefix_WR(nReg);
 		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
 		ins.Immediate.Immediate64(nValue);
+	}
+	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
+	{
+		ins.Prefix2 = Rex_Prefix_R(nReg);
+		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
+		ins.Immediate.Immediate32(nValue);
 	}
 	else if (nBitCount == 16)
 	{
@@ -2485,15 +2512,15 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, unsigned __int64 nValu
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, unsigned __int64 nValue)
+void RuntimeAssembler::Mov(AsmVariable& pVar, unsigned __int64 nValue)
 {
 	if (pVar.Location == Register)
 		return Mov(pVar.Register, nValue);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Type);
 	assert(In32BitRange(nValue));
 	if (nBitCount == 32)
@@ -2516,20 +2543,19 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, unsigned __int64 nVal
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, float nValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, float nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	if (nBitCount >= 32)
 	{
-		if (nBitCount == 64)
-			ins.Prefix = Rex_Prefix_WR(nReg);
-		else
-			ins.Prefix = Rex_Prefix_R(nReg);
+#if defined(_WIN64)
+		ins.Prefix = (nBitCount == 64) ? Rex_Prefix_WR(nReg) : Rex_Prefix_R(nReg);
+#endif
 		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
 		ins.Immediate = AsmImmediate(nValue);
 	}
@@ -2547,15 +2573,15 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, float nValue)
 		ins.Immediate = AsmImmediate(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, float nValue)
+void RuntimeAssembler::Mov(AsmVariable& pVar, float nValue)
 {
 	if (pVar.Location == Register)
 		return Mov(pVar.Register, nValue);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Type);
 	if (nBitCount >= 32)
 	{
@@ -2577,24 +2603,26 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, float nValue)
 		ins.Immediate = AsmImmediate(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, AsmImmediate nValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, AsmImmediate nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
+#if defined(_WIN64)
 	if (nBitCount == 64)
 	{
-		if (nValue.Size() == 8)
-			ins.Prefix = Rex_Prefix_WR(nReg);
-		else
-			ins.Prefix = Rex_Prefix_R(nReg);
+		ins.Prefix = (nValue.Size() == 8) ? Rex_Prefix_WR(nReg) : Rex_Prefix_R(nReg);
 		ins.Opcode = Make_Op(OP_MOV_R64_IMM64, nReg);
 		ins.Immediate = nValue;
 	}
 	else if (nBitCount == 32)
+#else
+	assert(nBitCount <= 32);
+	if (nBitCount == 32)
+#endif
 	{
 		if (nValue.Size() == 2)
 			ins.Prefix = PREFIX_OP_SIZE;
@@ -2616,23 +2644,17 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, AsmImmediate nValue)
 		ins.Immediate = nValue;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, AsmImmediate nValue)
+void RuntimeAssembler::Mov(AsmVariable& pVar, AsmImmediate nValue)
 {
 	if (pVar.Location == Register)
 		return Mov(pVar.Register, nValue);
 
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = TypeBitCount(pVar.Type);
-	if (nBitCount == 64)
-	{
-		ins.Opcode = OP_MOV_RM64_IMM32;
-		ModRm_Var(ins, pVar);
-		ins.Immediate = nValue;
-	}
-	else if (nBitCount == 32)
+	if (nBitCount >= 32)
 	{
 		ins.Opcode = OP_MOV_RM64_IMM32;
 		ModRm_Var(ins, pVar);
@@ -2652,23 +2674,23 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, AsmImmediate nValue)
 		ins.Immediate = nValue;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nReg, const char* pValue)
+void RuntimeAssembler::Mov(AsmRegister nReg, const char* pValue)
 {
 	return Mov(nReg, AsmImmediate(pValue));
 }
 
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, const char* pValue)
+void RuntimeAssembler::Mov(AsmVariable& pVar, const char* pValue)
 {
 	return Mov(pVar, AsmImmediate(pValue));
 }
 
 /* move register into parameter/local variable */
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, AsmRegister nRegSource)
+void RuntimeAssembler::Mov(AsmVariable& pVar, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	int nTypeBitCount = TypeBitCount(pVar.Type);
 	int nBitCount = RegisterBitCount(nRegSource);
 	assert(nTypeBitCount >= nBitCount);
@@ -2698,29 +2720,21 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVar, AsmRegister nRegSourc
 		ModRm_Var_Reg(ins, pVar, nRegSource);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Move value from one register into another */
-RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Mov(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (Make_Reg_Code(nRegDest) == Make_Reg_Code(nRegSource) && Rex_Prefix_R(nRegDest) == Rex_Prefix_R(nRegSource))
-		return *this;
+		return;
 	int nBitCountDest = RegisterBitCount(nRegDest);
 	int nBitCountSource = RegisterBitCount(nRegSource);
 	if (nBitCountDest > nBitCountSource)
 		return MovZX(nRegDest, nRegSource);
 	MarkRegister(nRegDest);
-	if (nBitCountDest == 64)
-	{
-		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
-		ins.Opcode = OP_MOV_R32_RM32;
-		ins.ModRM.Mod = MODRM_MOD_REGISTER;
-		ins.ModRM.Reg = nRegDest;
-		ins.ModRM.Rm = nRegSource;
-	}
-	else if (nBitCountDest == 32)
+	if (nBitCountDest >= 32)
 	{
 		ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
 		ins.Opcode = OP_MOV_R32_RM32;
@@ -2746,11 +2760,10 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
 /* Move on variable into another, using a temporary register if needed */
-RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVarDest, AsmVariable& pVarSource)
+void RuntimeAssembler::Mov(AsmVariable& pVarDest, AsmVariable& pVarSource)
 {
 	if (pVarDest.Location == Register && pVarSource.Location == Register)
 		return Mov(pVarDest.Register, pVarSource.Register);
@@ -2772,12 +2785,12 @@ RuntimeAssembler& RuntimeAssembler::Mov(AsmVariable& pVarDest, AsmVariable& pVar
 			Mov(nReg, pVarSource);
 		}
 	}
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::MovZX(AsmRegister nReg, AsmVariable pVar)
+void RuntimeAssembler::MovZX(AsmRegister nReg, AsmVariable pVar)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = TypeBitCount(pVar.Type);
 	ins.Prefix = Rex_Prefix_R(nReg);
@@ -2789,12 +2802,12 @@ RuntimeAssembler& RuntimeAssembler::MovZX(AsmRegister nReg, AsmVariable pVar)
 
 	ModRm_Reg_Var(ins, nReg, pVar);
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::MovZX(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::MovZX(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nRegDest);
 	int nBitCount = RegisterBitCount(nRegSource);
 	ins.Prefix = Rex_Prefix_WRB(nRegDest, nRegSource);
@@ -2808,12 +2821,12 @@ RuntimeAssembler& RuntimeAssembler::MovZX(AsmRegister nRegDest, AsmRegister nReg
 	ins.ModRM.Reg = nRegDest;
 	ins.ModRM.Rm = nRegSource;
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::MovSX(AsmRegister nReg, AsmVariable pVar)
+void RuntimeAssembler::MovSX(AsmRegister nReg, AsmVariable pVar)
 {
 	AsmInstruction ins;
+	ins.Init();
 	MarkRegister(nReg);
 	int nBitCount = RegisterBitCount(nReg);
 	int nTypeBitCount = TypeBitCount(pVar.Type);
@@ -2868,14 +2881,14 @@ RuntimeAssembler& RuntimeAssembler::MovSX(AsmRegister nReg, AsmVariable pVar)
 	}
 	ModRm_Reg_Var(ins, nReg, pVar);
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Cmp(AsmRegister nReg, int nValue)
+void RuntimeAssembler::Cmp(AsmRegister nReg, int nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = RegisterBitCount(nReg);
-	if (nBitCount == 64)
+	if (nBitCount >= 32)
 	{
 		if (In8BitRange(nValue))
 		{
@@ -2891,34 +2904,6 @@ RuntimeAssembler& RuntimeAssembler::Cmp(AsmRegister nReg, int nValue)
 			if (nReg != EAX)
 			{
 				ins.Prefix = Rex_Prefix_WB(nReg);
-				ins.Opcode = OP_CMP_RM32_IMM32;
-				ins.ModRM.Mod = MODRM_MOD_REGISTER;
-				ins.ModRM.Reg = MODRM_OP_CMP;
-				ins.ModRM.Rm = nReg;
-			}
-			else
-			{
-				ins.Opcode = OP_CMP_EAX_IMM32;
-			}
-			ins.Immediate.Immediate32(nValue);
-		}
-	}
-	else if (nBitCount == 32)
-	{
-		if (In8BitRange(nValue))
-		{
-			ins.Prefix = Rex_Prefix_B(nReg);
-			ins.Opcode = OP_CMP_RM32_IMM8;
-			ins.ModRM.Mod = MODRM_MOD_REGISTER;
-			ins.ModRM.Reg = MODRM_OP_CMP;
-			ins.ModRM.Rm = nReg;
-			ins.Immediate.Immediate8(nValue);
-		}
-		else
-		{
-			if (nReg != EAX)
-			{
-				ins.Prefix = Rex_Prefix_B(nReg);
 				ins.Opcode = OP_CMP_RM32_IMM32;
 				ins.ModRM.Mod = MODRM_MOD_REGISTER;
 				ins.ModRM.Reg = MODRM_OP_CMP;
@@ -2987,12 +2972,12 @@ RuntimeAssembler& RuntimeAssembler::Cmp(AsmRegister nReg, int nValue)
 		ins.Immediate.Immediate8(nValue);
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Cmp(AsmRegister nRegDest, AsmRegister nRegSource)
+void RuntimeAssembler::Cmp(AsmRegister nRegDest, AsmRegister nRegSource)
 {
 	AsmInstruction ins;
+	ins.Init();
 	int nBitCount = RegisterBitCount(nRegDest);
 	if (nBitCount == 64)
 	{
@@ -3028,165 +3013,182 @@ RuntimeAssembler& RuntimeAssembler::Cmp(AsmRegister nRegDest, AsmRegister nRegSo
 		ins.ModRM.Rm = nRegSource;
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Jo(const char* pLabel)
+void RuntimeAssembler::Jo(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JO_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jno(const char* pLabel)
+void RuntimeAssembler::Jno(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JNO_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jc(const char* pLabel)
+void RuntimeAssembler::Jc(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JC_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jb(const char* pLabel)
+void RuntimeAssembler::Jb(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JB_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jae(const char* pLabel)
+void RuntimeAssembler::Jae(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JAE_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Je(const char* pLabel)
+void RuntimeAssembler::Je(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JE_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jz(const char* pLabel)
+void RuntimeAssembler::Jz(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JZ_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jne(const char* pLabel)
+void RuntimeAssembler::Jne(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JNE_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jbe(const char* pLabel)
+void RuntimeAssembler::Jbe(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JBE_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Ja(const char* pLabel)
+void RuntimeAssembler::Ja(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JA_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Js(const char* pLabel)
+void RuntimeAssembler::Js(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JS_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jns(const char* pLabel)
+void RuntimeAssembler::Jns(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JNS_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jnp(const char* pLabel)
+void RuntimeAssembler::Jnp(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JNP_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jl(const char* pLabel)
+void RuntimeAssembler::Jl(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JL_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jge(const char* pLabel)
+void RuntimeAssembler::Jge(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JGE_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jle(const char* pLabel)
+void RuntimeAssembler::Jle(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JLE_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jg(const char* pLabel)
+void RuntimeAssembler::Jg(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JG_REL32;
 	ins.Immediate.Immediate32(0);
 	return AddJump(ins, pLabel);
 }
 
-RuntimeAssembler& RuntimeAssembler::Jmp(const char* pLabel)
+void RuntimeAssembler::Jmp(const char* pLabel)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_2BYTE;
 	ins.Opcode2 = OP_JMP_REL32;
 	ins.Immediate.Immediate32(0);
@@ -3194,18 +3196,18 @@ RuntimeAssembler& RuntimeAssembler::Jmp(const char* pLabel)
 }
 
 /* jump to location in a register */
-RuntimeAssembler& RuntimeAssembler::Jmp(AsmRegister nReg)
+void RuntimeAssembler::Jmp(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	ins.Opcode = OP_JMP_RM32;
 	ins.ModRM.Mod = MODRM_MOD_REGISTER;
 	ins.ModRM.Reg = MODRM_OP_JMP;
 	ins.ModRM.Rm = nReg;
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Jmp(AsmRegister nReg, AsmImmediate pLocation)
+void RuntimeAssembler::Jmp(AsmRegister nReg, AsmImmediate pLocation)
 {
 	Mov(nReg,pLocation);
 	return Jmp(nReg);
@@ -3217,10 +3219,10 @@ RuntimeAssembler& RuntimeAssembler::CallConv(AsmCallingConvention nConv)
 	return *this;
 }
 
+#if defined(_WIN64)
 void RuntimeAssembler::SpillRegister(AsmRegister nReg)
 {
-#if defined(_WIN64)
-	unsigned int nOffset;
+	unsigned int nOffset = 0;
 	switch (nReg)
 	{
 		case RDX:
@@ -3255,44 +3257,42 @@ void RuntimeAssembler::SpillRegister(AsmRegister nReg)
 	if (m_Parameters.GetCount() > nOffset && m_Parameters[nOffset].Location == AsmLocation::Register)
 	{
 		m_Parameters[nOffset].Location = AsmLocation::Memory;
-		m_Parameters[nOffset].Offset = (nOffset + 1) * 8;
+		m_Parameters[nOffset].Offset = (int)((nOffset + 1) * 8);
 		m_Parameters[nOffset].Register = RSP;
 	}
-#endif
 }
+#endif
 
 void RuntimeAssembler::OnCall(int nParmCount)
 {
 	// if we make a function call, all volatile registers need to be spilled
+#if defined(_WIN64)
 	SpillRegister(RCX);
 	SpillRegister(RDX);
 	SpillRegister(R8);
 	SpillRegister(R9);
 	m_UsedRegisters |= (RegisterMask(RCX) | RegisterMask(RDX) | RegisterMask(R8) | RegisterMask(R9));
 	m_SubFunctionParameterSize = max(m_SubFunctionParameterSize, nParmCount * 8);
+#endif // _WIN64
 }
 
-RuntimeAssembler& RuntimeAssembler::StackMode(bool bEnable, bool bDiscard)
+void RuntimeAssembler::StackMode(bool bEnable)
 {
 	if (bEnable)
 	{
 		m_ParameterCount = 0;
-		m_CodeStack.SetIndex(-1);
+		m_CodeStack.ResetIndex();
 		m_Code = &m_CodeStack;
 	}
 	else
 	{
 		m_Code = &m_CodeSegment;
-		if (bDiscard == false)
+		for (unsigned int xj = m_CodeStack.GetIndex(); xj != m_CodeStack.INVALID_INDEX; xj--)
 		{
-			for (int xj = m_CodeStack.GetIndex(); xj >= 0; xj--)
-			{
-				m_Code->Add(m_CodeStack[xj]);
-			}
+			m_Code->Add(m_CodeStack[xj]);
 		}
 	}
 	m_InStackMode = bEnable;
-	return *this;
 }
 
 AsmRegister RuntimeAssembler::Call(AsmRegister nReg, AsmFuncPtr pFunction)
@@ -3307,7 +3307,7 @@ AsmRegister RuntimeAssembler::Call(AsmRegister nReg, AsmFuncPtr pFunction)
 	return Call(nReg);
 }
 
-AsmRegister RuntimeAssembler::GetParameterRegister(int nSize, AsmType nType, int& nParmNo)
+AsmRegister RuntimeAssembler::GetParameterRegister(int nSize, AsmType nType, unsigned int& nParmNo)
 {
 #if defined(_WIN64)
 	nParmNo++;
@@ -3407,7 +3407,7 @@ AsmRegister RuntimeAssembler::GetParameterRegister(int nSize, AsmType nType, int
 #endif
 }
 
-AsmRegister RuntimeAssembler::GetParameterRegister(AsmRegister parm, int& nParmNo)
+AsmRegister RuntimeAssembler::GetParameterRegister(AsmRegister parm, unsigned int& nParmNo)
 {
 	int nBitCount = RegisterBitCount(parm);
 	int nSize = nBitCount / 8;
@@ -3415,9 +3415,10 @@ AsmRegister RuntimeAssembler::GetParameterRegister(AsmRegister parm, int& nParmN
 	return GetParameterRegister(nSize, nType, nParmNo);
 }
 
-RuntimeAssembler& RuntimeAssembler::Ret(int nBytes)
+void RuntimeAssembler::Ret(int nBytes)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (nBytes == -1)
 		nBytes = ParameterSize();
 	if (nBytes > 0)
@@ -3428,7 +3429,6 @@ RuntimeAssembler& RuntimeAssembler::Ret(int nBytes)
 	else if (nBytes == 0)
 		ins.Opcode = OP_RET;
 	m_Code->Add(ins);
-	return *this;
 }
 
 AsmRegister RuntimeAssembler::ReturnRegister()
@@ -3440,9 +3440,10 @@ AsmRegister RuntimeAssembler::ReturnRegister()
 #endif
 }
 
-RuntimeAssembler& RuntimeAssembler::Fld(float nValue)
+void RuntimeAssembler::Fld(float nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (nValue == 1.0)
 	{
 		ins.Opcode = OP_FLD_M32;
@@ -3465,12 +3466,12 @@ RuntimeAssembler& RuntimeAssembler::Fld(float nValue)
 #endif
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Fld(double nValue)
+void RuntimeAssembler::Fld(double nValue)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (nValue == 1.0)
 	{
 		ins.Opcode = OP_FLD_M32;
@@ -3493,13 +3494,13 @@ RuntimeAssembler& RuntimeAssembler::Fld(double nValue)
 #endif
 	}
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Fld(AsmVariable pVar)
+void RuntimeAssembler::Fld(AsmVariable pVar)
 {
 	assert(pVar.Location == Memory && (pVar.Type == T_DOUBLE || pVar.Type == T_FLOAT)) ;
 	AsmInstruction ins;
+	ins.Init();
 	if (pVar.Type == T_DOUBLE)
 		ins.Opcode = OP_FLD_M64;
 	else if (pVar.Type == T_FLOAT)
@@ -3507,30 +3508,30 @@ RuntimeAssembler& RuntimeAssembler::Fld(AsmVariable pVar)
 
 	ModRm_Var(ins, pVar);
 	m_Code->Add(ins);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Fst(AsmRegister nReg)
+void RuntimeAssembler::Fst(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	assert(nReg >= ST0 && nReg <= ST7);
 	ins.Opcode = OP_FST_M64;
 	ins.Opcode2 = Make_Op(OP_FST_REG, nReg);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Fstp(AsmRegister nReg)
+void RuntimeAssembler::Fstp(AsmRegister nReg)
 {
 	AsmInstruction ins;
+	ins.Init();
 	assert(nReg >= ST0 && nReg <= ST7);
 	ins.Opcode = OP_FSTP_M64;
 	ins.Opcode2 = Make_Op(OP_FSTP_REG, nReg);
-	return *this;
 }
 
-RuntimeAssembler& RuntimeAssembler::Fstp(AsmVariable pVar)
+void RuntimeAssembler::Fstp(AsmVariable pVar)
 {
 	AsmInstruction ins;
+	ins.Init();
 	if (pVar.Location == Register)
 		return Fstp(pVar.Register);
 
@@ -3539,21 +3540,8 @@ RuntimeAssembler& RuntimeAssembler::Fstp(AsmVariable pVar)
 	else if (pVar.Type == T_FLOAT)
 		ins.Opcode = OP_FSTP_M32;
 	else
-		return *this;
+		return;
 
 	ModRm_Var(ins, pVar);
 	m_Code->Add(ins);
-	return *this;
-}
-
-RuntimeAssembler& RuntimeAssembler::VMovsp(AsmRegister nReg)
-{
-	return *this;
-}
-
-RuntimeAssembler& RuntimeAssembler::VMovsp(AsmVariable pVar)
-{
-	// TODO 
-	// return Fstp_Ex(pVar.Type, pVar.Offset);
-	return *this;
 }

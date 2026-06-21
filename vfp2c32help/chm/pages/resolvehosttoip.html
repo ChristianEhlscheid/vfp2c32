@@ -14,7 +14,7 @@
 <div id="content">
 <p class="description">Resolves the IP address for a specified hostname.</p>
 
-<div class="block"><pre>ResolveHostToIp(<a href="#p1">cHostname</a> [, <a href="#p2">cArrayName</a>])</pre></div>
+<div class="block"><pre>ResolveHostToIp(<a href="#p1">cHostname</a> [, <a href="#p2">cArrayName</a> [, <a href="#p3">nIPType</a>]])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cHostname</a></dt>
 <dd><p>The hostname e.g  "www.google.com" or a server on your network</p>
@@ -22,6 +22,15 @@
 <dl class="parm"><dt><a id="p2">cArrayname (optional)</a></dt>
 <dd><p>If you pass an arrayname the function returns the number of IP addresses and stores the IPs into the array.</p>
 </dd></dl>
+<dl class="parm"><dt><a id="p3">nIPType  (optional)</a></dt>
+<dd><p>default = 1<br />
+</p>
+<table>
+<caption>One or a combination of the following values</caption>
+<tr><th>Value</th><th></th></tr>
+<tr><td>1</td><td>IPv4</td></tr>
+<tr><td>2</td><td>IPv6</td></tr>
+</table></dd></dl>
 <h2>Return Value</h2>
 <p>If no array name was passed as the second parameter the IP (string) or an empty string if the host could not be resolved.<br />
 If an array name was passed the number of IP addresses for the host or 0 if the host could not be resolved.</p>

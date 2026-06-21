@@ -12,6 +12,8 @@ this code implements a runtime assembly code emitter:
 
 // #pragma comment(lib, "old_initcode.obj")
 
+#include "vfp2cstring.h"
+
 #pragma warning(disable : 4482)
 
 #if !defined(UWOP_PUSH_NONVOL)
@@ -35,12 +37,12 @@ inline bool InU32BitRange(unsigned __int64 nValue) { return nValue <= MAX_UINT; 
 inline bool In64BitRange(__int64 nValue) { return (nValue >= 0 && nValue < MAX_INT64) || (nValue < 0  && nValue >= MIN_INT64); }
 
 #if defined(_WIN64)
-#define Rex_Prefix_WR(nReg)				Rex_Prefix_WR_Impl((AsmRegister)nReg)
-#define Rex_Prefix_WB(nReg)				Rex_Prefix_WB_Impl((AsmRegister)nReg)
-#define Rex_Prefix_B(nReg)				Rex_Prefix_B_Impl((AsmRegister)nReg)
-#define Rex_Prefix_R(nReg)				Rex_Prefix_R_Impl((AsmRegister)nReg)
-#define Rex_Prefix_WRB(nReg1, nReg2)	Rex_Prefix_WRB_Impl((AsmRegister)nReg1,(AsmRegister)nReg2)
-#define Rex_Prefix_RB(nReg1, nReg2)		Rex_Prefix_RB_Impl((AsmRegister)nReg1,(AsmRegister)nReg2)
+#define Rex_Prefix_WR(nReg)				Rex_Prefix_WR_Impl((AsmRegister)(nReg))
+#define Rex_Prefix_WB(nReg)				Rex_Prefix_WB_Impl((AsmRegister)(nReg))
+#define Rex_Prefix_B(nReg)				Rex_Prefix_B_Impl((AsmRegister)(nReg))
+#define Rex_Prefix_R(nReg)				Rex_Prefix_R_Impl((AsmRegister)(nReg))
+#define Rex_Prefix_WRB(nReg1, nReg2)	Rex_Prefix_WRB_Impl((AsmRegister)(nReg1),(AsmRegister)(nReg2))
+#define Rex_Prefix_RB(nReg1, nReg2)		Rex_Prefix_RB_Impl((AsmRegister)(nReg1),(AsmRegister)(nReg2))
 #else
 #define Rex_Prefix_WR(nReg)				0
 #define Rex_Prefix_WB(nReg)				0
@@ -619,7 +621,7 @@ typedef struct _AsmDisplacement
 #if !defined(_WIN64)
 			*(AsmByte**)pAddress = (pDataSegmentAddress + Disp32 * 8);
 #else
-			*(int*)pAddress = ((pDataSegmentAddress + Disp32 * 8) - pNextInstructionAddress);
+			*(int*)pAddress = (int)((pDataSegmentAddress + (ptrdiff_t)Disp32 * 8) - pNextInstructionAddress);
 #endif
 			return pAddress + 4;
 		}
@@ -631,10 +633,10 @@ typedef struct _AsmDisplacement
 		return ByteLen == -1 ? 4 : ByteLen;
 	}
 
-	int GetDisplacement()
+	int GetDisplacement() const
 	{
 		return ByteLen == 1 ? Disp8 : ByteLen == 4 ? Disp32 : 0;
-	}
+	} 
 
 } AsmDisplacement;
 
@@ -686,9 +688,8 @@ typedef struct _AsmVariable {
 	int Offset;
 	AsmRegister Register;
 
-	_AsmVariable() {};
-	_AsmVariable(_AsmVariable& pVar);
-	_AsmVariable(AsmRegister nReg, int nOffset, bool fixed = false);
+	static _AsmVariable Init();
+	static _AsmVariable Var(AsmRegister nReg, int nOffset, bool fixed = false);
 
 	template<typename T>
 	static _AsmVariable Var(AsmRegister nReg, int nOffset)
@@ -716,8 +717,8 @@ typedef struct _AsmVariable {
 } AsmVariable, *LPAsmVariable;
 
 typedef struct _AsmLabel {
-	int InstructionIndex;
-	int LabelIndex;
+	unsigned int InstructionIndex;
+	unsigned int LabelIndex;
 	CStrBuilder<ASM_IDENTIFIER_LEN> Name;
 	_AsmLabel() : InstructionIndex(0), LabelIndex(0) { }
 } AsmLabel, *LPAsmLabel;
@@ -783,7 +784,7 @@ typedef struct _AsmImmediate
 	};
 	unsigned char ByteLen;
 
-	_AsmImmediate() {};
+	_AsmImmediate() { ByteLen = 0; };
 	_AsmImmediate(const char* pValue) { Immediate((INT_PTR)pValue); }
 	_AsmImmediate(void* pValue) { Immediate((INT_PTR)pValue); }
 	_AsmImmediate(float pValue) { FltValue = pValue; ByteLen = 4; }
@@ -857,6 +858,8 @@ typedef struct _AsmImmediate
 		case 8:
 			*(__int64*)pAddress = Value64;
 			break;
+		default:
+			break;
 		}
 		return pAddress + ByteLen;
 	}
@@ -866,8 +869,6 @@ typedef struct _AsmImmediate
 		return ByteLen;
 	}
 } AsmImmediate;
-
-
 
 typedef struct _AsmInstruction
 {
@@ -885,9 +886,9 @@ typedef struct _AsmInstruction
 	AsmDisplacement Displacement;
 	AsmImmediate Immediate;
 
-	_AsmInstruction()
+	void Init()
 	{
-		memset(this, 0, sizeof(_AsmInstruction));
+		memset((void*)this, 0, sizeof(_AsmInstruction));
 	}
 
 	int Size() const
@@ -916,7 +917,7 @@ typedef struct _AsmInstruction
 		return nCodeSize;
 	}
 
-	AsmByte* Write(AsmByte* pAddress, AsmByte* pDataSegmentAddress);
+	AsmByte* Write(AsmByte* pAddress, AsmByte* pDataSegmentAddress) const;
 } AsmInstruction, *LPAsmInstruction;
 
 typedef struct _AsmData
@@ -927,11 +928,11 @@ typedef struct _AsmData
 	};
 	unsigned char ByteLen;
 
-	_AsmData();
+	// _AsmData();
 	_AsmData(float nValue) { floatValue = nValue; ByteLen = 4; }
 	_AsmData(double nValue) { doubleValue = nValue; ByteLen = 8; }
 
-	AsmByte* Write(AsmByte* pAddress)
+	AsmByte* Write(AsmByte* pAddress) const
 	{
 		switch (ByteLen)
 		{
@@ -941,6 +942,8 @@ typedef struct _AsmData
 		case 8:
 			*(double*)pAddress = doubleValue;
 			break;
+		default:
+			break;
 		}
 		return pAddress + 8; // align all data on 8 byte boundary
 	}
@@ -949,6 +952,7 @@ typedef struct _AsmData
 template<typename T>
 inline AsmType AsmGetType(int& nSize, int& nAlignment, bool& bSigned)
 {
+	// NOLINTNEXTLINE(bugprone-sizeof-expression)
 	nSize = sizeof(T);
 	nAlignment = __alignof(T);
 	bSigned = false;
@@ -1084,170 +1088,164 @@ inline AsmType AsmGetType<double>(int& nSize, int& nAlignment, bool& bSigned)
 class RuntimeAssembler
 {
 public:
-	RuntimeAssembler(AsmCallingConvention nCallConv = stdcall, bool bSpillParameters = false, bool bUseFramePointer = false);
+	RuntimeAssembler(AsmCallingConvention nCallConv = stdcall, bool bSpillParameters = false);
 
-	void Reset(AsmCallingConvention nCallConv = stdcall, bool bSpillParameters = false, bool bUseFramePointer = false);
+	void Reset(AsmCallingConvention nCallConv = stdcall, bool bSpillParameters = false);
 	void WriteCode(void* lpAddress);
 	int CodeSize();
 	void Finish();
 	AsmRegister ReturnRegister();
-	RuntimeAssembler& StackMode(bool bEnable, bool bDiscard = false);
-	RuntimeAssembler& BreakPoint();
+	void StackMode(bool bEnable);
+	void BreakPoint();
 
 	void Label(const char* pLabel);
 	void* LabelAddress(const char* pLabel, void* pCodeAddress);
-	RuntimeAssembler& Jump(const char* pLabel);
-	RuntimeAssembler& Push(AsmRegister nReg);
-	RuntimeAssembler& Push(AsmVariable& pVar);
-	RuntimeAssembler& Push(AsmImmediate nValue);
-	RuntimeAssembler& Push(const char* pValue);
-	RuntimeAssembler& Push(int nValue);
-	RuntimeAssembler& Push(unsigned int nValue);
-	RuntimeAssembler& Push(float nValue);
-	RuntimeAssembler& Push(double nValue);
+	void Jump(const char* pLabel);
+	void Push(AsmRegister nReg);
+	void Push(AsmVariable& pVar);
+	void Push(AsmImmediate nValue);
+	void Push(const char* pValue);
+	void Push(int nValue);
+	void Push(unsigned int nValue);
+	void Push(float nValue);
+	void Push(double nValue);
 
-	RuntimeAssembler& Pop(AsmRegister nReg);
+	void Pop(AsmRegister nReg);
 
-	RuntimeAssembler& Sub(AsmRegister nReg, int nBytes);
-	RuntimeAssembler& Sub(AsmRegister nReg, unsigned int nBytes);
-	RuntimeAssembler& Sub(AsmRegister nReg, __int64 nBytes);
-	RuntimeAssembler& Sub(AsmRegister nReg, unsigned __int64 nBytes);
-	RuntimeAssembler& Sub(AsmRegister nReg, AsmRegister nReg2);
+	void Sub(AsmRegister nReg, int nBytes);
+	void Sub(AsmRegister nReg, unsigned int nBytes);
+	void Sub(AsmRegister nReg, __int64 nBytes);
+	void Sub(AsmRegister nReg, unsigned __int64 nBytes);
+	void Sub(AsmRegister nReg, AsmRegister nReg2);
 	
-	RuntimeAssembler& Add(AsmRegister nReg, int nBytes);
-	RuntimeAssembler& Add(AsmRegister nReg, unsigned int nBytes);
+	void Add(AsmRegister nReg, int nBytes);
+	void Add(AsmRegister nReg, unsigned int nBytes);
 	// RuntimeAssembler& Add(AsmRegister nReg, __int64 nBytes);
 	// RuntimeAssembler& Add(AsmRegister nReg, unsigned __int64 nBytes);
-	RuntimeAssembler& Add(AsmRegister nReg, AsmRegister nReg2);
+	void Add(AsmRegister nReg, AsmRegister nReg2);
 
-	RuntimeAssembler& Adcx(AsmRegister nRegDest, AsmRegister nRegSource);
-	RuntimeAssembler& Adcx(AsmRegister nRegDest, AsmVariable pSource);
-	RuntimeAssembler& Adox(AsmRegister nRegDest, AsmRegister nRegSource);
-	RuntimeAssembler& Adox(AsmRegister nRegDest, AsmVariable pSource);
+	void Adcx(AsmRegister nRegDest, AsmRegister nRegSource);
+	void Adcx(AsmRegister nRegDest, AsmVariable pSource);
+	void Adox(AsmRegister nRegDest, AsmRegister nRegSource);
+	void Adox(AsmRegister nRegDest, AsmVariable pSource);
 
-	RuntimeAssembler& Dec(AsmRegister nReg);
-	RuntimeAssembler& Inc(AsmRegister nReg);
+	void Dec(AsmRegister nReg);
+	void Inc(AsmRegister nReg);
 
-	RuntimeAssembler& And(AsmRegister nReg, int nValue);
-	RuntimeAssembler& And(AsmRegister nReg, unsigned int nValue);
-	RuntimeAssembler& And(AsmRegister nReg, __int64 nValue);
-	RuntimeAssembler& And(AsmRegister nReg, unsigned __int64 nValue);
-	RuntimeAssembler& And(AsmRegister nReg, AsmRegister nReg2);
+	void And(AsmRegister nReg, int nValue);
+	void And(AsmRegister nReg, unsigned int nValue);
+	void And(AsmRegister nReg, __int64 nValue);
+	void And(AsmRegister nReg, unsigned __int64 nValue);
+	void And(AsmRegister nReg, AsmRegister nReg2);
 
-	RuntimeAssembler& Or(AsmRegister nReg, int nValue);
-	RuntimeAssembler& Or(AsmRegister nReg, unsigned int nValue);
-	RuntimeAssembler& Or(AsmRegister nReg, __int64 nValue);
-	RuntimeAssembler& Or(AsmRegister nReg, unsigned __int64 nValue);
-	RuntimeAssembler& Or(AsmRegister nReg, AsmRegister nReg2);
+	void Or(AsmRegister nReg, int nValue);
+	void Or(AsmRegister nReg, unsigned int nValue);
+	void Or(AsmRegister nReg, __int64 nValue);
+	void Or(AsmRegister nReg, unsigned __int64 nValue);
+	void Or(AsmRegister nReg, AsmRegister nReg2);
 
-	RuntimeAssembler& Xor(AsmRegister nReg, int nValue);
-	RuntimeAssembler& Xor(AsmRegister nReg, unsigned int nValue);
-	RuntimeAssembler& Xor(AsmRegister nReg, __int64 nValue);
-	RuntimeAssembler& Xor(AsmRegister nReg, unsigned __int64 nValue);
-	RuntimeAssembler& Xor(AsmRegister nReg, AsmRegister nReg2);
+	void Xor(AsmRegister nReg, int nValue);
+	void Xor(AsmRegister nReg, unsigned int nValue);
+	void Xor(AsmRegister nReg, __int64 nValue);
+	void Xor(AsmRegister nReg, unsigned __int64 nValue);
+	void Xor(AsmRegister nReg, AsmRegister nReg2);
 
+	void Cdq();
+	void CvtSd2Si(AsmRegister nRegDest, AsmRegister nRegSource); // convert double floatingpoint number into integer 
+	void CvtSd2Si(AsmRegister nRegDest, AsmVariable pVar);
+	void CvttSd2Si(AsmRegister nRegDest, AsmRegister nRegSource); // convert double floatingpoint number into integer with truncation
+	void CvttSd2Si(AsmRegister nRegDest, AsmVariable pVar);
+	void CvtSi2Sd(AsmRegister nRegDest, AsmRegister nRegSource); // convert integer into double floatingpoint number
+	void CvtSi2Sd(AsmRegister nRegDest, AsmVariable pVar);
 
-	RuntimeAssembler& Cdq();
-	RuntimeAssembler& CvtSd2Si(AsmRegister nRegDest, AsmRegister nRegSource); // convert double floatingpoint number into integer 
-	RuntimeAssembler& CvtSd2Si(AsmRegister nRegDest, AsmVariable pVar);  
-	RuntimeAssembler& CvttSd2Si(AsmRegister nRegDest, AsmRegister nRegSource); // convert double floatingpoint number into integer with truncation
-	RuntimeAssembler& CvttSd2Si(AsmRegister nRegDest, AsmVariable pVar);
-	RuntimeAssembler& CvtSi2Sd(AsmRegister nRegDest, AsmRegister nRegSource); // convert integer into double floatingpoint number
-	RuntimeAssembler& CvtSi2Sd(AsmRegister nRegDest, AsmVariable pVar);
-
-	RuntimeAssembler& Sar(AsmRegister nReg, int nBits);
-	RuntimeAssembler& Sal(AsmRegister nReg, int nBits);
-	RuntimeAssembler& Shl(AsmRegister nReg, int nBits);
-	RuntimeAssembler& Shr(AsmRegister nReg, int nBits);
+	void Sar(AsmRegister nReg, int nBits);
+	void Sal(AsmRegister nReg, int nBits);
+	void Shl(AsmRegister nReg, int nBits);
+	void Shr(AsmRegister nReg, int nBits);
 
 	// Load effective address
-	RuntimeAssembler& Lea(AsmRegister nReg, AsmVariable& pVar);
+	void Lea(AsmRegister nReg, AsmVariable& pVar);
 	
-	RuntimeAssembler& Mov(AsmRegister nReg, AsmVariable& pVar);
-	RuntimeAssembler& Mov(AsmRegister nReg, AsmImmediate nValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, AsmImmediate nValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, char pValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, char pValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, const char* pValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, const char* pValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, int nValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, int nValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, unsigned int nValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, unsigned int nValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, unsigned __int64 nValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, unsigned __int64 nValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, float nValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, float nValue);
-	RuntimeAssembler& Mov(AsmRegister nReg, double nValue);
-	RuntimeAssembler& Mov(AsmVariable& pVar, double nValue);
-	RuntimeAssembler& Mov(AsmRegister nRegDest, AsmRegister nRegSource);
-	RuntimeAssembler& Mov(AsmVariable& pVar, AsmRegister nReg);
-	RuntimeAssembler& Mov(AsmVariable& pVar, AsmVariable& nReg);
+	void Mov(AsmRegister nReg, AsmVariable& pVar);
+	void Mov(AsmRegister nReg, AsmImmediate nValue);
+	void Mov(AsmVariable& pVar, AsmImmediate nValue);
+	void Mov(AsmRegister nReg, char pValue);
+	void Mov(AsmVariable& pVar, char pValue);
+	void Mov(AsmRegister nReg, const char* pValue);
+	void Mov(AsmVariable& pVar, const char* pValue);
+	void Mov(AsmRegister nReg, int nValue);
+	void Mov(AsmVariable& pVar, int nValue);
+	void Mov(AsmRegister nReg, unsigned int nValue);
+	void Mov(AsmVariable& pVar, unsigned int nValue);
+	void Mov(AsmRegister nReg, unsigned __int64 nValue);
+	void Mov(AsmVariable& pVar, unsigned __int64 nValue);
+	void Mov(AsmRegister nReg, float nValue);
+	void Mov(AsmVariable& pVar, float nValue);
+	void Mov(AsmRegister nReg, double nValue);
+	void Mov(AsmVariable& pVar, double nValue);
+	void Mov(AsmRegister nRegDest, AsmRegister nRegSource);
+	void Mov(AsmVariable& pVar, AsmRegister nReg);
+	void Mov(AsmVariable& pVar, AsmVariable& nReg);
 
 	// Mov with zero extension
-	RuntimeAssembler& MovZX(AsmRegister nReg, AsmVariable pVar);
-	RuntimeAssembler& MovZX(AsmRegister nRegSource, AsmRegister nRegDest);
+	void MovZX(AsmRegister nReg, AsmVariable pVar);
+	void MovZX(AsmRegister nRegSource, AsmRegister nRegDest);
 
 	// Mov with sign extension
-	RuntimeAssembler& MovSX(AsmRegister nReg, AsmVariable pVar);
-	RuntimeAssembler& MovSX(AsmRegister nRegDest, AsmRegister nRegSource);
+	void MovSX(AsmRegister nReg, AsmVariable pVar);
+	void MovSX(AsmRegister nRegDest, AsmRegister nRegSource);
 
 	// Fld -  Pushes a Floatingpoint number from the source onto the top of the FPU Stack.
-	RuntimeAssembler& Fld(AsmVariable pVar);
-	RuntimeAssembler& Fld(float nValue);
-	RuntimeAssembler& Fld(double nValue);
+	void Fld(AsmVariable pVar);
+	void Fld(float nValue);
+	void Fld(double nValue);
 
 	// Fstp - Store a Floatingpoint number from the top of the FPU stack into the destination.
-	RuntimeAssembler& Fst(AsmRegister nReg);
-	RuntimeAssembler& Fst(AsmVariable pVar);
+	void Fst(AsmRegister nReg);
+	void Fst(AsmVariable pVar);
 
 	// Fstp -  Store and Pop a Floatingpoint number from the top of the FPU stack into a the destination.
-	RuntimeAssembler& Fstp(AsmRegister nReg);
-	RuntimeAssembler& Fstp(AsmVariable pVar);
+	void Fstp(AsmRegister nReg);
+	void Fstp(AsmVariable pVar);
 
-	// vmovsp - 
-	RuntimeAssembler& VMovsp(AsmRegister nReg);
-	RuntimeAssembler& VMovsp(AsmVariable pVar);
-
-	RuntimeAssembler& Cmp(AsmRegister nReg, int nValue);
-	RuntimeAssembler& Cmp(AsmRegister nReg, AsmRegister nReg2);
+	void Cmp(AsmRegister nReg, int nValue);
+	void Cmp(AsmRegister nReg, AsmRegister nReg2);
 
 	// conditional jumps
-	RuntimeAssembler& Jo(const char* pLabel);
-	RuntimeAssembler& Jno(const char* pLabel);
-	RuntimeAssembler& Jc(const char* pLabel);
-	RuntimeAssembler& Jb(const char* pLabel);
-	RuntimeAssembler& Jae(const char* pLabel);
-	RuntimeAssembler& Je(const char* pLabel);
-	RuntimeAssembler& Jz(const char* pLabel);
-	RuntimeAssembler& Jne(const char* pLabel);
-	RuntimeAssembler& Jbe(const char* pLabel);
-	RuntimeAssembler& Ja(const char* pLabel);
-	RuntimeAssembler& Js(const char* pLabel);
-	RuntimeAssembler& Jns(const char* pLabel);
-	RuntimeAssembler& Jnp(const char* pLabel);
-	RuntimeAssembler& Jl(const char* pLabel);
-	RuntimeAssembler& Jge(const char* pLabel);
-	RuntimeAssembler& Jle(const char* pLabel);
-	RuntimeAssembler& Jg(const char* pLabel);
+	void Jo(const char* pLabel);
+	void Jno(const char* pLabel);
+	void Jc(const char* pLabel);
+	void Jb(const char* pLabel);
+	void Jae(const char* pLabel);
+	void Je(const char* pLabel);
+	void Jz(const char* pLabel);
+	void Jne(const char* pLabel);
+	void Jbe(const char* pLabel);
+	void Ja(const char* pLabel);
+	void Js(const char* pLabel);
+	void Jns(const char* pLabel);
+	void Jnp(const char* pLabel);
+	void Jl(const char* pLabel);
+	void Jge(const char* pLabel);
+	void Jle(const char* pLabel);
+	void Jg(const char* pLabel);
 
 	// direct jumps
-	RuntimeAssembler& Jmp(const char* pLabel);
-	RuntimeAssembler& Jmp(AsmRegister nReg, AsmImmediate pLocation);
-	RuntimeAssembler& Jmp(AsmRegister nReg);
+	void Jmp(const char* pLabel);
+	void Jmp(AsmRegister nReg, AsmImmediate pLocation);
+	void Jmp(AsmRegister nReg);
 
 	RuntimeAssembler& CallConv(AsmCallingConvention nConv);
 	// function invocation
 	AsmRegister Call(AsmRegister nReg, AsmFuncPtr pFunction);
-	RuntimeAssembler& Ret(int nBytes = -1);
+	void Ret(int nBytes = -1);
 
 	template<typename T>
 	AsmVariable& Parameter()
 	{
-		AsmVariable pVar;
-		int nCount = m_Parameters.GetCount();
+		AsmVariable pVar = AsmVariable::Init();
+		unsigned int nCount = m_Parameters.GetCount();
 		pVar.Type = AsmGetType<T>(pVar.Size, pVar.Alignment, pVar.Signed);
-		pVar.Fixed = false;
 #if !defined(_WIN64)
 		pVar.Location = Memory;
 		if (nCount > 0)
@@ -1264,7 +1262,7 @@ public:
 			if (m_SpillParameters)
 			{
 				pVar.Location = AsmLocation::Memory;
-				pVar.Offset = m_FrameOffset + (nCount + 1) * 8;
+				pVar.Offset = (int)(nCount + 1) * 8;
 				pVar.Register = StackFrameRegister();
 			}
 			else
@@ -1282,7 +1280,7 @@ public:
 				if (IsRegisterMarked(pVar.Register))
 				{
 					pVar.Location = AsmLocation::Memory;
-					pVar.Offset = m_FrameOffset + (nCount + 1) * 8;
+					pVar.Offset = (int)(nCount + 1) * 8;
 					pVar.Register = StackFrameRegister();
 				}
 			}
@@ -1290,19 +1288,20 @@ public:
 		else
 		{
 			pVar.Location = AsmLocation::Memory;
-			pVar.Offset = m_FrameOffset + 32 + ((nCount - 3) * 8); // m_FrameOffset = 16 when we use the stackpointer RBP or 8 when RSP is used, 4 * 8 bytes shadow space for RCX, RDX, R8 and R9 is always allocated + 8 bytes for each parameter after the 4th 
+			// m_FrameOffset = 16 when we use the stackpointer RBP or 8 when RSP is used, 4 * 8 bytes shadow space for RCX, RDX, R8 and R9 is always allocated + 8 bytes for each parameter after the 4th 
+			pVar.Offset = 32 + (int)((nCount - 3) * 8);
 			pVar.Register = StackFrameRegister();
 		}
 #endif
-		int nIndex = m_Parameters.Add(pVar);
+		unsigned int nIndex = m_Parameters.Add(pVar);
 		return m_Parameters[nIndex];
 	}
 
 	template<typename T>
 	AsmVariable& LocalVar()
 	{
-		AsmVariable pVar;
-		int nCount = m_Variables.GetCount();
+		AsmVariable pVar = AsmVariable::Init();
+		unsigned int nCount = m_Variables.GetCount();
 		pVar.Location = Memory;
 		pVar.Register = StackFrameRegister();
 		pVar.Fixed = false;
@@ -1324,14 +1323,14 @@ public:
 		else
 			pVar.Offset = 0;
 #endif
-		int nIndex = m_Variables.Add(pVar);
+		unsigned int nIndex = m_Variables.Add(pVar);
 		return m_Variables[nIndex];
 	}
 
 	template<typename T>
 	AsmVariable Var(AsmVariable& pBase, int nOffset)
 	{
-		AsmVariable pVar;
+		AsmVariable pVar = AsmVariable::Init();
 		pVar.Location = pBase.Location;
 		pVar.Offset = pBase.Offset;
 		pVar.Register = pBase.Register;
@@ -1354,12 +1353,13 @@ public:
 				return CL;
 			case 2:
 				return CX;
+#if defined(_WIN64)
 			case 4:
 				return ECX;
 			default:
-#if !defined(_WIN64)
 				return RCX;
 #else
+			default:
 				return ECX;
 #endif
 			}
@@ -1372,12 +1372,13 @@ public:
 				return DL;
 			case 2:
 				return DX;
+#if defined(_WIN64)
 			case 4:
 				return EDX;
 			default:
-#if !defined(_WIN64)
 				return RDX;
 #else
+			default:
 				return EDX;
 #endif
 			}
@@ -1390,12 +1391,13 @@ public:
 				return BL;
 			case 2:
 				return BX;
+#if defined(_WIN64)
 			case 4:
 				return EBX;
 			default:
-#if !defined(_WIN64)
 				return RBX;
 #else
+			default:
 				return EBX;
 #endif
 			}
@@ -1408,12 +1410,13 @@ public:
 				return AL;
 			case 2:
 				return AX;
+#if defined(_WIN64)
 			case 4:
 				return EAX;
 			default:
-#if !defined(_WIN64)
 				return RAX;
 #else
+			default:
 				return EAX;
 #endif
 			}
@@ -1441,6 +1444,7 @@ public:
 	AsmRegister Call<AsmRegister>(AsmRegister nReg)
 	{
 		AsmInstruction ins;
+		ins.Init();
 		ins.Opcode = OP_CALL_R32;
 		ins.ModRM.Mod = MODRM_MOD_REGISTER;
 		ins.ModRM.Reg = MODRM_OP_CALL;
@@ -1467,7 +1471,7 @@ public:
 	template<typename F, typename T1>
 	AsmRegister Call(F pFunc, T1 parm1)
 	{
-		int nParmNo = 0;
+		unsigned int nParmNo = 0;
 #if !defined(_WIN64)
 		PassParameter(parm1, nParmNo);
 		Call(pFunc);
@@ -1486,7 +1490,7 @@ public:
 	template<typename F, typename T1, typename T2>
 	AsmRegister Call(F pFunc, T1 parm1, T2 parm2)
 	{
-		int nParmNo = 0;
+		unsigned int nParmNo = 0;
 #if !defined(_WIN64)
 		StackMode(true);
 		PassParameter(parm1, nParmNo);
@@ -1511,7 +1515,7 @@ public:
 	template<typename F, typename T1, typename T2, typename T3>
 	AsmRegister Call(F pFunc, T1 parm1, T2 parm2, T3 parm3)
 	{
-		int nParmNo = 0;	
+		unsigned int nParmNo = 0;	
 #if !defined(_WIN64)
 		StackMode(true);
 		PassParameter(parm1, nParmNo);
@@ -1538,7 +1542,7 @@ public:
 	template<typename F, typename T1, typename T2, typename T3, typename T4>
 	AsmRegister Call(F pFunc, T1 parm1, T2 parm2, T3 parm3, T4 parm4)
 	{
-		int nParmNo = 0;
+		unsigned int nParmNo = 0;
 #if !defined(_WIN64)
 		StackMode(true);
 		PassParameter(parm1, nParmNo);
@@ -1567,8 +1571,7 @@ public:
 	template<typename F, typename T1, typename T2, typename T3, typename T4, typename T5>
 	AsmRegister Call(F pFunc, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5)
 	{
-		int nParmNo = 0;
-		
+		unsigned int nParmNo = 0;
 #if !defined(_WIN64)
 		StackMode(true);
 		PassParameter(parm1, nParmNo);
@@ -1599,9 +1602,8 @@ public:
 	template<typename F, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
 	AsmRegister Call(F pFunc, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6)
 	{
-		int nParmNo = 0;
+		unsigned int nParmNo = 0;
 #if !defined(_WIN64)
-		int nParmNo = 0;
 		StackMode(true);
 		PassParameter(parm1, nParmNo);
 		PassParameter(parm2, nParmNo);
@@ -1633,9 +1635,8 @@ public:
 	template<typename F, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
 	AsmRegister Call(F pFunc, T1 parm1, T2 parm2, T3 parm3, T4 parm4, T5 parm5, T6 parm6, T7 parm7)
 	{
-		int nParmNo = 0;
+		unsigned int nParmNo = 0;
 #if !defined(_WIN64)
-		int nParmNo = 0;
 		StackMode(true);
 		PassParameter(parm1, nParmNo);
 		PassParameter(parm2, nParmNo);
@@ -1666,14 +1667,16 @@ public:
 #endif
 	}
 
+	unsigned int ParameterCount() const { return m_ParameterCount; }
+
 	template<typename T>
-	void PassParameter(T parm, int& nParmNo)
+	void PassParameter(T parm, unsigned int& nParmNo)
 	{
 		m_ParameterCount++;
 #if !defined(_WIN64)
 		if (m_SubCallConv == fastcall && nParmNo <= 1)
 		{
-			int nLastParmNo = nParmNo;
+			unsigned int nLastParmNo = nParmNo;
 			AsmRegister nReg = GetParameterRegister(parm, nParmNo);
 			if (nLastParmNo != nParmNo)
 			{
@@ -1697,26 +1700,23 @@ public:
 		}
 		else
 		{
+			/*
 			if (m_UseFramePointer)
 			{
-				AsmVariable pVar;
-				pVar = AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), -8 - (int)(8 * (nParmNo - 4)), true);
 				Mov(pVar, parm);
 			}
-			else
-			{
-				AsmVariable pVar;
-				pVar = AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
-				Mov(pVar, parm);
-			}
+			*/
+			AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), 32 + (int)(8 * (nParmNo - 4)), true);
+			Mov(pVar, parm);
 			nParmNo++;
-			m_SubFunctionParameterSize = nParmNo * 8;
+			m_SubFunctionParameterSize = (int)(nParmNo * 8);
 		}
 #endif
 	}
 
 	template<>
-	void PassParameter<float>(float parm, int& nParmNo)
+	void PassParameter<float>(float parm, unsigned int& nParmNo)
 	{
 		m_ParameterCount++;
 #if !defined(_WIN64)
@@ -1729,24 +1729,23 @@ public:
 		}
 		else
 		{
+			/*
 			if (m_UseFramePointer)
 			{
-				AsmVariable pVar(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), (-8) - (int)(8 * (nParmNo - 4)), true);
 				Mov(pVar, parm);
 			}
-			else
-			{
-				AsmVariable pVar(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
-				Mov(pVar, parm);
-			}
+			*/
+			AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), 32 + (int)(8 * (nParmNo - 4)), true);
+			Mov(pVar, parm);
 			nParmNo++;
-			m_SubFunctionParameterSize = nParmNo * 8;
+			m_SubFunctionParameterSize = (int)(nParmNo * 8);
 		}
 #endif
 	}
 
 	template<>
-	void PassParameter<double>(double parm, int& nParmNo)
+	void PassParameter<double>(double parm, unsigned int& nParmNo)
 	{
 		m_ParameterCount++;
 #if !defined(_WIN64)
@@ -1759,30 +1758,29 @@ public:
 		}
 		else
 		{
+			/*
 			if (m_UseFramePointer)
 			{
-				AsmVariable pVar(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), (-8) - (int)(8 * (nParmNo - 4)), true);
 				Mov(pVar, parm);
 			}
-			else
-			{
-				AsmVariable pVar(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
-				Mov(pVar, parm);
-			}
+			*/
+			AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), 32 + (int)(8 * (nParmNo - 4)), true);
+			Mov(pVar, parm);
 			nParmNo++;
-			m_SubFunctionParameterSize = nParmNo * 8;
+			m_SubFunctionParameterSize = (int)(nParmNo * 8);
 		}
 #endif
 	}
 
 	template<>
-	void PassParameter<AsmVariable>(AsmVariable parm, int& nParmNo)
+	void PassParameter<AsmVariable>(AsmVariable parm, unsigned int& nParmNo)
 	{
 		m_ParameterCount++;
 #if !defined(_WIN64)
 		if (m_SubCallConv == fastcall && nParmNo <= 1)
 		{
-			int nLastParmNo = nParmNo;
+			unsigned int nLastParmNo = nParmNo;
 			AsmRegister nReg = GetParameterRegister(parm, nParmNo);
 			if (nLastParmNo != nParmNo)
 			{
@@ -1819,30 +1817,29 @@ public:
 		}
 		else
 		{
+			/*
 			if (m_UseFramePointer)
 			{
-				AsmVariable pVar(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+				AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), (-8) - (int)(8 * (nParmNo - 4)), true);
 				Mov(pVar, parm);
 			}
-			else
-			{
-				AsmVariable pVar(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
-				Mov(pVar, parm);
-			}
+			*/
+			AsmVariable pVar = AsmVariable::Var(StackFrameRegister(), 32 + (int)(8 * (nParmNo - 4)), true);
+			Mov(pVar, parm);
 			nParmNo++;
-			m_SubFunctionParameterSize = nParmNo * 8;
+			m_SubFunctionParameterSize = (int)(nParmNo * 8);
 		}
 #endif
 	}
 
 	template<>
-	void PassParameter<AsmVariable*>(AsmVariable* parm, int& nParmNo)
+	void PassParameter<AsmVariable*>(AsmVariable* parm, unsigned int& nParmNo)
 	{
 		m_ParameterCount++;
 #if !defined(_WIN64)
 		if (m_SubCallConv == fastcall && nParmNo <= 1)
 		{
-			int nLastParmNo = nParmNo;
+			unsigned int nLastParmNo = nParmNo;
 			AsmRegister nReg = GetParameterRegister(parm, nParmNo);
 			if (nLastParmNo != nParmNo)
 			{
@@ -1869,10 +1866,11 @@ public:
 		else
 		{
 			AsmVariable pVar;
-			if (m_UseFramePointer)
-				pVar = AsmVariable(StackFrameRegister(), -8 - (8 * (nParmNo - 4)), true);
+			/*if (m_UseFramePointer)
+				pVar = AsmVariable::Var(StackFrameRegister(), (-8) - (int)(8 * (nParmNo - 4)), true);
 			else
-				pVar = AsmVariable(StackFrameRegister(), 32 + (8 * (nParmNo - 4)), true);
+			*/
+			pVar = AsmVariable::Var(StackFrameRegister(), 32 + (int)(8 * (nParmNo - 4)), true);
 
 			if (m_InStackMode == false)
 			{
@@ -1885,7 +1883,7 @@ public:
 				Lea(RAX, *parm);
 			}
 			nParmNo++;
-			m_SubFunctionParameterSize = nParmNo * 8;
+			m_SubFunctionParameterSize = (int)(nParmNo * 8);
 		}
 #endif
 	}
@@ -1898,30 +1896,33 @@ public:
 private:
 
 	template<typename T>
-	AsmRegister GetParameterRegister(T parm, int& nParmNo)
+	AsmRegister GetParameterRegister(T parm, unsigned int& nParmNo)
 	{
+		// NOLINTNEXTLINE(bugprone-sizeof-expression)
 		int nSize = sizeof(T);
 		AsmType nType = nSize == 4 ? T_INT : nSize == 8 ? T_INT64 : T_STRUCT;
 		return GetParameterRegister(nSize, nType, nParmNo);
 	}
 
 	template<>
-	AsmRegister GetParameterRegister(AsmVariable parm, int& nParmNo)
+	AsmRegister GetParameterRegister(AsmVariable parm, unsigned int& nParmNo)
 	{
 		return GetParameterRegister(parm.Size, parm.Type, nParmNo);
 	}
 
-	AsmRegister GetParameterRegister(int nSize, AsmType nType, int& nParmNo);
-	AsmRegister GetParameterRegister(AsmRegister parm, int& nParmNo);
+	AsmRegister GetParameterRegister(int nSize, AsmType nType, unsigned int& nParmNo);
+	AsmRegister GetParameterRegister(AsmRegister parm, unsigned int& nParmNo);
 
 	AsmLabel* LabelRef(const char *pLabel);
-	RuntimeAssembler& Shift_Ex(AsmRegister nReg, int nBits, int nOpcode);
-	RuntimeAssembler& AddJump(AsmInstruction& ins, const char* pLabel);
+	void Shift_Ex(AsmRegister nReg, int nBits, int nOpcode);
+	void AddJump(AsmInstruction& ins, const char* pLabel);
 
 	void Prolog();
 	void Epilog();
 	void OnCall(int nParmCount);
+#if defined(_WIN64)
 	void SpillRegister(AsmRegister nReg);
+#endif
 	size_t Data(float nValue);
 	size_t Data(double nValue);
 	int ParameterSize();
@@ -1936,20 +1937,18 @@ private:
 
 	UINT m_UsedRegisters;
 	int m_SavedRegisterSpace;
-	int m_SubFunctionParameterSize;
 	int m_ParameterCount;
-	int m_FrameOffset;
 	int m_CachedCodeSize;
 	int m_CachedPrologSize;
 	int m_DataSegmentOffset;
 	bool m_InStackMode;
 	bool m_InPrologEpilog;
-	bool m_UseFramePointer;
-	bool m_SpillParameters;
 	bool m_Finished;
 	AsmCallingConvention m_CallConv;
 	AsmCallingConvention m_SubCallConv;
 #if defined(_WIN64)
+	bool m_SpillParameters;
+	int m_SubFunctionParameterSize;
 	int m_UnwindInfoOffset;
 	CArray<unsigned short> m_UnwindData;
 	void CreateUnwindInfo();
@@ -1977,8 +1976,9 @@ private:
 #if !defined(_WIN64)
 		return EBP;
 #else
-		if (m_UseFramePointer)
+		/*if (m_UseFramePointer)
 			return RBP;
+		*/
 		return RSP;
 #endif
 	}

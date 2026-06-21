@@ -9,15 +9,15 @@
 #include "vfp2codbcclasses.h"
 
 // function forward definitions
-void _stdcall SaveODBCError(char *pFunction, SQLHANDLE hHandle, SQLSMALLINT nHandleType, bool bAddError);
-inline void SaveODBCError(char *pFunction, SQLHENVPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_ENV, false); }
-inline void SaveODBCError(char* pFunction, SQLHDBCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DBC, false); }
-inline void SaveODBCError(char* pFunction, SQLHSTMTPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_STMT, false); }
-inline void SaveODBCError(char* pFunction, SQLHDESCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DESC, false); }
-inline void AddODBCError(char* pFunction, SQLHENVPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_ENV, true); }
-inline void AddODBCError(char* pFunction, SQLHDBCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DBC, true); }
-inline void AddODBCError(char* pFunction, SQLHSTMTPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_STMT, true); }
-inline void AddODBCError(char* pFunction, SQLHDESCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DESC, true); }
+void _stdcall SaveODBCError(const char *pFunction, SQLHANDLE hHandle, SQLSMALLINT nHandleType, bool bAddError);
+inline void SaveODBCError(const char *pFunction, SQLHENVPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_ENV, false); }
+inline void SaveODBCError(const char* pFunction, SQLHDBCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DBC, false); }
+inline void SaveODBCError(const char* pFunction, SQLHSTMTPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_STMT, false); }
+inline void SaveODBCError(const char* pFunction, SQLHDESCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DESC, false); }
+inline void AddODBCError(const char* pFunction, SQLHENVPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_ENV, true); }
+inline void AddODBCError(const char* pFunction, SQLHDBCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DBC, true); }
+inline void AddODBCError(const char* pFunction, SQLHSTMTPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_STMT, true); }
+inline void AddODBCError(const char* pFunction, SQLHDESCPARAM hParam) { SaveODBCError(pFunction, hParam.hHandle, SQL_HANDLE_DESC, true); }
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,7 +56,7 @@ SqlStatement* _fastcall SQLAllocCatalogStatement(ParamBlkEx& parm, VFP2CTls& tls
 void _fastcall SQLCatalogFetch(SqlStatement* pStmt, FoxString& pCursor, VFP2CTls& tls) throw(int);
 #pragma warning(default : 4290)
 
-BOOL _fastcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType);
+BOOL _fastcall SQLTypeConvertible(SQLSMALLINT nSQLType, SQLCHAR aVFPType);
 
 int _fastcall SQLStoreByBinding(SqlColumn* lpCS);
 int _fastcall SQLStoreByBindingVar(SqlColumn* lpCS);
@@ -119,4 +119,4 @@ void _fastcall StringToTimestampOffset_Struct(char* lpString, SQLLEN nLen, SQLSM
 }
 #endif // end of extern "C"
 
-#endif _VFP2CODBC_H__
+#endif // _VFP2CODBC_H__

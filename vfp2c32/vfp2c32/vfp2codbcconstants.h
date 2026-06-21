@@ -27,7 +27,7 @@ const int VFP2C_VFP_DOUBLE_PRECISION = 18;
 const int VFP2C_VFP_CURRENCY_PRECISION = 19;
 const int VFP2C_VFP_CURRENCY_SCALE = 4;
 
-#define SQL_C_MONEY -199
+#define SQL_C_MONEY (-199)
 #define VFP2C_VFP_DATATYPE_CHARACTERS "CcVvQqWwMmGgNnBbFfIiYyDdTtLl"
 
 // additional SQL Server constants

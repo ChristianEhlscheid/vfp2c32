@@ -10,7 +10,7 @@ class CComCallInfo : public IDispatch
 {
 public:
 	CComCallInfo(LONG nCallId, DISPID dispid, WORD wFlags, LCID lcid, HANDLE hAbortEvent);
-	~CComCallInfo();
+	virtual ~CComCallInfo();
 	friend class CThreadedComObject;
 
 	// IUnknown methods
@@ -50,7 +50,7 @@ class CDispEntry
 {
 public:
 	CComBSTR Name;
-	int Len;
+	unsigned int Len;
 	DISPID DispId;
 };
 
@@ -58,7 +58,7 @@ class CThreadedComObject : public IDispatch
 {
 public:
 	CThreadedComObject(wchar_t* pComClass, bool bSynchronousAccess);
-	~CThreadedComObject();
+	virtual ~CThreadedComObject();
 	
 	// IUnknown methods
 	STDMETHOD(QueryInterface)(REFIID riid, void **ppvObject);
@@ -107,7 +107,7 @@ private:
 	CEvent m_ShutdownEvent; // event to signal the thread to shutdown
 	HANDLE m_AbortCallEvent; // event to signal the object to cancel the currently running method
 	DWORD m_LastError;	// error number of the last error that occured
-	char* m_LastErrorFunction; // name of the function that caused the last error
+	const char* m_LastErrorFunction; // name of the function that caused the last error
 	CComVariant m_CallContext; // context value which is passed to the OnComplete/OnError callback routine and can be set by setting CallContext
 	CCriticalSection m_CritSect; // critical section to protect access the to m_CallQueue
 	CAutoPtr<CComCallInfo> m_CurrentCall; // the currently active call

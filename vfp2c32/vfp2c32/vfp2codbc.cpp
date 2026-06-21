@@ -1,6 +1,5 @@
 #include <windows.h>
-#include <math.h>
-#include <stdio.h>
+#include <cmath>
 #include <sql.h>
 
 #if !defined(_WIN64)
@@ -14,7 +13,7 @@
 #include "vfp2codbcclasses.h"
 #include "vfp2ccppapi.h"
 
-void _stdcall SaveODBCError(char *pFunction, SQLHANDLE hHandle, SQLSMALLINT nHandleType, bool bAddError)
+void _stdcall SaveODBCError(const char *pFunction, SQLHANDLE hHandle, SQLSMALLINT nHandleType, bool bAddError)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	if (bAddError)
@@ -56,7 +55,7 @@ void _stdcall SaveODBCError(char *pFunction, SQLHANDLE hHandle, SQLSMALLINT nHan
 	} while (SQL_SUCCEEDED(nApiRet) && tls.ErrorCount < VFP2C_MAX_ERRORS);
 }
 
-void _stdcall SaveODBCInstallerError(char *pFunction)
+void _stdcall SaveODBCInstallerError(const char *pFunction)
 {
 	VFP2CTls& tls = VFP2CTls::Tls();
 	LPVFP2CERROR pError = tls.ErrorInfo;
@@ -64,8 +63,9 @@ void _stdcall SaveODBCInstallerError(char *pFunction)
 	tls.ErrorCount = 0;
 
 	while (nError <= 8 && 
-		SQLInstallerError(nError++, &pError->nErrorNo, pError->aErrorMessage, VFP2C_ERROR_MESSAGE_LEN, &nErrorLength) == SQL_SUCCESS)
+		SQLInstallerError(nError, &pError->nErrorNo, pError->aErrorMessage, VFP2C_ERROR_MESSAGE_LEN, &nErrorLength) == SQL_SUCCESS)
 	{
+		nError++;
 		pError->nErrorType = VFP2C_ERRORTYPE_WIN32; // we don't need a SQLState field here 
 		strncpyex(pError->aErrorFunction, pFunction, VFP2C_ERROR_FUNCTION_LEN);
 		tls.ErrorCount++;
@@ -78,7 +78,8 @@ SQLHENV _fastcall GetODBCEnvHandle()
 	int nErrorNo;
 	ValueEx vODBCHandle;
 	vODBCHandle.SetNull();
-	if (nErrorNo = _Evaluate(vODBCHandle, "VAL(SYS(3053))"))
+	nErrorNo = __Evaluate(vODBCHandle, "VAL(SYS(3053))");
+	if (nErrorNo)
 	{
 		SaveCustomErrorEx("SYS(3053)", "Cannot retrieve ODBC environment handle.", nErrorNo);
 		throw E_APIERROR;
@@ -96,7 +97,14 @@ try
 	BOOL bRetVal;
 	UINT nDSNType = parm(3)->ev_long & ODBC_SYSTEM_DSN ? ODBC_ADD_SYS_DSN : ODBC_ADD_DSN;
 
-	if (!(bRetVal = SQLConfigDataSource(0,nDSNType,pDriver,pDsn)))
+	if (pDsn.Len() > SQL_MAX_DSN_LENGTH)
+	{
+		SaveCustomErrorEx("CreateSQLDataSource", "Dsn is greater than maximum of %U characters.", E_VFP_INVALIDPARAMS, SQL_MAX_DSN_LENGTH);
+		throw E_APIERROR;
+	}
+
+	bRetVal = SQLConfigDataSource(0, nDSNType, pDriver.Ptr<LPCSTR>(), pDsn.Ptr<LPCSTR>());
+	if (!bRetVal)
 		SaveODBCInstallerError("SQLConfigDataSource");
 
 	Return(bRetVal == TRUE);
@@ -119,11 +127,15 @@ try
 	char aDSNName[SQL_MAX_DSN_LENGTH_EX] = "DSN=";
 
 	if (pDsn.Len() > SQL_MAX_DSN_LENGTH)
-		throw E_INVALIDPARAMS;
+	{
+		SaveCustomErrorEx("DeleteSQLDataSource", "Dsn is greater than maximum of %U characters.", E_VFP_INVALIDPARAMS, SQL_MAX_DSN_LENGTH);
+		throw E_APIERROR;
+	}
 	
-	strcat(aDSNName,pDsn);
+	strcat(aDSNName,pDsn.Ptr<LPCSTR>());
 
-	if (!(bRetVal = SQLConfigDataSource(0,nDSNType,pDriver,aDSNName)))
+	bRetVal = SQLConfigDataSource(0, nDSNType, pDriver.Ptr<LPCSTR>(), aDSNName);
+	if (!bRetVal)
 		SaveODBCInstallerError("SQLConfigDataSource");
 
 	Return(bRetVal == TRUE);
@@ -144,7 +156,14 @@ try
 	BOOL bRetVal;
 	UINT nDSNType = parm(3)->ev_long == ODBC_SYSTEM_DSN ? ODBC_CONFIG_SYS_DSN : ODBC_CONFIG_DSN;
 
-	if (!(bRetVal = SQLConfigDataSource(0,nDSNType,pDriver,pDsn)))
+	if (pDsn.Len() > SQL_MAX_DSN_LENGTH)
+	{
+		SaveCustomErrorEx("ChangeSQLDataSource", "Dsn is greater than maximum of %U characters.", E_VFP_INVALIDPARAMS, SQL_MAX_DSN_LENGTH);
+		throw E_APIERROR;
+	}
+
+	bRetVal = SQLConfigDataSource(0, nDSNType, pDriver.Ptr<LPCSTR>(), pDsn.Ptr<LPCSTR>());
+	if (!bRetVal)
 		SaveODBCInstallerError("SQLConfigDataSource");
 
 	Return(bRetVal == TRUE);
@@ -178,8 +197,8 @@ try
 			throw E_INVALIDPARAMS;
 	}
 	
-	nApiRet = SQLDataSources(hEnv,nFilter,pDatasource,SQL_MAX_DSN_LENGTH+1,&nDsnLen,
-				pDescription,ODBC_MAX_DESCRIPTION_LEN,&nDescLen);
+	nApiRet = SQLDataSources(hEnv,nFilter,pDatasource.Ptr<SQLCHAR*>(),SQL_MAX_DSN_LENGTH+1,&nDsnLen,
+				pDescription.Ptr<SQLCHAR*>(),ODBC_MAX_DESCRIPTION_LEN,&nDescLen);
 
 	pArray.AutoGrow(8);
 	while (nApiRet == SQL_SUCCESS)
@@ -188,8 +207,8 @@ try
 		pArray(nRow,1) = pDatasource.Len(nDsnLen);
 		pArray(nRow,2) = pDescription.Len(nDescLen);
 		
-		nApiRet = SQLDataSources(hEnv,SQL_FETCH_NEXT,pDatasource,SQL_MAX_DSN_LENGTH+1,&nDsnLen,
-				pDescription,ODBC_MAX_DESCRIPTION_LEN,&nDescLen);
+		nApiRet = SQLDataSources(hEnv,SQL_FETCH_NEXT,pDatasource.Ptr<SQLCHAR*>(),SQL_MAX_DSN_LENGTH+1,&nDsnLen,
+				pDescription.Ptr<SQLCHAR*>(),ODBC_MAX_DESCRIPTION_LEN,&nDescLen);
 	}
 
 	if (nApiRet != SQL_NO_DATA)
@@ -218,8 +237,8 @@ try
 	SQLSMALLINT nDriverLen, nAttribLen;
 	unsigned int nRow;
 	
-	nApiRet = SQLDrivers(hEnv,SQL_FETCH_FIRST,pDriver,ODBC_MAX_DRIVER_LEN,&nDriverLen,
-						pAttributes,ODBC_MAX_ATTRIBUTES_LEN,&nAttribLen);
+	nApiRet = SQLDrivers(hEnv,SQL_FETCH_FIRST,pDriver.Ptr<SQLCHAR*>(),ODBC_MAX_DRIVER_LEN,&nDriverLen,
+						pAttributes.Ptr<SQLCHAR*>(),ODBC_MAX_ATTRIBUTES_LEN,&nAttribLen);
 
 	pArray.AutoGrow(32);
 	while (nApiRet == SQL_SUCCESS)
@@ -227,8 +246,8 @@ try
 		nRow = pArray.Grow();
 		pArray(nRow,1) = pDriver.Len(nDriverLen);
 		pArray(nRow,2) = pAttributes.Len(--nAttribLen);
-		nApiRet = SQLDrivers(hEnv,SQL_FETCH_NEXT,pDriver,ODBC_MAX_DRIVER_LEN,&nDriverLen,
-						pAttributes,ODBC_MAX_ATTRIBUTES_LEN,&nAttribLen);
+		nApiRet = SQLDrivers(hEnv,SQL_FETCH_NEXT,pDriver.Ptr<SQLCHAR*>(),ODBC_MAX_DRIVER_LEN,&nDriverLen,
+						pAttributes.Ptr<SQLCHAR*>(),ODBC_MAX_ATTRIBUTES_LEN,&nAttribLen);
 	}
 
 	if (nApiRet != SQL_NO_DATA)
@@ -282,14 +301,14 @@ try
 		hConHandle = vConHandle.DynamicPtr<SQLHDBC>();
 	}
 
-	if (pConAttribute.ICompare("trace"))
+	if (pConAttribute.ICompare(__sv("trace")))
 	{
 		BOOL bTrace;
 		nApiRet = SQLGetConnectAttr(hConHandle, SQL_ATTR_TRACE, &bTrace,0,0);
 		if (nApiRet != SQL_ERROR)
 			pRef = bTrace > 0;
 	}
-	else if (pConAttribute.ICompare("tracefile"))
+	else if (pConAttribute.ICompare(__sv("tracefile")))
 	{
 		SQLINTEGER nLen;
 		pBuffer.Size(MAX_PATH);
@@ -297,21 +316,21 @@ try
 		if (nApiRet != SQL_ERROR)
 			pRef = pBuffer.Len(nLen);
 	}
-	else if (pConAttribute.ICompare("connected"))
+	else if (pConAttribute.ICompare(__sv("connected")))
 	{
 		BOOL bConnected;
 		nApiRet = SQLGetConnectAttr(hConHandle,SQL_ATTR_CONNECTION_DEAD,&bConnected,0,0);
 		if (nApiRet != SQL_ERROR)
 			pRef = (bConnected == 0); // negate result, since we want to return if we're connected, but we query if the connection is dead ..
 	}
-	else if (pConAttribute.ICompare("isolationlevel"))
+	else if (pConAttribute.ICompare(__sv("isolationlevel")))
 	{
 		int nIsolation;
 		nApiRet = SQLGetConnectAttr(hConHandle,SQL_ATTR_TXN_ISOLATION,&nIsolation,0,0);
 		if (nApiRet != SQL_ERROR)				
 			pRef = nIsolation;
 	}
-	else if (pConAttribute.ICompare("perfdata"))
+	else if (pConAttribute.ICompare(__sv("perfdata")))
 	{
 		if (hConHandle == false)
 			throw E_INVALIDPARAMS;
@@ -322,7 +341,10 @@ try
 			pRef = nPerfData;
 	}
 	else
-		throw E_INVALIDPARAMS;
+	{
+		SaveCustomErrorEx("SQLGetPropEx", "Unknown connection attribute '%128V'.", E_VFP_INVALIDPARAMS, pConAttribute.StringView());
+		throw E_APIERROR;
+	}
 
 	if (nApiRet == SQL_ERROR)
 	{
@@ -379,21 +401,21 @@ try
 		hConHandle = vConHandle.DynamicPtr<SQLHDBC>();
 	}
 
-	if (pConAttribute.ICompare("trace"))
+	if (pConAttribute.ICompare(__sv("trace")))
 	{
 		if (parm(3)->Vartype() != 'L')
 			throw E_INVALIDPARAMS;
 		SQLPOINTER pParam = parm(3)->ev_length ? (SQLPOINTER)1 : 0;
 		nApiRet = SQLSetConnectAttr(hConHandle,SQL_ATTR_TRACE, pParam, SQL_IS_UINTEGER);
 	}
-	else if (pConAttribute.ICompare("tracefile"))
+	else if (pConAttribute.ICompare(__sv("tracefile")))
 	{
 		if (parm(3)->Vartype() != 'C')
 			throw E_INVALIDPARAMS;
 		
-		nApiRet = SQLSetConnectAttr(hConHandle,SQL_ATTR_TRACEFILE,pProperty.Ptr<SQLPOINTER>(),pProperty.Len());
+		nApiRet = SQLSetConnectAttr(hConHandle,SQL_ATTR_TRACEFILE,pProperty.Ptr<SQLPOINTER>(), (SQLINTEGER)pProperty.Len());
 	}
-	else if (pConAttribute.ICompare("perfdata"))
+	else if (pConAttribute.ICompare(__sv("perfdata")))
 	{
 		if (parm(3)->Vartype() != 'L')
 			throw E_INVALIDPARAMS;
@@ -401,19 +423,22 @@ try
 		SQLPOINTER pParam = parm(3)->ev_length ? (SQLPOINTER)SQL_PERF_START : (SQLPOINTER)SQL_PERF_STOP;
 		nApiRet = SQLSetConnectAttr(hConHandle,SQL_COPT_SS_PERF_DATA, pParam, SQL_IS_INTEGER);
 	}
-	else if (pConAttribute.ICompare("perfdatafile"))
+	else if (pConAttribute.ICompare(__sv("perfdatafile")))
 	{
 		if (parm(3)->Vartype() != 'C')
 			throw E_INVALIDPARAMS;
 		
 		nApiRet = SQLSetConnectAttr(hConHandle,SQL_COPT_SS_PERF_DATA_LOG,pProperty.Ptr<SQLPOINTER>(),SQL_NTS);
 	}
-	else if (pConAttribute.ICompare("perfdatalog"))
+	else if (pConAttribute.ICompare(__sv("perfdatalog")))
 	{
 		nApiRet = SQLSetConnectAttr(hConHandle, SQL_COPT_SS_PERF_DATA_LOG_NOW, NULL, 0);
 	}
 	else
-		throw E_INVALIDPARAMS;
+	{
+		SaveCustomErrorEx("SQLSetPropEx", "Unknown connection attribute '%128V'.", E_VFP_INVALIDPARAMS, pConAttribute.StringView());
+		throw E_APIERROR;
+	}
 
 	if (nApiRet == SQL_ERROR)
 	{
@@ -443,11 +468,11 @@ SqlStatement* _fastcall SQLAllocCatalogStatement(ParamBlkEx& parm, VFP2CTls& tls
 		ValueEx vConHandle;
 		ValueEx vTypeSettings;
 		CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pBuffer;
-		vConHandle = 0;
-		vTypeSettings = 0;
+		vConHandle.SetNull();
+		vTypeSettings.SetNull();
 		SQLRETURN nApiRet;
 
-		pStmt = new SqlStatement();
+		pStmt = new(std::nothrow) SqlStatement();
 		if (!pStmt)
 			throw E_INSUFMEMORY;
 
@@ -545,7 +570,7 @@ void _fastcall SQLRegisterTableType(ParamBlkEx& parm)
 		else if (nApiRet == SQL_SUCCESS_WITH_INFO && pStmt->bStoreInfoAsError)
 			AddODBCError("SQLSetStmtAttr", pStmt->hConn);
 
-		nApiRet = SQLColumns(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pType, pType.Len(), 0, 0);
+		nApiRet = SQLColumns(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pType.Ptr<SQLCHAR*>(), (SQLSMALLINT)pType.Len(), 0, 0);
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLColumns", pStmt->hStmt);
@@ -560,7 +585,7 @@ void _fastcall SQLRegisterTableType(ParamBlkEx& parm)
 		if (nFlags & SQLREGISTERTABLETYPE_SCHEMA)
 			pSchemaView =  pSchema;
 
-		pTableType = new SqlTableType(pCatalogView, pSchemaView, pType);
+		pTableType = new(std::nothrow) SqlTableType(pCatalogView, pSchemaView, pType);
 		if (!pTableType)
 			throw E_INSUFMEMORY;
 
@@ -636,7 +661,7 @@ void _fastcall SQLRegisterTableType(ParamBlkEx& parm)
 			lpSC->pColumnName = pColumnName;
 			lpSC->pColumnName.Len(FixCursorColumnName(lpSC->pColumnName), true);
 			lpSC->nSQLType = nSQLType;
-			lpSC->nSQLTypeCode = (nSQLTypeCodeInd == SQL_NULL_DATA) ? 0 : nSQLTypeCode;
+			lpSC->nSQLTypeCode = (SQLSMALLINT)((nSQLTypeCodeInd == SQL_NULL_DATA) ? 0 : nSQLTypeCode);
 			lpSC->nSize = nSize;
 			lpSC->bNullable = bNullable;
 			lpSC->nDisplaySize = (nDisplaySizeInd == SQL_NULL_DATA) ? 0 : nDisplaySize;
@@ -860,6 +885,8 @@ void _fastcall SQLRegisterTableType(ParamBlkEx& parm)
 								lpSC->cVFPType = 'C';
 							}
 							break;
+						default:
+							break;
 					}
 					break;
 
@@ -898,15 +925,7 @@ void _fastcall SQLRegisterTableType(ParamBlkEx& parm)
 					break;
 
 				case SQL_TYPE_TIME:
-					lpSC->nCType = SQL_C_CHAR;
-					lpSC->cVFPType = 'C';
-					break;
-
 				case SQL_SS_TIME2:
-					lpSC->nCType = SQL_C_CHAR;
-					lpSC->cVFPType = 'C';
-					break;
-
 				case SQL_SS_TIMESTAMPOFFSET:
 					lpSC->nCType = SQL_C_CHAR;
 					lpSC->cVFPType = 'C';
@@ -1073,19 +1092,19 @@ void _fastcall SQLCreateTableTypeCursor(ParamBlkEx& parm)
 			}
 
 			// store fieldname
-			vStringValue = lpSC->pColumnName;
+			vStringValue = lpSC->pColumnName.StringView();
 			pArray(nRow, 1) = vStringValue;
 
 			// store fieldtype
 			vStringValue.Len(1);
-			vStringValue[0] = lpSC->cVFPType;
+			vStringValue[0] = (char)lpSC->cVFPType;
 			pArray(nRow, 2) = vStringValue;
 
 			// store field width/precision
 			// if the VFP datatype is none of the below ones .. the field width is unneccesary
 			if (lpSC->cVFPType == 'C' || lpSC->cVFPType == 'V' || lpSC->cVFPType == 'Q' ||
 				lpSC->cVFPType == 'F' || lpSC->cVFPType == 'N')
-				vNumeric.ev_long = lpSC->nSize;
+				vNumeric.ev_long = (long)lpSC->nSize;
 			else
 				vNumeric.ev_long = 0;
 
@@ -1149,7 +1168,8 @@ void _fastcall SQLCatalogFetch(SqlStatement* pStmt, FoxString& pCursor, VFP2CTls
 		if ((pStmt->nFlags & SQLEXECEX_APPEND_CURSOR) == 0)
 		{
 			AutoOnOffSetting pSetting("SAFETY", false);
-			if (nErrorNo = Zap(pResultSet->nWorkArea))
+			nErrorNo = Zap(pResultSet->nWorkArea);
+			if (nErrorNo)
 				throw nErrorNo;
 		}
 		pResultSet->pRecNoRestore.SaveRecNo(pResultSet->nWorkArea, (pStmt->nFlags & SQLEXECEX_PRESERVE_RECNO) > 0, true);
@@ -1178,10 +1198,10 @@ void _fastcall SQLTablesEx(ParamBlkEx& parm)
 	{
 		VFP2CTls& tls = VFP2CTls::Tls();
 		tls.ErrorCount = 0;
-		FoxString pCatalog(parm, 2, NoNullIfEmpty);
-		FoxString pSchema(parm, 3, NoNullIfEmpty);
-		FoxString pTable(parm, 4, NoNullIfEmpty);
-		FoxString pTableType(parm, 5, NoNullIfEmpty);
+		FoxString pCatalog(parm, 2, FoxString::NoNullIfEmpty);
+		FoxString pSchema(parm, 3, FoxString::NoNullIfEmpty);
+		FoxString pTable(parm, 4, FoxString::NoNullIfEmpty);
+		FoxString pTableType(parm, 5, FoxString::NoNullIfEmpty);
 		FoxString pCursor(parm(6));
 		DWORD nFlags = parm.PCount() >= 7 ? parm(7)->NumericCast<DWORD>() : 0;
 		UINT_PTR nScope = parm.PCount() >= 8 ? parm(8)->NumericCast<UINT_PTR>() : 0;
@@ -1201,8 +1221,8 @@ void _fastcall SQLTablesEx(ParamBlkEx& parm)
 				AddODBCError("SQLSetStmtAttr", pStmt->hConn);
 		}
 
-		nApiRet = SQLTables(pStmt->hStmt, pCatalog, pCatalog.Len() ? SQL_NTS : 0, pSchema, pSchema.Len() ? SQL_NTS : 0, 
-			pTable, pTable.Len() ? SQL_NTS : 0, pTableType, pTableType.Len() ? SQL_NTS : 0);
+		nApiRet = SQLTables(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), pCatalog.Len() ? SQL_NTS : 0, pSchema.Ptr<SQLCHAR*>(), pSchema.Len() ? SQL_NTS : 0,
+			pTable.Ptr<SQLCHAR*>(), pTable.Len() ? SQL_NTS : 0, pTableType.Ptr<SQLCHAR*>(), pTableType.Len() ? SQL_NTS : 0);
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLTables", pStmt->hStmt);
@@ -1258,7 +1278,7 @@ void _fastcall SQLColumnsEx(ParamBlkEx& parm)
 				AddODBCError("SQLSetStmtAttr", pStmt->hConn);
 		}
 
-		nApiRet = SQLColumns(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len(), pColumn, pColumn.Len());
+		nApiRet = SQLColumns(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len(), pColumn.Ptr<SQLCHAR*>(), (SQLSMALLINT)pColumn.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLColumns", pStmt->hStmt);
@@ -1298,7 +1318,7 @@ void _fastcall SQLPrimaryKeysEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 6 ? parm(6)->NumericCast<DWORD>() : 0;
 
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLPrimaryKeys(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len());
+		SQLRETURN nApiRet = SQLPrimaryKeys(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLPrimaryKeys", pStmt->hStmt);
@@ -1341,8 +1361,9 @@ void _fastcall SQLForeignKeysEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 9 ? parm(9)->NumericCast<DWORD>() : 0;
 
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLForeignKeys(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len(),
-				pCatalog2, pCatalog2.Len(), pSchema2, pSchema2.Len(), pTable2, pTable2.Len());
+		SQLRETURN nApiRet = SQLForeignKeys(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), pSchema.Ptr<SQLCHAR*>(),
+			(SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len(), 	pCatalog2.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog2.Len(), 
+			pSchema2.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema2.Len(), pTable2.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable2.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLForeignKeys", pStmt->hStmt);
@@ -1382,7 +1403,8 @@ void _fastcall SQLProceduresEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 6 ? parm(6)->NumericCast<DWORD>() : 0;
 
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLProcedures(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pProcedure, pProcedure.Len());
+		SQLRETURN nApiRet = SQLProcedures(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(),
+			pProcedure.Ptr<SQLCHAR*>(), (SQLSMALLINT)pProcedure.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLProcedures", pStmt->hStmt);
@@ -1423,8 +1445,9 @@ void _fastcall SQLProcedureColumnsEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 7 ? parm(7)->NumericCast<DWORD>() : 0;
 
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLProcedureColumns(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pProcedure, pProcedure.Len(),
-			pColumn, pColumn.Len());
+		SQLRETURN nApiRet = SQLProcedureColumns(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), 
+			pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pProcedure.Ptr<SQLCHAR*>(), (SQLSMALLINT)pProcedure.Len(),
+			pColumn.Ptr<SQLCHAR*>(), (SQLSMALLINT)pColumn.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLProcedureColumns", pStmt->hStmt);
@@ -1464,7 +1487,8 @@ void _fastcall SQLTablePrivilegesEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 6 ? parm(6)->NumericCast<DWORD>() : 0;
 
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLTablePrivileges(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len());
+		SQLRETURN nApiRet = SQLTablePrivileges(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), 
+			pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLTablePrivileges", pStmt->hStmt);
@@ -1505,8 +1529,9 @@ void _fastcall SQLColumnPrivilegesEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 7 ? parm(7)->NumericCast<DWORD>() : 0;
 
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLColumnPrivileges(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len(),
-			pColumn, pColumn.Len());
+		SQLRETURN nApiRet = SQLColumnPrivileges(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), 
+			pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len(),
+			pColumn.Ptr<SQLCHAR*>(), (SQLSMALLINT)pColumn.Len());
 		if (nApiRet == SQL_ERROR)
 		{
 			SaveODBCError("SQLColumnPrivileges", pStmt->hStmt);
@@ -1549,7 +1574,8 @@ void _fastcall SQLSpecialColumnsEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 9 ? parm(9)->NumericCast<DWORD>() : 0;
 		
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLSpecialColumns(pStmt->hStmt, nIdentifier, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len(),
+		SQLRETURN nApiRet = SQLSpecialColumns(pStmt->hStmt, nIdentifier, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), 
+			pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len(),
 			nScope, nNullable);
 		if (nApiRet == SQL_ERROR)
 		{
@@ -1593,7 +1619,8 @@ void _fastcall SQLStatisticsEx(ParamBlkEx& parm)
 		DWORD nFlags = parm.PCount() >= 9 ? parm(9)->NumericCast<DWORD>() : 0;
 		
 		pStmt = SQLAllocCatalogStatement(parm, tls, nFlags);
-		SQLRETURN nApiRet = SQLStatistics(pStmt->hStmt, pCatalog, pCatalog.Len(), pSchema, pSchema.Len(), pTable, pTable.Len(),
+		SQLRETURN nApiRet = SQLStatistics(pStmt->hStmt, pCatalog.Ptr<SQLCHAR*>(), (SQLSMALLINT)pCatalog.Len(), 
+			pSchema.Ptr<SQLCHAR*>(), (SQLSMALLINT)pSchema.Len(), pTable.Ptr<SQLCHAR*>(), (SQLSMALLINT)pTable.Len(),
 			nUnique, nReserved);
 		if (nApiRet == SQL_ERROR)
 		{
@@ -1698,8 +1725,8 @@ void _fastcall SQLExecEx(ParamBlkEx& parm)
 				pStmt = parm(1)->DynamicPtr<SqlStatement*>();
 			else
 			{
-				SaveCustomError("SqlExecEx", "Invalid parameter nHandle, should be of type I or N");
-				throw E_INVALIDPARAMS;
+				SaveCustomErrorEx("SqlExecEx", "Invalid parameter 'nHandle', should be of type I or N", E_VFP_INVALIDPARAMS);
+				throw E_APIERROR;
 			}
 
 			pStmt->Reset();
@@ -1810,7 +1837,7 @@ SQLResultSetProcessing:
 			goto SQLResultSetChecking;
 		}
 
-		if ((pStmt->nFlags & SQLEXECEX_PARAMETER_ARRAY_MERGE_OUTPUT))
+		if (pStmt->nFlags & SQLEXECEX_PARAMETER_ARRAY_MERGE_OUTPUT)
 		{
 			pResultSet = pStmt->AddResultSet();
 			pResultSet->nWorkArea = pStmt->pParameterArray.nWorkArea;
@@ -1839,6 +1866,7 @@ SQLParameterArrayMergeOutput:
 			pResultSet->SetCursorName();
 
 			// 6.1
+			// NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
 			if ((pStmt->nFlags & SQLEXECEX_REUSE_CURSOR) && (pResultSet->nWorkArea = Select(pResultSet->pCursorName)))
 				pResultSet->ParseExistingCursorSchema();
 			else
@@ -1855,7 +1883,8 @@ SQLParameterArrayMergeOutput:
 				if ((pStmt->nFlags & (SQLEXECEX_APPEND_CURSOR | SQLEXECEX_PARAMETER_ARRAY)) == 0)
 				{
 					AutoOnOffSetting pSetting("SAFETY", false);
-					if (nErrorNo = Zap(pResultSet->nWorkArea))
+					nErrorNo = Zap(pResultSet->nWorkArea);
+					if (nErrorNo)
 						throw nErrorNo;
 				}
 				pResultSet->pRecNoRestore.SaveRecNo(pResultSet->nWorkArea, (pStmt->nFlags & SQLEXECEX_PRESERVE_RECNO) > 0, true);
@@ -1888,7 +1917,7 @@ SQLParameterArrayMergeOutput:
 		if (pStmt->pInfoArray)
 		{
 			// TODO combine - rowcounts if SQLEXECEX_PARAMETER_ARRAY
-			int nIndex = pStmt->pInfoArray.Grow();
+			unsigned int nIndex = pStmt->pInfoArray.Grow();
 			pStmt->pInfoArray(nIndex, 1) = (pStmt->nFlags & SQLEXECEX_DEST_CURSOR) ? pResultSet->pCursorName : pStmt->pGetDataBuffer.Len(0);
 			vRowCount.ev_real = (double)pResultSet->nRowsFetched;
 			pStmt->pInfoArray(nIndex, 2) = vRowCount;
@@ -2015,7 +2044,7 @@ void _fastcall SQLPrepareEx(ParamBlkEx& parm)
 
 			pStmt->ExtractParametersAndRewriteStatement();
 			pSqlCommand = pStmt->pSQLSend.Ptr<SQLCHAR*>();
-			nSqlLen = pStmt->pSQLSend.Len();
+			nSqlLen = (SQLINTEGER)pStmt->pSQLSend.Len();
 
 			// 2.4 - parse parameterschema
 			pStmt->ParseParameterSchema();
@@ -2023,7 +2052,7 @@ void _fastcall SQLPrepareEx(ParamBlkEx& parm)
 		else // no parameters in SQL statement .. just send it as it is ..
 		{
 			pSqlCommand = pStmt->pSQLInput.Ptr<SQLCHAR*>();
-			nSqlLen = pStmt->pSQLInput.Len();
+			nSqlLen = (SQLINTEGER)pStmt->pSQLInput.Len();
 		}
 
 		// 4.
@@ -2088,13 +2117,14 @@ try
 {
 	SQLRETURN nApiRet;
 	ValueEx vConHandle;
-	ValueEx vTypeSettings;
-	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pBuffer;
+	ValueEx vSetting;
 	SQLSMALLINT nLen;
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pBuffer;
+	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pBuffer2;
 	vConHandle.SetNull();
-	vTypeSettings.SetNull();
+	vSetting.SetNull();
 	
-	pStmt = new SqlStatement();
+	pStmt = new(std::nothrow) SqlStatement();
 	if (!pStmt)
 		throw E_INSUFMEMORY;
 
@@ -2108,9 +2138,11 @@ try
 		pStmt->nFlags = parm(5)->ev_long;
 		if (pStmt->nFlags & SQLEXECEX_APPEND_CURSOR)
 			pStmt->nFlags |= SQLEXECEX_REUSE_CURSOR;
+		
 		if (pStmt->nFlags & SQLEXECEX_REUSE_CURSOR)
 			pStmt->nFlags |= SQLEXECEX_DEST_CURSOR;
-		else if ((pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_DEST_VARIABLE)) == 0)
+		
+		if ((pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_DEST_VARIABLE)) == 0)
 			pStmt->nFlags |= SQLEXECEX_DEST_CURSOR;
 	}
 	else
@@ -2118,20 +2150,20 @@ try
 
 	if ((pStmt->nFlags & SQLEXECEX_DEST_VARIABLE) && (pStmt->nFlags & (SQLEXECEX_DEST_CURSOR | SQLEXECEX_REUSE_CURSOR | SQLEXECEX_APPEND_CURSOR | SQLEXECEX_PRESERVE_RECNO)))
 	{
-		SaveCustomError("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_DEST_VARIABLE in combination with SQLEXECEX_DEST_CURSOR, SQLEXECEX_REUSE_CURSOR, SQLEXECEX_APPEND_CURSOR or SQLEXECEX_PRESERVE_RECNO.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_DEST_VARIABLE in combination with SQLEXECEX_DEST_CURSOR, SQLEXECEX_REUSE_CURSOR, SQLEXECEX_APPEND_CURSOR or SQLEXECEX_PRESERVE_RECNO.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	if ((pStmt->nFlags & SQLEXECEX_PRESERVE_RECNO) && (pStmt->nFlags & SQLEXECEX_APPEND_CURSOR) == 0)
 	{
-		SaveCustomError("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_PRESERVE_RECNO requires SQLEXECEX_APPEND_CURSOR.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_PRESERVE_RECNO requires SQLEXECEX_APPEND_CURSOR.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	if ((pStmt->nFlags & (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_STORE_INFO)) == (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_STORE_INFO))
 	{
-		SaveCustomError("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_CALLBACK_INFO and SQLEXECEX_STORE_INFO or mutually exclusive.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("SqlExecEx", "Invalid nFlags parameter, SQLEXECEX_CALLBACK_INFO and SQLEXECEX_STORE_INFO or mutually exclusive.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	pStmt->pSQLInput.Attach(parm(2));
@@ -2149,8 +2181,8 @@ try
 	}
 	else if (pStmt->nFlags & SQLEXECEX_STORE_INFO)
 	{
-		SaveCustomError("SqlExecEx", "SQLEXECEX_STORE_INFO requires the passing of an array name in parameter cArray.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("SqlExecEx", "SQLEXECEX_STORE_INFO requires the passing of an array name in parameter cArray.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	if (parm.PCount() >= 6 && parm(6)->Len())
@@ -2174,16 +2206,16 @@ try
 
 		if (parm(8)->Len() > VFP2C_MAX_CALLBACKFUNCTION)
 		{
-			SaveCustomError("SqlExecEx", "Callback function length is greater than maximum length of 1024.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("SqlExecEx", "Callback function length is greater than maximum length of 1024.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 		FoxString pCallback(parm(8));
 		pStmt->pCallback.SetCallback(pCallback);
 	}
 	else if (pStmt->nFlags & (SQLEXECEX_CALLBACK_INFO | SQLEXECEX_CALLBACK_PROGRESS))
 	{
-		SaveCustomError("SqlExecEx", "SQLEXECEX_CALLBACK_INFO or SQLEXECEX_CALLBACK_PROGRES requires the passing of a callback function.");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("SqlExecEx", "SQLEXECEX_CALLBACK_INFO or SQLEXECEX_CALLBACK_PROGRESS requires the passing of a callback function.", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 
 	if (parm.PCount() >= 9 && parm(9)->ev_long)
@@ -2199,8 +2231,8 @@ try
 		}
 		else
 		{
-			SaveCustomError("SqlExecEx", "Status cursor for SQLEXECEX_PARAMETER_ARRAY provided but the flag SQLEXECEX_PARAMETER_ARRAY was not passed.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("SqlExecEx", "Status cursor for SQLEXECEX_PARAMETER_ARRAY provided but the flag SQLEXECEX_PARAMETER_ARRAY was not passed.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 	}
 
@@ -2213,8 +2245,8 @@ try
 			pStmt->nRowSetSize = parm(12)->ev_long;
 		else
 		{
-			SaveCustomError("SqlExecEx", "Rowsetsize parameter has to be greater 0.");
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("SqlExecEx", "Rowsetsize parameter has to be greater 0.", E_VFP_INVALIDPARAMS);
+			throw E_APIERROR;
 		}
 	}
 
@@ -2224,21 +2256,51 @@ try
 	// 1.2 - evaluate connection handle
 	Evaluate(vConHandle, pBuffer);
 	pStmt->hConn = vConHandle.DynamicPtr<SQLHDBC>();
+	if (pStmt->hConn == 0)
+	{
+		// the connection is currently "idle" disconnected, force a reconnection by calling SQLCOMMIT, besides from reestablishing the connection SQLCOMMIT is basically a noop when executed on an "idle" connection
+		// disable 'DispLogin' setting before if neccessary to supress the connection dialog on reconnection failure
+		pBuffer2.Format("SQLGETPROP(%U, 'DispLogin')", parm(1)->ev_long);
+		Evaluate(vSetting, pBuffer2);
+		if (vSetting.ev_long != 3)
+		{
+			pBuffer2.Format("SQLSETPROP(%U, 'DispLogin', 3)", parm(1)->ev_long);
+			Execute(pBuffer2);
+		}
+
+		pBuffer2.Format("SQLCOMMIT(%U)", parm(1)->ev_long);
+		Execute(pBuffer2);
+
+		if (vSetting.ev_long != 3)
+		{
+			pBuffer2.Format("SQLSETPROP(%U, 'DispLogin', %U)", parm(1)->ev_long, vSetting.ev_long);
+			Execute(pBuffer2);
+		}
+
+		Evaluate(vConHandle, pBuffer);
+		pStmt->hConn = vConHandle.DynamicPtr<SQLHDBC>();
+		if (pStmt->hConn == 0)
+		{
+			SaveCustomError("SQLAllocStatement", "ODBC connection was idle disconnected and the reconnection attempt failed.");
+			throw E_APIERROR;
+		}
+		vSetting.SetNull();
+	}
 
 	if (CFoxVersion::MajorVersion() >= 9) 
 	{
-		Evaluate(vTypeSettings, "CURSORGETPROP('UseMemoSize',0)+IIF(CURSORGETPROP('MapVarchar',0),256,0)+IIF(CURSORGETPROP('MapBinary',0),512,0)");
-		pStmt->nUseMemoSize = (vTypeSettings.ev_long & 255);
-		pStmt->bMapVarchar = (vTypeSettings.ev_long & 256) > 0;
-		pStmt->bMapVarbinary = (vTypeSettings.ev_long & 512) > 0;
+		Evaluate(vSetting, "CURSORGETPROP('UseMemoSize',0)+IIF(CURSORGETPROP('MapVarchar',0),256,0)+IIF(CURSORGETPROP('MapBinary',0),512,0)");
+		pStmt->nUseMemoSize = (vSetting.ev_long & 255);
+		pStmt->bMapVarchar = (vSetting.ev_long & 256) > 0;
+		pStmt->bMapVarbinary = (vSetting.ev_long & 512) > 0;
 	}
 	else
 	{
-		Evaluate(vTypeSettings, "CURSORGETPROP('UseMemoSize',0)");
-		pStmt->nUseMemoSize = vTypeSettings.ev_long;
+		Evaluate(vSetting, "CURSORGETPROP('UseMemoSize',0)");
+		pStmt->nUseMemoSize = vSetting.ev_long;
 	}
 
-	nApiRet = SQLGetInfo(pStmt->hConn, SQL_DBMS_NAME, pBuffer.Ptr<SQLPOINTER>(), pBuffer.Size(), &nLen);
+	nApiRet = SQLGetInfo(pStmt->hConn, SQL_DBMS_NAME, pBuffer.Ptr<SQLPOINTER>(), (SQLSMALLINT)pBuffer.Size(), &nLen);
 	if (nApiRet == SQL_ERROR)
 	{
 		SaveODBCError("SQLGetInfo - SQL_DBMS_NAME", pStmt->hConn);
@@ -2250,21 +2312,21 @@ try
 	{
 		pBuffer.Len(nLen > 6 ? 6 : nLen, true);
 		CStringView pDBName = pBuffer;
-		if (pDBName.ICompare("MICROS"))
+		if (pDBName.ICompare(__sv("MICROS")))
 			pStmt->ServerType = SQLServer;
-		else if (pDBName.ICompare("ORACLE"))
+		else if (pDBName.ICompare(__sv("ORACLE")))
 			pStmt->ServerType = Oracle;
-		else if (pDBName.ICompare("MYSQL"))
+		else if (pDBName.ICompare(__sv("MYSQL")))
 			pStmt->ServerType = MySql;
-		else if (pDBName.ICompare("MARIAD"))
+		else if (pDBName.ICompare(__sv("MARIAD")))
 			pStmt->ServerType = MariaDB;
-		else if (pDBName.ICompare("POSTGR"))
+		else if (pDBName.ICompare(__sv("POSTGR")))
 			pStmt->ServerType = PostgreSQL;
-		else if (pDBName.ICompare("INFORM"))
+		else if (pDBName.ICompare(__sv("INFORM")))
 			pStmt->ServerType = Informix;
-		else if (pDBName.ICompare("FIREBI"))
+		else if (pDBName.ICompare(__sv("FIREBI")))
 			pStmt->ServerType = Firebird;
-		else if (pDBName.ICompare("ACCESS"))
+		else if (pDBName.ICompare(__sv("ACCESS")))
 			pStmt->ServerType = Access;
 	}
 
@@ -2326,7 +2388,7 @@ unsigned int _fastcall FixCursorColumnName(CStringView pColumnName)
 	return nLen;
 }
 
-BOOL _fastcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType)
+BOOL _fastcall SQLTypeConvertible(SQLSMALLINT nSQLType, SQLCHAR aVFPType)
 {
 	switch (nSQLType)
 	{
@@ -2379,11 +2441,7 @@ BOOL _fastcall SQLTypeConvertible(SQLSMALLINT nSQLType, char aVFPType)
 		return aVFPType == 'C' || aVFPType == 'V' || aVFPType == 'L' || aVFPType == 'I';
 
 	case SQL_GUID:
-		return aVFPType == 'C' || aVFPType == 'Q';
-
 	case SQL_SS_TIME2:
-		return aVFPType == 'C' || aVFPType == 'Q';
-
 	case SQL_SS_TIMESTAMPOFFSET:
 		return aVFPType == 'C' || aVFPType == 'Q';
 
@@ -2431,7 +2489,7 @@ int _fastcall SQLStoreIntByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		int* pData = IndexPtr<int>(lpSC->pDataPtr, nRow);
+		int* pData = IndexPtr<int*>(lpSC->pDataPtr, nRow);
 		lpSC->vData.ev_long = *pData;
 		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
@@ -2447,8 +2505,8 @@ int _fastcall SQLStoreDoubleByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		double* pData = IndexPtr<double>(lpSC->pDataPtr, nRow);
-		lpSC->vData.ev_long = *pData;
+		double* pData = IndexPtr<double*>(lpSC->pDataPtr, nRow);
+		lpSC->vData.ev_real = *pData;
 		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
 }
@@ -2525,7 +2583,7 @@ int _fastcall SQLStoreCharByBindingSet(SqlColumn* lpSC, int nRow)
 	{
 		FoxString& pValue = lpSC->pStmt->pGetDataBuffer;
 		SQLPOINTER pData = AdvancePtr<SQLPOINTER>(lpSC->pDataPtr, nRow * lpSC->nBufferSize);
-		SQLLEN nSize = nIndicator != SQL_NO_TOTAL ? nIndicator : lpSC->nSize;
+		SQLLEN nSize = nIndicator != SQL_NO_TOTAL ? nIndicator : (SQLINTEGER)lpSC->nSize;
 		memcpy(pValue.Ptr<char*>(), pData, nSize);
 		pValue.Len(nSize);
 		return _DBReplace(lpSC->lField, pValue);
@@ -2549,7 +2607,7 @@ int _fastcall SQLStoreCharByBindingVar(SqlColumn* lpSC)
 int _fastcall SQLStoreCharByGetData(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(),
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (SQL_SUCCEEDED(nApiRet))
 	{
 		if (nApiRet == SQL_SUCCESS_WITH_INFO && lpSC->bStoreInfoAsError)
@@ -2576,7 +2634,7 @@ int _fastcall SQLStoreCharByGetData(SqlColumn* lpSC)
 int _fastcall SQLStoreCharByGetDataVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(),
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (SQL_SUCCEEDED(nApiRet))
 	{
 		if (nApiRet == SQL_SUCCESS_WITH_INFO && lpSC->bStoreInfoAsError)
@@ -2690,7 +2748,7 @@ int _fastcall SQLStoreDateByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		SQL_DATE_STRUCT *pDate = IndexPtr<SQL_DATE_STRUCT>(lpSC->pDataPtr, nRow);
+		SQL_DATE_STRUCT *pDate = IndexPtr<SQL_DATE_STRUCT*>(lpSC->pDataPtr, nRow);
 		Date_StructToValue(pDate, lpSC->vData);
 		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
@@ -2786,7 +2844,7 @@ int _fastcall SQLStoreDateTimeByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		SQL_TIMESTAMP_STRUCT* pDate = IndexPtr<SQL_TIMESTAMP_STRUCT>(lpSC->pDataPtr, nRow);
+		SQL_TIMESTAMP_STRUCT* pDate = IndexPtr<SQL_TIMESTAMP_STRUCT*>(lpSC->pDataPtr, nRow);
 		Timestamp_StructToValue(pDate, lpSC->vData);
 		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
@@ -2882,7 +2940,7 @@ int _fastcall SQLStoreCurrencyByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		SQL_NUMERIC_STRUCT *pNum = IndexPtr<SQL_NUMERIC_STRUCT>(lpSC->pDataPtr, nRow);
+		SQL_NUMERIC_STRUCT *pNum = IndexPtr<SQL_NUMERIC_STRUCT*>(lpSC->pDataPtr, nRow);
 		Numeric_StructToValue(pNum, lpSC->vData);
 		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
@@ -2898,7 +2956,7 @@ int _fastcall SQLStoreLogicalByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		unsigned char* pLogical = IndexPtr<unsigned char>(lpSC->pDataPtr, nRow);
+		unsigned char* pLogical = IndexPtr<unsigned char*>(lpSC->pDataPtr, nRow);
 		lpSC->vData.ev_length = *pLogical;
 		return _DBReplace(lpSC->lField, lpSC->vData);
 	}
@@ -2911,11 +2969,11 @@ int _fastcall SQLStoreMemoChar(SqlColumn* lpSC)
 	int nErrorNo;
 
 	nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(), 
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
 		if (lpSC->nIndicator != SQL_NULL_DATA)
-			return ReplaceMemo(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->nIndicator, lpSC->hMemoFile);
+			return FoxMemo::Replace(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)lpSC->nIndicator, lpSC->hMemoFile);
 		else if (lpSC->bNullable)
 		{
 			Value vNull = { '0' };
@@ -2925,20 +2983,23 @@ int _fastcall SQLStoreMemoChar(SqlColumn* lpSC)
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
 		// result is greater than buffer, allocate space for the memo field, nIndicator contains length of data
-		if (nErrorNo = AllocMemo(lpSC->lField,lpSC->nIndicator, &nLoc))
+		nErrorNo = FoxMemo::Alloc(lpSC->lField, (int)lpSC->nIndicator, &nLoc);
+		if (nErrorNo)
 			return nErrorNo;
 
 		// append the data from the buffer
-		if (nErrorNo = AppendMemo(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->pStmt->pGetDataBuffer.Size() - 1, lpSC->hMemoFile, &nLoc))
+		nErrorNo = FoxMemo::Append(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)(lpSC->pStmt->pGetDataBuffer.Size() - 1), lpSC->hMemoFile, &nLoc);
+		if (nErrorNo)
 			return nErrorNo;
 
 		do
 		{
 			nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(), 
-				lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+				(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 			if (SQL_SUCCEEDED(nApiRet))
 			{
-				if (nErrorNo = AppendMemo(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->pStmt->pGetDataBuffer.Size() - 1, lpSC->hMemoFile, 0))
+				nErrorNo = FoxMemo::Append(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)(lpSC->pStmt->pGetDataBuffer.Size() - 1), lpSC->hMemoFile, 0);
+				if (nErrorNo)
 					return nErrorNo;
 			}
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
@@ -2961,7 +3022,7 @@ int _fastcall SQLStoreMemoChar(SqlColumn* lpSC)
 int _fastcall SQLStoreMemoCharVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(), 
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
 		if (lpSC->nIndicator == SQL_NULL_DATA)
@@ -2981,7 +3042,7 @@ int _fastcall SQLStoreMemoCharVar(SqlColumn* lpSC)
 		lpSC->pStmt->pGetDataBuffer.Size(lpSC->nIndicator + 1);
 		lpSC->pStmt->pGetDataBuffer.Len(lpSC->nIndicator);
 		nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<char*>() + nDataSize, 
-			lpSC->pStmt->pGetDataBuffer.Size() - nDataSize, &lpSC->nIndicator);
+			(SQLINTEGER)(lpSC->pStmt->pGetDataBuffer.Size() - nDataSize), &lpSC->nIndicator);
 		if (nApiRet == SQL_SUCCESS)
 			return _Store(lpSC->lField, lpSC->pStmt->pGetDataBuffer);
 		else
@@ -3007,9 +3068,9 @@ int _fastcall SQLStoreMemoCharByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		int nSize = lpSC->nIndicator == SQL_NO_TOTAL ? lpSC->nIndicator : lpSC->nSize;
+		int nSize = lpSC->nIndicator == SQL_NO_TOTAL ? (int)lpSC->nIndicator : (int)lpSC->nSize;
 		memcpy(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), IndexPtr<char*>(lpSC->pDataPtr, nRow), nSize);
-		return ReplaceMemo(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), nSize, lpSC->hMemoFile);
+		return FoxMemo::Replace(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), nSize, lpSC->hMemoFile);
 	}
 }
 
@@ -3020,11 +3081,11 @@ int _fastcall SQLStoreMemoWChar(SqlColumn* lpSC)
 	int nErrorNo;
 
 	nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(), 
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
 		if (lpSC->nIndicator != SQL_NULL_DATA)
-			return ReplaceMemo(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->nIndicator, lpSC->hMemoFile);
+			return FoxMemo::Replace(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)lpSC->nIndicator, lpSC->hMemoFile);
 		else if (lpSC->bNullable)
 		{
 			Value vNull = { '0' };
@@ -3034,20 +3095,23 @@ int _fastcall SQLStoreMemoWChar(SqlColumn* lpSC)
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
 		// result is greater than buffer, allocate space for the memo field, nIndicator contains length of data
-		if (nErrorNo = AllocMemo(lpSC->lField,lpSC->nIndicator,&nLoc))
+		nErrorNo = FoxMemo::Alloc(lpSC->lField, (int)lpSC->nIndicator, &nLoc);
+		if (nErrorNo)
 			return nErrorNo;
 
 		// append the data from the buffer
-		if (nErrorNo = AppendMemo(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->pStmt->pGetDataBuffer.Size() - 2, lpSC->hMemoFile, &nLoc))
+		nErrorNo = FoxMemo::Append(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)(lpSC->pStmt->pGetDataBuffer.Size() - 2), lpSC->hMemoFile, &nLoc);
+		if (nErrorNo)
 			return nErrorNo;
 
 		do 
 		{
 			nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(), 
-				lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+				(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 			if (SQL_SUCCEEDED(nApiRet))
 			{
-				if (nErrorNo = AppendMemo(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->pStmt->pGetDataBuffer.Size() - 2,lpSC->hMemoFile, 0))
+				nErrorNo = FoxMemo::Append(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)(lpSC->pStmt->pGetDataBuffer.Size() - 2), lpSC->hMemoFile, 0);
+				if (nErrorNo)
 					return nErrorNo;
 			}
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
@@ -3069,7 +3133,7 @@ int _fastcall SQLStoreMemoWChar(SqlColumn* lpSC)
 int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(),
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
 		if (lpSC->nIndicator == SQL_NULL_DATA)
@@ -3089,7 +3153,7 @@ int _fastcall SQLStoreMemoWCharVar(SqlColumn* lpSC)
 		lpSC->pStmt->pGetDataBuffer.Size(lpSC->nIndicator + 2);
 		lpSC->pStmt->pGetDataBuffer.Len(lpSC->nIndicator);
 		nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<char*>() + nDataSize,
-			lpSC->pStmt->pGetDataBuffer.Size() - nDataSize, &lpSC->nIndicator);
+			(SQLINTEGER)(lpSC->pStmt->pGetDataBuffer.Size() - nDataSize), &lpSC->nIndicator);
 		if (nApiRet == SQL_SUCCESS)
 			return _Store(lpSC->lField, lpSC->pStmt->pGetDataBuffer);
 		else
@@ -3115,9 +3179,9 @@ int _fastcall SQLStoreMemoWCharByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		int nSize = lpSC->nIndicator == SQL_NO_TOTAL ? lpSC->nIndicator : lpSC->nSize;
+		int nSize = lpSC->nIndicator == SQL_NO_TOTAL ? (int)lpSC->nIndicator : (int)lpSC->nSize;
 		memcpy(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), IndexPtr<wchar_t*>(lpSC->pDataPtr, nRow), nSize);
-		return ReplaceMemo(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), nSize, lpSC->hMemoFile);
+		return FoxMemo::Replace(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), nSize, lpSC->hMemoFile);
 	}
 }
 
@@ -3128,12 +3192,12 @@ int _fastcall SQLStoreMemoBinary(SqlColumn* lpSC)
 	int nErrorNo;
 
 	nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(),
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	
 	if (nApiRet == SQL_SUCCESS)
 	{
 		if (lpSC->nIndicator != SQL_NULL_DATA)
-			return ReplaceMemo(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->nIndicator, lpSC->hMemoFile);
+			return FoxMemo::Replace(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)lpSC->nIndicator, lpSC->hMemoFile);
 		else if (lpSC->bNullable)
 		{
 			Value vNull = { '0' };
@@ -3143,20 +3207,23 @@ int _fastcall SQLStoreMemoBinary(SqlColumn* lpSC)
 	else if (nApiRet == SQL_SUCCESS_WITH_INFO)
 	{
 		// allocate space for the memo field, nIncicator contains length of full data
-		if (nErrorNo = AllocMemo(lpSC->lField,lpSC->nIndicator,&nLoc))
+		nErrorNo = FoxMemo::Alloc(lpSC->lField, (int)lpSC->nIndicator, &nLoc);
+		if (nErrorNo)
 			return nErrorNo;
 
 		// append the data from the buffer
-		if (nErrorNo = AppendMemo(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->pStmt->pGetDataBuffer.Size(), lpSC->hMemoFile,&nLoc))
+		nErrorNo = FoxMemo::Append(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)lpSC->pStmt->pGetDataBuffer.Size(), lpSC->hMemoFile, &nLoc);
+		if (nErrorNo)
 			return nErrorNo;
 
 		do 
 		{
 			nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(),
-				lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+				(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 			if (SQL_SUCCEEDED(nApiRet))
 			{
-				if (nErrorNo = AppendMemo(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), lpSC->pStmt->pGetDataBuffer.Size(), lpSC->hMemoFile, 0))
+				nErrorNo = FoxMemo::Append(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), (int)lpSC->pStmt->pGetDataBuffer.Size(), lpSC->hMemoFile, 0);
+				if (nErrorNo)
 					return nErrorNo;
 			}
 		} while (nApiRet == SQL_SUCCESS_WITH_INFO);
@@ -3179,7 +3246,7 @@ int _fastcall SQLStoreMemoBinary(SqlColumn* lpSC)
 int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpSC)
 {
 	SQLRETURN nApiRet = SQLGetData(lpSC->pStmt->hStmt,lpSC->nColNo,lpSC->nCType, lpSC->pStmt->pGetDataBuffer.Ptr<SQLPOINTER>(), 
-		lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
+		(SQLINTEGER)lpSC->pStmt->pGetDataBuffer.Size(), &lpSC->nIndicator);
 	if (nApiRet == SQL_SUCCESS)
 	{
 		if (lpSC->nIndicator == SQL_NULL_DATA)
@@ -3200,7 +3267,7 @@ int _fastcall SQLStoreMemoBinaryVar(SqlColumn* lpSC)
 		pData += nDataSize;
 		lpSC->pStmt->pGetDataBuffer.Size(lpSC->nIndicator);
 		lpSC->pStmt->pGetDataBuffer.Len(lpSC->nIndicator);
-		nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, pData, lpSC->pStmt->pGetDataBuffer.Size() - nDataSize, &lpSC->nIndicator);
+		nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, lpSC->nCType, pData, (SQLINTEGER)(lpSC->pStmt->pGetDataBuffer.Size() - nDataSize), &lpSC->nIndicator);
 		if (nApiRet == SQL_SUCCESS)
 			return _Store(lpSC->lField, lpSC->pStmt->pGetDataBuffer);
 		else
@@ -3226,9 +3293,9 @@ int _fastcall SQLStoreMemoBinaryByBindingSet(SqlColumn* lpSC, int nRow)
 	}
 	else
 	{
-		int nSize = lpSC->nIndicator == SQL_NO_TOTAL ? lpSC->nIndicator : lpSC->nSize;
+		int nSize = lpSC->nIndicator == SQL_NO_TOTAL ? (int)lpSC->nIndicator : (int)lpSC->nSize;
 		memcpy(lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), IndexPtr<char*>(lpSC->pDataPtr, nRow), nSize);
-		return ReplaceMemo(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), nSize, lpSC->hMemoFile);
+		return FoxMemo::Replace(lpSC->lField, lpSC->pStmt->pGetDataBuffer.Ptr<char*>(), nSize, lpSC->hMemoFile);
 	}
 }
 
@@ -3248,27 +3315,27 @@ int _fastcall SQLStoreSqlVariantByGetData(SqlColumn* lpSC)
 			switch (nCType)
 			{
 				case SQL_C_BINARY:
-					lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_CA_SS_COLUMN_SSTYPE, &pVariant->nType, 0, 0);
+					lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_CA_SS_COLUMN_SSTYPE, &pVariant->nType, 0, 0);
 					switch (pVariant->nType)
 					{
 						case SQLTIMEN:
-							lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
+							lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
 							pVariant->nType = SQL_C_SS_TIME2;
 							nCType = SQL_C_CHAR;
 							break;
 						case SQLDATETIMEOFFSETN:
-							lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
+							lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
 							pVariant->nType = SQL_C_SS_TIMESTAMPOFFSET;
 							nCType = SQL_C_CHAR;
 							break;
 						default:
-							pVariant->nType = nCType;
-							pVariant->nSize = nLen;
+							pVariant->nType = (SQLSMALLINT)nCType;
+							pVariant->nSize = (SQLSMALLINT)nLen;
 					}
 					break;
 
 				case SQL_C_NUMERIC:
-					lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_CA_SS_COLUMN_SSTYPE, &pVariant->nType, 0, 0);
+					lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_CA_SS_COLUMN_SSTYPE, &pVariant->nType, 0, 0);
 					switch (pVariant->nType)
 					{
 						case SQLMONEY:
@@ -3277,38 +3344,38 @@ int _fastcall SQLStoreSqlVariantByGetData(SqlColumn* lpSC)
 							pVariant->nType = SQL_C_MONEY;
 							break;
 						default:
-							lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_DESC_PRECISION, &pVariant->nSize, 0, 0);
-							lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
+							lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_DESC_PRECISION, &pVariant->nSize, 0, 0);
+							lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
 							pVariant->nType = SQL_C_NUMERIC;
 							nCType = SQL_C_DOUBLE;
 					}
 					break;
 
 				case SQL_C_TIME:
-					pVariant->nType = nCType;
-					lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
+					pVariant->nType = (SQLSMALLINT)nCType;
+					lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
 					nCType = SQL_C_CHAR;
 					break;
 
 				case SQL_C_TIMESTAMP:
-					pVariant->nType = nCType;
-					lpSC->pStmt->GetImplementationRowDescriptorField(lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
+					pVariant->nType = (SQLSMALLINT)nCType;
+					lpSC->pStmt->GetImplementationRowDescriptorField((SQLSMALLINT)lpSC->nColNo, SQL_DESC_SCALE, &pVariant->nScale, 0, 0);
 					if (pVariant->nScale)
 						nCType = SQL_C_CHAR;
 					break;
 
 				case SQL_C_SBIGINT:
-					pVariant->nType = nCType;
+					pVariant->nType = (SQLSMALLINT)nCType;
 					nCType = SQL_C_CHAR;
 					break;
 
 				default:
-					pVariant->nType = nCType;
-					pVariant->nSize = nLen;
+					pVariant->nType = (SQLSMALLINT)nCType;
+					pVariant->nSize = (SQLSMALLINT)nLen;
 			}
 			
-			nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, nCType,
-				pData + sizeof(SqlVariant), lpSC->pStmt->pGetDataBuffer.Size() - sizeof(SqlVariant), &lpSC->nIndicator);
+			nApiRet = SQLGetData(lpSC->pStmt->hStmt, lpSC->nColNo, (SQLSMALLINT)nCType,
+				pData + sizeof(SqlVariant), (SQLINTEGER)(lpSC->pStmt->pGetDataBuffer.Size() - sizeof(SqlVariant)), &lpSC->nIndicator);
 			if (SQL_SUCCEEDED(nApiRet))
 			{
 				lpSC->pStmt->pGetDataBuffer.Len((unsigned int)lpSC->nIndicator + sizeof(SqlVariant));
@@ -3347,7 +3414,7 @@ void _fastcall ValueToTimestamp_Struct(Value *pValue, SQL_TIMESTAMP_STRUCT *pTim
 	dSecs = modf(pValue->ev_real,&dDays);
 	lnDays = static_cast<DWORD>(dDays);
 
-	lnA = lnDays + 32044;
+	lnA = (int)(lnDays + 32044);
 	lnB = (4 * lnA + 3) / 146097;
 	lnC = lnA - (lnB * 146097) / 4;
 
@@ -3355,16 +3422,16 @@ void _fastcall ValueToTimestamp_Struct(Value *pValue, SQL_TIMESTAMP_STRUCT *pTim
 	lnE = lnC - (1461 * lnD) / 4;
 	lnM = (5 * lnE + 2) / 153;
 	
-	pTimestamp->day = (WORD) lnE - (153 * lnM + 2) / 5 + 1;
-	pTimestamp->month = (WORD) lnM + 3 - 12 * (lnM / 10);
-	pTimestamp->year = (WORD) lnB * 100 + lnD - 4800 + lnM / 10;
+	pTimestamp->day = (SQLUSMALLINT)(lnE - (153 * lnM + 2) / 5 + 1);
+	pTimestamp->month = (SQLUSMALLINT)(lnM + 3 - 12 * (lnM / 10));
+	pTimestamp->year = (SQLSMALLINT)(lnB * 100 + lnD - 4800 + lnM / 10);
 
 	lnSecs = (int)floor(dSecs * 86400.0 + 0.1);
-	pTimestamp->hour = (WORD)lnSecs / 3600;
+	pTimestamp->hour = (SQLUSMALLINT)(lnSecs / 3600);
 	lnSecs %= 3600;
-	pTimestamp->minute = (WORD)lnSecs / 60;
+	pTimestamp->minute = (SQLUSMALLINT)(lnSecs / 60);
 	lnSecs %= 60;
-	pTimestamp->second = (WORD)lnSecs;
+	pTimestamp->second = (SQLUSMALLINT)lnSecs;
 	pTimestamp->fraction = 0;
 }
 
@@ -3385,7 +3452,7 @@ void _fastcall ValueToDate_Struct(Value *pValue, SQL_DATE_STRUCT *pDate)
 
 	lnDays = static_cast<DWORD>(pValue->ev_real);
 
-	lnA = lnDays + 32044;
+	lnA = (int)(lnDays + 32044);
 	lnB = (4 * lnA + 3) / 146097;
 	lnC = lnA - (lnB * 146097) / 4;
 
@@ -3393,9 +3460,10 @@ void _fastcall ValueToDate_Struct(Value *pValue, SQL_DATE_STRUCT *pDate)
 	lnE = lnC - (1461 * lnD) / 4;
 	lnM = (5 * lnE + 2) / 153;
 	
-	pDate->day = (WORD) lnE - (153 * lnM + 2) / 5 + 1;
-	pDate->month = (WORD) lnM + 3 - 12 * (lnM / 10);
-	pDate->year = (WORD) lnB * 100 + lnD - 4800 + lnM / 10;
+	pDate->day = (SQLUSMALLINT)(lnE - (153 * lnM + 2) / 5 + 1);
+	pDate->month = (SQLUSMALLINT)(lnM + 3 - 12 * (lnM / 10));
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+	pDate->year = (SQLSMALLINT)(lnB * 100 + lnD - 4800 + lnM / 10);
 }
 
 void _fastcall StringToDate_Struct(char* lpString, SQLLEN nLen, SQL_DATE_STRUCT* pTime)
@@ -3728,14 +3796,14 @@ void _fastcall SQLVariantToValue(ParamBlkEx& parm)
 	{
 		ValueEx vValue;
 		SqlVariant* pVariant = 0;
-		FoxMemo vMemo;
+		CBuffer pBuffer;
 		unsigned int nLength = 0;
 		char cType = parm(1)->Vartype();
-		char pBuffer[288];
+		char pStackBuffer[288];
 
 		if (cType == 'R')
 		{
-			vMemo.Attach(parm(1));
+			FoxMemo vMemo(parm(1));
 			if (vMemo.Size() == 0)
 			{
 				vValue.SetNull();
@@ -3743,15 +3811,17 @@ void _fastcall SQLVariantToValue(ParamBlkEx& parm)
 				return;
 			}
 
-			if (vMemo.Size() <= sizeof(pBuffer))
+			nLength = vMemo.Size();
+			if (nLength <= sizeof(pStackBuffer))
 			{
-				vMemo.ReadTo(pBuffer, vMemo.Size());
-				pVariant = (SqlVariant*)pBuffer;
-				nLength = vMemo.Size();
+				vMemo.Read(pStackBuffer, nLength);
+				pVariant = (SqlVariant*)pStackBuffer;
 			}
 			else
 			{
-				pVariant = (SqlVariant*)vMemo.Read(nLength);
+				pBuffer.Size(nLength);
+				vMemo.Read(pBuffer.Ptr<char*>(), nLength);
+				pVariant = pBuffer.Ptr<SqlVariant*>();
 			}
 		}
 		else if (cType == 'C')
@@ -3765,6 +3835,8 @@ void _fastcall SQLVariantToValue(ParamBlkEx& parm)
 			Return(vValue);
 			return;
 		}
+		else
+			throw E_INVALIDPARAMS;
 
 		switch (pVariant->nType)
 		{
@@ -3796,13 +3868,13 @@ void _fastcall SQLVariantToValue(ParamBlkEx& parm)
 
 			case SQL_C_DOUBLE:
 				vValue.SetDouble();
-				vValue.ev_long = *(double*)pVariant->pData;
+				vValue.ev_real = *(double*)pVariant->pData;
 				Return(vValue);
 				break;
 
 			case SQL_C_BIT:
 				vValue.SetLogical();
-				vValue.ev_length = *(char*)pVariant->pData;
+				vValue.ev_length = *(unsigned char*)pVariant->pData;
 				Return(vValue);
 				break;
 
@@ -3919,7 +3991,7 @@ void _fastcall ValueToSQLVariant(ParamBlkEx& parm)
 			}
 
 		case 'C':
-			nLength = sizeof(SqlVariant) + parm(1)->ev_length;
+			nLength = (int)(sizeof(SqlVariant) + parm(1)->ev_length);
 			if (vVariant.AllocHandle(nLength))
 			{
 				if (parm.PCount() == 1)
@@ -3931,14 +4003,14 @@ void _fastcall ValueToSQLVariant(ParamBlkEx& parm)
 				else if (parm.PCount() == 2)
 				{
 					pSqlVariant = vVariant.HandleToPtr<SqlVariant*>();
-					pSqlVariant->nType = parm(2)->ev_long;
+					pSqlVariant->nType = (SQLSMALLINT)parm(2)->ev_long;
 					memcpy(&pSqlVariant->pData, parm(1)->HandleToPtr(), parm(1)->ev_length);
 				}
 				else if (parm.PCount() == 3)
 				{
 					pSqlVariant = vVariant.HandleToPtr<SqlVariant*>();
-					pSqlVariant->nType = parm(2)->ev_long;
-					pSqlVariant->nScale = parm(3)->ev_long;
+					pSqlVariant->nType = (SQLSMALLINT)parm(2)->ev_long;
+					pSqlVariant->nScale = (SQLSMALLINT)parm(3)->ev_long;
 					memcpy(&pSqlVariant->pData, parm(1)->HandleToPtr(), parm(1)->ev_length);
 				}
 				break;

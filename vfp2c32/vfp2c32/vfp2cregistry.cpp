@@ -21,7 +21,7 @@ try
 	DWORD nOptions = (parm.PCount() < 4) ? REG_OPTION_NON_VOLATILE : parm(4)->ev_long;
 	FoxString pClass(parm,5);
 	RegistryKey hKey;
-	hKey.Create(hRoot, pKey, pClass, nOptions, nKeyRights);
+	hKey.Create(hRoot, pKey.Ptr<LPCSTR>(), pClass.Ptr<LPSTR>(), nOptions, nKeyRights);
 	Return(hKey.Detach());
 }
 catch(int nErrorNo)
@@ -39,7 +39,7 @@ try
 	bool bShell = parm.PCount() == 2 || parm(3)->ev_long != REG_DELETE_NORMAL;
 	RegistryKey hKey;
 
-	Return(hKey.Delete(hRoot,pKey,bShell));
+	Return(hKey.Delete(hRoot,pKey.Ptr<LPCSTR>(),bShell));
 }
 catch(int nErrorNo)
 {
@@ -57,7 +57,7 @@ try
 
 	RegistryKey hKey;
 
-	hKey.Open(hRoot,pKeyName,nKeyRights);
+	hKey.Open(hRoot,pKeyName.Ptr<LPCSTR>(),nKeyRights);
 	Return(hKey.Detach());
 }
 catch(int nErrorNo)
@@ -92,8 +92,8 @@ try
 	char *pValue;
 	char cType;
 
- 	hKey.Open(hRoot, pKeyName, KEY_QUERY_VALUE);
-	dwSize = hKey.QueryValueInfo(pValueName, nValueType);
+ 	hKey.Open(hRoot, pKeyName.Ptr<LPCSTR>(), KEY_QUERY_VALUE);
+	dwSize = hKey.QueryValueInfo(pValueName.Ptr<LPSTR>(), nValueType);
 
 	if (pType.Len())
 		cType = pType[0];
@@ -149,8 +149,8 @@ try
 	}
 
 	pBuffer.Size(dwSize);
-	pValue = pBuffer;
- 	hKey.QueryValue(pValueName, pBuffer, &dwSize);
+	pValue = pBuffer.Ptr<char*>();
+ 	hKey.QueryValue(pValueName.Ptr<LPCSTR>(), pBuffer.Ptr<LPBYTE>(), &dwSize);
 
 	switch(nValueType)
 	{
@@ -215,13 +215,13 @@ try
 			{
 				FoxDate pDate;
 				pDate = *reinterpret_cast<double*>(pValue);
-				pDate.Return();
+				Return(pDate);
 			}
 			else if (cType == 'T')
 			{
 				FoxDateTime pDateTime;
 				pDateTime = *reinterpret_cast<double*>(pValue);
-				pDateTime.Return();
+				Return(pDateTime);
 			}
 			else if (cType == 'Q')
 			{
@@ -264,13 +264,13 @@ catch(int nErrorNo)
 }
 }
 
+// TODO - fix 
 void _fastcall WriteRegistryKey(ParamBlkEx& parm)
 {
 try
 {
 	HKEY hRoot = parm(1)->Ptr<HKEY>();
-	FoxString pData(parm,2,0);
-	FoxMemo pMemo(parm, 2);
+	FoxString pData;
 	FoxString pValueName(parm,3);
 	FoxString pKeyName(parm,4);
 	RegistryKey hKey;
@@ -279,32 +279,37 @@ try
 	DWORD nValueSize, nValueType = parm.PCount() == 5 ? parm(5)->ev_long : 0;
 	DWORD nDWord;
 	unsigned __int64 nQWord;
+	unique_ptr<char*> pMemoContent;
 
 	switch(cType)
 	{
 		case 'C':
-			if (nValueType == 0)
 			{
-				if (pData.Binary())
-					nValueType = REG_BINARY;
-				else
-					nValueType = REG_SZ;
+				pData.Attach(parm(2), 0);
+				if (nValueType == 0)
+				{
+					if (pData.Binary())
+						nValueType = REG_BINARY;
+					else
+						nValueType = REG_SZ;
+				}
+
+				if (nValueType == REG_SZ || nValueType == REG_EXPAND_SZ)
+					pData.NullTerminate();
+				else if (nValueType == REG_MULTI_SZ)
+					pData.DoubleNullTerminate();
+
+				nValueSize = pData.Len();
+				pValueData = pData.Ptr<LPBYTE>();
+				break;
+
 			}
-
-			if (nValueType == REG_SZ || nValueType == REG_EXPAND_SZ)
-				pData.Expand(1);
-			else if (nValueType == REG_MULTI_SZ)
-				pData.Expand(2);
-
-			nValueSize = pData.Len();
-			pValueData = pData;
-			break;
 
 		case 'I':
 			if (nValueType == 0)
 				nValueType = REG_INTEGER;
 
-			if (nValueType == REG_INTEGER || nValueType == REG_DWORD)
+			if (nValueType == REG_INTEGER || nValueType == REG_DWORD || nValueType == REG_BINARY)
 			{
 				pValueData = reinterpret_cast<BYTE*>(&parm(2)->ev_long);
 				nValueSize = sizeof(int);
@@ -321,11 +326,6 @@ try
 				pValueData = reinterpret_cast<BYTE*>(&parm(2)->ev_real);
 				nValueSize = sizeof(double);
 			}
-			else if (nValueType == REG_BINARY)
-			{
-				pValueData = reinterpret_cast<BYTE*>(&parm(2)->ev_long);
-				nValueSize = sizeof(int);
-			}
 			else
 				throw E_INVALIDPARAMS;
 			break;
@@ -334,7 +334,7 @@ try
 			if (nValueType == 0)
 				nValueType = REG_DOUBLE;
 
-			if (nValueType == REG_DOUBLE)
+			if (nValueType == REG_DOUBLE || nValueType == REG_BINARY)
 			{
 				pValueData = reinterpret_cast<BYTE*>(&parm(2)->ev_real);
 				nValueSize = sizeof(double);
@@ -356,11 +356,6 @@ try
 				parm(2)->ev_long = static_cast<int>(parm(2)->ev_real);
 				pValueData = reinterpret_cast<BYTE*>(&parm(2)->ev_long);
 				nValueSize = sizeof(int);
-			}
-			else if (nValueType == REG_BINARY)
-			{
-				pValueData = reinterpret_cast<BYTE*>(&parm(2)->ev_real);
-				nValueSize = sizeof(double);
 			}
 			else
 				throw E_INVALIDPARAMS;
@@ -424,6 +419,7 @@ try
 				if (!parm(2).IsMemoRef())
 					throw E_INVALIDPARAMS;
 
+				FoxMemo pMemo(parm(2));
 				unsigned int nLen;
 				if (nValueType == 0)
 					nValueType = REG_SZ;
@@ -437,14 +433,15 @@ try
 				else
 					throw E_INVALIDPARAMS;
 
-				pValueData = reinterpret_cast<BYTE*>(pMemo.Read(nLen));
+				pMemoContent = pMemo.Read(nLen);
+				pValueData = pMemoContent.Ptr<BYTE*>();
 
 				if (nValueType == REG_SZ || nValueType == REG_EXPAND_SZ)
 					pValueData[nLen] = '\0';
 				else if (nValueType == REG_MULTI_SZ)
 				{
 					pValueData[nLen] = '\0';
-					pValueData[nLen+1] = '\0';
+					pValueData[nLen + 1] = '\0';
 				}
 			}
 			break;
@@ -453,8 +450,8 @@ try
 			throw E_INVALIDPARAMS;
 	}
  
-	hKey.Open(hRoot,pKeyName,KEY_SET_VALUE);
-	hKey.SetValue(pValueName,pValueData,nValueSize,nValueType);
+	hKey.Open(hRoot,pKeyName.Ptr<LPCSTR>(),KEY_SET_VALUE);
+	hKey.SetValue(pValueName.Ptr<LPCSTR>(),pValueData,nValueSize,nValueType);
 }
 catch(int nErrorNo)
 {
@@ -493,7 +490,7 @@ try
 		nWriteTimeDim = bEnumClassName ? 3 : 2;
 	}
 
-	hKey.Open(hRoot,pKeyName,KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS);
+	hKey.Open(hRoot,pKeyName.Ptr<LPCSTR>(),KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS);
 
 	hKey.QueryInfo(0,0,&nSubKeys,&nSubKeyMaxLen,&nClassMaxLen);
 
@@ -511,7 +508,7 @@ try
 
 	pArray.Dimension(nSubKeys,nDimensions);
 
-	bRet = hKey.EnumFirstKey(pKeyBuffer,&dwKeyLen,pClassBuffer,&dwClassLen,&sLastWrite);
+	bRet = hKey.EnumFirstKey(pKeyBuffer.Ptr<LPSTR>(),&dwKeyLen,pClassBuffer.Ptr<LPSTR>(),&dwClassLen,&sLastWrite);
 
 	unsigned int nRow = 0;
 	while (bRet)
@@ -531,7 +528,7 @@ try
 		dwKeyLen = pKeyBuffer.Size();
 		dwClassLen = pClassBuffer.Size();
 		
-		bRet = hKey.EnumNextKey(pKeyBuffer,&dwKeyLen,pClassBuffer,&dwClassLen,&sLastWrite);
+		bRet = hKey.EnumNextKey(pKeyBuffer.Ptr<LPSTR>(),&dwKeyLen,pClassBuffer.Ptr<LPSTR>(),&dwClassLen,&sLastWrite);
 	}
 
 	pArray.ReturnRows();
@@ -574,7 +571,7 @@ try
 	if (bRegValue)
 		nDimensions++;
 
-	hKey.Open(hRoot,pKeyName,KEY_QUERY_VALUE);
+	hKey.Open(hRoot,pKeyName.Ptr<LPCSTR>(),KEY_QUERY_VALUE);
 	hKey.QueryInfo(0,0,0,0,0,&nValues,&nNameLen,&nValueLen);
 
 	if (nValues == 0)
@@ -587,12 +584,12 @@ try
 	if (bRegValue)
 		pValue.Size(nValueLen);
 
-	pRegValue = pValue;
+	pRegValue = pValue.Ptr<LPBYTE>();
 	nValueLen = pValue.Size();
 
     pArray.Dimension(nValues,nDimensions);
 	
-	bRet = hKey.EnumFirstValue(pValueName,&nNameLen,pRegValue,&nValueLen,&nValueType);
+	bRet = hKey.EnumFirstValue(pValueName.Ptr<LPSTR>(),&nNameLen,pRegValue,&nValueLen,&nValueType);
 
 	unsigned int nRow = 0;
 	while (bRet)
@@ -666,7 +663,7 @@ try
 		nNameLen = pValueName.Size();
 		nValueLen = pValue.Size();
 
-		bRet = hKey.EnumNextValue(pValueName,&nNameLen,pValue,&nValueLen,&nValueType);
+		bRet = hKey.EnumNextValue(pValueName.Ptr<LPSTR>(),&nNameLen,pValue.Ptr<LPBYTE>(),&nValueLen,&nValueType);
 	}
 
 	pArray.ReturnRows();
@@ -696,7 +693,7 @@ try
 	bool bRet;
 
 	// open key and query value information
-	hKey.Open(hRoot, pKeyName, KEY_QUERY_VALUE);
+	hKey.Open(hRoot, pKeyName.Ptr<LPCSTR>(), KEY_QUERY_VALUE);
 	hKey.QueryInfo(0, 0, 0, 0, 0, &nValues, &nValueNameLen, &nValueLen);
 
 	if (nValues == 0)
@@ -707,12 +704,12 @@ try
 
 	// allocate needed temporary buffers
 	pValue.Size(nValueLen);
-	pRegValue = pValue;
+	pRegValue = pValue.Ptr<LPBYTE>();
 	pValueName.Size(nValueNameLen);
 	nValueNameLen = pValueName.Size();
 
 	// start enumeration
-	bRet = hKey.EnumFirstValue(pValueName, &nValueNameLen, pValue, &nValueLen, &nValueType);
+	bRet = hKey.EnumFirstValue(pValueName, &nValueNameLen, pValue.Ptr<LPBYTE>(), &nValueLen, &nValueType);
 
 	while (bRet)
 	{
@@ -777,7 +774,7 @@ try
 		nValueNameLen = pValueName.Size();
 		nValueLen = pValue.Size();
 
-		bRet = hKey.EnumNextValue(pValueName, &nValueNameLen, pValue, &nValueLen, &nValueType);
+		bRet = hKey.EnumNextValue(pValueName, &nValueNameLen, pValue.Ptr<LPBYTE>(), &nValueLen, &nValueType);
 	}
 
 	Return((int)nValues);
@@ -795,7 +792,7 @@ try
 	HKEY hRoot = parm(1)->Ptr<HKEY>();
 	FoxString pKeyName(parm(2));
 	FoxObject pObject(parm(3));
-	RegistryHiveSubroutine(hRoot,pKeyName,pObject);
+	RegistryHiveSubroutine(hRoot,pKeyName.Ptr<char*>(),pObject);
 }
 catch(int nErrorNo)
 {
@@ -803,7 +800,7 @@ catch(int nErrorNo)
 }
 }
 
-void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject)
+void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject) throw(int)
 {
 	RegistryKey hKey;
 	FoxString pValue;
@@ -817,7 +814,7 @@ void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject)
 
 	if (nValues > 0)
 		pValue.Size(nValueLen);
-	pRegValue = pValue;
+	pRegValue = pValue.Ptr<LPBYTE>();
 
 	pName.Size(max(nSubKeyLen, nValueNameLen));
 	if (nSubKeys > 0)
@@ -831,7 +828,7 @@ void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject)
 		FoxDateTime pDateTime;
 		FoxCurrency pCurrency;
 
-		bRet = hKey.EnumFirstValue(pName,&nValueNameLen,pValue,&nValueLen,&nValueType);
+		bRet = hKey.EnumFirstValue(pName,&nValueNameLen,pValue.Ptr<LPBYTE>(),&nValueLen,&nValueType);
 
 		while (bRet)
 		{
@@ -893,7 +890,7 @@ void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject)
 
 			nValueNameLen = pName.Size();
 			nValueLen = pValue.Size();
-			bRet = hKey.EnumNextValue(pName,&nValueNameLen,pValue,&nValueLen,&nValueType);
+			bRet = hKey.EnumNextValue(pName,&nValueNameLen,pValue.Ptr<LPBYTE>(),&nValueLen,&nValueType);
 		}
 	}
 
@@ -908,8 +905,8 @@ void _stdcall RegistryHiveSubroutine(HKEY hRoot, char* pKey, FoxObject& pObject)
 			pObjectEx.EmptyObject();
 			pObject(pProperty) << pObjectEx;
 
-			pSubKey = pKey;
-			pSubKey += "\\";
+			pSubKey = CStringView(pKey);
+			pSubKey += __sv("\\");
 			pSubKey += pName;
 
 			RegistryHiveSubroutine(hRoot,pSubKey,pObjectEx);

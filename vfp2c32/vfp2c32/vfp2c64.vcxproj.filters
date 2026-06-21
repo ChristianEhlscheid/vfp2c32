@@ -129,6 +129,21 @@
     <ClInclude Include="vfp2codbcconstants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="hs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hs_common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hs_compile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hs_runtime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vfp2chyperscan.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vfp2cwinsock.cpp">
@@ -227,6 +242,9 @@
     <ClCompile Include="vfp2codbcclasses.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vfp2chyperscan.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vfp2c32.def">
@@ -238,6 +256,8 @@
     <None Include="vfp2c32t.def">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="..\vfp2c64.natstepfilter" />
+    <None Include="..\.clang-tidy" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="vfp2casmtest.asm">

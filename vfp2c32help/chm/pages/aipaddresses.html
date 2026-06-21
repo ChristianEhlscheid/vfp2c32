@@ -14,13 +14,22 @@
 <div id="content">
 <p class="description">Stores all IP addresses of the machine into an array.</p>
 
-<div class="block"><pre>AIpAddresses(<a href="#p1">cArrayName</a>)</pre></div>
+<div class="block"><pre>AIpAddresses(<a href="#p1">cArrayName</a>[, <a href="#p2">nIPType</a>])</pre></div>
 <h3>Parameters</h3>
 <dl class="parm"><dt><a id="p1">cArrayName</a></dt>
 <dd><table>
 <caption>On return the array contains the following information.</caption>
 <tr><th style="width: 70px;">Column</th><th>Content</th></tr>
 <tr><td>1</td><td>IP address</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p2">nIPType  (optional)</a></dt>
+<dd><p>default = 1<br />
+</p>
+<table>
+<caption>One or a combination of the following values</caption>
+<tr><th>Value</th><th></th></tr>
+<tr><td>1</td><td>IPv4</td></tr>
+<tr><td>2</td><td>IPv6</td></tr>
 </table></dd></dl>
 <h2>Return Value</h2>
 <p>The number of IP's.</p>

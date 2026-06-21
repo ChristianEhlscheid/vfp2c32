@@ -1,5 +1,5 @@
 #include <winsock2.h>
-#include <math.h>
+#include <cmath>
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -8,7 +8,6 @@
 #endif
 #include "vfp2c32.h"
 #include "vfp2ccppapi.h"
-#include "vfp2cwinsock.h"
 #include "vfp2csntp.h"
 #include "vfp2cutil.h"
 
@@ -32,8 +31,10 @@ try
 	int nApiRet;
 	fd_set fSockets;
 
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 	sTimeout.tv_sec = dwTimeout / 1000;
-	sTimeout.tv_usec = dwTimeout % 1000;
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+	sTimeout.tv_usec = dwTimeout % 1000;   
 	FD_ZERO(&fSockets);
 
 	ZeroMemory(&sockAddr,sizeof(sockAddr));
@@ -43,11 +44,11 @@ try
 
 	sockAddr.sin_family = AF_INET;
 	sockAddr.sin_port = htons(nPort);
-	sockAddr.sin_addr.s_addr = inet_addr(pServer);
+	sockAddr.sin_addr.s_addr = inet_addr(pServer.Ptr<const char*>());
 
 	if (sockAddr.sin_addr.s_addr == INADDR_NONE)
 	{
-		lphost = gethostbyname(pServer);
+		lphost = gethostbyname(pServer.Ptr<const char*>());
 		if (lphost != NULL)
 			sockAddr.sin_addr.s_addr = ((LPIN_ADDR)lphost->h_addr)->s_addr;
 		else
@@ -218,8 +219,9 @@ void _stdcall SNTPTimeToSystemTime(LPSNTPTIME pSntpTime, LPSYSTEMTIME pSysTime)
 	nSecs /= 60;
 	pSysTime->wHour = (WORD)(nSecs % 24);
 	nSecs /= 24;
-	JulianDay = nSecs + JAN_1ST_1900;
+	JulianDay = (long)(nSecs + JAN_1ST_1900);
 	pSysTime->wDayOfWeek = (WORD)((JulianDay + 1) % 7);
 	GetGregorianDate(JulianDay,&pSysTime->wYear,&pSysTime->wMonth,&pSysTime->wDay);
+	// NOLINTNEXTLINE(bugprone-incorrect-roundings)
 	pSysTime->wMilliseconds = (WORD)(((double)pSntpTime->dwFraction) * FRACTION_TO_MS + 0.5);
 }

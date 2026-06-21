@@ -1,0 +1,153 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>Hyperscan_compile</title><link href="/scripts/styles.css" rel="stylesheet" type="text/css" />
+<script src="/scripts/jscript.js" type="text/javascript"></script>
+</head><body>
+<div id="header">
+<p id="vfp2c32version"></p>
+<h1 class="function">Hyperscan_compile</h1>
+<div class="flags"><a class="notthreadsafe" title="Not available in threadsafe version"></a></div>
+</div>
+<div id="content">
+<p class="description">Compiles a regular expression into a hyperscan database.</p>
+
+<div class="block"><pre>Hyperscan_compile(<a href="#p1">@caExpressions</a>, <a href="#p2">@nDb</a>, <a href="#p3">naFlags</a>, <a href="#p4">nMode</a>[, <a href="#p5">aExtendedFlags</a>[, <a href="#p6">oPlatform</a>]])</pre></div>
+<h3>Parameters</h3>
+<dl class="parm"><dt><a id="p1">@caExpressions</a></dt>
+<dd><p>A single regular expression or an array of regular expressions.<br />
+</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>If an array of multiple expression's is passed one can specify the expression match ID in the 2nd column.<br />
+When passing a 1 dimensional array the expression match ID is the row index of the array.<br />
+The expression identifier is reported back in the various <a href="/pages/hyperscan_scan.html">Hyperscan_scan</a> functions result cursor in the "match_id" field.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p2">@nDb</a></dt>
+<dd><p>A variable by reference in which a handle to the compiled database is returned.</p>
+</dd></dl>
+<dl class="parm"><dt><a id="p3">naFlags (additional)</a></dt>
+<dd><p>A single numeric flag value or an array by reference of flags for each regular expression used to compile the database.<br />
+</p>
+<table>
+<tr><th>Flag</th><th>Description</th></tr>
+<tr><td>HS_FLAG_CASELESS</td><td>This flag sets the expression to be matched case-insensitively by default</td></tr>
+<tr><td>HS_FLAG_DOTALL</td><td>This flag sets any instances of the . token to match newline characters as well as all other characters.</td></tr>
+<tr><td>HS_FLAG_SINGLEMATCH</td><td>The flag is not supported, since HS_FLAG_SOM_LEFTMOST is implied for all expressions.</td></tr>
+<tr><td>HS_FLAG_ALLOWEMPTY</td><td>This flag instructs the compiler to allow expressions that can match against empty buffers, such as .?, .*, (a|). Since Hyperscan can return every possible match for an expression, such expressions generally execute very slowly; the default behaviour is to return an error when an attempt to compile one is made. Using this flag will force the compiler to allow such an expression.</td></tr>
+<tr><td>HS_FLAG_UTF8</td><td>This flag instructs Hyperscan to treat the pattern as a sequence of UTF-8 characters. The results of scanning invalid UTF-8 sequences with a Hyperscan library that has been compiled with one or more patterns using this flag are undefined.</td></tr>
+<tr><td>HS_FLAG_UCP</td><td>This flag instructs Hyperscan to use Unicode properties, rather than the default ASCII interpretations, for character mnemonics like \w and \s as well as the POSIX character classes. It is only meaningful in conjunction with HS_FLAG_UTF8.</td></tr>
+<tr><td>HS_FLAG_PREFILTER</td><td>The flag is not supported, since the HS_FLAG_SOM_LEFTMOST is implied for all expressions.</td></tr>
+<tr><td>HS_FLAG_COMBINATION</td><td>This flag instructs Hyperscan to parse this expression as logical combination syntax. Logical constraints consist of operands, operators and parentheses. The operands are expression indices, and operators can be ‘!’(NOT), ‘&amp;’(AND) or ‘|’(OR). For example: (101&amp;102&amp;103)|(104&amp;!105) ((301|302)&amp;303)&amp;(304|305)</td></tr>
+<tr><td>HS_FLAG_QUIET</td><td>This flag instructs Hyperscan to ignore match reporting for this expression. It is designed to be used on the sub-expressions in logical combinations.</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>When passing a single numeric flag parameter it is used for all expressions passed in <em>caExpressions</em>.<br />
+<br />
+The hyperscan flag HS_FLAG_SOM_LEFTMOST is added automatically, without this flag it would be impossible to <br />
+extract the regular expression out of the scanned data.
+</p></div>
+<p></p>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">LOCAL laRegs[2], laFlags[2]
+m.laRegs[1]  = '^PROCEDURE\s+\w+$'
+m.laRegs[1]  = '^ENDPROC\b'
+m.laFlags[1] = HS_FLAG_CASELESS + HS_FLAG_MULTILINE &amp;&amp; flags used for 1st regular expression
+m.laFlags[2] = HS_FLAG_CASELESS  &amp;&amp; flags used for 2nd regular expression
+</pre></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p4">nMode (additional)</a></dt>
+<dd><p>A mode to compile the regular expression.<br />
+</p>
+<table>
+<tr><th>Mode</th><th>Description</th></tr>
+<tr><td>HS_MODE_BLOCK</td><td></td></tr>
+<tr><td>HS_MODE_STREAM</td><td></td></tr>
+<tr><td>HS_MODE_SOM_HORIZON_SMALL</td><td>Limits the lookback buffer to 64 kilobytes in HS_MODE_STREAM</td></tr>
+<tr><td>HS_MODE_SOM_HORIZON_MEDIUM</td><td>Limits the lookback buffer to 2 gigabyte in HS_MODE_STREAM, the real<br />
+lookback capability is controlled by the buffersize passed to <a href="/pages/hyperscan_scan.html">Hyperscan_scan</a> / <a href="/pages/hyperscan_scan_files.html">Hyperscan_scan_files</a> / <a href="/pages/hyperscan_scan_cursor.html">Hyperscan_scan_cursor</a> though.<br />
+ </td></tr>
+</table><p></p>
+<table>
+<caption>The following mode extension's control which data is reported back in the result cursor.</caption>
+<tr><th>Mode</th><th>Description</th></tr>
+<tr><td>HS_MODE_EX_MATCH_ID</td><td>Includes the "match_id" field</td></tr>
+<tr><td>HS_MODE_EX_LINENO</td><td>Includes the "match_lineno" field</td></tr>
+<tr><td>HS_MODE_EX_LITERAL</td><td>For compiling all regular expression as literals</td></tr>
+</table><p></p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>Pass the same <em>nMode</em> parameter to the various <a href="/pages/hyperscan_scan.html">Hyperscan_scan</a> functions which was used to compile the expressions to ensure correct execution behaviour.
+</p></div>
+</dd></dl>
+<dl class="parm"><dt><a id="p5">aExtendedFlags (optional)</a></dt>
+<dd><p>An array of objects with extened flags to control the pattern matching behaviour.</p>
+<div class="blockheader"><p class="note">Note</p></div>
+<div class="block"><p>This array has to be passed by name, not by reference!
+</p></div>
+<p></p>
+<table>
+<tr><th>Property</th><th>Description</th></tr>
+<tr><td>min_offset</td><td>The minimum end offset in the data stream at which this expression should match successfully.</td></tr>
+<tr><td>max_offset</td><td>The maximum end offset in the data stream at which this expression should match successfully.</td></tr>
+<tr><td>min_length</td><td>The minimum match length (from start to end) required to successfully match this expression.</td></tr>
+<tr><td>edit_distance</td><td>Allow patterns to approximately match within this edit distance.</td></tr>
+<tr><td>hamming_distance</td><td>Allow patterns to approximately match within this Hamming distance.</td></tr>
+</table></dd></dl>
+<dl class="parm"><dt><a id="p6">oPlatform (optional)</a></dt>
+<dd><p>A platform object specifying the available CPU instruction set and a tuning value to optimize the database for<br />
+a specific CPU architecture.<br />
+<br />
+If ommitted the database is optimized for the CPU it is compiled on.</p>
+</dd></dl>
+<h2>Return Value</h2>
+<p>A hyperscan return code.<br />
+HS_SUCCESS (0) on success otherwise the errorcode.</p>
+
+<h2>Example</h2>
+<div class="codeheader"><a onclick="CopyCode('code_1')" onmouseover="ChangeClass(this, 'onhover')" onmouseout="ChangeClass(this, '')">Copy code</a></div>
+<div class="block"><pre id="code_1">LOCAL laRegs[2,2], lnRet, lnDB, lnMode
+LOCAL laExtendedFlags[2], loExtFlags
+
+m.lnDB = 0
+m.laRegs[1,1] = '\bRegularExpression1\b'
+m.laRegs[1,2] = 1
+m.laRegs[2,1] = '\bRegularExpression2\b'
+m.laRegs[2,2] = 5
+
+m.loExtFlags = CREATEOBJECT('Empty')
+ADDPROPERTY(m.loExtFlags, 'min_offset', 32)
+ADDPROPERTY(m.loExtFlags, 'max_offset', 64)
+m.laExtendedFlags[1] = m.loExtFlags
+m.loExtFlags = CREATEOBJECT('Empty')
+ADDPROPERTY(m.loExtFlags, 'min_offset', 128)
+ADDPROPERTY(m.loExtFlags, 'max_offset', 256)
+m.laExtendedFlags[2] = m.loExtFlags
+
+m.lnRet = Hyperscan_compile(@m.laRegs, @m.lnDB, HS_FLAG_MULTILINE, ;
+HS_MODE_STREAM + HS_MODE_SOM_HORIZON_SMALL, "laExtendedFlags")
+
+IF m.lnRet != 0
+    AERROREX('laError')
+    ? laError[1], laError[2], laError[3]
+ENDIF
+</pre></div>
+<h2>See Also</h2>
+<h4>Reference</h4>
+<p><a href="/pages/hyperscan_alloc_scratch.html">Hyperscan_alloc_scratch</a><br />
+<a href="/pages/hyperscan_free_database.html">Hyperscan_free_database</a><br />
+<a href="/pages/hyperscan_free_scratch.html">Hyperscan_free_scratch</a><br />
+<a href="/pages/hyperscan_platform.html">Hyperscan_platform</a><br />
+<a href="/pages/hyperscan_scan.html">Hyperscan_scan</a><br />
+<a href="/pages/hyperscan_scan_cursor.html">Hyperscan_scan_cursor</a><br />
+<a href="/pages/hyperscan_scan_files.html">Hyperscan_scan_files</a><br />
+</p>
+
+
+</div>
+<div id="footer">
+<p>&copy; <a href="https://github.com/ChristianEhlscheid/vfp2c32">VFP2C32</a> - Shared Source License for <a href="https://vfpx.github.io/">VFPX</a></p>
+</div>
+</body>
+</html>

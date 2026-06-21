@@ -1,6 +1,10 @@
-#include <math.h>
 #include <new>
-#include <stdio.h>
+#include <cmath>
+
+#if MSVC_VER < 1400
+#include <cstdio>
+#include <cstdarg>
+#endif
 
 #include "vfp2c32.h"
 #include "vfp2ctime.h"
@@ -24,7 +28,7 @@ void _stdcall StoreObjectRef(char *pName, NTI &nVarNti, ValueEx &sObject)
 	if (nVarNti)
 	{
 		ValueEx vTmpObject;
-		vTmpObject = 0;
+		vTmpObject.SetNull();
 		// FindVar(nVarNti, lVar);
 		lVar.FindVar(nVarNti),
 		// increment reference count by calling evaluate
@@ -55,7 +59,7 @@ IDispatch* FoxValue::GetIDispatch()
 	const char* pCommand = "m.__VFP2C32_TEMP_COMOBJECT = _VFP.Eval('m.__VFP2C32_TEMP_OBJECT')";
 	const char* pCommand2 = "GetIDispatch(m.__VFP2C32_TEMP_COMOBJECT)";
 	ValueEx pDisp;
-	pDisp = 0;
+	pDisp.SetNull();
 	FoxVariable pFoxObject(VarName, false);
 	FoxVariable pComObject(VarName2, false);
 	pFoxObject() = m_Value;
@@ -67,9 +71,8 @@ IDispatch* FoxValue::GetIDispatch()
 	return pObject;
 }
 
-long _fastcall RecCountEx(int nWorkarea, bool bCountFromCurrentRecord)
+long _fastcall RecCountEx(SHORT nWorkarea, bool bCountFromCurrentRecord)
 {
-	CStrBuilder<64> pFunc;
 	ValueEx vExpr;
 	int nErrorNo;
 	long nRecCount;
@@ -77,7 +80,7 @@ long _fastcall RecCountEx(int nWorkarea, bool bCountFromCurrentRecord)
 	vExpr.SetNull();
 	if (!bCountFromCurrentRecord)
 	{
-		nErrorNo = _Evaluate(vExpr, "SET('DELETED')");
+		nErrorNo = __Evaluate(vExpr, "SET('DELETED')");
 		if (nErrorNo)
 			throw nErrorNo;
 		vExpr.FreeHandle();
@@ -90,9 +93,9 @@ long _fastcall RecCountEx(int nWorkarea, bool bCountFromCurrentRecord)
 		AutoRecNoRestore pRecNoRestore(nWorkarea);
 		FoxVariable pCount;
 		if (bCountFromCurrentRecord)
-			nErrorNo = _Execute("COUNT REST TO m.__VFP2C_COUNT_INTERNAL");
+			nErrorNo = __Execute("COUNT REST TO m.__VFP2C_COUNT_INTERNAL");
 		else
-			nErrorNo = _Execute("COUNT TO m.__VFP2C_COUNT_INTERNAL");
+			nErrorNo = __Execute("COUNT TO m.__VFP2C_COUNT_INTERNAL");
 		if (nErrorNo)
 			throw nErrorNo;
 		pCount.Attach("__VFP2C_COUNT_INTERNAL");
@@ -127,7 +130,8 @@ int _fastcall Dimension(char* pArrayName, Locator* lArrayLoc, unsigned long nRow
 		if (nErrorNo)
 			return nErrorNo;
 
-		if (nErrorNo = FindFoxVar(pArrayName, lArrayLoc))
+		nErrorNo = FindFoxVar(pArrayName, lArrayLoc);
+		if (nErrorNo)
 			return nErrorNo;
 	}
 	else if (nErrorNo == 0)
@@ -142,7 +146,8 @@ int _fastcall Dimension(char* pArrayName, Locator* lArrayLoc, unsigned long nRow
 		vFalse.ev_type = 'L';
 		vFalse.ev_width = 0;
 		lArrayLoc->l_subs = 0;
-		if (nErrorNo = _Store(lArrayLoc, &vFalse))
+		nErrorNo = _Store(lArrayLoc, &vFalse);
+		if (nErrorNo)
 			return nErrorNo;
 
 		lArrayLoc->l_subs = nDims > 1 ? 2 : 1;
@@ -157,7 +162,8 @@ int _fastcall Dimension(char* pArrayName, Locator* lArrayLoc, unsigned long nRow
 
 int _fastcall ASubscripts(Locator* pLoc, int* nRows, int* nDims)
 {
-	if ((*nRows = _ALen(pLoc->l_NTI, AL_SUBSCRIPT1)) == -1)
+	*nRows = _ALen(pLoc->l_NTI, AL_SUBSCRIPT1);
+	if (*nRows == -1)
 		return E_NOTANARRAY;
 	*nDims = _ALen(pLoc->l_NTI, AL_SUBSCRIPT2);
 	return 0;
@@ -166,8 +172,7 @@ int _fastcall ASubscripts(Locator* pLoc, int* nRows, int* nDims)
 // fill a Locator with a reference to a FoxPro variable
 int _fastcall FindFoxVar(char* pName, Locator* pLoc)
 {
-	NTI nVarNti;
-	nVarNti = _NameTableIndex(pName);
+	NTI nVarNti = _NameTableIndex(pName);
 	if (nVarNti == -1)
 	{
 		SaveCustomErrorEx("_NameTableIndex", "Variable '%S' not found.", E_VARIABLENOTFOUND, pName);
@@ -184,10 +189,9 @@ int _fastcall FindFoxVar(char* pName, Locator* pLoc)
 }
 
 // fill a Locator with a reference to a FoxPro field
-int _fastcall FindFoxField(char* pName, Locator* pLoc, int nWorkarea)
+int _fastcall FindFoxField(char* pName, Locator* pLoc, SHORT nWorkarea)
 {
-	NTI nVarNti;
-	nVarNti = _NameTableIndex(pName);
+	NTI nVarNti = _NameTableIndex(pName);
 	if (nVarNti == -1)
 	{
 		SaveCustomErrorEx("_NameTableIndex", "Field '%S' not found in workarea %I.", E_FIELDNOTFOUND, pName, nWorkarea);
@@ -210,7 +214,7 @@ int _fastcall FindFoxField(char* pName, Locator* pLoc, char* pCursor)
 	int nErrorNo;
 	Value vWorkarea = { '0' };
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
-
+	
 	nVarNti = _NameTableIndex(pName);
 	if (nVarNti == -1)
 	{
@@ -219,7 +223,8 @@ int _fastcall FindFoxField(char* pName, Locator* pLoc, char* pCursor)
 	}
 
 	pExeBuffer.Format("SELECT('%S')", pCursor);
-	if (nErrorNo = _Evaluate(&vWorkarea, pExeBuffer))
+	nErrorNo = _Evaluate(&vWorkarea, pExeBuffer);
+	if (nErrorNo)
 		return nErrorNo;
 
 	if (_FindVar(nVarNti, vWorkarea.ev_long, pLoc))
@@ -232,17 +237,18 @@ int _fastcall FindFoxField(char* pName, Locator* pLoc, char* pCursor)
 }
 
 // fill a Locator with a reference to a FoxPro field, instead of passing the name one passes the field offset (1st field, 2nd field ..)
-int _fastcall FindFoxField(int nFieldNo, Locator* pLoc, int nWorkarea)
+int _fastcall FindFoxField(int nFieldNo, Locator* pLoc, SHORT nWorkarea)
 {
 	ValueEx vFieldName;
-	vFieldName = 0;
+	vFieldName.SetNull();
 	char* pFieldName;
 	NTI nVarNti;
 	int nErrorNo;
 	CStrBuilder<64> pExeBuffer;
 
 	pExeBuffer.Format("FIELD(%I,%I)+CHR(0)", nFieldNo, nWorkarea);
-	if (nErrorNo = _Evaluate(vFieldName, pExeBuffer))
+	nErrorNo = _Evaluate(vFieldName, pExeBuffer);
+	if (nErrorNo)
 		return nErrorNo;
 
 	pFieldName = vFieldName.HandleToPtr();
@@ -310,182 +316,10 @@ int _fastcall StoreEx(Locator* pLoc, Value* pValue)
 		return _DBReplace(pLoc, pValue);
 }
 
-int _fastcall AllocMemo(Locator* pLoc, int nSize, long* nLoc)
-{
-	*nLoc = _AllocMemo(pLoc, nSize);
-	if (*nLoc == -1)
-	{
-		SaveCustomError("_AllocMemo", "Function failed.");
-		return E_APIERROR;
-	}
-	return 0;
-}
-
-int _fastcall MemoChan(int nWorkarea, FCHAN* nChan)
-{
-	*nChan = _MemoChan(nWorkarea);
-	if (*nChan == -1)
-	{
-		SaveCustomError("_MemoChan", "Function failed.");
-		return E_APIERROR;
-	}
-	return 0;
-}
-
-int _fastcall GetMemoContent(Value* pValue, char* pData)
-{
-	FCHAN hFile = pValue->ev_width;
-	int mLoc = (int)pValue->ev_real;
-	if (_FSeek(hFile, mLoc, FS_FROMBOF) != mLoc)
-	{
-		SaveCustomError("_FSeek", "Function failed.");
-		return E_APIERROR;
-	}
-	if (_FRead(hFile, pData, (unsigned int)pValue->ev_long) != (unsigned int)pValue->ev_long)
-	{
-		SaveCustomErrorEx("_FRead", "Function failed.", _FError());
-		return E_APIERROR;
-	}
-	else
-		return 0;
-}
-
-int _fastcall GetMemoContent(Value* pValue, char* pData, unsigned int nLen, int nOffset)
-{
-	FCHAN hFile = pValue->ev_width;
-	int mLoc = ((int)pValue->ev_real) + nOffset;
-	if (_FSeek(hFile, mLoc, FS_FROMBOF) != mLoc)
-	{
-		SaveCustomError("_FSeek", "Function failed.");
-		return E_APIERROR;
-	}
-	if (_FRead(hFile, pData, nLen) != nLen)
-	{
-		SaveCustomErrorEx("_FRead", "Function failed.", _FError());
-		return E_APIERROR;
-	}
-	else
-		return 0;
-}
-
-int _fastcall GetMemoContent(Locator* pLoc, char** pData, int* nErrorNo)
-{
-	FCHAN hFile;
-	int mLoc, mLen;
-
-	mLoc = _FindMemo(pLoc);
-	if (mLoc < 0)
-	{
-		*nErrorNo = E_INVALIDPARAMS;
-		return -1;
-	}
-
-	hFile = _MemoChan(pLoc->l_where);
-	if (hFile == -1)
-	{
-		SaveCustomError("_MemoChan", "Function failed for workarea %I.", pLoc->l_where);
-		return -1;
-	}
-
-	mLen = _MemoSize(pLoc);
-	if (mLen <= 0)
-	{
-		if (mLen == 0)
-			return 0;
-		else
-		{
-			*nErrorNo = mLen;
-			return -1;
-		}
-	}
-
-	*pData = (char*)malloc(mLen);
-	if (!*pData)
-	{
-		*nErrorNo = E_INSUFMEMORY;
-		return -1;
-	}
-
-	if (_FSeek(hFile, mLoc, FS_FROMBOF) != mLoc)
-	{
-		SaveCustomError("_FSeek", "Function failed.");
-		*nErrorNo = E_APIERROR;
-		return -1;
-	}
-	mLen = _FRead(hFile, *pData, mLen);
-	return mLen;
-}
-
-int _fastcall ReplaceMemo(Locator* pLoc, char* pData, unsigned int nLen)
-{
-	FCHAN hFile;
-	long nLoc;
-
-	hFile = _MemoChan(pLoc->l_where);
-	if (hFile == -1)
-		return E_FIELDNOTFOUND;
-
-	nLoc = _AllocMemo(pLoc, nLen);
-	if (nLoc == -1)
-		return E_INSUFMEMORY;
-
-	if (_FSeek(hFile, nLoc, FS_FROMBOF) != nLoc)
-	{
-		SaveCustomError("_FSeek", "Function failed.");
-		return E_APIERROR;
-	}
-	if (_FWrite(hFile, pData, nLen) != nLen)
-	{
-		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
-		return E_APIERROR;
-	}
-	return 0;
-}
-
-int _fastcall ReplaceMemo(Locator* pLoc, char* pData, unsigned int nLen, FCHAN hFile)
-{
-	long nLoc;
-	nLoc = _AllocMemo(pLoc, nLen);
-	if (nLoc == -1)
-		return E_INSUFMEMORY;
-
-	if (_FSeek(hFile, nLoc, FS_FROMBOF) != nLoc)
-	{
-		SaveCustomError("_FSeek", "Function failed.");
-		return E_APIERROR;
-	}
-	if (_FWrite(hFile, pData, nLen) != nLen)
-	{
-		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
-		return E_APIERROR;
-	}
-	return 0;
-}
-
-int _fastcall AppendMemo(char* pData, unsigned int nLen, FCHAN hFile, long* nLocation)
-{
-	if (nLocation)
-	{
-		if (_FSeek(hFile, *nLocation, FS_FROMBOF) != *nLocation)
-		{
-			SaveCustomError("_FSeek", "Function failed.");
-			return E_APIERROR;
-		}
-	}
-	if (_FWrite(hFile, pData, nLen) != nLen)
-	{
-		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
-		return E_APIERROR;
-	}
-	if (nLocation)
-		*nLocation += nLen;
-	return 0;
-}
-
-int _fastcall Zap(int nWorkArea)
+int _fastcall Zap(SHORT nWorkArea)
 {
 	CStrBuilder<64> pExeBuffer;
-	pExeBuffer.Format("ZAP IN %U", nWorkArea);
+	pExeBuffer.Format("ZAP IN %i", nWorkArea);
 	return _Execute(pExeBuffer);
 }
 
@@ -508,19 +342,19 @@ bool _fastcall Used(CStringView pCursor)
 	return vValue.ev_length > 0;
 }
 
-int _fastcall Select(int nWorkarea)
+SHORT _fastcall Select(SHORT nWorkarea)
 {
 	CStrBuilder<64> pExeBuffer;
 	Value vValue;
-	pExeBuffer.Format("SELECT(%U)", nWorkarea);
+	pExeBuffer.Format("SELECT(%i)", nWorkarea);
 	vValue.ev_type = '0';
 	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
 	if (nErrorNo)
 		throw nErrorNo;
-	return vValue.ev_long;
+	return (SHORT)vValue.ev_long;
 }
 
-int _fastcall Select(CStringView pCursor)
+SHORT _fastcall Select(CStringView pCursor)
 {
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
 	Value vValue;
@@ -529,20 +363,19 @@ int _fastcall Select(CStringView pCursor)
 	int nErrorNo = _Evaluate(&vValue, pExeBuffer);
 	if (nErrorNo)
 		throw nErrorNo;
-	return vValue.ev_long;
+	return (SHORT)vValue.ev_long;
 }
 
-int _fastcall SelectCmd(int nWorkarea)
+int _fastcall SelectCmd(SHORT nWorkarea)
 {
 	CStrBuilder<64> pExeBuffer;
-	pExeBuffer.Format("SELECT %U", nWorkarea);
+	pExeBuffer.Format("SELECT %i", nWorkarea);
 	return _Execute(pExeBuffer);
 }
 
 /* FoxString */
 FoxString::FoxString() : FoxValue('C')
 {
-	m_ParameterRef = false;
 	m_BufferSize = 0;
 	m_String = 0;
 	m_CodePage = CP_ACP;
@@ -550,7 +383,6 @@ FoxString::FoxString() : FoxValue('C')
 
 FoxString::FoxString(FoxString &pString) : FoxValue('C')
 {
-	m_ParameterRef = false;
 	m_CodePage = pString.m_CodePage;
 	m_BufferSize = pString.Size();
 	if (m_BufferSize)
@@ -600,7 +432,6 @@ FoxString::FoxString(ParamBlkEx& parm, int nParmNo, unsigned int nExpand, FoxStr
 
 FoxString::FoxString(const CStringView pString) : FoxValue('C')
 {
-	m_ParameterRef = false;
 	m_CodePage = CP_ACP;
 	if (pString)
 	{
@@ -624,7 +455,6 @@ FoxString::FoxString(unsigned int nBufferSize) : FoxValue('C')
    {
 	assert(nBufferSize > 0);
 	m_CodePage = CP_ACP;
-	m_ParameterRef = false;
 	AllocHandle(nBufferSize);
 	LockHandle();
 	m_String = HandleToPtr();
@@ -635,7 +465,6 @@ FoxString::FoxString(unsigned int nBufferSize) : FoxValue('C')
 FoxString::FoxString(BSTR pString, UINT nCodePage) : FoxValue('C')
 {
 	m_CodePage = nCodePage;
-	m_ParameterRef = false;
 	if (pString)
 	{
 		unsigned int nLen = SysStringLen(pString);
@@ -645,7 +474,7 @@ FoxString::FoxString(BSTR pString, UINT nCodePage) : FoxValue('C')
 		LockHandle();
 		m_String = HandleToPtr();
 		int nChars;
-		nChars = WideCharToMultiByte(nCodePage, 0, pString, nLen, m_String, nLen, 0, 0);
+		nChars = WideCharToMultiByte(nCodePage, 0, pString, (int)nLen, m_String, (int)nLen, 0, 0);
 		if (!nChars)
 		{
 			SaveWin32Error("WideCharToMultiByte", GetLastError());
@@ -663,7 +492,6 @@ FoxString::FoxString(BSTR pString, UINT nCodePage) : FoxValue('C')
 FoxString::FoxString(SAFEARRAY *pArray) : FoxValue('C')
 {
 	m_CodePage = CP_ACP;
-	m_ParameterRef = false;
 	HRESULT hr;
 	VARTYPE vt;
 	if (pArray)
@@ -679,8 +507,6 @@ FoxString::FoxString(SAFEARRAY *pArray) : FoxValue('C')
 			if (vt != VT_UI1)
 				throw E_TYPECONFLICT;
 		}
-
-		m_ParameterRef = false;
 
 		unsigned long nLen;
 		nLen = pArray->rgsabound[0].cElements;
@@ -715,17 +541,6 @@ FoxString::FoxString(SAFEARRAY *pArray) : FoxValue('C')
 	}
 }
 
-FoxString::~FoxString()
-{
-	if (m_Value.ev_handle)
-	{
-		UnlockHandle();
-		if (!m_ParameterRef)
-			FreeHandle();
-	}
-	m_Value.ev_type = '0';
-}
-
 FoxString& FoxString::Attach(ValueEx& pValue, unsigned int nExpand)
 {
 	assert(pValue.Vartype() == 'C');
@@ -749,6 +564,7 @@ FoxString& FoxString::Attach(ValueEx& pValue, unsigned int nExpand)
 
 FoxString& FoxString::Attach(FoxParameterEx& pVal)
 {
+	assert(m_Value.ev_handle == 0);
 	// nullterminate
 	if (!pVal->NullTerminate())
 		throw E_INSUFMEMORY;
@@ -757,7 +573,7 @@ FoxString& FoxString::Attach(FoxParameterEx& pVal)
 	m_Value.ev_width = pVal->ev_width;
 	m_Value.ev_handle = pVal->ev_handle;
 	m_BufferSize = pVal->ev_length + 1;
-	m_ParameterRef = true;
+	m_Value.ev_padding = Parameter;
 	m_CodePage = CP_ACP;
 	LockHandle();
 	m_String = HandleToPtr();
@@ -775,7 +591,7 @@ FoxString& FoxString::Attach(FoxParameterEx& pVal, unsigned int nExpand)
 	m_Value.ev_width = pVal->ev_width;
 	m_Value.ev_handle = pVal->ev_handle;
 	m_BufferSize = pVal->ev_length + nExpand;
-	m_ParameterRef = true;
+	m_Value.ev_padding = Parameter;
 	m_CodePage = CP_ACP;
 	LockHandle();
 	m_String = HandleToPtr();
@@ -799,13 +615,12 @@ bool FoxString::Attach(ParamBlkEx& parm, int nParmNo)
 			m_Value.ev_length = pVal.ev_length;
 			m_Value.ev_width = pVal.ev_width;
 			m_BufferSize = pVal.ev_length + 1;
-			m_ParameterRef = true;
+			m_Value.ev_padding = Parameter;
 			LockHandle();
 			m_String = HandleToPtr();
 			return true;
 		}
 	}
-	m_ParameterRef = false;
 	m_BufferSize = 0;
 	m_String = 0;
 	return false;
@@ -829,13 +644,12 @@ bool FoxString::Attach(ParamBlkEx& parm, int nParmNo, unsigned int nExpand)
 			m_Value.ev_length = pVal.ev_length;
 			m_Value.ev_width = pVal.ev_width;
 			m_BufferSize = pVal.ev_length + nExpand;
-			m_ParameterRef = true;
+			m_Value.ev_padding = Parameter;
 			LockHandle();
 			m_String = HandleToPtr();
 			return true;
 		}
 	}
-	m_ParameterRef = false;
 	m_BufferSize = 0;
 	m_String = 0;
 	return false;
@@ -859,14 +673,13 @@ bool FoxString::Attach(ParamBlkEx& parm, int nParmNo, FoxStringInitialization eI
 				m_Value.ev_length = pVal.ev_length;
 				m_Value.ev_width = pVal.ev_width;
 				m_BufferSize = pVal.ev_length + 1;
-				m_ParameterRef = true;
+				m_Value.ev_padding = Parameter;
 				LockHandle();
 				m_String = HandleToPtr();
 				return true;
 			}
 		}
 	}
-	m_ParameterRef = false;
 	m_BufferSize = 0;
 	m_String = 0;
 	return false;
@@ -892,14 +705,13 @@ bool FoxString::Attach(ParamBlkEx& parm, int nParmNo, unsigned int nExpand, FoxS
 				m_Value.ev_length = pVal.ev_length;
 				m_Value.ev_width = pVal.ev_width;
 				m_BufferSize = pVal.ev_length + 1;
-				m_ParameterRef = true;
+				m_Value.ev_padding = Parameter;
 				LockHandle();
 				m_String = HandleToPtr();
 				return true;
 			}
 		}
 	}
-	m_ParameterRef = false;
 	m_BufferSize = 0;
 	m_String = 0;
 	return false;
@@ -909,13 +721,19 @@ void FoxString::Release()
 {
 	if (m_Value.ev_handle)
 	{
-		UnlockHandle();
-		if (!m_ParameterRef)
-			FreeHandle();
-		else
-			m_Value.ev_handle = 0;
+		if (m_Value.ev_padding & Locked)
+			_HUnLock(m_Value.ev_handle);
+		if ((m_Value.ev_padding & Parameter) == 0)
+		{
+			_FreeHand(m_Value.ev_handle);
+#if defined(_DEBUGALLOCATIONS)
+			VfpAllocationCount--;
+#endif
+		}
+		m_Value.ev_handle = 0;
+		m_Value.ev_padding = Unlocked;
 	}
-	m_ParameterRef = false;
+	m_String = 0;
 	m_Value.ev_length = 0;
 	m_BufferSize = 0;
 }
@@ -990,7 +808,7 @@ unsigned int FoxString::StringDblLen()
 	const char *pString = m_String;
 	unsigned int nMaxLen = m_BufferSize;
 
-	while (1)
+	while (true)
 	{
 		while (*pString != '\0' && nMaxLen--) ++pString;
 	
@@ -1014,7 +832,7 @@ unsigned int FoxString::StringDblCount()
 	if (*pString == '\0')
 		return 0;
 
-	while (1)
+	while (true)
 	{
 		while (*pString != '\0' && nMaxLen--) ++pString;
 		pString++;		
@@ -1194,6 +1012,10 @@ FoxString& FoxString::PrependIfNotPresent(const CStringView pString)
 	return *this;
 }
 
+bool FoxString::StartsWith(const CStringView pString) const
+{
+	return pString.Data != 0 && pString.Len <= Len() && memcmp(m_String, pString.Data, pString.Len) == 0;
+}
 
 FoxString& FoxString::SubStr(unsigned int nStartPos, unsigned int nLen)
 {
@@ -1231,7 +1053,7 @@ FoxString& FoxString::SubStr(unsigned int nStartPos, unsigned int nLen)
 		}
 		else if (nStartPos > Len())
 		{
-			m_String = '\0';
+			m_String[0] = '\0';
 			Len(0);
 		}
 		else
@@ -1252,7 +1074,7 @@ FoxString& FoxString::Format(const char* format, ...)
 {
 	va_list lpArgs;
 	va_start(lpArgs, format);
-	m_Value.ev_length = nprintfex(m_String, format, m_BufferSize, lpArgs);
+	m_Value.ev_length = nprintfex(m_String, format, (int)m_BufferSize, lpArgs);
 	va_end(lpArgs);
 	return *this;
 }
@@ -1261,7 +1083,7 @@ FoxString& FoxString::Replicate(const CStringView pString, unsigned int nCount)
 {
 	if (pString)
 	{
-		int nNewSize = pString.Len * nCount + 1;
+		unsigned int nNewSize = pString.Len * nCount + 1;
 		Size(nNewSize);
 		char* pPtr = m_String;
 		for (unsigned int xj = 1; xj <= nCount; xj++)
@@ -1280,7 +1102,7 @@ unsigned int FoxString::At(char cSearchFor, unsigned int nOccurence, unsigned in
 	assert(m_String);
 	char *pSearch = m_String;
 	if (nMax == 0)
-		nMax = Len();
+		nMax = m_Value.ev_length;
 
 	for (unsigned int nPos = 1; nPos <= nMax; nPos++)
 	{
@@ -1300,8 +1122,8 @@ unsigned int FoxString::Rat(char cSearchFor, unsigned int nOccurence, unsigned i
 	if (Len() == 0)
 		return 0;
 
-	char *pSearch = m_String + Len() - 1;
-	nMax = max(nMax, Len());
+	char *pSearch = m_String + (m_Value.ev_length - 1);
+	nMax = max(nMax, m_Value.ev_length);
 
 	unsigned int nPos = nMax;
 	while(true)
@@ -1322,7 +1144,7 @@ unsigned int FoxString::Rat(char cSearchFor, unsigned int nOccurence, unsigned i
 CStringView FoxString::GetWordNum(unsigned int nWordnum, const char pSeperator) const
 {
 	unsigned int nCurrentWord = 1;
-	unsigned int nLen = Len();
+	unsigned int nLen = m_Value.ev_length;
 	char* pWordStart = m_String;
 	char* pString = m_String;
 	while (nLen--)
@@ -1345,7 +1167,7 @@ CStringView FoxString::GetWordNum(unsigned int nWordnum, const char pSeperator) 
 unsigned int FoxString::GetWordCount(const char pSeperator) const
 {
 	unsigned int nTokens = 1;
-	unsigned int nLen = Len();
+	unsigned int nLen = m_Value.ev_length;
 	const char *pString = m_String;
 	while (nLen--)
 	{
@@ -1377,18 +1199,24 @@ unsigned int FoxString::Expand(int nSize)
 FoxString& FoxString::NullTerminate()
 {
 	assert(m_Value.ev_handle);
-	if (m_BufferSize > Len())
-		m_String[Len()] = '\0';
-	else
-	{
-		UnlockHandle();
-		FoxValue::NullTerminate();
-		LockHandle();
-		m_String = HandleToPtr();
-		m_BufferSize++;
-	}
+	if (m_BufferSize < m_Value.ev_length + 1)
+		Expand(1);
+
+	m_String[m_Value.ev_length] = '\0';
 	return *this;
 }
+
+FoxString& FoxString::DoubleNullTerminate()
+{
+	assert(m_Value.ev_handle);
+	if (m_BufferSize < m_Value.ev_length + 2)
+		Expand(2);
+
+	m_String[m_Value.ev_length] = '\0';
+	m_String[m_Value.ev_length + 1] = '\0';
+	return *this;
+}
+
 
 FoxString& FoxString::ExtendBuffer(unsigned int nNewMinBufferSize)
 {
@@ -1413,7 +1241,7 @@ FoxString& FoxString::Fullpath()
 {
 	assert(m_String);
 	ValueEx vFullpath;
-	vFullpath = 0;
+	vFullpath.SetNull();
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pVarName;
 	CStrBuilder<VFP2C_MAX_FUNCTIONBUFFER> pExeBuffer;
 	pVarName.Format("_VFP2C32_FULLPATH_%U", this);
@@ -1580,7 +1408,7 @@ BSTR FoxString::ToBSTR() const
 	if (pBstr == 0)
 		throw E_INSUFMEMORY;
 
-	int nChars = MultiByteToWideChar(m_CodePage, MB_PRECOMPOSED,m_String,dwLen,pBstr,dwLen);
+	int nChars = MultiByteToWideChar(m_CodePage, MB_PRECOMPOSED, m_String, (int)dwLen, pBstr, (int)dwLen);
 	if (!nChars)
 	{
 		SaveWin32Error("MultiByteToWideChar", GetLastError());
@@ -1598,14 +1426,16 @@ SAFEARRAY* FoxString::ToU1SafeArray() const
 	pArray = SafeArrayCreateVector(VT_UI1,0,Len());
 	if (pArray == 0)
 		throw E_INSUFMEMORY;
-    if ((hr = SafeArrayAccessData(pArray,(void**)&pData)) != S_OK)
+	hr = SafeArrayAccessData(pArray, (void**)&pData);
+    if (hr != S_OK)
 	{
 		SaveWin32Error("SafeArrayAccessData", hr);
 		SafeArrayDestroy(pArray);
 		throw E_APIERROR;
 	}
 	memcpy(pData,m_String,Len());
-	if ((hr = SafeArrayUnaccessData(pArray)) != S_OK)
+	hr = SafeArrayUnaccessData(pArray);
+	if (hr != S_OK)
 	{
 		SaveWin32Error("SafeArrayUnaccessData", hr);
 		SafeArrayDestroy(pArray);
@@ -1616,7 +1446,7 @@ SAFEARRAY* FoxString::ToU1SafeArray() const
 
 void FoxString::DetachParameter()
 {
-	assert(m_ParameterRef == true && m_Value.ev_type == 'C' && m_Value.ev_handle);
+	assert(m_Value.ev_type == 'C' && (m_Value.ev_padding & Parameter) && m_Value.ev_handle);
 	ValueEx vValue;
 	vValue.SetString(m_Value.ev_length);
 	vValue.ev_width = m_Value.ev_width;
@@ -1626,25 +1456,32 @@ void FoxString::DetachParameter()
 	char* pString = vValue.HandleToPtr();
 	memcpy(pString, m_String, m_BufferSize);
 	UnlockHandle();
+	m_Value.ev_padding = Locked;
 	m_Value.ev_handle = vValue.ev_handle;
 	m_String = pString;
-	m_ParameterRef = false;
-	m_Locked = true;
 }
 
 /* Operator overloading */
 FoxString& FoxString::operator=(LocatorEx &pLoc)
 {
 	Release();
-	int nErrorNo;
-	if (nErrorNo = _Load(pLoc, &m_Value))
+	int nErrorNo = _Load(pLoc, &m_Value);
+	if (nErrorNo)
 		throw nErrorNo;
-	m_String = (char*)_HandToPtr(m_Value.ev_handle);
-	m_BufferSize = m_Value.ev_length;
-#if defined(_DEBUGALLOCATIONS)
 	if (m_Value.ev_type == 'C')
-		VfpAllocationCount++;
+	{
+		m_BufferSize = m_Value.ev_length;
+		m_String = HandleToPtr();
+#if defined(_DEBUGALLOCATIONS)
+		if (m_Value.ev_type == 'C')
+			VfpAllocationCount++;
 #endif
+	}
+	else
+	{
+		Release();
+		throw E_TYPECONFLICT;
+	}
 	return *this;
 }
 
@@ -1667,8 +1504,8 @@ FoxString& FoxString::operator=(FoxValue &pValue)
 FoxString& FoxString::operator<<(FoxObject &pObject)
 {
 	Release();
-	int nErrorNo;
-	if (nErrorNo = _GetObjectProperty(&m_Value, pObject, pObject.Property()))
+	int nErrorNo = _GetObjectProperty(&m_Value, pObject, pObject.Property());
+	if (nErrorNo)
 		throw nErrorNo;
 	if (m_Value.ev_type == 'C')
 	{
@@ -1676,13 +1513,51 @@ FoxString& FoxString::operator<<(FoxObject &pObject)
 		LockHandle();
 		m_String = HandleToPtr();
 	}
-	else if (m_Value.ev_type == 'O')
+	else
 	{
-        FreeObject();
+		Release();
 		throw E_TYPECONFLICT;
 	}
+	return *this;
+}
+
+FoxString& FoxString::operator=(char* pString)
+{
+	if (pString)
+	{
+		unsigned int nStrLen = (unsigned int)strlen(pString) + 1;
+		if (m_BufferSize < nStrLen + 1)
+			Size(nStrLen + 1);
+
+		memcpy(m_String, pString, nStrLen + 1);
+		m_Value.ev_length = nStrLen;
+	}
 	else
-		throw E_TYPECONFLICT;
+	{
+		if (m_String)
+			*m_String = '\0';
+		m_Value.ev_length = 0;
+	}
+	return *this;
+}
+
+FoxString& FoxString::operator=(const char* pString)
+{
+	if (pString)
+	{
+		unsigned int nStrLen = (unsigned int)strlen(pString);
+		if (m_BufferSize < nStrLen + 1)
+			Size(nStrLen + 1);
+
+		memcpy(m_String, pString, nStrLen + 1);
+		m_Value.ev_length = nStrLen;
+	}
+	else
+	{
+		if (m_String)
+			*m_String = '\0';
+		m_Value.ev_length = 0;
+	}
 	return *this;
 }
 
@@ -1716,7 +1591,7 @@ FoxString& FoxString::operator=(const CWideStringView pWString)
 		if (m_BufferSize < nBufferSize)
 			Size(nBufferSize);
 
-		nChars = WideCharToMultiByte(m_CodePage, 0, pWString.Data, pWString.Len, m_String, m_BufferSize, 0, 0);
+		nChars = WideCharToMultiByte(m_CodePage, 0, pWString.Data, (int)pWString.Len, m_String, (int)m_BufferSize, 0, 0);
 		if (!nChars)
 		{
 			SaveWin32Error("MultiByteToWideChar", GetLastError());
@@ -1737,22 +1612,25 @@ FoxString& FoxString::operator=(const CWideStringView pWString)
 FoxString& FoxString::operator+=(const CStringView pString)
 {
 	unsigned int nLen = pString.Len;
-	int nDiff = m_BufferSize - (m_Value.ev_length + nLen);
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+	int nDiff = m_BufferSize - (m_Value.ev_length + nLen + 1);
 	if (nDiff < 0)
-		Expand(m_BufferSize + (-nDiff));
+		Expand(-nDiff);
 	memcpy(m_String + m_Value.ev_length, pString.Data, nLen);
 	m_Value.ev_length += nLen;
+	m_String[m_Value.ev_length] = '\0';
 	return *this;
 }
 
 FoxString& FoxString::operator+=(const CWideStringView pWString)
 {
-	unsigned int nLen = pWString.Len * sizeof(wchar_t) + 1;
-	int nDiff = m_BufferSize - (m_Value.ev_length + nLen);
+	unsigned int nLen = pWString.Len * sizeof(wchar_t);
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+	int nDiff = m_BufferSize - (m_Value.ev_length + nLen + 1);
 	if (nDiff < 0)
-		Expand(m_BufferSize + (-nDiff));
+		Expand(-nDiff);
 
-	int nChars = WideCharToMultiByte(m_CodePage, 0, pWString.Data, pWString.Len, m_String + m_Value.ev_length, m_BufferSize, 0, 0);
+	int nChars = WideCharToMultiByte(m_CodePage, 0, pWString.Data, (int)pWString.Len, m_String + m_Value.ev_length, (int)m_BufferSize, 0, 0);
 	if (!nChars)
 	{
 		SaveWin32Error("MultiByteToWideChar", GetLastError());
@@ -1767,8 +1645,10 @@ FoxString& FoxString::operator+=(const CWideStringView pWString)
 
 FoxString& FoxString::operator+=(const char pChar)
 {
-	if ((m_Value.ev_length + 1) > m_BufferSize)
-		Expand(1);
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+	int nDiff = m_BufferSize - (m_Value.ev_length + 2);
+	if (nDiff < 0)
+		Expand(-nDiff);
 	char *pTmp = m_String + m_Value.ev_length;
 	*pTmp++ = pChar;
 	*pTmp = '\0';
@@ -1789,19 +1669,22 @@ bool FoxString::operator==(const CStringView pString) const
 }
 
 /* FoxDate */
-FoxDate::FoxDate(ValueEx &pVal) : FoxValue('D')
+FoxDate::FoxDate(ValueEx &pVal)
 {
 	assert(pVal.Vartype() == 'D');
+	m_Value.ev_type = 'D';
 	m_Value.ev_real = pVal.ev_real;
 }
 
-FoxDate::FoxDate(SYSTEMTIME &sTime) : FoxValue('D')
+FoxDate::FoxDate(SYSTEMTIME &sTime)
 {
+	m_Value.ev_type = 'D';
 	SystemTimeToDate(sTime);
 }
 
-FoxDate::FoxDate(FILETIME &sTime) : FoxValue('D')
+FoxDate::FoxDate(FILETIME &sTime)
 {
+	m_Value.ev_type = 'D';
 	FileTimeToDate(sTime);
 }
 
@@ -1845,7 +1728,7 @@ void FoxDate::FileTimeToDate(const FILETIME &sTime)
 {
 	// FILETIME base: Januar 1 1601 | C = 0 | FoxPro = 2305814.0
 	// 86400 secs a day, 10000000 "100 nanosecond intervals" in one second
-    LARGE_INTEGER pTime;
+    ULARGE_INTEGER pTime;
 	pTime.LowPart = sTime.dwLowDateTime;
 	pTime.HighPart = sTime.dwHighDateTime;
 
@@ -1858,6 +1741,7 @@ void FoxDate::FileTimeToDate(const FILETIME &sTime)
 		// gives us seconds since 1601/01/01
 		pTime.QuadPart /= NANOINTERVALSPERSECOND;
 		// 1601/01/01 + number of seconds / 86400 (= number of days)
+		// NOLINTNEXTLINE(bugprone-integer-division)
 		m_Value.ev_real = VFPFILETIMEBASE + (double)(pTime.QuadPart / SECONDSPERDAY);
 	}
 }
@@ -1869,7 +1753,7 @@ void FoxDate::DateToSystemTime(SYSTEMTIME &sTime) const
 
 	lnDays = static_cast<DWORD>(floor(m_Value.ev_real));
 
-	lnA = lnDays + 32044;
+	lnA = (int)(lnDays + 32044);
 	lnB = (4 * lnA + 3) / 146097;
 	lnC = lnA - (lnB * 146097) / 4;
 
@@ -1910,24 +1794,28 @@ void FoxDate::DateToFileTime(FILETIME &sTime) const
 
 
 /* FoxDateTime */
-FoxDateTime::FoxDateTime(ValueEx &pVal) : FoxValue('T')
+FoxDateTime::FoxDateTime(ValueEx &pVal)
 {
 	assert(pVal.Vartype() == 'T');
+	m_Value.ev_type = 'T';
 	m_Value.ev_real = pVal.ev_real;
 }
 
-FoxDateTime::FoxDateTime(SYSTEMTIME &sTime) : FoxValue('T')
+FoxDateTime::FoxDateTime(SYSTEMTIME &sTime)
 {
+	m_Value.ev_type = 'T';
 	SystemTimeToDateTime(sTime);
 }
 
-FoxDateTime::FoxDateTime(FILETIME &sTime) : FoxValue('T')
+FoxDateTime::FoxDateTime(FILETIME &sTime)
 {
+	m_Value.ev_type = 'T';
 	FileTimeToDateTime(sTime);
 }
 
-FoxDateTime::FoxDateTime(double dTime) : FoxValue('T')
+FoxDateTime::FoxDateTime(double dTime)
 {
+	m_Value.ev_type = 'T';
 	m_Value.ev_real = dTime;
 }
 
@@ -1999,7 +1887,7 @@ void FoxDateTime::FileTimeToDateTime(const FILETIME &sTime)
 	// 86400 secs a day, 10000000 "100 nanosecond intervals" in one second
     LARGE_INTEGER pTime;
 	pTime.LowPart = sTime.dwLowDateTime;
-	pTime.HighPart = sTime.dwHighDateTime;
+	pTime.HighPart = (LONG)sTime.dwHighDateTime;
 
 	if (pTime.QuadPart > MAXVFPFILETIME) //if bigger than maximum DATETIME - 9999/12/12 23:59:59
 		pTime.QuadPart = MAXVFPFILETIME; //set to maximum date ..
@@ -2009,6 +1897,7 @@ void FoxDateTime::FileTimeToDateTime(const FILETIME &sTime)
 	{
 		// gives us seconds since 1601/01/01
 		pTime.QuadPart /= NANOINTERVALSPERSECOND;
+		// NOLINTNEXTLINE(bugprone-integer-division)
 		m_Value.ev_real = VFPFILETIMEBASE + (double)(pTime.QuadPart / SECONDSPERDAY);
 		m_Value.ev_real += ((double)(pTime.QuadPart % SECONDSPERDAY)) / SECONDSPERDAY; 
 	}
@@ -2023,7 +1912,7 @@ void FoxDateTime::DateTimeToSystemTime(SYSTEMTIME &sTime) const
 	dSecs = modf(m_Value.ev_real,&dDays);
 	lnDays = static_cast<DWORD>(dDays);
 
-	lnA = lnDays + 32044;
+	lnA = (int)(lnDays + 32044);
 	lnB = (4 * lnA + 3) / 146097;
 	lnC = lnA - (lnB * 146097) / 4;
 
@@ -2166,57 +2055,47 @@ FoxDateTimeLiteral::operator CStringView()
 	return CStringView(m_Literal, m_Length); 
 }
 
-FoxObject::FoxObject(ValueEx &pVal) : FoxValue('O'), m_Property(0), m_ParameterRef(true)
+FoxObject::FoxObject(ValueEx &pVal) : FoxValue('O'), m_Property(0)
 {
 	assert(pVal.Vartype() == 'O');
+	m_Value.ev_padding = Unlocked;
 	m_Value.ev_object = pVal.ev_object;
 }
 
 FoxObject::FoxObject(ParamBlkEx& parm, int nParmNo) : m_Property(0)
 {
-
 	if (parm.pCount >= nParmNo && parm(nParmNo)->ev_type == 'O')
 	{
 		m_Value.ev_type = 'O';
 		m_Value.ev_object = parm(nParmNo)->ev_object;
-		m_ParameterRef = true;
+		m_Value.ev_padding = Parameter;
 	}
 	else
 	{
 		m_Value.ev_type = '0';
 		m_Value.ev_object = 0;
-		m_ParameterRef = false;
+		m_Value.ev_padding = Unlocked;
 	}
 }
 
-FoxObject::FoxObject(char *pExpression) : FoxValue('0'), m_Property(0), m_ParameterRef(false)
+FoxObject::FoxObject(char *pExpression) : FoxValue('0'), m_Property(0)
 {
 	Evaluate(pExpression);
 }
 
-FoxObject::~FoxObject()
-{
-	if (m_Value.ev_object)
-	{
-		UnlockObject();
-		if (!m_ParameterRef)
-			FreeObject();
-	}
-	m_Value.ev_type = '0';
-}
-
+// TODO - simplify
 void FoxObject::Release()
 {
 	if (m_Value.ev_object)
 	{
 		UnlockObject();
-		if (!m_ParameterRef)
+		if ((m_Value.ev_padding & Parameter) == 0)
 			FreeObject();
 		else
 			m_Value.ev_object = 0;
 	}
-	m_ParameterRef = false;
 	m_Value.ev_type = '0';
+	m_Value.ev_padding = Unlocked;
 }
 
 FoxObject& FoxObject::NewObject(char *pClass)
@@ -2239,12 +2118,12 @@ FoxObject& FoxObject::EmptyObject()
 }
 
 /* FoxMemo */
-FoxMemo::FoxMemo() : m_File(0), m_Location(0), m_pContent(0)
+FoxMemo::FoxMemo() : m_File(0), m_Location(0)
 {
-	memset(&m_Loc,0,sizeof(Locator));
+	memset((void*)&m_Loc, 0, sizeof(LocatorEx));
 }
 
-FoxMemo::FoxMemo(ParamBlkEx& parm, int nParmNo) : m_pContent(0)
+FoxMemo::FoxMemo(ParamBlkEx& parm, int nParmNo)
 {
 	if (parm.pCount >= nParmNo && parm(nParmNo).IsMemoRef())
 	{
@@ -2255,31 +2134,40 @@ FoxMemo::FoxMemo(ParamBlkEx& parm, int nParmNo) : m_pContent(0)
 		m_File = 0;
 		m_Location = 0;
 		m_Size = 0;
-		memset(&m_Loc, 0 ,sizeof(Locator));
+		memset((void*)&m_Loc, 0, sizeof(LocatorEx));
 	}
 }
 
-FoxMemo::FoxMemo(LocatorEx &pLoc) : m_pContent(0)
+FoxMemo::FoxMemo(FoxParameterEx &parm)
 {
-	Attach(pLoc);
+	if (parm.IsMemoRef())
+		Attach(parm.loc);
+	else
+	{
+		m_Location = (long)parm->ev_real; // _FindMemo(pValue.ev_long);
+		m_File = parm->ev_width; // _MemoChan(m_Loc.l_where);
+		m_Size = parm->ev_long; // _MemoSize(m_Loc);
+	}
 }
 
-FoxMemo::FoxMemo(Value& pValue) : m_pContent(0)
+FoxMemo::FoxMemo(Value& pValue)
 {
 	m_Location = (long)pValue.ev_real; // _FindMemo(pValue.ev_long);
 	m_File = pValue.ev_width; // _MemoChan(m_Loc.l_where);
 	m_Size = pValue.ev_long; // _MemoSize(m_Loc);
 }
 
-FoxMemo::~FoxMemo()
+void FoxMemo::Attach(Locator& pLoc)
 {
-	if (m_pContent)
-		delete[] m_pContent;
+	Attach((LocatorEx&)pLoc);
 }
 
 void FoxMemo::Attach(LocatorEx& pLoc)
 {
-	m_Loc.Init(pLoc);
+	m_Loc.l_type = pLoc.l_type;
+	m_Loc.l_where = pLoc.l_where;
+	m_Loc.l_NTI = pLoc.l_NTI;
+	m_Loc.l_offset = pLoc.l_offset;
 
 	m_Location = _FindMemo(m_Loc);
 	if (m_Location < 0)
@@ -2302,7 +2190,7 @@ void FoxMemo::Attach(LocatorEx& pLoc)
 		m_Size = 0;
 }
 
-void FoxMemo::Alloc(unsigned int nSize)
+void FoxMemo::Alloc(int nSize)
 {
 	m_Location = _AllocMemo(m_Loc,nSize);
 	if (m_Location == -1)
@@ -2312,19 +2200,19 @@ void FoxMemo::Alloc(unsigned int nSize)
 	}
 }
 
-void FoxMemo::Append(char *pData, unsigned int nLen)
+void FoxMemo::Append(char *pData, int nLen)
 {
 	if (_FSeek(m_File, m_Location, FS_FROMBOF) != m_Location)
 	{
 		SaveCustomError("_FSeek", "Function failed.");
 		throw E_APIERROR;
 	}
-	if (_FWrite(m_File,pData,nLen) != nLen)
+	if (_FWrite(m_File,pData,(unsigned int)nLen) != (unsigned int)nLen)
 		throw _FError();
 	m_Location += nLen;
 }
 
-void FoxMemo::ReadTo(char* pDestination, unsigned int nBytes)
+void FoxMemo::Read(char* pDestination, unsigned int nBytes)
 {
 	if (_FSeek(m_File, m_Location, FS_FROMBOF) != m_Location)
 	{
@@ -2339,37 +2227,59 @@ void FoxMemo::ReadTo(char* pDestination, unsigned int nBytes)
 	}
 }
 
-void FoxMemo::ReadTo(ValueEx& pMemo, ValueEx& pDestination, bool bNullTerminate)
+void FoxMemo::Read(FoxParameterEx& pMemo, FoxString& pDestination, bool bNullTerminate)
 {
-	unsigned int nBytes = pMemo.ev_long; 
-	long location = pMemo.ev_real;
-	long memochan = pMemo.ev_width;
+	assert(pMemo.IsMemoRef());
 
-	if (_FSeek(memochan, location, FS_FROMBOF) != location)
+	long nLocation = _FindMemo(&pMemo.loc);
+	if (nLocation < 0)
 	{
-		SaveCustomError("_FSeek", "Function failed.");
+		SaveCustomError("_FindMemo", "Function failed.");
 		throw E_APIERROR;
 	}
 
-	if (!pDestination.AllocHandle(nBytes + (bNullTerminate ? 1 : 0)))
-		throw E_INSUFMEMORY;
-	char* pDest = pDestination.HandleToPtr();
-
-	unsigned int nBytesRead = _FRead(memochan, pDest, nBytes);
-	if (nBytesRead != nBytes)
+	if (nLocation != 0)
 	{
-		SaveCustomError("_FRead", "Function failed.");
-		throw E_APIERROR;
+		FCHAN hFile = _MemoChan(pMemo.loc.l_where);
+		if (hFile == -1)
+		{
+			SaveCustomError("_MemoChan", "Function failed.");
+			throw E_APIERROR;
+		}
+
+		long nBytes = _MemoSize(&pMemo.loc);
+		if (nBytes < 0)
+			throw nBytes;
+
+		if (_FSeek(hFile, nLocation, FS_FROMBOF) != nLocation)
+		{
+			SaveCustomError("_FSeek", "Function failed.");
+			throw E_APIERROR;
+		}
+		pDestination.ExtendBuffer(nBytes + (bNullTerminate ? 1 : 0));
+		char* pDest = pDestination.Ptr<char*>();
+		long nBytesRead = (long)_FRead(hFile, pDest, nBytes);
+		if (nBytesRead != nBytes)
+		{
+			SaveCustomError("_FRead", "Function failed.");
+			throw E_APIERROR;
+		}
+
+		pDestination.Len(nBytes);
+		if (bNullTerminate)
+			pDest[nBytes] = '\0';
 	}
-	pDestination.ev_length = nBytes;
-	if (bNullTerminate)
-		pDest[nBytes] = '\0';
+	else
+	{
+		pDestination.Len(0);
+	}
+
 }
 
-void FoxMemo::ReadTo(ValueEx& pMemo, FoxString& pDestination, bool bNullTerminate)
+void FoxMemo::Read(ValueEx& pMemo, FoxString& pDestination, bool bNullTerminate)
 {
 	unsigned int nBytes = pMemo.ev_long;
-	long location = pMemo.ev_real;
+	long location = (long)pMemo.ev_real;
 	long memochan = pMemo.ev_width;
 
 	if (_FSeek(memochan, location, FS_FROMBOF) != location)
@@ -2388,29 +2298,24 @@ void FoxMemo::ReadTo(ValueEx& pMemo, FoxString& pDestination, bool bNullTerminat
 	}
 	pDestination.Len(nBytes);
 	if (bNullTerminate)
-		pDestination.NullTerminate();
+		pDest[nBytes] = '\0';
 }
 
-void FoxMemo::ReadTo(FoxString& pDestination, unsigned int nBytes, bool bNullTerminate)
+unique_ptr<char*> FoxMemo::Read(unsigned int &nLen)
 {
-	if (nBytes == 0)
-		nBytes = m_Size;
-	pDestination.ExtendBuffer(nBytes + (bNullTerminate ? 1 : 0));
-	ReadTo(pDestination.Ptr<char*>(), nBytes);
-	pDestination.Len(nBytes);
-	if (bNullTerminate)
-		pDestination.NullTerminate();
-}
+	unsigned int nAllocBytes, nReadBytes;
+	if (nLen == 0)
+	{
+		nAllocBytes = nReadBytes = m_Size;
+	}
+	else
+	{
+		nAllocBytes = nLen;
+		nReadBytes = (long)nLen > m_Size ? m_Size : nLen;
+	}
 
-char* FoxMemo::Read(unsigned int &nLen)
-{
-	unsigned int nBytes = nLen == 0 ? m_Size : nLen;
-
-	if (m_pContent)
-		delete[] m_pContent;
-
-	m_pContent = new char[nBytes];
-	if (m_pContent == 0)
+	unique_ptr<char*> pData(new(std::nothrow) char[nAllocBytes]);
+	if (!pData)
 		throw E_INSUFMEMORY;
 
 	if (_FSeek(m_File, m_Location, FS_FROMBOF) != m_Location)
@@ -2418,8 +2323,40 @@ char* FoxMemo::Read(unsigned int &nLen)
 		SaveCustomError("_FSeek", "Function failed.");
 		throw E_APIERROR;
 	}
-	nLen = _FRead(m_File, m_pContent, nBytes);
-	return m_pContent;
+	nLen = _FRead(m_File, pData, nReadBytes);
+	return pData;
+}
+
+void FoxMemo::Read(char* pDestination, int nOffset, unsigned int nBytes)
+{
+	long location = m_Location + nOffset;
+	if (_FSeek(m_File, location, FS_FROMBOF) != location)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		throw E_APIERROR;
+	}
+	unsigned int nBytesRead = _FRead(m_File, pDestination, nBytes);
+	if (nBytesRead != nBytes)
+	{
+		SaveCustomError("_FRead", "Function failed.");
+		throw E_APIERROR;
+	}
+}
+
+void FoxMemo::Write(char* pData, int nOffset, unsigned int nBytes)
+{
+	long location = m_Location + nOffset;
+	if (_FSeek(m_File, location, FS_FROMBOF) != location)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		throw E_APIERROR;
+	}
+	unsigned int nBytesWritten = _FWrite(m_File, pData, nBytes);
+	if (nBytesWritten != nBytes)
+	{
+		SaveCustomError("_FWrite", "Function failed.");
+		throw E_APIERROR;
+	}
 }
 
 FoxMemo& FoxMemo::operator=(FoxString &pString)
@@ -2427,29 +2364,222 @@ FoxMemo& FoxMemo::operator=(FoxString &pString)
 	/* if data is smaller or equal to 65000, we can use _DBReplace */
 	if (pString.Len() <= 65000)
 	{
-		int nErrorNo;
-		if (nErrorNo = _DBReplace(m_Loc,pString))
+		int nErrorNo = _DBReplace(m_Loc, pString);
+		if (nErrorNo)
 			throw nErrorNo;
 	}
 	else
 	{
-		Alloc(pString.Len());
+		Alloc((int)pString.Len());
 		if (_FSeek(m_File, m_Location, FS_FROMBOF) != m_Location)
 		{
 			SaveCustomError("_FSeek", "Function failed.");
 			throw E_APIERROR;
 		}
-		if (_FWrite(m_File,pString,pString.Len()) != pString.Len())
+		if (_FWrite(m_File,pString.Ptr<LPSTR>(),pString.Len()) != pString.Len())
 			throw _FError();
 	}
 	return *this;
 }
 
+FoxMemo& FoxMemo::operator=(CStringView& pString)
+{
+	Alloc((int)pString.Len);
+	if (_FSeek(m_File, m_Location, FS_FROMBOF) != m_Location)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		throw E_APIERROR;
+	}
+	if (_FWrite(m_File, pString.Data, pString.Len) != pString.Len)
+		throw _FError();
+	return *this;
+}
+
+int _fastcall FoxMemo::Alloc(Locator* pLoc, int nSize, long* nLocation)
+{
+	*nLocation = _AllocMemo(pLoc, nSize);
+	if (*nLocation == -1)
+	{
+		SaveCustomError("_AllocMemo", "Function failed.");
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall FoxMemo::Chan(int nWorkarea, FCHAN* nChan)
+{
+	*nChan = _MemoChan(nWorkarea);
+	if (*nChan == -1)
+	{
+		SaveCustomError("_MemoChan", "Function failed.");
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall FoxMemo::Read(Value* pValue, char* pData)
+{
+	FCHAN hFile = pValue->ev_width;
+	int nLocation = (int)pValue->ev_real;
+	if (_FSeek(hFile, nLocation, FS_FROMBOF) != nLocation)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+	if (_FRead(hFile, pData, (unsigned int)pValue->ev_long) != (unsigned int)pValue->ev_long)
+	{
+		SaveCustomErrorEx("_FRead", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	else
+		return 0;
+}
+
+int _fastcall FoxMemo::Read(Value* pValue, char* pData, unsigned int nLen, int nOffset)
+{
+	FCHAN hFile = pValue->ev_width;
+	int nLocation = ((int)pValue->ev_real) + nOffset;
+	if (_FSeek(hFile, nLocation, FS_FROMBOF) != nLocation)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+	if (_FRead(hFile, pData, nLen) != nLen)
+	{
+		SaveCustomErrorEx("_FRead", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	else
+		return 0;
+}
+
+int _fastcall FoxMemo::Read(Locator* pLoc, char** pData, int* nErrorNo)
+{
+	FCHAN hFile;
+	int nLocation, nLen;
+
+	nLocation = _FindMemo(pLoc);
+	if (nLocation < 0)
+	{
+		*nErrorNo = E_INVALIDPARAMS;
+		return -1;
+	}
+
+	hFile = _MemoChan(pLoc->l_where);
+	if (hFile == -1)
+	{
+		SaveCustomError("_MemoChan", "Function failed for workarea %I.", pLoc->l_where);
+		*nErrorNo = E_APIERROR;
+		return -1;
+	}
+
+	nLen = _MemoSize(pLoc);
+	if (nLen <= 0)
+	{
+		if (nLen == 0)
+			return 0;
+		else
+		{
+			*nErrorNo = nLen;
+			return -1;
+		}
+	}
+
+	*pData = (char*)malloc(nLen);
+	if (!*pData)
+	{
+		*nErrorNo = E_INSUFMEMORY;
+		return -1;
+	}
+
+	if (_FSeek(hFile, nLocation, FS_FROMBOF) != nLocation)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		*nErrorNo = E_APIERROR;
+		return -1;
+	}
+
+	return _FRead(hFile, *pData, nLen);
+}
+
+int _fastcall FoxMemo::Replace(Locator* pLoc, char* pData, int nLen)
+{
+	FCHAN hFile;
+	long nLocation;
+
+	hFile = _MemoChan(pLoc->l_where);
+	if (hFile == -1)
+		return E_FIELDNOTFOUND;
+
+	nLocation = _AllocMemo(pLoc, nLen);
+	if (nLocation == -1)
+	{
+		SaveCustomError("_AllocMemo", "Function failed.");
+		return E_APIERROR;
+	}
+
+	if (_FSeek(hFile, nLocation, FS_FROMBOF) != nLocation)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+
+	if (_FWrite(hFile, pData, (unsigned int)nLen) != (unsigned int)nLen)
+	{
+		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall FoxMemo::Replace(Locator* pLoc, char* pData, int nLen, FCHAN hFile)
+{
+	long nLocation;
+	nLocation = _AllocMemo(pLoc, nLen);
+	if (nLocation == -1)
+	{
+		SaveCustomError("_AllocMemo", "Function failed.");
+		return E_APIERROR;
+	}
+
+	if (_FSeek(hFile, nLocation, FS_FROMBOF) != nLocation)
+	{
+		SaveCustomError("_FSeek", "Function failed.");
+		return E_APIERROR;
+	}
+
+	if (_FWrite(hFile, pData, (unsigned int)nLen) != (unsigned int)nLen)
+	{
+		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	return 0;
+}
+
+int _fastcall FoxMemo::Append(char* pData, int nLen, FCHAN hFile, long* nLocation)
+{
+	if (nLocation)
+	{
+		if (_FSeek(hFile, *nLocation, FS_FROMBOF) != *nLocation)
+		{
+			SaveCustomError("_FSeek", "Function failed.");
+			return E_APIERROR;
+		}
+	}
+	if (_FWrite(hFile, pData, (unsigned int)nLen) != (unsigned int)nLen)
+	{
+		SaveCustomErrorEx("_FWrite", "Function failed.", _FError());
+		return E_APIERROR;
+	}
+	if (nLocation)
+		*nLocation += nLen;
+	return 0;
+}
 
 /* FoxArray */
 FoxArray::FoxArray()
 {
-	Init();
+	Init(false);
 }
 
 FoxArray::FoxArray(ValueEx &pVal, unsigned int nRows, unsigned int nDims)
@@ -2468,21 +2598,21 @@ FoxArray::FoxArray(FoxParameterEx& pVal, unsigned int nRows, unsigned int nDims)
 	}
 	else
 	{
-		SaveCustomErrorEx("FoxArray:Constructor", "Invalid parameter type '%s' to initialize array.", 0, pVal->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("FoxArray:Constructor", "Invalid parameter type '%s' to initialize array.", E_VFP_INVALIDPARAMS, pVal->Vartype());
+		throw E_APIERROR;
 	}
 }
 
-FoxArray::FoxArray(FoxParameterEx& pVal, bool bRaiseErrorIfNotExists)
+FoxArray::FoxArray(FoxParameterEx& pVal, FoxArray::Initialisation eInit)
 {
 	if (pVal->Vartype() == 'C' && pVal->Len() > 0)
 	{
-		Init(pVal.val, bRaiseErrorIfNotExists);
+		Init(pVal.val, eInit);
 	}
 	else
 	{
-		SaveCustomErrorEx("FoxArray:Constructor", "Invalid parameter type '%s' to initialize array.", 0, pVal->Vartype());
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("FoxArray:Constructor", "Invalid parameter type '%s' to initialize array.", E_VFP_INVALIDPARAMS, pVal->Vartype());
+		throw E_APIERROR;
 	}
 }
 
@@ -2497,44 +2627,44 @@ FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo)
 	{
 		FoxParameterEx& pParameter = parm(nParmNo);
 		if (pParameter->Vartype() == 'C')
+		{
 			Init(pParameter.val);
+			return;
+		}
 		else if (pParameter->Vartype() == 'R')
 		{
 			LocatorEx& pRef = pParameter;
 			Init(pRef);
+			return;
 		}
-		else
-			Init();
 	}
-	else
-		Init();
+	Init(false);
 }
 
-FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo, char cTypeCheck)
+FoxArray::FoxArray(ParamBlkEx& parm, int nParmNo, FoxArray::BindingSource eBind)
 {
 	if (parm.PCount() >= nParmNo)
 	{
-		FoxParameterEx& pVal = parm(nParmNo);
-		if (pVal->Vartype() == 'C')
+		FoxParameterEx& pParameter = parm(nParmNo);
+		if (eBind == BindByName && pParameter->Vartype() == 'C')
 		{
-			Init(pVal.val);
+			Init(pParameter.val);
+			return;
 		}
-		else if (pVal->Vartype() != cTypeCheck)
+		else if (eBind == BindByReference && pParameter->Vartype() == 'R')
 		{
-			SaveCustomErrorEx("FoxArray:Constructor", "Invalid parameter type '%s' to initialize array.", 0, cTypeCheck);
-			throw E_INVALIDPARAMS;
+			LocatorEx& pRef = pParameter;
+			Init(pRef);
+			return;
 		}
 	}
-	else
-		Init();
+	Init(false);
 }
 
-void FoxArray::Init()
+void FoxArray::Init(bool bPassed)
 {
 	m_Loc.l_NTI = 0;
-	m_Loc.l_subs = 0;
-	m_Loc.l_sub1 = 0;
-	m_Loc.l_sub2 = 0;
+	m_Loc.l_where = bPassed ? 0 : 1;
 	m_Rows = 0;
 	m_Dims = 0;
 	m_AutoGrow = 0;
@@ -2543,7 +2673,10 @@ void FoxArray::Init()
 
 void FoxArray::Init(LocatorEx &pLoc)
 {
-	m_Loc.Init(pLoc);
+	m_Loc.l_type = pLoc.l_type;
+	m_Loc.l_NTI = pLoc.l_NTI;
+	m_Loc.l_where = -1;
+	m_Loc.l_offset = 0;
 	m_Rows = m_Loc.ARows();
 	m_Dims = m_Loc.ADims();
 	m_Dims = m_Dims > 0 ? m_Dims : 1;
@@ -2558,155 +2691,118 @@ void FoxArray::Init(ValueEx &pVal, unsigned int nRows, unsigned int nDims)
 {
 	if (pVal.Vartype() != 'C' || pVal.ev_handle == 0 || pVal.ev_length == 0 || pVal.ev_length > VFP_MAX_VARIABLE_NAME)	
 	{
-		SaveCustomError("FoxArray:Init", "Invalid parameter to initialize array: the parameter has to be the variable name as a string no longer than 128 characters");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("FoxArray:Init", "The parameter has to be the variable name as a string no longer than 128 characters", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	m_Name.Append(pVal);
 	m_Name.SetFormatBase();
 	m_Loc.l_NTI = 0;
+	m_Loc.l_where = 0;
 	m_AutoGrow = 0;
 	m_AutoOverflow = 0;
 	if (nRows > 0)
 		Dimension(nRows, nDims);
 	else
 	{
-		m_Loc.l_subs = 0;
-		m_Loc.l_sub1 = 0;
-		m_Loc.l_sub2 = 0;
-		m_Rows = 0;
-		m_Dims = 0;
+		FindArrayResult res = FindArray();
+		if (res == ArrayNotFound)
+			Init(true);
+		else if (res == NotAnArray)
+		{
+			CStringView pName = m_Name.StringView();
+			SaveCustomErrorEx("FoxArray:Init", "The passed variable '%V' is not an array", E_NOTANARRAY, &pName);
+			throw E_APIERROR;
+		}
 	}
 }
 
-void FoxArray::Init(ValueEx &pVal, bool bRaiseErrorIfNotExists)
+void FoxArray::Init(ValueEx &pVal, FoxArray::Initialisation eInit)
 {
 	if (pVal.Vartype() != 'C' || pVal.ev_handle == 0 || pVal.ev_length == 0 || pVal.ev_length > VFP_MAX_VARIABLE_NAME)
 	{
-		SaveCustomError("FoxArray:Init", "Invalid parameter to initialize array: the parameter has to be the variable name as a string no longer than 128 characters");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("FoxArray:Init", "Invalid parameter to initialize array: the parameter has to be the variable name as a string no longer than 128 characters", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
-	m_Name.Append(pVal);
+	m_Name.Append(pVal); 
 	m_Name.SetFormatBase();
 	m_Loc.l_NTI = 0;
+	m_Loc.l_where = 0;
 	m_AutoGrow = 0;
 	m_AutoOverflow = 0;
-	if (bRaiseErrorIfNotExists)
+
+	FindArrayResult res = FindArray();
+	if (res == ArrayNotFound && eInit == RaiseErrorIfNotExists)
 	{
-		if (FindArray(-1, -1) != ArrayFound)
-			throw E_NOTANARRAY;
-		m_Loc.l_subs = m_Loc.l_sub2 > 1 ? 2 : 1;
-		m_Rows = m_Loc.l_sub1;
-		m_Dims = m_Loc.l_sub2;
+		CStringView pName = m_Name.StringView();
+		SaveCustomErrorEx("FoxArray:Init", "The passed variable '%V' is not found", E_VARIABLENOTFOUND, &pName);
+		throw E_APIERROR;
 	}
-	else
+	else if (res == NotAnArray)
 	{
-		m_Loc.l_subs = 0;
-		m_Rows = 0;
-		m_Dims = 0;
+		CStringView pName = m_Name.StringView();
+		SaveCustomErrorEx("FoxArray:Init", "The passed variable '%V' is not an array", E_NOTANARRAY, &pName);
+		throw E_APIERROR;
 	}
-	m_Loc.l_sub1 = 0;
-	m_Loc.l_sub2 = 0;
 }
 
-FoxArray& FoxArray::Dimension(unsigned int nRows, unsigned int nDims)
+void FoxArray::Dimension(unsigned int nRows, unsigned int nDims)
 {
-	FoxArray::FindArrayResult res;
-	if (m_Loc.l_NTI != 0)
-	{
-		ReDimension(nRows,nDims);
-	}
-	else
-	{
-		res = FindArray(nDims, nRows);
-		if (res == ArrayFound)
-		{
-			InitArray();
-			m_Rows = nRows;
-			m_Dims = nDims;
-		}
-		else
-		{
-			ReDimension(nRows, nDims);
-			if (res == ArrayNotFound)
-			{
-				if (FindArray(-((int)nDims)) != ArrayFound)
-					throw E_NOTANARRAY;
-			}
-			else
-				InitArray();
-		}
-		m_Loc.l_sub1 = 0;
-		m_Loc.l_sub2 = 0;
-	}
-	return *this;
+	assert(m_Loc.l_where <= 0);
+	ReDimension(nRows, nDims);
+	if (m_Loc.l_NTI == 0)
+		FindArray();
 }
 
-FoxArray& FoxArray::Dimension(ValueEx &pVal, unsigned int nRows, unsigned int nDims)
+void FoxArray::Dimension(ValueEx &pVal, unsigned int nRows, unsigned int nDims)
 {
 	assert(pVal.Vartype() == 'C' && pVal.ev_handle != 0);
 	CStringView pName(pVal.HandleToPtr(), pVal.Len());
-	return Dimension(pName, nRows, nDims);
+	Dimension(pName, nRows, nDims);
 }
 
-FoxArray& FoxArray::Dimension(CStringView pName, unsigned int nRows, unsigned int nDims)
+void FoxArray::Dimension(CStringView pName, unsigned int nRows, unsigned int nDims)
 {
 	if (pName.Len == 0 || pName.Len > VFP_MAX_VARIABLE_NAME)
 	{
-		SaveCustomErrorEx("FoxArray:Dimension", "Invalid array name '%V' passed to initialize array, name to short or to long.", 0, &pName);
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("FoxArray:Dimension", "Invalid array name '%V' passed to initialize array, name to short or to long.", E_VFP_INVALIDPARAMS, &pName);
+		throw E_APIERROR;
 	}
+	m_Loc.l_where = 0;
 	m_Name = pName;
 	m_Name.SetFormatBase();
-	return Dimension(nRows,nDims);
+	Dimension(nRows,nDims);
 }
 
-FoxArray::FindArrayResult FoxArray::FindArray(int nDims, int nRows)
+FoxArray::FindArrayResult FoxArray::FindArray()
 {
 	NTI nVarNti = _NameTableIndex(m_Name);
 	if (nVarNti == -1)
 		return ArrayNotFound;
 
-	m_Loc.l_NTI = nVarNti;
-	bool found = _FindVar(m_Loc.l_NTI, -1, m_Loc) > 0;
-	if (nRows + nDims >= 1)
+	bool found = _FindVar(nVarNti, -1, m_Loc) > 0;
+	if (found)
 	{
-		if (found)
-		{
-			if (!((nRows == 0 || m_Loc.l_sub1 == nRows) && (nDims == 0 || (nDims == 1 && m_Loc.l_sub2 == 0) || m_Loc.l_sub2 == nDims)))
-				return ArrayInvalidDimension;
-			else
-				return ArrayFound;
-		}
-		return ArrayNotFound;
+		if (m_Loc.l_subs == 0)
+			return NotAnArray;
+
+		m_Rows = m_Loc.l_sub1;
+		m_Dims = m_Loc.l_sub2;
+		m_Loc.l_subs = m_Loc.l_sub2 > 1 ? 2 : 1;
 	}
-	else if (nRows == -1 && nDims == -1)
-	{
-		if (found)
-			return ArrayFound;
-		else
-			return ArrayNotFound;
-	}
-	else
-	{
-		assert(nDims < 0);
-		m_Loc.l_type = 'R';
-		m_Loc.l_where = -1;
-		m_Loc.l_offset = 0;
-		m_Loc.l_subs = nDims < -1 ? 2 : 1;
-		return ArrayFound;
-	}
+	return found ? ArrayFound : ArrayNotFound;
 }
 
 void FoxArray::InitArray()
 {
-	assert(m_Loc.l_NTI);
+	assert(m_Loc.l_NTI > 0);
 	int nErrorNo;
 	USHORT tmpSubs;
 	ValueEx vFalse;
 	vFalse.SetLogical(false);
 	tmpSubs = m_Loc.l_subs;
 	m_Loc.l_subs = 0;
-	if (nErrorNo = _Store(m_Loc, vFalse))
+	nErrorNo = _Store(m_Loc, vFalse);
+	if (nErrorNo)
 		throw nErrorNo;
 	m_Loc.l_subs = tmpSubs;
 }
@@ -2728,14 +2824,13 @@ void FoxArray::ReDimension(unsigned int nRows, unsigned int nDims)
 
 unsigned int FoxArray::ALen(unsigned int &nDims)
 {
-	if (m_Loc.l_NTI == -1)
+	if (m_Loc.l_where == 0)
 	{	
-		if (FindArray(-1, -1) == ArrayNotFound)
+		FindArrayResult res = FindArray();
+		if (res == ArrayNotFound)
 			throw E_VARIABLENOTFOUND;
-
-		m_Rows = m_Loc.l_sub1;
-		m_Dims = m_Loc.l_sub2;
-		m_Loc.l_subs = m_Dims > 1 ? 2 : 1;
+		else if (res == NotAnArray)
+			throw E_NOTANARRAY;
 	}
 	nDims = m_Dims;
 	return m_Rows;
@@ -2785,11 +2880,11 @@ void FoxArray::OverflowArray()
 	m_AutoOverflow++;
 	m_Name.AppendFormatBase("_VFP2C_OF_%U", m_AutoOverflow);
 	ReDimension(m_AutoGrow, m_Dims);
-	if (FindArray(-1, -1) == ArrayNotFound)
+	if (FindArray() == ArrayNotFound)
 		throw E_VARIABLENOTFOUND;
 }
 
-unsigned int FoxArray::CompactOverflow()
+int FoxArray::CompactOverflow()
 {
 	if (m_AutoOverflow > 1)
 	{
@@ -2810,7 +2905,7 @@ unsigned int FoxArray::CompactOverflow()
 		{
 			pArrayName.AppendFormatBase("_VFP2C_OF_%U", xj);
 			// append elements from 2nd, 3rd .. array into the first array
-			pArrayView = pArrayName;
+			pArrayView = pArrayName.StringView();
 			pExeBuffer.Format("ACOPY(%V,%V,1,%U,%U)", &pArrayView, &pNameView, min(nMaxElementsPerArray, nTotalElementsToCopy), nFirstDestinationElement);
 			Execute(pExeBuffer);
 			// release the intermediary arrays
@@ -2819,7 +2914,7 @@ unsigned int FoxArray::CompactOverflow()
 			nFirstDestinationElement += nMaxElementsPerArray;
 			nTotalElementsToCopy -= nMaxElementsPerArray;
 		}
-		return nTotalRows;
+		return (int)nTotalRows;
 	}
 	else if (m_AutoGrow && m_Loc.l_sub1 && m_Loc.l_sub1 < m_Rows)
 		ReDimension(m_Loc.l_sub1, m_Dims);
@@ -2831,6 +2926,31 @@ CStringView FoxArray::Name()
 	return m_Name;
 }
 
+Value FoxArray::EvaluateElement(unsigned int nRow, unsigned int nDim)
+{
+	int nErrorNo;
+	Value pValue;
+	pValue.ev_type = '0';
+	if (nDim == 0)
+		m_Name.AppendFormatBase("[%U]", nRow);
+	else
+		m_Name.AppendFormatBase("[%U,%U]", nRow, nDim);
+
+	nErrorNo = _Evaluate(&pValue, m_Name);
+	m_Name.ResetToFormatBase();
+	if (nErrorNo)
+	{
+		if (nErrorNo == 173)
+		{
+			SaveCustomErrorEx("FoxArray::EvaluateElement", "Passed variable name is not an array.", E_NOTANARRAY);
+			throw E_APIERROR;
+		}
+		else
+			throw nErrorNo;
+	}
+	return pValue;
+}
+
 FoxCursor::~FoxCursor()
 {
 	if (m_AutoFLocked)
@@ -2840,46 +2960,32 @@ FoxCursor::~FoxCursor()
 		delete[] m_pFieldLocs;
 }
 
-bool FoxCursor::Create(CStringView pCursorName, CStringView pFields, bool bAttach)
+void FoxCursor::Create(CStringView pCursorName, CStringView pFields)
 {
 	if (pCursorName.Len == 0 || pCursorName.Len > VFP_MAX_CURSOR_NAME)
 	{
-		SaveCustomError("FoxCursor:Create", "Passed cursorname is invalid, len = 0 or > VFP_MAX_CURSOR_NAME (128).");
-		throw E_INVALIDPARAMS;
+		SaveCustomErrorEx("FoxCursor:Create", "Passed cursorname is invalid, len = 0 or > VFP_MAX_CURSOR_NAME (128).", E_VFP_INVALIDPARAMS);
+		throw E_APIERROR;
 	}
 	
 	char* pField;
-	bool bCursorCreated;
+	int nErrorNo;
 	FoxVariable pFieldArrayRef;
 	FoxValue vValue;
 	FoxArray pFieldArray;
 	CStrBuilder<4096> pExeBuffer;
 
-	if (bAttach)
+	// create the cursor
+	pExeBuffer.Format("CREATE CURSOR %V (%V)", &pCursorName, &pFields);
+	nErrorNo = _Execute(pExeBuffer);
+	if (nErrorNo)
 	{
-		pExeBuffer.Format("SELECT('%V')", &pCursorName);
-		vValue.Evaluate(pExeBuffer);
-		m_WorkArea = vValue->ev_long;
+		SaveCustomErrorEx("FoxCursor::Create", "CREATE CURSOR command failed.", nErrorNo);
+		throw E_APIERROR;
 	}
-
-	// if workarea == 0 the cursor does not exist
-	if(m_WorkArea == 0)
-	{
-		bCursorCreated = true;
-		// create the cursor
-		pExeBuffer.Format("CREATE CURSOR %V (%V)", &pCursorName, &pFields);
-		Execute(pExeBuffer);
-		// get the workarea
-		vValue.Evaluate("SELECT(0)");
-		m_WorkArea = vValue->ev_long;
-	}
-	else
-	{
-		bCursorCreated = false;
-		// select the workarea
-		pExeBuffer.Format("SELECT %I", m_WorkArea);
-		Execute(pExeBuffer);
-	}
+	// get the workarea
+	vValue.Evaluate("SELECT(0)");
+	m_WorkArea = (SHORT)vValue->ev_long;
 	
 	// get fieldcount
 	pExeBuffer.Format("_VFP2C_FIELDS_%U", this);
@@ -2889,11 +2995,8 @@ bool FoxCursor::Create(CStringView pCursorName, CStringView pFields, bool bAttac
 	vValue.Evaluate(pExeBuffer);
 	m_FieldCnt = vValue->ev_long;
 	if (m_pFieldLocs)
-	{
 		delete[] m_pFieldLocs;
-		m_pFieldLocs = 0;
-	}
-	m_pFieldLocs = new FieldLocatorEx[m_FieldCnt];
+	m_pFieldLocs = new(std::nothrow) FieldLocatorEx[m_FieldCnt];
 	if (m_pFieldLocs == 0)
 		throw E_INSUFMEMORY;
 
@@ -2906,7 +3009,7 @@ bool FoxCursor::Create(CStringView pCursorName, CStringView pFields, bool bAttac
 		pField = vValue.HandleToPtr();
 		nVarNti = _NameTableIndex(pField);
 		vValue.FreeHandle();
-
+		vValue->ev_type = '0';
 		/*
 		vValue = pFieldArray(nFieldNo, 18); // autoinc value
 		if (vValue.Vartype() == 'N' && vValue->ev_long > 0)
@@ -2921,34 +3024,27 @@ bool FoxCursor::Create(CStringView pCursorName, CStringView pFields, bool bAttac
 
 		if (!_FindVar(nVarNti, m_WorkArea, &m_pFieldLocs[nFieldNo-1]))
 			throw E_FIELDNOTFOUND;
+
 	}
-	return bCursorCreated;
 }
 
-FoxCursor& FoxCursor::Attach(CStringView pCursorName, CStringView pFields)
+int FoxCursor::Attach(CStringView pCursorName, CStringView pFields)
 {
 	FoxValue vValue;
 	CStrBuilder<256> pExeBuffer;
 	CStrBuilder<VFP_MAX_COLUMN_NAME + 1> pFieldname;
+
 	pExeBuffer.Format("SELECT('%V')", &pCursorName);
 	vValue.Evaluate(pExeBuffer);
-	m_WorkArea = vValue->ev_long;
-
 	// if workarea == 0 the cursor does not exist
-	if(m_WorkArea == 0)
-		throw E_ALIASNOTFOUND;
+	if (vValue->ev_long == 0)
+		return E_ALIASNOTFOUND;
 
-	// select the workarea
-	pExeBuffer.Format("SELECT %I", m_WorkArea);
-	Execute(pExeBuffer);
-		
+	AutoWorkAreaRestore m_WorkAreaRestore((SHORT)vValue->ev_long, 0, true);
 	m_FieldCnt = pFields.GetWordCount(',');
 	if (m_pFieldLocs)
-	{
 		delete[] m_pFieldLocs;
-		m_pFieldLocs = 0;
-	}
-	m_pFieldLocs = new FieldLocatorEx[m_FieldCnt];
+	m_pFieldLocs = new(std::nothrow) FieldLocatorEx[m_FieldCnt];
 	if (m_pFieldLocs == 0)
 		throw E_INSUFMEMORY;
 
@@ -2960,33 +3056,29 @@ FoxCursor& FoxCursor::Attach(CStringView pCursorName, CStringView pFields)
 		pFieldname = pField.Alltrim();
         nVarNti = _NameTableIndex(pFieldname);
 		if (nVarNti == -1)
-			throw E_FIELDNOTFOUND;
+			return E_FIELDNOTFOUND;
 
 		if (!_FindVar(nVarNti, m_WorkArea, &m_pFieldLocs[nFieldNo]))
-			throw E_FIELDNOTFOUND;
+			return E_FIELDNOTFOUND;
 
 		pFields = pFields + (pField.Len + 1);
 	}
-	return *this;
+
+	m_WorkArea = (SHORT)vValue->ev_long;
+	return 0;
 }
 
-FoxCursor& FoxCursor::Attach(int nWorkArea, CStringView pFields)
+int FoxCursor::Attach(SHORT nWorkArea, CStringView pFields)
 {
-	CStrBuilder<256> pExeBuffer;
-	CStrBuilder<VFP_MAX_COLUMN_NAME> pFieldName;
+	CStrBuilder<64> pExeBuffer;
+	CStrBuilder<VFP_MAX_COLUMN_NAME + 1> pFieldName;
 
-	m_WorkArea = nWorkArea;
 	// select the workarea
-	pExeBuffer.Format("SELECT %I", nWorkArea);
-	Execute(pExeBuffer);
-
+	AutoWorkAreaRestore m_WorkAreaRestore(nWorkArea, 0, true);
 	m_FieldCnt = pFields.GetWordCount(',');
 	if (m_pFieldLocs)
-	{
 		delete[] m_pFieldLocs;
-		m_pFieldLocs = 0;
-	}	
-	m_pFieldLocs = new FieldLocatorEx[m_FieldCnt];
+	m_pFieldLocs = new(std::nothrow) FieldLocatorEx[m_FieldCnt];
 	if (m_pFieldLocs == 0)
 		throw E_INSUFMEMORY;
 
@@ -2998,32 +3090,102 @@ FoxCursor& FoxCursor::Attach(int nWorkArea, CStringView pFields)
 		pFieldName = pField.Alltrim();
         nVarNti = _NameTableIndex(pFieldName);
 		if (nVarNti == -1)
-			throw E_FIELDNOTFOUND;
+			return E_FIELDNOTFOUND;
 
 		if (!_FindVar(nVarNti, m_WorkArea, &m_pFieldLocs[nFieldNo]))
-			throw E_FIELDNOTFOUND;
+			return E_FIELDNOTFOUND;
 
 		pFields = pFields + (pField.Len + 1);
 	}
-	return *this;
+	
+	m_WorkArea = nWorkArea;
+	return 0;
 }
 
-int FoxCursor::GetFieldNumber(const char* pField)
+int FoxCursor::Attach(CStringView pCursorName, CStringView pFields, int& nFieldStatus, int nRequiredFields)
 {
-	assert(m_WorkArea && m_pFieldLocs);
 	NTI nVarNti;
-	LocatorEx* pLoc;
-	nVarNti = _NameTableIndex((char*)pField);
-	if (nVarNti == -1)
-		return -1;
+	int nErrorNo = 0;
+	FoxValue vValue;
+	CStrBuilder<256> pExeBuffer;
+	CStrBuilder<VFP_MAX_COLUMN_NAME + 1> pFieldname;
 
+	pExeBuffer.Format("SELECT('%V')", &pCursorName);
+	vValue.Evaluate(pExeBuffer);
+	// if workarea == 0 the cursor does not exist
+	if (vValue->ev_long == 0)
+		return E_ALIASNOTFOUND;
+
+	AutoWorkAreaRestore m_WorkAreaRestore((SHORT)vValue->ev_long, 0, true);
+	m_FieldCnt = pFields.GetWordCount(',');
+	if (m_pFieldLocs)
+		delete[] m_pFieldLocs;
+	m_pFieldLocs = new(std::nothrow) FieldLocatorEx[m_FieldCnt];
+	if (m_pFieldLocs == 0)
+		throw E_INSUFMEMORY;
+
+	nFieldStatus = 0;
+	// get locators to each field
 	for (unsigned int nFieldNo = 0; nFieldNo < m_FieldCnt; nFieldNo++)
 	{
-		pLoc = m_pFieldLocs + nFieldNo;
-		if (pLoc->l_NTI == nVarNti)
-			return nFieldNo;
+		CStringView pField = pFields.GetWordNum(1, ',');
+		pFieldname = pField.Alltrim();
+		nVarNti = _NameTableIndex(pFieldname);
+		if (nVarNti == -1 || !_FindVar(nVarNti, m_WorkArea, &m_pFieldLocs[nFieldNo]))
+		{
+			if (nRequiredFields & (1 << nFieldNo))
+				nErrorNo = E_FIELDNOTFOUND;
+		}
+		else
+			nFieldStatus |= (1 << nFieldNo);
+
+		pFields = pFields + (pField.Len + 1);
 	}
-	return -1;
+
+	if (nErrorNo == 0)
+		m_WorkArea = (SHORT)vValue->ev_long;
+
+	return nErrorNo;
+}
+
+int FoxCursor::Attach(SHORT nWorkArea, CStringView pFields, int& nFieldStatus, int nRequiredFields)
+{
+	NTI nVarNti;
+	int nErrorNo = 0;
+	CStrBuilder<64> pExeBuffer;
+	CStrBuilder<VFP_MAX_COLUMN_NAME + 1> pFieldName;
+
+	// select the workarea
+	AutoWorkAreaRestore m_WorkAreaRestore(nWorkArea, 0, true);
+	m_FieldCnt = pFields.GetWordCount(',');
+	if (m_pFieldLocs)
+		delete[] m_pFieldLocs;
+	m_pFieldLocs = new(std::nothrow) FieldLocatorEx[m_FieldCnt];
+	if (m_pFieldLocs == 0)
+		throw E_INSUFMEMORY;
+
+	nFieldStatus = 0;
+	// get locators to each field
+	for (unsigned int nFieldNo = 0; nFieldNo < m_FieldCnt; nFieldNo++)
+	{
+		CStringView pField = pFields.GetWordNum(1, ',');
+		pFieldName = pField.Alltrim();
+		nVarNti = _NameTableIndex(pFieldName);
+		if (nVarNti == -1 || !_FindVar(nVarNti, m_WorkArea, &m_pFieldLocs[nFieldNo]))
+		{
+			if (nRequiredFields & (1 << nFieldNo))
+				nErrorNo = E_FIELDNOTFOUND;
+		}
+		else
+			nFieldStatus |= (1 << nFieldNo);
+
+		pFields = pFields + (pField.Len + 1);
+	}
+
+	if (nErrorNo == 0)
+		m_WorkArea = nWorkArea;
+
+	return nErrorNo;
 }
 
 /* FoxCStringArray */
@@ -3039,12 +3201,12 @@ void FoxCStringArray::Dimension(unsigned int nRows)
 {
 	assert(!m_pStrings);
 
-	m_pStrings = new char*[nRows];
+	m_pStrings = new(std::nothrow) char*[nRows];
 	if (m_pStrings == 0)
 		throw E_INSUFMEMORY;
     ZeroMemory(m_pStrings, sizeof(char*)*nRows);
 
-    m_pValues = new FoxValue[nRows];
+    m_pValues = new(std::nothrow) FoxValue[nRows];
 	if (m_pValues == 0)
 		throw E_INSUFMEMORY;
 }
@@ -3063,7 +3225,9 @@ FoxCStringArray& FoxCStringArray::operator=(FoxArray &pArray)
 			if (pValue->Vartype() != 'C')
 				throw E_INVALIDPARAMS;
 
-			m_pStrings[xj] = pValue->NullTerminate().LockHandle().HandleToPtr();
+			pValue->NullTerminate();
+			pValue->LockHandle();
+			m_pStrings[xj] = pValue->HandleToPtr();
 			pValue++;
 		}
 	}

@@ -140,4 +140,4 @@ void _fastcall AFontInfo(ParamBlkEx& parm);
 TT_NAME_RECORD * __stdcall GetFontNameRecord(TT_NAME_RECORD *pRecords, unsigned short nCount, unsigned short uNameID, unsigned short dwPlatform, LANGID dwLanguage);
 void __stdcall BigEndianWideCharToMultiByte(wchar_t *pWString, unsigned int nWideChars, char *pBuffer, unsigned int nBytes);
 
-#endif _VFP2CFONT_H__
+#endif // _VFP2CFONT_H__

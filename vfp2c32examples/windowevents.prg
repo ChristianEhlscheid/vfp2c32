@@ -24,20 +24,15 @@ SET PROCEDURE TO windowevents ADDITIVE
 && and how they should be marshaled
 && 5. you cannot use 0 as the hWnd like in BINDEVENTS to bind to all windows
 
-IF TYPE('loObj') = 'U'
-
-	LOCAL lnProc
+LOCAL lnProc, loApp
+IF !PEMSTATUS(_VFP, 'AppObj', 5)
 	&& bind message to a public function, and pass no parameters to it (lParam & wParam have no meaning for this message anyway)
-	lnProc = BINDEVENTSEX(_VFP.hWnd,WM_TIMECHANGE,NULL,'TimeChangeEvent','')
-	
-	PUBLIC loObj
-	loObj = CREATEOBJECT('oApp')
-	
+	m.lnProc = BINDEVENTSEX(_VFP.hWnd,WM_TIMECHANGE,NULL,'TimeChangeEvent','')
+	m.loApp = CREATEOBJECT('oApp')
+	ADDPROPERTY(_VFP, 'AppObj', m.loApp)
 ELSE
-
 	UNBINDEVENTSEX(_VFP.hWnd,WM_TIMECHANGE)	
-	RELEASE loObj
-	
+	REMOVEPROPERTY(_VFP, 'AppObj')
 ENDIF
 
 && to emulate callbacks on an object the 
@@ -74,11 +69,11 @@ DEFINE CLASS oApp AS Custom
 	
 	FUNCTION Destroy
 		&& unbind events from the window
-		UNBINDEVENTSEX(_VFP.hWnd,WM_ACTIVATE)
-		UNBINDEVENTSEX(_VFP.hWnd,WM_DEVICECHANGE)
-		UNBINDEVENTSEX(_VFP.hWnd,WM_APPCOMMAND)
-		UNBINDEVENTSEX(_VFP.hWnd,WM_ENTERMENULOOP)
 		UNBINDEVENTSEX(_VFP.hWnd,WM_EXITMENULOOP)
+		UNBINDEVENTSEX(_VFP.hWnd,WM_ENTERMENULOOP)
+		UNBINDEVENTSEX(_VFP.hWnd,WM_APPCOMMAND)
+		UNBINDEVENTSEX(_VFP.hWnd,WM_DEVICECHANGE)
+		UNBINDEVENTSEX(_VFP.hWnd,WM_ACTIVATE)
 	ENDFUNC
 
 	FUNCTION AppFocusChanged(bFocus)

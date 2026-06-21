@@ -2,13 +2,7 @@
 #define _VFP2CTLS_H__
 
 #include <windows.h>
-#if !defined(_WIN64)
-#include "pro_ext.h"
-#else
-#include "pro_ext64.h"
-#endif
 #include "vfp2cdatastructure.h"
-#include "vfp2ctls.h"
 
 const int VFP2C_MAX_ERRORS					= 32;
 const unsigned int VFP2C_ERROR_MESSAGE_LEN	= 1024;
@@ -40,6 +34,24 @@ typedef struct _DBGALLOCINFO {
 class WindowSubclass;
 class CallbackFunction;
 
+class CriticalSectionGuard
+{
+public:
+	CriticalSectionGuard(CRITICAL_SECTION& section)
+	{
+		cs = &section;
+		EnterCriticalSection(cs);
+	}
+
+	~CriticalSectionGuard()
+	{
+		LeaveCriticalSection(cs);
+	}
+
+private:
+	CRITICAL_SECTION* cs;
+};
+
 class VFP2CTls
 {
 public:
@@ -65,7 +77,7 @@ public:
 #endif
 	/* handle to process api library */
 	
-	/* flag is winsock was initialized with WSAStartup */
+	/* flag if winsock was initialized with WSAStartup */
 	bool WinsockInited;
 	/* default timeout for winsock calls */
 	DWORD DefaultWinsockTimeout;
@@ -83,6 +95,7 @@ public:
 	static VFP2CTls& _stdcall Tls();
 
 #ifdef _THREADSAFE
+	static CriticalSectionGuard Guard();
 	static LONG ThreadCount;
 	static DWORD TlsIndex;
 #endif
@@ -95,9 +108,16 @@ public:
 	static HMODULE Icmp;
 	static HMODULE NetApi32;
 	static HMODULE Propsys;
-
+	static HMODULE HsDll;
+	static bool HyperScanInitialized;
+	
 private:
 	HANDLE JitHeap;
+#ifdef _THREADSAFE
+	static CRITICAL_SECTION CritSection;
+	static void _stdcall InitCriticalSection();
+	static void _stdcall FreeCriticalSection();
+#endif
 	static void _stdcall FreeGlobalResources();
 };
 

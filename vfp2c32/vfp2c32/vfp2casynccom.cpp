@@ -2,7 +2,7 @@
 
 #include <windows.h>
 #include <atlbase.h>
-#include <atlsafe.h>
+// #include <atlsafe.h>
 
 #if !defined(_WIN64)
 #include "pro_ext.h"
@@ -10,13 +10,11 @@
 #include "pro_ext64.h"
 #endif
 #include "vfp2c32.h"
-#include "vfp2ccom.h"
 #include "vfp2casynccom.h"
-#include "vfp2cutil.h"
 #include "vfp2ccppapi.h"
 
 CComCallInfo::CComCallInfo(LONG nCallId, DISPID dispid, WORD wFlags, LCID lcid, HANDLE hAbortEvent) : 
-	m_CallId(nCallId), m_DispIdMember(dispid), m_Flags(wFlags), m_Lcid(lcid), m_AbortEvent(hAbortEvent), 
+	m_CallId(nCallId), m_DispIdMember(dispid), m_Lcid(lcid), m_Flags(wFlags), m_AbortEvent(hAbortEvent),
 	m_Aborted(false)
 {
 	m_DispParams.rgvarg = 0;
@@ -49,6 +47,7 @@ CComCallInfo::~CComCallInfo()
 
 STDMETHODIMP CComCallInfo::QueryInterface(REFIID riid, void **ppvObject)
 {
+	unused(riid);
 	*ppvObject = NULL;
 	return E_NOINTERFACE;
 }
@@ -71,6 +70,7 @@ STDMETHODIMP CComCallInfo::GetTypeInfoCount(UINT* pctinfo)
 
 STDMETHODIMP CComCallInfo::GetTypeInfo(UINT itinfo, LCID lcid, ITypeInfo** pptinfo)
 {
+	unused(itinfo);
 	if (pptinfo)
         *pptinfo = 0;
 	return E_NOTIMPL;
@@ -78,6 +78,10 @@ STDMETHODIMP CComCallInfo::GetTypeInfo(UINT itinfo, LCID lcid, ITypeInfo** pptin
 
 STDMETHODIMP CComCallInfo::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid)
 {
+	unused(riid);
+	unused(cNames);
+	unused(lcid);
+
 	HRESULT hr = DISP_E_UNKNOWNNAME;
 	*rgdispid = DISPID_UNKNOWN;
 	if (_wcsicmp(L"AbortEvent", *rgszNames) == 0)
@@ -106,6 +110,10 @@ STDMETHODIMP CComCallInfo::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT 
 STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags, 
 										DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
+	unused(riid);
+	unused(lcid);
+	unused(pexcepinfo);
+	unused(puArgErr);
 	HRESULT hr = DISP_E_MEMBERNOTFOUND;
 
 	switch(dispidMember)
@@ -120,6 +128,7 @@ STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, W
 					pvarResult->lVal = (LONG)m_AbortEvent;
 #else
 					pvarResult->vt = VT_R8;
+					// NOLINTNEXTLINE(bugprone-narrowing-conversions)
 					pvarResult->lVal = static_cast<double>(reinterpret_cast<UINT_PTR>(m_AbortEvent));
 #endif
 				}
@@ -187,6 +196,9 @@ STDMETHODIMP CComCallInfo::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, W
 				hr = S_OK;
 			}
 			break;
+
+		default:
+			break;
 	}
 
 	return hr;
@@ -198,7 +210,7 @@ HRESULT CComCallInfo::MarshalParameters(DISPPARAMS* pdispparams)
 	m_DispParams.cArgs = pdispparams->cArgs;
 	if (m_DispParams.cArgs > 0)
 	{
-		m_DispParams.rgvarg = new VARIANTARG[m_DispParams.cArgs];
+		m_DispParams.rgvarg = new(std::nothrow) VARIANTARG[m_DispParams.cArgs];
 		if (!m_DispParams.rgvarg)
 			return E_OUTOFMEMORY;
 
@@ -265,7 +277,7 @@ CThreadedComObject::CThreadedComObject(wchar_t* pComClass, bool bSynchronousAcce
 															m_Callback_OnCallComplete(DISPID_UNKNOWN), m_Callback_OnError(DISPID_UNKNOWN), 
 															m_DispId_CallInfo(DISPID_UNKNOWN), m_ComClass(pComClass), m_Thread(0), 
 															m_AbortCallEvent(0), m_LastError(0), m_LastErrorFunction(0), 
-															m_SynchronousAccess(bSynchronousAccess), m_CallQueue(20), m_ShutdownFlag(false)
+															m_CallQueue(20), m_SynchronousAccess(bSynchronousAccess), m_ShutdownFlag(false)
 {
 	VariantInit(&m_CallContext);
 }
@@ -346,22 +358,35 @@ STDMETHODIMP CThreadedComObject::GetTypeInfoCount(UINT* pctinfo)
 
 STDMETHODIMP CThreadedComObject::GetTypeInfo(UINT itinfo, LCID lcid, ITypeInfo** pptinfo)
 {
+	unused(itinfo);
+	unused(lcid);
+	unused(pptinfo);
 	return E_NOTIMPL;
 }
 
 STDMETHODIMP CThreadedComObject::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgdispid)
 {
+	unused(riid);
+	unused(cNames);
+	unused(lcid);
 	HRESULT hr = DISP_E_UNKNOWNNAME;
 	*rgdispid = DISPID_UNKNOWN;
-	int len = ocslen(rgszNames[0]);
-	for (unsigned int xj = 0; xj < m_DispMap.GetCount(); xj++)
+	unsigned int len = ocslen(rgszNames[0]);
+	try
 	{
-		if (m_DispMap[xj].Len == len && m_DispMap[xj].Name == rgszNames[0])
+		for (unsigned int xj = 0; xj < m_DispMap.GetCount(); xj++)
 		{
-			*rgdispid = m_DispMap[xj].DispId;
-			hr = S_OK;
-			break;
+			if (m_DispMap[xj].Len == len && m_DispMap[xj].Name == rgszNames[0])
+			{
+				*rgdispid = m_DispMap[xj].DispId;
+				hr = S_OK;
+				break;
+			}
 		}
+	}
+	catch(CAtlException e)
+	{
+		hr = e;
 	}
 	return hr;
 }
@@ -369,64 +394,69 @@ STDMETHODIMP CThreadedComObject::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames,
 STDMETHODIMP CThreadedComObject::Invoke(DISPID dispidMember, REFIID riid, LCID lcid, WORD wFlags, 
 										DISPPARAMS* pdispparams, VARIANT* pvarResult, EXCEPINFO* pexcepinfo, UINT* puArgErr)
 {
+	unused(riid);
+	unused(pexcepinfo);
+	unused(puArgErr);
 	HRESULT hr;
-	switch(dispidMember)
+	try
 	{
-		case DISPID_AbortCall:
-			if (pdispparams->cArgs <= 1)
-			{
-				if (pdispparams->cArgs == 1)
+		switch (dispidMember)
+		{
+			case DISPID_AbortCall:
+				if (pdispparams->cArgs <= 1)
 				{
-					hr = VariantChangeType(&pdispparams->rgvarg[0], &pdispparams->rgvarg[0], 0, VT_I4);
-					if (SUCCEEDED(hr))
-						hr = AbortCall(pdispparams->rgvarg[0].lVal, pvarResult);
+					if (pdispparams->cArgs == 1)
+					{
+						hr = VariantChangeType(&pdispparams->rgvarg[0], &pdispparams->rgvarg[0], 0, VT_I4);
+						if (SUCCEEDED(hr))
+							hr = AbortCall(pdispparams->rgvarg[0].lVal, pvarResult);
+					}
+					else
+						hr = AbortCall(0, pvarResult);
 				}
 				else
-					hr = AbortCall(0, pvarResult);
-			}
-			else
-				hr = DISP_E_BADPARAMCOUNT;
-			break;
+					hr = DISP_E_BADPARAMCOUNT;
+				break;
 
-		case DISPID_ContainedObject:
-			if (wFlags & DISPATCH_PROPERTYGET)
-			{
-				if (pvarResult)
+			case DISPID_ContainedObject:
+				if (wFlags & DISPATCH_PROPERTYGET)
 				{
-					hr = m_Git.CopyTo(&pvarResult->pdispVal);
-					if (SUCCEEDED(hr))
-						pvarResult->vt = VT_DISPATCH;
+					if (pvarResult)
+					{
+						hr = m_Git.CopyTo(&pvarResult->pdispVal);
+						if (SUCCEEDED(hr))
+							pvarResult->vt = VT_DISPATCH;
+					}
+					else
+						hr = S_OK;
 				}
 				else
-					hr = S_OK;
-			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
+					hr = DISP_E_MEMBERNOTFOUND;
 
-			break;
+				break;
 
-		case DISPID_ThreadId:
-			if (wFlags & DISPATCH_PROPERTYGET)
-			{
-				if (pvarResult)
+			case DISPID_ThreadId:
+				if (wFlags & DISPATCH_PROPERTYGET)
 				{
-					pvarResult->vt = VT_I4;
-					pvarResult->lVal = m_ThreadId;
-					hr = S_OK;
+					if (pvarResult)
+					{
+						pvarResult->vt = VT_I4;
+						pvarResult->lVal = (LONG)m_ThreadId;
+						hr = S_OK;
+					}
+					else
+						hr = S_OK;
 				}
 				else
-					hr = S_OK;
-			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
+					hr = DISP_E_MEMBERNOTFOUND;
 
-			break;
+				break;
 
-		case DISPID_CallContext:
-			if (wFlags & DISPATCH_PROPERTYGET)
-			{
-				switch(pdispparams->cArgs)
+			case DISPID_CallContext:
+				if (wFlags & DISPATCH_PROPERTYGET)
 				{
+					switch (pdispparams->cArgs)
+					{
 					case 0:
 						if (pvarResult)
 							hr = VariantCopy(pvarResult, &m_CallContext);
@@ -451,85 +481,91 @@ STDMETHODIMP CThreadedComObject::Invoke(DISPID dispidMember, REFIID riid, LCID l
 
 					default:
 						return DISP_E_BADPARAMCOUNT;
+					}
 				}
-			}
-			else if (wFlags & DISPATCH_PROPERTYPUT)
-			{
-				VARTYPE vt = pdispparams->rgvarg[0].vt;
-				if ((vt & VT_ARRAY) > 0 || (vt & VT_BYREF) > 0 || vt == VT_DISPATCH)
-					return DISP_E_TYPEMISMATCH;
-
-				hr = m_CallContext.Copy(&pdispparams->rgvarg[0]);
-				if (SUCCEEDED(hr) && pvarResult)
+				else if (wFlags & DISPATCH_PROPERTYPUT)
 				{
-					AddRef();
-					pvarResult->vt = VT_DISPATCH;
-					pvarResult->pdispVal = this;
+					VARTYPE vt = pdispparams->rgvarg[0].vt;
+					if ((vt & VT_ARRAY) > 0 || (vt & VT_BYREF) > 0 || vt == VT_DISPATCH)
+						return DISP_E_TYPEMISMATCH;
+
+					hr = m_CallContext.Copy(&pdispparams->rgvarg[0]);
+					if (SUCCEEDED(hr) && pvarResult)
+					{
+						AddRef();
+						pvarResult->vt = VT_DISPATCH;
+						pvarResult->pdispVal = this;
+					}
 				}
-			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
-			break;
-		
-		case DISPID_GetCallQueueSize:
-			if (wFlags & DISPATCH_PROPERTYGET) {
+				else
+					hr = DISP_E_MEMBERNOTFOUND;
+				break;
+
+			case DISPID_GetCallQueueSize:
+				if (wFlags & DISPATCH_PROPERTYGET) {
+					if (pvarResult)
+					{
+						pvarResult->vt = VT_I4;
+						m_CritSect.Enter();
+						pvarResult->lVal = (LONG)m_CallQueue.GetCount() + (m_CurrentCall.m_p ? 1 : 0);
+						m_CritSect.Leave();
+						hr = S_OK;
+					}
+					else
+						hr = S_OK;
+				}
+				else
+					hr = DISP_E_MEMBERNOTFOUND;
+				break;
+
+			case DISPID_GetCallRunTime:
+				if (wFlags & DISPATCH_PROPERTYGET) {
+					if (pdispparams->cArgs == 1) {
+						hr = VariantChangeType(&pdispparams->rgvarg[0], &pdispparams->rgvarg[0], 0, VT_I4);
+						if (SUCCEEDED(hr))
+							hr = GetCallRunTime(pdispparams->rgvarg[0].lVal, pvarResult);
+					}
+					else
+						hr = DISP_E_BADPARAMCOUNT;
+				}
+				else
+					hr = DISP_E_MEMBERNOTFOUND;
+				break;
+
+			default:
+			{
+				if (++m_CallId == 0)
+					++m_CallId;
+
+				CComCallInfo* ci = new(std::nothrow) CComCallInfo(m_CallId, dispidMember, wFlags, lcid, m_AbortCallEvent);
+				if (!ci)
+					return E_OUTOFMEMORY;
+
+				CAutoPtr<CComCallInfo> pCallInfo(ci);
+				hr = pCallInfo->MarshalParameters(pdispparams);
+				if (FAILED(hr))
+					return hr;
+
+				m_CallContext.Detach(&pCallInfo->m_CallContext);
+
+				hr = QueueCall(pCallInfo);
+				if (FAILED(hr))
+					return hr;
+
+				if (!m_CallEvent.Signal())
+					return HRESULT_FROM_WIN32(GetLastError());
+
 				if (pvarResult)
 				{
 					pvarResult->vt = VT_I4;
-					m_CritSect.Enter();
-					pvarResult->lVal = (LONG)m_CallQueue.GetCount() + (m_CurrentCall.m_p ? 1 : 0);
-					m_CritSect.Leave();
-					hr = S_OK;
+					pvarResult->lVal = m_CallId;
 				}
-				else
-					hr = S_OK;
-			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
-			break;
-
-		case DISPID_GetCallRunTime:
-			if (wFlags & DISPATCH_PROPERTYGET) {
-				if (pdispparams->cArgs == 1) {
-					hr = VariantChangeType(&pdispparams->rgvarg[0], &pdispparams->rgvarg[0], 0, VT_I4);
-					if (SUCCEEDED(hr))
-						hr = GetCallRunTime(pdispparams->rgvarg[0].lVal, pvarResult);
-				} else
-					hr = DISP_E_BADPARAMCOUNT;
-			}
-			else
-				hr = DISP_E_MEMBERNOTFOUND;
-			break;
-
-		default:
-		{
-			if (++m_CallId == 0)
-				++m_CallId;
-
-			CComCallInfo* ci = new CComCallInfo(m_CallId, dispidMember, wFlags, lcid, m_AbortCallEvent);
-			if (!ci)
-				return E_OUTOFMEMORY;
-
-			CAutoPtr<CComCallInfo> pCallInfo(ci);
-			hr = pCallInfo->MarshalParameters(pdispparams);
-			if (FAILED(hr))
-				return hr;
-
-			m_CallContext.Detach(&pCallInfo->m_CallContext);
-
-			hr = QueueCall(pCallInfo);
-			if (FAILED(hr))
-				return hr;
-
-			if (!m_CallEvent.Signal())
-				return HRESULT_FROM_WIN32(GetLastError());
-
-			if (pvarResult)
-			{
-				pvarResult->vt = VT_I4;
-				pvarResult->lVal = m_CallId;
 			}
 		}
+	}
+	catch (CAtlException e)
+	{
+		hr = e;
 	}
 	return hr;
 }
@@ -544,7 +580,7 @@ void CThreadedComObject::CreateObject(DWORD dwContext, IDispatch* pCallback, DWO
 
 	if (pCallback)
 	{
-		LPOLESTR pMethod = L"OnCallComplete";
+		LPOLESTR pMethod = (LPOLESTR)L"OnCallComplete";
 		hr = pCallback->GetIDsOfNames(IID_NULL, &pMethod, 1, 1033, &m_Callback_OnCallComplete);
 		if (hr != S_OK && hr != DISP_E_UNKNOWNNAME)
 		{
@@ -552,7 +588,7 @@ void CThreadedComObject::CreateObject(DWORD dwContext, IDispatch* pCallback, DWO
 			throw E_APIERROR;
 		}
 
-		pMethod = L"OnError";
+		pMethod = (LPOLESTR)L"OnError";
 		hr = pCallback->GetIDsOfNames(IID_NULL, &pMethod, 1, 1033, &m_Callback_OnError);
 		if (hr != S_OK && hr != DISP_E_UNKNOWNNAME)
 		{
@@ -668,7 +704,8 @@ HRESULT CThreadedComObject::AbortCall(long callid, VARIANT* result)
 
 HRESULT CThreadedComObject::GetCallRunTime(long callid, VARIANT* result)
 {
-	LARGE_INTEGER time = {0};
+	LARGE_INTEGER time;
+	time.QuadPart = 0;
 	m_CritSect.Enter();
 	if (m_CurrentCall.m_p && (m_CurrentCall->m_CallId == callid || callid == 0))
 		time = m_CurrentCall->m_StartTime;
@@ -816,7 +853,7 @@ try
 	}
 	m_DispMap.SetCount(entry);
 
-	// if syncronous access is request register the created object in the Global interface table from which we can later marshal 
+	// if syncronous access is requested register the created object in the Global interface table from which we can later marshal 
 	// it into any apartment
 	if (m_SynchronousAccess)
 	{
@@ -914,6 +951,9 @@ void CThreadedComObject::MessageLoop()
 				m_LastError = GetLastError();
 				m_LastErrorFunction = "MsgWaitForMultipleObjects";
 				return;
+			
+			default:
+				break;
 		}
 	} while(true);
 }
@@ -1013,6 +1053,7 @@ bool CThreadedComObject::ProcessCalls()
 					CallbackParms[2].lVal = m_CurrentCall->m_CallId;
 					CallbackParms[1] = vResult;
 					CallbackParms[0] = m_CurrentCall->m_CallContext;
+					// NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
 					hr = m_Callback->Invoke(m_Callback_OnCallComplete, IID_NULL,  m_CurrentCall->m_Lcid, DISPATCH_METHOD, &DispParams, 0, &CallbackError, &CallbackErrorArg);
 				}
 				else if (FAILED(hr) && m_Callback_OnError != DISPID_UNKNOWN)
@@ -1027,6 +1068,7 @@ bool CThreadedComObject::ProcessCalls()
 					CallbackParms[1].bstrVal = ErrorInfo.bstrSource;
 					CallbackParms[0].vt = ErrorInfo.bstrDescription ? VT_BSTR : VT_EMPTY;
 					CallbackParms[0].bstrVal = ErrorInfo.bstrDescription;
+					// NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
 					hr = m_Callback->Invoke(m_Callback_OnError, IID_NULL,  m_CurrentCall->m_Lcid, DISPATCH_METHOD, &DispParams, 0, &CallbackError, &CallbackErrorArg);
 				}
 			}
@@ -1079,12 +1121,12 @@ try
 		}
 		else if (parm(2)->Vartype() != '0')
 		{
-			SaveCustomError("CreateThreadObject", "Invalid type '%s' for parameter 2.", parm(2)->Vartype());
-			throw E_INVALIDPARAMS;
+			SaveCustomErrorEx("CreateThreadObject", "Invalid type '%s' for parameter 2.", E_VFP_INVALIDPARAMS, parm(2)->Vartype());
+			throw E_APIERROR;
 		}
 	}
 
-	pObject = new CThreadedComObject(pComClass, bSyncronousAccess);
+	pObject = new(std::nothrow) CThreadedComObject(pComClass, bSyncronousAccess);
 	if (!pObject)
 		throw E_INSUFMEMORY;
 
