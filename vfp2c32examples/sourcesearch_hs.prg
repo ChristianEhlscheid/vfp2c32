@@ -24,13 +24,6 @@ LOCAL xj, lcPath
 *!*	m.lcPath = 'C:\*'
 m.lcPath = 'C:\Projects\*.php'
 *!*	m.lcPath = "C:\Projects\*.scx|*.vcx"
-*!*	m.lcPath = 'C:\Projects\websites\geve4-online_chris\testfile._php'
-*!*	m.lcPath = 'C:\Projects\websites\tcr\administrator\components\com_config\config.class.php'
-*!*	m.lcPath = 'C:\Projects\websites\rtv\plugins\mobile\scientia\scientia\TeraWurflExceptions\TeraWurflExceptions.php'
-*!*	m.lcPath = 'C:\Projects\git\joomla-platform\libraries\phpmailer\pop3.php'
-*!*	m.lcPath = 'C:\Projects\websites\*.php'
-*!*	m.lcPath = 'C:\OpenComposite\*'
-*!*	m.lcPath = 'C:\windows'
 USE IN SELECT('curFiles1')
 USE IN SELECT('curMatches1')
 USE IN SELECT('curMatches2')

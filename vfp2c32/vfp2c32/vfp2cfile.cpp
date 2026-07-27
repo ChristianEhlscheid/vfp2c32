@@ -1488,7 +1488,7 @@ bool NtFileSearch::FindFirstInternal()
 	OBJECT_ATTRIBUTES objattribs;
 	UNICODE_STRING uPath;
 	uPath.Buffer = pRoot.Data;
-	uPath.MaximumLength = uPath.Length = pRoot.Len;
+	uPath.MaximumLength = uPath.Length = pRoot.Len * 2;
 
 	InitializeObjectAttributes(&objattribs, &uPath, OBJ_OPENIF, 0, 0);
 	m_IoStatusBlock.Status = 0;
