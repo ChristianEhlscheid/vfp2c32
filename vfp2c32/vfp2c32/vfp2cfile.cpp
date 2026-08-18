@@ -417,6 +417,7 @@ void FileSearchStorageArray<TData>::Initialize(CStringView pDestination, DWORD& 
 	m_Array.AutoGrow(256);
 	m_Array.Dimension(pDestination, m_Array.AutoGrow(), nFieldCount);
 	m_Array.AutoOverflow(CFoxVersion::MajorVersion() >= 9);
+	m_Array.Reset();
 }
 
 template<class TData>
@@ -718,11 +719,17 @@ void FileSearchStorageCursor<TData>::Initialize(CStringView pDestination, DWORD&
 		{
 			if (nFlags & ADIREX_FILEID)
 				pCursorDefinition = __sv("fileid I NOT NULL,");
+			else
+				pCursorDefinition = __sv("");
+
 			if (nFlags & ADIREX_PARENTID)
 				pCursorDefinition.Append(__sv("parentid I NOT NULL,"));
+
 			pCursorDefinition.Append(__sv("filename M NOT NULL,"));
+
 			if (!(nFlags & ADIREX_NODOSNAME))
 				pCursorDefinition.Append(__sv("dosfilename C(13) NOT NULL,"));
+
 			pCursorDefinition.Append(__sv("creationtime T NOT NULL,accesstime T NOT NULL,writetime T NOT NULL,filesize N(20, 0) NOT NULL,"));
 			if (nFlags & ADIREX_STRING_FILEATTRIBUTES)
 			{
